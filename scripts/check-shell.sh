@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+export CI=true
+export GIT_TERMINAL_PROMPT=0
+export GIT_PAGER=cat
+export PAGER=cat
+export DEBIAN_FRONTEND=noninteractive
+export CARGO_TERM_COLOR=never
+find scripts -type f -name '*.sh' -print | sort | while read -r file; do
+  sh -n "$file"
+done
+echo "shell syntax: ok"

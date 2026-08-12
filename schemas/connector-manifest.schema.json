@@ -1,0 +1,90 @@
+{
+  "$id": "https://schemas.nexus.local/connector-manifest/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capabilities": {
+      "items": {
+        "$ref": "capability-descriptor.schema.json"
+      },
+      "type": "array"
+    },
+    "certification": {
+      "enum": [
+        "UNCERTIFIED",
+        "LAB",
+        "CERTIFIED",
+        "DEPRECATED"
+      ]
+    },
+    "data_classes": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "events": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "health": {
+      "format": "uri-reference",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[a-z][a-z0-9-]+$",
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "network_origins": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "runtime": {
+      "enum": [
+        "RUST",
+        "PYTHON",
+        "TYPESCRIPT",
+        "WASM",
+        "SIDECAR",
+        "APPLIANCE"
+      ]
+    },
+    "secrets": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "tier": {
+      "enum": [
+        "TIER1",
+        "TIER2",
+        "TIER3"
+      ]
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "tier",
+    "license",
+    "runtime",
+    "health",
+    "capabilities",
+    "events",
+    "secrets",
+    "network_origins"
+  ],
+  "title": "ConnectorManifest",
+  "type": "object"
+}

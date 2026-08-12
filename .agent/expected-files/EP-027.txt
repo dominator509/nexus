@@ -1,0 +1,10 @@
+.agent/execplans/EP-027-fax-fabric.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-027.txt
+.agent/node-contracts/EP-027.md
+scripts/nodes/EP-027.sh
+crates/nexus-fax/
+connectors/ictfax/
+connectors/hylafax/
+infra/fax/
+tests/fax/

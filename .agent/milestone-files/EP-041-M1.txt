@@ -1,0 +1,7 @@
+.agent/execplans/EP-041-microbrain-training-factory.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-041.txt
+.agent/node-contracts/EP-041.md
+scripts/nodes/EP-041.sh
+python/nexus_microbrain/
+tests/microbrain/

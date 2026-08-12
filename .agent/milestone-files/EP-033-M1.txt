@@ -1,0 +1,6 @@
+.agent/execplans/EP-033-web-dashboard-and-desktop.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-033.txt
+.agent/node-contracts/EP-033.md
+scripts/nodes/EP-033.sh
+apps/web/

@@ -1,0 +1,6 @@
+.agent/execplans/EP-032-notification-and-communications-router.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-032.txt
+.agent/node-contracts/EP-032.md
+scripts/nodes/EP-032.sh
+crates/nexus-notifications/

@@ -1,0 +1,6 @@
+.agent/execplans/EP-010-capability-registry-and-connector-contract.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-010.txt
+.agent/node-contracts/EP-010.md
+scripts/nodes/EP-010.sh
+crates/nexus-capabilities/

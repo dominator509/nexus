@@ -1,0 +1,10 @@
+.agent/execplans/EP-011-connector-sdks-and-sidecar-runtime.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-011.txt
+.agent/node-contracts/EP-011.md
+scripts/nodes/EP-011.sh
+crates/nexus-connector-sdk/
+packages/connector-sdk/
+python/nexus_connector_sdk/
+crates/nexus-sidecar/
+tests/connectors/

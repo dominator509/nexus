@@ -1,0 +1,3 @@
+package.json
+apps/
+.github/workflows/ci.yml

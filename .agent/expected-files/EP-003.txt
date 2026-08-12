@@ -1,0 +1,9 @@
+.agent/execplans/EP-003-identity-people-devices-and-tenancy.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-003.txt
+.agent/node-contracts/EP-003.md
+scripts/nodes/EP-003.sh
+crates/nexus-identity/
+crates/nexus-presence/
+schemas/identity/
+tests/identity/

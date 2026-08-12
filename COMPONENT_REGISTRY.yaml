@@ -1,0 +1,192 @@
+schema_version: 1
+generated_at: 2026-08-12T07:00:00Z
+selection_laws:
+  - self_hosted_first
+  - open_source_first
+  - lowest_recurring_cost
+  - mature_before_custom
+  - provider_contracts_not_vendor_coupling
+  - copyleft_isolated_and_reviewed
+components:
+  - id: nexus-control-plane
+    capability: core.control
+    implementation: "custom Rust"
+    license: "proprietary"
+    integration_mode: embedded
+    status: required
+    rationale: "Nexus proprietary control plane and API"
+  - id: nexus-edge
+    capability: edge.execute
+    implementation: "custom Rust"
+    license: "proprietary"
+    integration_mode: embedded
+    status: required
+    rationale: "Local fast path, device gateway, audio and policy cache"
+  - id: deepseek-v4-flash
+    capability: ai.reflex
+    implementation: "DeepSeek API"
+    license: "commercial API terms"
+    integration_mode: external-provider
+    status: required-v1
+    rationale: "Primary V1 ReflexProvider with cache optimization"
+  - id: bifrost
+    capability: ai.gateway
+    implementation: "Bifrost"
+    license: "Apache-2.0"
+    integration_mode: replaceable-sidecar
+    status: preferred
+    rationale: "Provider gateway, not irrevocably locked"
+  - id: postgresql
+    capability: data.relational
+    implementation: "PostgreSQL"
+    license: "PostgreSQL"
+    integration_mode: sidecar
+    status: required
+    rationale: "Canonical durable data store"
+  - id: pgvector
+    capability: data.vector
+    implementation: "pgvector"
+    license: "PostgreSQL"
+    integration_mode: extension
+    status: required
+    rationale: "Initial vector search"
+  - id: nats
+    capability: events.bus
+    implementation: "NATS JetStream"
+    license: "Apache-2.0"
+    integration_mode: sidecar
+    status: required
+    rationale: "Durable event nervous system"
+  - id: temporal
+    capability: workflow.durable
+    implementation: "Temporal"
+    license: "MIT"
+    integration_mode: sidecar
+    status: required
+    rationale: "Long-running durable workflows and approvals"
+  - id: keycloak
+    capability: identity.oidc
+    implementation: "Keycloak"
+    license: "Apache-2.0"
+    integration_mode: sidecar
+    status: required
+    rationale: "OIDC, OAuth, passkeys, federation"
+  - id: openfga
+    capability: authz.relationship
+    implementation: "OpenFGA"
+    license: "Apache-2.0"
+    integration_mode: sidecar
+    status: required
+    rationale: "Relationship authorization"
+  - id: opa
+    capability: authz.context
+    implementation: "OPA"
+    license: "Apache-2.0"
+    integration_mode: sidecar
+    status: required
+    rationale: "Contextual policy decisions"
+  - id: openbao
+    capability: secrets.central
+    implementation: "OpenBao"
+    license: "MPL-2.0"
+    integration_mode: sidecar
+    status: required-prod
+    rationale: "Central secret service"
+  - id: home-assistant
+    capability: home.control
+    implementation: "Home Assistant"
+    license: "Apache-2.0"
+    integration_mode: sidecar
+    status: home-profile
+    rationale: "Primary home abstraction"
+  - id: frigate
+    capability: vision.nvr
+    implementation: "Frigate"
+    license: "MIT"
+    integration_mode: sidecar
+    status: camera-profile
+    rationale: "Primary local NVR and vision event source"
+  - id: whisper-cpp
+    capability: voice.stt
+    implementation: "whisper.cpp"
+    license: "MIT"
+    integration_mode: sidecar-or-library
+    status: voice-profile
+    rationale: "Local STT default"
+  - id: kokoro
+    capability: voice.tts
+    implementation: "Kokoro"
+    license: "Apache-2.0"
+    integration_mode: sidecar
+    status: voice-profile
+    rationale: "Local TTS default"
+  - id: openwakeword
+    capability: voice.wake
+    implementation: "openWakeWord runtime"
+    license: "Apache-2.0"
+    integration_mode: library
+    status: voice-profile
+    rationale: "Custom commercially safe wake models only"
+  - id: asterisk
+    capability: phone.gateway
+    implementation: "Asterisk"
+    license: "GPL-2.0"
+    integration_mode: isolated-sidecar
+    status: communications-profile
+    rationale: "SIP and PSTN media gateway"
+  - id: ictfax
+    capability: fax.gateway
+    implementation: "ICTFax"
+    license: "GPL-3.0"
+    integration_mode: isolated-sidecar
+    status: fax-profile
+    rationale: "Primary self-hosted fax control"
+  - id: postiz
+    capability: social.connector
+    implementation: "Postiz"
+    license: "AGPL-3.0"
+    integration_mode: isolated-sidecar
+    status: social-profile
+    rationale: "Initial social publishing connector"
+  - id: opnsense
+    capability: network.firewall
+    implementation: "OPNsense"
+    license: "BSD-2-Clause"
+    integration_mode: external-appliance
+    status: sentinel-profile
+    rationale: "Primary serious firewall"
+  - id: openwrt
+    capability: network.firewall
+    implementation: "OpenWrt"
+    license: "GPL-2.0"
+    integration_mode: external-appliance
+    status: sentinel-profile
+    rationale: "Consumer and embedded firewall option"
+  - id: adguard-home
+    capability: network.dns
+    implementation: "AdGuard Home"
+    license: "GPL-3.0"
+    integration_mode: isolated-sidecar
+    status: sentinel-profile
+    rationale: "DNS security default"
+  - id: glitchtip
+    capability: observability.incidents
+    implementation: "GlitchTip"
+    license: "MIT"
+    integration_mode: sidecar
+    status: required-prod
+    rationale: "Error and incident UI"
+  - id: seaweedfs
+    capability: artifact.object-store
+    implementation: "SeaweedFS"
+    license: "Apache-2.0"
+    integration_mode: sidecar
+    status: optional
+    rationale: "Preferred scalable local S3-compatible store"
+  - id: minio
+    capability: artifact.object-store
+    implementation: "MinIO community"
+    license: "AGPL-3.0"
+    integration_mode: isolated-sidecar
+    status: legacy-optional
+    rationale: "Compatibility only because upstream is archived"

@@ -1,0 +1,7 @@
+.agent/execplans/EP-040-testing-hardening-and-chaos.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-040.txt
+.agent/node-contracts/EP-040.md
+scripts/nodes/EP-040.sh
+tests/contract/
+tests/performance/

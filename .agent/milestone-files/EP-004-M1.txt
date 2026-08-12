@@ -1,0 +1,7 @@
+.agent/execplans/EP-004-data-memory-and-world-graph.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-004.txt
+.agent/node-contracts/EP-004.md
+scripts/nodes/EP-004.sh
+crates/nexus-data/
+tests/memory/

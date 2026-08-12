@@ -1,0 +1,133 @@
+{
+  "$id": "https://schemas.nexus.local/nexus-control-object/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "ambiguity": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
+    "approval_required": {
+      "type": "boolean"
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
+    "entities": {
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean",
+          "null",
+          "array",
+          "object"
+        ]
+      },
+      "type": "object"
+    },
+    "escalation_reason": {
+      "maxLength": 512,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "executable_instruction": {
+      "type": "boolean"
+    },
+    "intent": {
+      "pattern": "^[a-z][a-z0-9_.-]{2,127}$",
+      "type": "string"
+    },
+    "privacy": {
+      "enum": [
+        "PUBLIC",
+        "HOUSEHOLD",
+        "PERSONAL",
+        "SENSITIVE",
+        "BUSINESS_CONFIDENTIAL",
+        "SECURITY",
+        "SECRET"
+      ]
+    },
+    "required_capabilities": {
+      "items": {
+        "pattern": "^[a-z][a-z0-9_.-]+$",
+        "type": "string"
+      },
+      "maxItems": 32,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "risk": {
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3",
+        "R4"
+      ]
+    },
+    "route": {
+      "enum": [
+        "DETERMINISTIC",
+        "REFLEX",
+        "CHEAP_API",
+        "FRONTIER_API",
+        "SPECIALIST_AGENT",
+        "CLARIFY",
+        "REJECT"
+      ]
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "workflow": {
+      "additionalProperties": false,
+      "properties": {
+        "condition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deadline": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schedule": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "intent",
+    "route",
+    "risk",
+    "privacy",
+    "ambiguity",
+    "approval_required",
+    "executable_instruction",
+    "confidence",
+    "required_capabilities",
+    "entities"
+  ],
+  "title": "NexusControlObject",
+  "type": "object"
+}

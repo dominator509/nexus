@@ -1,0 +1,11 @@
+.agent/execplans/EP-009-secrets-trust-and-private-mesh.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-009.txt
+.agent/node-contracts/EP-009.md
+scripts/nodes/EP-009.sh
+crates/nexus-trust/
+infra/openbao/
+infra/headscale/
+infra/pki/
+config/sops/
+tests/trust/

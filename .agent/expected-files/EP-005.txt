@@ -1,0 +1,9 @@
+.agent/execplans/EP-005-event-nervous-system.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-005.txt
+.agent/node-contracts/EP-005.md
+scripts/nodes/EP-005.sh
+crates/nexus-events/
+infra/nats/
+schemas/event-envelope.schema.json
+tests/events/

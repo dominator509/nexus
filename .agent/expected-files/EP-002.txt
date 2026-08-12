@@ -1,0 +1,11 @@
+.agent/execplans/EP-002-domain-contracts-and-vocabulary.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-002.txt
+.agent/node-contracts/EP-002.md
+scripts/nodes/EP-002.sh
+crates/nexus-domain/
+crates/nexus-contracts/
+packages/contracts/
+python/nexus_contracts/
+schemas/
+docs/vocabulary/

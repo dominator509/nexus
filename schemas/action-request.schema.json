@@ -1,0 +1,65 @@
+{
+  "$id": "https://schemas.nexus.local/action-request/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "approval_class": {
+      "type": "string"
+    },
+    "arguments": {
+      "type": "object"
+    },
+    "capability_id": {
+      "type": "string"
+    },
+    "expected_state": {
+      "type": "object"
+    },
+    "idempotency_key": {
+      "maxLength": 200,
+      "minLength": 16,
+      "type": "string"
+    },
+    "invocation": {
+      "$ref": "invocation-context.schema.json"
+    },
+    "principal_id": {
+      "type": "string"
+    },
+    "reversal": {
+      "type": "string"
+    },
+    "risk": {
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3",
+        "R4"
+      ]
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "action_id",
+    "tenant_id",
+    "principal_id",
+    "capability_id",
+    "idempotency_key",
+    "risk",
+    "approval_class",
+    "reversal",
+    "arguments",
+    "expected_state",
+    "invocation"
+  ],
+  "title": "ActionRequest",
+  "type": "object"
+}

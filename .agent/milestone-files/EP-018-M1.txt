@@ -1,0 +1,6 @@
+.agent/execplans/EP-018-skill-registry-and-skill-factory.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-018.txt
+.agent/node-contracts/EP-018.md
+scripts/nodes/EP-018.sh
+crates/nexus-skills/

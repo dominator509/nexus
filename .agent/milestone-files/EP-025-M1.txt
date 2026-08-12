@@ -1,0 +1,6 @@
+.agent/execplans/EP-025-asterisk-telephony-and-ai-calling.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-025.txt
+.agent/node-contracts/EP-025.md
+scripts/nodes/EP-025.sh
+crates/nexus-telephony/

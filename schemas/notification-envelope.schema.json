@@ -1,0 +1,76 @@
+{
+  "$id": "https://schemas.nexus.local/notification-envelope/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "channels": {
+      "items": {
+        "enum": [
+          "MOBILE_PUSH",
+          "DESKTOP",
+          "SPEAKER",
+          "SMS",
+          "EMAIL",
+          "PHONE",
+          "WATCH",
+          "CAR"
+        ]
+      },
+      "type": "array"
+    },
+    "correlation_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "notification_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "person_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "privacy": {
+      "type": "string"
+    },
+    "summary": {
+      "maxLength": 1000,
+      "type": "string"
+    },
+    "title": {
+      "maxLength": 160,
+      "type": "string"
+    },
+    "urgency": {
+      "enum": [
+        "LOW",
+        "NORMAL",
+        "HIGH",
+        "CRITICAL"
+      ]
+    }
+  },
+  "required": [
+    "notification_id",
+    "person_id",
+    "urgency",
+    "privacy",
+    "title",
+    "summary",
+    "channels",
+    "expires_at",
+    "correlation_id"
+  ],
+  "title": "NotificationEnvelope",
+  "type": "object"
+}

@@ -1,0 +1,9 @@
+.agent/execplans/EP-017-agent-orchestrator-and-harness-adapters.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-017.txt
+.agent/node-contracts/EP-017.md
+scripts/nodes/EP-017.sh
+crates/nexus-agents/
+crates/nexus-harness-adapters/
+packages/workflows/src/agents/
+tests/agents/

@@ -1,0 +1,7 @@
+.agent/execplans/EP-042-deployment-release-update-and-rollback.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-042.txt
+.agent/node-contracts/EP-042.md
+scripts/nodes/EP-042.sh
+crates/nexus-release/
+.github/workflows/release.yml

@@ -1,0 +1,12 @@
+.agent/execplans/EP-000-discovery-and-toolchain.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-000.txt
+.agent/node-contracts/EP-000.md
+scripts/nodes/EP-000.sh
+references/
+infra/devcontainer/
+scripts/source-verify.sh
+scripts/version-verify.sh
+rust-toolchain.toml
+.tool-versions
+mise.toml

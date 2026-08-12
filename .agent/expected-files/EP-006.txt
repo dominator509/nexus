@@ -1,0 +1,8 @@
+.agent/execplans/EP-006-durable-workflows.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-006.txt
+.agent/node-contracts/EP-006.md
+scripts/nodes/EP-006.sh
+packages/workflows/
+infra/temporal/
+tests/workflows/

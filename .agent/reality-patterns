@@ -1,0 +1,10 @@
+TODO|FIXME|XXX|HACK
+TODO!|todo!\(|unimplemented!\(|unreachable!\("not
+NotImplementedError|raise NotImplemented
+not implemented|Not implemented|NOT IMPLEMENTED
+PLACEHOLDER|__REPLACE__|CHANGEME|changeme
+\{\{[A-Z_]+\}\}
+lorem ipsum|Lorem Ipsum
+example\.com/api|sk-test-|xxxx-xxxx
+sleep[^\n]*(pretend|simulate)|return[^\n]*success[^\n]*(stub|fake)
+mock server enabled|demo mode|sample data mode

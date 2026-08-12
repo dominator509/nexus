@@ -1,0 +1,56 @@
+{
+  "$id": "https://schemas.nexus.local/deployment-profile/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "backup": {
+      "type": "object"
+    },
+    "components": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "id": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "MANAGED",
+        "BYOC",
+        "EXISTING_SSH",
+        "HYBRID",
+        "FULLY_LOCAL"
+      ]
+    },
+    "nodes": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "release_channel": {
+      "enum": [
+        "STABLE",
+        "BETA",
+        "DEVELOPER",
+        "PINNED"
+      ]
+    },
+    "remote_access": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "mode",
+    "release_channel",
+    "components",
+    "nodes",
+    "backup",
+    "remote_access"
+  ],
+  "title": "DeploymentProfile",
+  "type": "object"
+}

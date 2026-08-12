@@ -1,0 +1,13 @@
+.agent/execplans/EP-037-artifact-storage-backup-and-disaster-recovery.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-037.txt
+.agent/node-contracts/EP-037.md
+scripts/nodes/EP-037.sh
+crates/nexus-artifacts/
+connectors/storage-local/
+connectors/storage-nas/
+connectors/storage-seaweedfs/
+connectors/storage-s3/
+infra/storage/
+tests/artifacts/
+tests/backup/

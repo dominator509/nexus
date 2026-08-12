@@ -1,0 +1,6 @@
+.agent/execplans/EP-021-voice-core-stt-tts-wake-and-speaker-id.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-021.txt
+.agent/node-contracts/EP-021.md
+scripts/nodes/EP-021.sh
+python/nexus_voice/

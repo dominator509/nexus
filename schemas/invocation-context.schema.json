@@ -1,0 +1,87 @@
+{
+  "$id": "https://schemas.nexus.local/invocation-context/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approval_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "causation_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "channel": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "correlation_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "device_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "external_actor_id": {
+      "type": "string"
+    },
+    "external_actor_type": {
+      "enum": [
+        "HUMAN",
+        "SERVICE",
+        "AGENT",
+        "DEVICE",
+        "SYSTEM"
+      ]
+    },
+    "objective_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "origin_system": {
+      "type": "string"
+    },
+    "request_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "room_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "task_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "request_id",
+    "correlation_id",
+    "origin_system",
+    "external_actor_id",
+    "external_actor_type"
+  ],
+  "title": "InvocationContext",
+  "type": "object"
+}

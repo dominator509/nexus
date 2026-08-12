@@ -1,0 +1,7 @@
+.agent/execplans/EP-031-sentinel-advanced-detection-and-endpoints.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-031.txt
+.agent/node-contracts/EP-031.md
+scripts/nodes/EP-031.sh
+connectors/suricata/
+infra/sentinel/advanced/

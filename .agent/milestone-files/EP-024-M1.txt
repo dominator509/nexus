@@ -1,0 +1,7 @@
+.agent/execplans/EP-024-media-appliances-irrigation-and-robotics-providers.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-024.txt
+.agent/node-contracts/EP-024.md
+scripts/nodes/EP-024.sh
+crates/nexus-devices/
+connectors/robotics/

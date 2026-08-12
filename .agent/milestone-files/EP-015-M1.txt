@@ -1,0 +1,6 @@
+.agent/execplans/EP-015-model-router-and-microbrain-seam.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-015.txt
+.agent/node-contracts/EP-015.md
+scripts/nodes/EP-015.sh
+crates/nexus-model-router/

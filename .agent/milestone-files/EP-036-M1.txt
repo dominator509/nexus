@@ -1,0 +1,7 @@
+.agent/execplans/EP-036-compute-fabric-and-cloud-provisioning.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-036.txt
+.agent/node-contracts/EP-036.md
+scripts/nodes/EP-036.sh
+crates/nexus-compute/
+providers/digitalocean/

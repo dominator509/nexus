@@ -1,0 +1,1 @@
+schemas/memory-record.schema.json

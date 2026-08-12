@@ -1,0 +1,84 @@
+{
+  "$id": "https://schemas.nexus.local/event-envelope/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actor_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "causation_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "correlation_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "data_class": {
+      "type": "string"
+    },
+    "event_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "event_type": {
+      "pattern": "^[a-z][a-z0-9_.-]+\\.v[0-9]+$",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "request_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "source": {
+      "format": "uri-reference",
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "source",
+    "subject",
+    "occurred_at",
+    "tenant_id",
+    "correlation_id",
+    "data_class",
+    "payload"
+  ],
+  "title": "EventEnvelope",
+  "type": "object"
+}

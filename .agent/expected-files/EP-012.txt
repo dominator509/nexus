@@ -1,0 +1,10 @@
+.agent/execplans/EP-012-api-mcp-and-a2a-fabric.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-012.txt
+.agent/node-contracts/EP-012.md
+scripts/nodes/EP-012.sh
+crates/nexus-fabric/
+crates/nexus-mcp/
+crates/nexus-a2a/
+tests/fabric/
+infra/gateway/

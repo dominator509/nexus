@@ -1,0 +1,2 @@
+connectors/media/
+tests/devices/

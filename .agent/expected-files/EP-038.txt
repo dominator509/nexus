@@ -1,0 +1,12 @@
+.agent/execplans/EP-038-observability-and-operations.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-038.txt
+.agent/node-contracts/EP-038.md
+scripts/nodes/EP-038.sh
+crates/nexus-observability/
+infra/otel/
+infra/glitchtip/
+infra/observability/
+dashboards/
+alerts/
+tests/observability/

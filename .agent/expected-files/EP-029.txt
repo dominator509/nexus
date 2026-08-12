@@ -1,0 +1,10 @@
+.agent/execplans/EP-029-social-command-center.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-029.txt
+.agent/node-contracts/EP-029.md
+scripts/nodes/EP-029.sh
+crates/nexus-social/
+connectors/postiz/
+connectors/social-direct/
+infra/postiz/
+tests/social/

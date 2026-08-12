@@ -1,0 +1,9 @@
+.agent/execplans/EP-019-self-healing-engineering-loop.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-019.txt
+.agent/node-contracts/EP-019.md
+scripts/nodes/EP-019.sh
+crates/nexus-healing/
+packages/workflows/src/incidents/
+tests/healing/
+runbooks/self-healing/

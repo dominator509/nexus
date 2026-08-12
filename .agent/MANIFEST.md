@@ -1,0 +1,620 @@
+# PACK MANIFEST
+
+Every listed file is part of the Nexus 6LAYER pack. Layer is the GraphLock authority layer, not the runtime code layer.
+
+- `.agent/EXECUTION_RULES.md` - L1 - Nexus blueprint artifact or contract.
+- `.agent/GRAPH.md` - L1 - Nexus blueprint artifact or contract.
+- `.agent/LOOPS.md` - L1 - Nexus blueprint artifact or contract.
+- `.agent/MANIFEST.md` - L2 - Nexus blueprint artifact or contract.
+- `.agent/PLANS.md` - L4 - Nexus blueprint artifact or contract.
+- `.agent/adapters/RECIPE.md` - L2 - Nexus blueprint artifact or contract.
+- `.agent/checklists/agent-readiness.md` - L5 - Executable operator or agent checklist.
+- `.agent/checklists/final-review.md` - L5 - Executable operator or agent checklist.
+- `.agent/checklists/implementation.md` - L5 - Executable operator or agent checklist.
+- `.agent/checklists/incident-response.md` - L5 - Executable operator or agent checklist.
+- `.agent/checklists/preflight.md` - L5 - Executable operator or agent checklist.
+- `.agent/checklists/production-readiness.md` - L5 - Executable operator or agent checklist.
+- `.agent/checklists/release.md` - L5 - Executable operator or agent checklist.
+- `.agent/checklists/rollback.md` - L5 - Executable operator or agent checklist.
+- `.agent/checklists/validation.md` - L5 - Executable operator or agent checklist.
+- `.agent/execplans/EP-000-discovery-and-toolchain.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-001-foundation-and-monorepo.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-002-domain-contracts-and-vocabulary.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-003-identity-people-devices-and-tenancy.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-004-data-memory-and-world-graph.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-005-event-nervous-system.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-006-durable-workflows.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-007-authentication-and-passkeys.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-008-authorization-policy-and-action-gateway.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-009-secrets-trust-and-private-mesh.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-010-capability-registry-and-connector-contract.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-011-connector-sdks-and-sidecar-runtime.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-012-api-mcp-and-a2a-fabric.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-013-model-gateway-and-provider-registry.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-014-deepseek-reflex-and-cache.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-015-model-router-and-microbrain-seam.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-016-context-engine-and-memory-consolidation.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-017-agent-orchestrator-and-harness-adapters.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-018-skill-registry-and-skill-factory.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-019-self-healing-engineering-loop.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-020-home-assistant-and-device-control.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-021-voice-core-stt-tts-wake-and-speaker-id.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-022-voice-satellites-bluetooth-and-audio-routing.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-023-frigate-vision-and-roku-home-provider.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-024-media-appliances-irrigation-and-robotics-providers.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-025-asterisk-telephony-and-ai-calling.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-026-email-fabric.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-027-fax-fabric.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-028-hydra-business-control-plane.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-029-social-command-center.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-030-sentinel-core-network-and-dns.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-031-sentinel-advanced-detection-and-endpoints.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-032-notification-and-communications-router.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-033-web-dashboard-and-desktop.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-034-ios-and-android-mobile.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-035-setup-wizard-and-onboarding.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-036-compute-fabric-and-cloud-provisioning.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-037-artifact-storage-backup-and-disaster-recovery.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-038-observability-and-operations.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-039-license-sbom-and-supply-chain.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-040-testing-hardening-and-chaos.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-041-microbrain-training-factory.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-042-deployment-release-update-and-rollback.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-043-production-readiness-and-ship.md` - L4 - Self-contained graph node execution plan.
+- `.agent/expected-files/EP-000.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-001.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-002.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-003.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-004.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-005.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-006.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-007.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-008.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-009.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-010.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-011.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-012.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-013.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-014.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-015.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-016.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-017.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-018.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-019.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-020.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-021.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-022.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-023.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-024.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-025.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-026.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-027.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-028.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-029.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-030.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-031.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-032.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-033.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-034.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-035.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-036.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-037.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-038.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-039.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-040.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-041.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-042.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-043.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/milestone-files/EP-000-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-000-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-000-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-000-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-000-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-001-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-001-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-001-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-001-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-001-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-002-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-002-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-002-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-002-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-002-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-003-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-003-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-003-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-003-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-003-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-004-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-004-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-004-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-004-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-004-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-005-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-005-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-005-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-005-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-005-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-006-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-006-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-006-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-006-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-006-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-007-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-007-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-007-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-007-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-007-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-008-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-008-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-008-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-008-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-008-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-009-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-009-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-009-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-009-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-009-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-010-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-010-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-010-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-010-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-010-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-011-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-011-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-011-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-011-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-011-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-012-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-012-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-012-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-012-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-012-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-013-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-013-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-013-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-013-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-013-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-014-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-014-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-014-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-014-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-014-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-015-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-015-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-015-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-015-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-015-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-016-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-016-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-016-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-016-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-016-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-017-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-017-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-017-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-017-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-017-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-018-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-018-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-018-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-018-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-018-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-019-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-019-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-019-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-019-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-019-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-020-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-020-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-020-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-020-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-020-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-021-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-021-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-021-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-021-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-021-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-022-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-022-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-022-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-022-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-022-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-023-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-023-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-023-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-023-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-023-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-024-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-024-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-024-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-024-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-024-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-025-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-025-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-025-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-025-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-025-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-026-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-026-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-026-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-026-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-026-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-027-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-027-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-027-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-027-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-027-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-028-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-028-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-028-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-028-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-028-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-029-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-029-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-029-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-029-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-029-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-030-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-030-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-030-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-030-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-030-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-031-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-031-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-031-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-031-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-031-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-032-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-032-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-032-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-032-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-032-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-033-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-033-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-033-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-033-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-033-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-034-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-034-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-034-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-034-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-034-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-035-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-035-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-035-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-035-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-035-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-036-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-036-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-036-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-036-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-036-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-037-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-037-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-037-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-037-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-037-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-038-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-038-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-038-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-038-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-038-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-039-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-039-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-039-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-039-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-039-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-040-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-040-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-040-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-040-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-040-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-041-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-041-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-041-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-041-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-041-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-042-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-042-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-042-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-042-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-042-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-043-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-043-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-043-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-043-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-043-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/node-contracts/EP-000.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-001.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-002.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-003.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-004.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-005.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-006.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-007.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-008.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-009.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-010.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-011.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-012.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-013.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-014.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-015.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-016.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-017.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-018.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-019.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-020.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-021.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-022.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-023.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-024.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-025.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-026.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-027.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-028.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-029.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-030.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-031.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-032.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-033.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-034.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-035.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-036.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-037.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-038.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-039.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-040.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-041.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-042.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-043.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/prompts/continue-execplan.md` - L4 - Nexus blueprint artifact or contract.
+- `.agent/prompts/debug-validation-failure.md` - L4 - Nexus blueprint artifact or contract.
+- `.agent/prompts/execute-active-execplan.md` - L4 - Nexus blueprint artifact or contract.
+- `.agent/prompts/final-review.md` - L4 - Nexus blueprint artifact or contract.
+- `.agent/prompts/run-graph.md` - L4 - Nexus blueprint artifact or contract.
+- `.agent/reality-allow` - L2 - Nexus blueprint artifact or contract.
+- `.agent/reality-patterns` - L2 - Nexus blueprint artifact or contract.
+- `.agent/specs/SPEC-000-product-scope-and-constitutional-priorities.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-001-core-domain-identity-references-and-world-model.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-002-data-memory-fabric-search-and-world-graph.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-003-api-mcp-a2a-artifacts-and-interoperability.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-004-user-experience-dashboard-desktop-and-onboarding.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-005-authentication-authorization-secrets-trust-and-multi-user-privacy.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-006-errors-reliability-idempotency-verification-and-action-safety.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-007-observability-incident-correlation-and-operations.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-008-production-readiness-certification-and-ship-standard.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-009-reflex-ai-model-gateway-routing-cache-and-microbrain-seam.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-010-objectives-agents-harness-adapters-artifacts-and-skills.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-011-home-devices-media-appliances-irrigation-and-robotics-providers.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-012-voice-speech-wake-word-speaker-evidence-satellites-bluetooth-and-audio-routing.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-013-sentinel-firewall-dns-network-detection-and-endpoint-security.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-014-email-phone-fax-notifications-and-communications-routing.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-015-business-control-hydra-crm-social-command-center-and-attribution.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-016-deployment-profiles-setup-compute-fabric-provisioning-and-updates.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-017-web-desktop-ios-android-device-security-and-remote-control.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-018-self-healing-engineering-and-incident-feedback-loop.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-019-licensing-sbom-provenance-and-supply-chain-security.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-020-privacy-data-governance-retention-export-and-deletion.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-021-cameras-frigate-go2rtc-roku-home-visitor-identity-and-two-way-audio.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-022-universal-connector-contract-sdks-sidecar-and-legacy-integration.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-023-events-outbox-temporal-workflows-scheduling-and-human-approvals.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-024-artifacts-object-storage-backup-restore-and-disaster-recovery.md` - L2 - Accepted behavior-first specification.
+- `.agent/specs/SPEC-025-microbrain-dataset-training-evaluation-shadow-and-promotion.md` - L2 - Accepted behavior-first specification.
+- `.agent/state/LEDGER.md` - L6 - Nexus blueprint artifact or contract.
+- `.agent/templates/adr-template.md` - L4 - Canonical authoring template.
+- `.agent/templates/execplan-template.md` - L4 - Canonical authoring template.
+- `.agent/templates/runbook-template.md` - L4 - Canonical authoring template.
+- `.agent/templates/spec-template.md` - L4 - Canonical authoring template.
+- `.agent/templates/test-case-template.md` - L4 - Canonical authoring template.
+- `.clinerules/6layer.md` - L1 - Nexus blueprint artifact or contract.
+- `.cursor/rules/6layer.mdc` - L1 - Nexus blueprint artifact or contract.
+- `.env.example` - L2 - Nexus blueprint artifact or contract.
+- `.github/copilot-instructions.md` - L1 - Nexus blueprint artifact or contract.
+- `.gitignore` - L2 - Nexus blueprint artifact or contract.
+- `AGENTS.md` - L1 - Nexus blueprint artifact or contract.
+- `ARCHITECTURE.md` - L2 - Nexus blueprint artifact or contract.
+- `ASSUMPTIONS.md` - L2 - Nexus blueprint artifact or contract.
+- `CAPABILITY_TAXONOMY.md` - L2 - Nexus blueprint artifact or contract.
+- `CLAUDE.md` - L1 - Nexus blueprint artifact or contract.
+- `COMMANDS.md` - L4 - Nexus blueprint artifact or contract.
+- `COMPONENT_REGISTRY.yaml` - L2 - Nexus blueprint artifact or contract.
+- `COMPUTE_FABRIC.md` - L2 - Nexus blueprint artifact or contract.
+- `CONTRIBUTING.md` - L4 - Nexus blueprint artifact or contract.
+- `DECISIONS.md` - L2 - Nexus blueprint artifact or contract.
+- `DEPLOYMENT.md` - L2 - Nexus blueprint artifact or contract.
+- `ENVIRONMENT.md` - L2 - Nexus blueprint artifact or contract.
+- `GEMINI.md` - L1 - Nexus blueprint artifact or contract.
+- `HERMES.md` - L1 - Nexus blueprint artifact or contract.
+- `HOW_TO_USE.md` - L2 - Nexus blueprint artifact or contract.
+- `LICENSE_POLICY.md` - L2 - Nexus blueprint artifact or contract.
+- `LIVE_FIRE_PROOFS.md` - L2 - Nexus blueprint artifact or contract.
+- `MEMORY_MODEL.md` - L2 - Nexus blueprint artifact or contract.
+- `NEXUS_ARCHITECTURE_ATLAS.md` - L2 - Nexus blueprint artifact or contract.
+- `NEXUS_GRAPHLOCK_INPUTS.md` - L2 - Nexus blueprint artifact or contract.
+- `OBSERVABILITY.md` - L2 - Nexus blueprint artifact or contract.
+- `ONBOARDING_WIZARD.md` - L2 - Nexus blueprint artifact or contract.
+- `OPENCLAW.md` - L1 - Nexus blueprint artifact or contract.
+- `OPERATIONS.md` - L2 - Nexus blueprint artifact or contract.
+- `PREFLIGHT.md` - L2 - Nexus blueprint artifact or contract.
+- `PRODUCTION_READINESS.md` - L5 - Nexus blueprint artifact or contract.
+- `PROJECT_BRIEF.md` - L2 - Nexus blueprint artifact or contract.
+- `README_FIRST.md` - L2 - Nexus blueprint artifact or contract.
+- `RELEASE.md` - L2 - Nexus blueprint artifact or contract.
+- `ROADMAP.md` - L3 - Nexus blueprint artifact or contract.
+- `ROLLBACK.md` - L2 - Nexus blueprint artifact or contract.
+- `SECURITY.md` - L2 - Nexus blueprint artifact or contract.
+- `SOURCE_REGISTRY.md` - L2 - Nexus blueprint artifact or contract.
+- `TESTING.md` - L5 - Nexus blueprint artifact or contract.
+- `VERSIONS.lock.yaml` - L2 - Nexus blueprint artifact or contract.
+- `hardware/CERTIFICATION_RESULTS.md` - L2 - Nexus blueprint artifact or contract.
+- `hardware/COMPATIBILITY_MATRIX.md` - L2 - Nexus blueprint artifact or contract.
+- `hardware/LAB_INVENTORY.yaml` - L2 - Nexus blueprint artifact or contract.
+- `live-fire/REGISTRY.tsv` - L5 - Nexus blueprint artifact or contract.
+- `provider-certification/README.md` - L2 - Nexus blueprint artifact or contract.
+- `provider-certification/RESULTS.md` - L2 - Nexus blueprint artifact or contract.
+- `schemas/README.md` - L2 - Canonical cross-language JSON Schema.
+- `schemas/action-request.schema.json` - L2 - Canonical cross-language JSON Schema.
+- `schemas/capability-descriptor.schema.json` - L2 - Canonical cross-language JSON Schema.
+- `schemas/connector-manifest.schema.json` - L2 - Canonical cross-language JSON Schema.
+- `schemas/deployment-profile.schema.json` - L2 - Canonical cross-language JSON Schema.
+- `schemas/event-envelope.schema.json` - L2 - Canonical cross-language JSON Schema.
+- `schemas/invocation-context.schema.json` - L2 - Canonical cross-language JSON Schema.
+- `schemas/memory-record.schema.json` - L2 - Canonical cross-language JSON Schema.
+- `schemas/nexus-control-object.schema.json` - L2 - Canonical cross-language JSON Schema.
+- `schemas/notification-envelope.schema.json` - L2 - Canonical cross-language JSON Schema.
+- `scripts/backup.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/blueprint_validate.py` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/build.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/certification_validate.py` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/check-shell.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/dependency-audit.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/deploy.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/expected-files.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/format-check.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/generate-contracts.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/graph-next.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/hardware-certify.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/install.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/ledger.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/license-gate.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/license_validate.py` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/lint.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-001.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-002.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-003.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-004.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-005.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-006.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-007.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-008.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-009.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-010.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-011.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-012.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-013.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-014.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-015.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-016.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-017.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-018.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-019.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-020.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-021.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-022.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-023.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-024.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-025.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-026.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-027.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-028.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/local-start.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/local-stop.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/migrate.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/node-artifact-check.py` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/node-verify.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-000.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-001.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-002.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-003.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-004.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-005.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-006.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-007.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-008.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-009.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-010.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-011.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-012.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-013.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-014.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-015.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-016.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-017.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-018.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-019.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-020.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-021.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-022.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-023.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-024.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-025.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-026.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-027.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-028.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-029.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-030.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-031.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-032.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-033.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-034.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-035.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-036.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-037.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-038.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-039.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-040.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-041.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-042.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-043.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/preflight.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/anthropic.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/aws.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/azure_speech.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/backblaze.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/base_domain.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/cloudflare.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/contabo.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/deepgram.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/deepseek_api_key.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/digitalocean.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/docker_host.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/elevenlabs.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/existing_ssh.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/file_secret.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/github.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/glitchtip.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/google_ai.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/google_oauth.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/hetzner.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/home_assistant.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/hydra.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/imap.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/mail_socket.py` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/microsoft_graph.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/openai.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/openwrt.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/opnsense.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/phaxio.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/postiz.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/s3_compatible.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/s3_probe.py` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/smtp.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/telnyx.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/twilio.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/venice.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/probes/xai.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/production-readiness-check.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/profile-preflight.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/proof-runner.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/provider-certify.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/reality-gate.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/release-build.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/restore-drill.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/rollback-drill.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/scope-audit.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/security-check.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/seed-test-tenant.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/smoke-test.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/smoke/runtime.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/stage.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/test-e2e.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/test-integration.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/test-unit.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/toolchain-check.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/typecheck.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/verify.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+
+TOTAL FILES: 614

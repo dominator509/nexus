@@ -1,0 +1,6 @@
+.agent/execplans/EP-034-ios-and-android-mobile.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-034.txt
+.agent/node-contracts/EP-034.md
+scripts/nodes/EP-034.sh
+apps/mobile/

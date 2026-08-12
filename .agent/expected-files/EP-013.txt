@@ -1,0 +1,9 @@
+.agent/execplans/EP-013-model-gateway-and-provider-registry.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-013.txt
+.agent/node-contracts/EP-013.md
+scripts/nodes/EP-013.sh
+crates/nexus-model-gateway/
+infra/bifrost/
+config/models/
+tests/models/gateway/

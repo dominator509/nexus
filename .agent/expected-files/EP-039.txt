@@ -1,0 +1,10 @@
+.agent/execplans/EP-039-license-sbom-and-supply-chain.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-039.txt
+.agent/node-contracts/EP-039.md
+scripts/nodes/EP-039.sh
+crates/nexus-supply-chain/
+supply-chain/
+policies/licenses/
+scripts/sbom/
+tests/supply-chain/

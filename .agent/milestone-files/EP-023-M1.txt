@@ -1,0 +1,7 @@
+.agent/execplans/EP-023-frigate-vision-and-roku-home-provider.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-023.txt
+.agent/node-contracts/EP-023.md
+scripts/nodes/EP-023.sh
+crates/nexus-vision/
+hardware/cameras/

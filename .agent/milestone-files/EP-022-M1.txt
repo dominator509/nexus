@@ -1,0 +1,7 @@
+.agent/execplans/EP-022-voice-satellites-bluetooth-and-audio-routing.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-022.txt
+.agent/node-contracts/EP-022.md
+scripts/nodes/EP-022.sh
+crates/nexus-audio/
+hardware/voice/

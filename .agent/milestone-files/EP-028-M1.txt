@@ -1,0 +1,6 @@
+.agent/execplans/EP-028-hydra-business-control-plane.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-028.txt
+.agent/node-contracts/EP-028.md
+scripts/nodes/EP-028.sh
+crates/nexus-hydra/

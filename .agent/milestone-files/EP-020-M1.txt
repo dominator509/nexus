@@ -1,0 +1,6 @@
+.agent/execplans/EP-020-home-assistant-and-device-control.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-020.txt
+.agent/node-contracts/EP-020.md
+scripts/nodes/EP-020.sh
+crates/nexus-home/

@@ -1,0 +1,19 @@
+schema_version: 1
+owner: unassigned
+locations: []
+devices: []
+required_classes:
+  - home-assistant-edge
+  - controllable-light
+  - contact-sensor
+  - voice-satellite
+  - bluetooth-headset
+  - frigate-camera
+  - roku-home-camera
+  - opnsense-or-openwrt-firewall
+  - android-device
+  - ios-device
+rules:
+  production_credentials: prohibited
+  destructive_tests: prohibited
+  network_isolation: required

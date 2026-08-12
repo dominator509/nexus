@@ -1,0 +1,11 @@
+.agent/execplans/EP-008-authorization-policy-and-action-gateway.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-008.txt
+.agent/node-contracts/EP-008.md
+scripts/nodes/EP-008.sh
+crates/nexus-policy/
+crates/nexus-action-gateway/
+infra/openfga/
+infra/opa/
+policies/
+tests/policy/

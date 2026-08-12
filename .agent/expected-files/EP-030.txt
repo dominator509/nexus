@@ -1,0 +1,11 @@
+.agent/execplans/EP-030-sentinel-core-network-and-dns.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-030.txt
+.agent/node-contracts/EP-030.md
+scripts/nodes/EP-030.sh
+crates/nexus-sentinel/
+connectors/opnsense/
+connectors/openwrt/
+connectors/adguard-home/
+infra/sentinel/core/
+tests/sentinel/core/

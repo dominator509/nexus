@@ -1,0 +1,9 @@
+.agent/execplans/EP-007-authentication-and-passkeys.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-007.txt
+.agent/node-contracts/EP-007.md
+scripts/nodes/EP-007.sh
+crates/nexus-auth/
+infra/keycloak/
+tests/auth/
+schemas/auth/

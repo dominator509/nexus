@@ -1,0 +1,113 @@
+{
+  "$id": "https://schemas.nexus.local/memory-record/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actor": {
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
+    "content": {
+      "type": "object"
+    },
+    "content_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "derived_from": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "embedding_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "memory_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "memory_type": {
+      "enum": [
+        "WORKING",
+        "EPISODIC",
+        "SEMANTIC",
+        "ENTITY",
+        "PROCEDURAL",
+        "DECISION",
+        "SKILL",
+        "SYSTEM"
+      ]
+    },
+    "namespace": {
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "retention": {
+      "type": "string"
+    },
+    "sensitivity": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "PROPOSED",
+        "ACTIVE",
+        "SUPERSEDED",
+        "REJECTED",
+        "DELETED"
+      ]
+    },
+    "supersedes": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "memory_id",
+    "tenant_id",
+    "namespace",
+    "memory_type",
+    "content",
+    "content_hash",
+    "source",
+    "actor",
+    "created_at",
+    "observed_at",
+    "confidence",
+    "sensitivity",
+    "purpose",
+    "retention",
+    "status"
+  ],
+  "title": "MemoryRecord",
+  "type": "object"
+}

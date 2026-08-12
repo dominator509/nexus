@@ -1,0 +1,130 @@
+{
+  "$id": "https://schemas.nexus.local/capability-descriptor/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approval": {
+      "enum": [
+        "NONE",
+        "POLICY",
+        "HUMAN",
+        "STRONG_HUMAN",
+        "FOUR_EYES"
+      ]
+    },
+    "availability": {
+      "enum": [
+        "AVAILABLE",
+        "DEGRADED",
+        "UNAVAILABLE",
+        "UNCERTIFIED"
+      ]
+    },
+    "class": {
+      "enum": [
+        "QUERY",
+        "COMMAND",
+        "WORKFLOW",
+        "STREAM",
+        "ADMINISTRATIVE"
+      ]
+    },
+    "data_classes": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "description": {
+      "maxLength": 1000,
+      "minLength": 10,
+      "type": "string"
+    },
+    "event_types": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "id": {
+      "pattern": "^[a-z][a-z0-9_.-]+$",
+      "type": "string"
+    },
+    "idempotency": {
+      "enum": [
+        "NOT_APPLICABLE",
+        "OPTIONAL",
+        "REQUIRED"
+      ]
+    },
+    "input_schema": {
+      "format": "uri-reference",
+      "type": "string"
+    },
+    "locality": {
+      "enum": [
+        "ANY",
+        "CONTROL_PLANE",
+        "HOME_EDGE",
+        "CLIENT_DEVICE",
+        "HARDWARE_NODE"
+      ]
+    },
+    "output_schema": {
+      "format": "uri-reference",
+      "type": "string"
+    },
+    "provider_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "required_scopes": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "reversal": {
+      "enum": [
+        "NONE",
+        "COMPENSATING",
+        "SNAPSHOT",
+        "IRREVERSIBLE"
+      ]
+    },
+    "risk": {
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3",
+        "R4"
+      ]
+    },
+    "version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "class",
+    "description",
+    "input_schema",
+    "output_schema",
+    "required_scopes",
+    "risk",
+    "approval",
+    "reversal",
+    "idempotency",
+    "availability"
+  ],
+  "title": "CapabilityDescriptor",
+  "type": "object"
+}
