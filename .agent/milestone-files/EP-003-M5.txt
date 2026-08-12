@@ -1,1 +1,9 @@
-
+scripts/env.sh
+scripts/clean-shell-check.sh
+scripts/nodes/EP-003.sh
+scripts/node-verify.sh
+scripts/verify.sh
+scripts/preflight.sh
+scripts/toolchain-check.sh
+scripts/install.sh
+COMMANDS.md

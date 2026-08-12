@@ -6,6 +6,11 @@ Run every command from the repository root. Coding agents must not invent comman
 
 ## Non-interactive environment
 
+Repository scripts source `scripts/env.sh` to establish the canonical
+environment: the exports below plus the mise toolchain shims on PATH, so a
+fresh noninteractive shell can run node verification without a manual
+preamble (EP-003 M5). Equivalent manual exports:
+
 ```sh
 export CI=true
 export GIT_TERMINAL_PROMPT=0
@@ -14,6 +19,7 @@ export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 ```
 
 ## Legal commands
@@ -44,6 +50,7 @@ export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 | Expected-file audit | `sh scripts/expected-files.sh EP-NNN` | `expected files EP-NNN: ok` |
 | Node verify | `sh scripts/node-verify.sh EP-NNN` | `node verify EP-NNN: ok` |
 | Shell syntax | `sh scripts/check-shell.sh` | `shell syntax: ok` |
+| Clean-shell regression | `sh scripts/clean-shell-check.sh` | `clean shell check: ok` |
 | Contract generation | `sh scripts/generate-contracts.sh` | `contract generation: ok` |
 | Provider certification | `sh scripts/provider-certify.sh PROVIDER PROFILE` | `provider certification: ok` |
 | Hardware certification | `sh scripts/hardware-certify.sh TARGET` | `hardware certification: ok` |

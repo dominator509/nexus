@@ -24,3 +24,5 @@
 2026-08-12T21:25:02Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M1 EP-003 M1: ok; nexus-identity crate; all 10 public interfaces; ADR-007 vocabulary; 30 unit tests + dependency direction; fence extended
 2026-08-12T21:26:41Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M2 EP-003 M2: ok; nexus-presence; PresenceFusionEngine single-source cap 0.6; GuestPolicy; TenantGuard no-disclosure; 13 unit tests + dependency direction
 2026-08-12T21:30:01Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M3 EP-003 M3: ok; schemas/identity 9 canonical JSON Schemas; 4 ep003_integration tests real postgres:18.4 dynamic host ports; identity records, sessions, evidence round-trip; container cleanup
+2026-08-12T22:04:49Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M4 EP-003 M4: ok; security check: ok; license gate: ok; 9 Rust + 8 Python failure tests; real failure mechanisms; redaction-corruption repair
+2026-08-12T22:18:46Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M5 EP-003 M5: ok; node verify EP-003: ok; scope audit EP-003: ok; canonical mise PATH bootstrap env.sh + clean-shell-check regression; ops notes in ExecPlan; clippy/ASCII fixes

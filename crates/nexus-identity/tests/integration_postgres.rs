@@ -12,8 +12,7 @@ use std::time::{Duration, Instant};
 
 use nexus_domain::{CorrelationId, DeviceId, NexusId, PersonId, PrincipalType, TenantId};
 use nexus_identity::{
-    EvidenceKind, Household, LifecycleState, PersonProfile, PresenceEvidence, Principal,
-    PrivacyContext, Session,
+    EvidenceKind, Household, LifecycleState, PersonProfile, PresenceEvidence, Principal, Session,
 };
 use postgres::{Client, NoTls};
 

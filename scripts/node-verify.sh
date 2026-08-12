@@ -1,11 +1,7 @@
 #!/usr/bin/env sh
 set -eu
-export CI=true
-export GIT_TERMINAL_PROMPT=0
-export GIT_PAGER=cat
-export PAGER=cat
-export DEBIAN_FRONTEND=noninteractive
-export CARGO_TERM_COLOR=never
+# Canonical environment: mise shims PATH + non-interactive exports.
+. scripts/env.sh
 node="${1:?node id}"
 sh scripts/expected-files.sh "$node"
 sh scripts/verify.sh

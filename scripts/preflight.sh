@@ -1,11 +1,7 @@
 #!/usr/bin/env sh
 set -eu
-export CI=true
-export GIT_TERMINAL_PROMPT=0
-export GIT_PAGER=cat
-export PAGER=cat
-export DEBIAN_FRONTEND=noninteractive
-export CARGO_TERM_COLOR=never
+# Canonical environment: mise shims PATH + non-interactive exports.
+. scripts/env.sh
 fail() { echo "preflight: FAIL - $1" >&2; exit 1; }
 [ -f AGENTS.md ] && [ -d .agent ] || fail "run from repository root"
 for f in AGENTS.md COMMANDS.md PREFLIGHT.md .env.example .agent/GRAPH.md .agent/LOOPS.md .agent/state/LEDGER.md .agent/reality-patterns .agent/reality-allow; do

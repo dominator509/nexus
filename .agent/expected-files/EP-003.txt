@@ -1,6 +1,7 @@
 .agent/execplans/EP-003-identity-people-devices-and-tenancy.md
 .agent/state/LEDGER.md
 .agent/expected-files/EP-003.txt
+.agent/milestone-files/EP-003-M5.txt
 .agent/node-contracts/EP-003.md
 scripts/nodes/EP-003.sh
 crates/nexus-identity/
@@ -11,3 +12,11 @@ Cargo.toml
 Cargo.lock
 docs/vocabulary/README.md
 references/ADR-007-identity-and-presence-vocabulary.md
+scripts/env.sh
+scripts/clean-shell-check.sh
+scripts/node-verify.sh
+scripts/verify.sh
+scripts/preflight.sh
+scripts/toolchain-check.sh
+scripts/install.sh
+COMMANDS.md

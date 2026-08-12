@@ -278,7 +278,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 M1 completed 2026-08-12: `crates/nexus-identity` created with all ten public
 interfaces (Principal, PersonProfile, Household, BusinessBinding,
@@ -314,6 +314,20 @@ cross-tenant no-disclosure. All use real failure mechanisms; no mocks of the
 component under proof. Sentinel: `EP-003 M4: ok`; `security check: ok`;
 `license gate: ok`. Failure-suite wiring added to `scripts/nodes/EP-003.sh`
 M4 and M5|verify modes via explicit pytest invocation.
+
+M5 completed 2026-08-12: `EP-003 M5: ok`; `node verify EP-003: ok`;
+`scope audit EP-003: ok`. Owner clarifications executed: (1) EP-003
+operational notes recorded in this ExecPlan (no standalone docs file; no
+authorized exact path in the fence); (2) canonical mise PATH bootstrap
+(`scripts/env.sh` sourced by node-verify, verify, preflight,
+toolchain-check, install, and the node script) with
+`scripts/clean-shell-check.sh` regression wired into verify.sh (proven
+from a scrubbed `env -i` shell; `clean shell check: ok`). Also fixed
+pre-existing node-verify-only defects: non-ASCII em-dash in
+`tenant_guard.rs`, clippy `too_many_arguments` on `Session::new`, unused
+`PrivacyContext` import in the M3 integration test. Fence amended with
+exact paths for the shared scripts, COMMANDS.md, and the M5 milestone
+fence.
 
 # 12. Surprises & Discoveries
 
@@ -380,7 +394,68 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   display. Evidence: M4 gate green on the repaired file. Consequence:
   treat `***`-masked display as a corruption signal, never as proof of
   content.
+- 2026-08-12 (M5, owner clarification): **Canonical mise PATH bootstrap.**
+  Reproducibility defect: a fresh noninteractive shell
+  (`env -i HOME=/root PATH=/usr/bin:/bin sh scripts/toolchain-check.sh`)
+  fails with `missing locked tool rustc` because no repository script
+  establishes the mise shims PATH. Fix: new repository-owned
+  `scripts/env.sh` (idempotent; exports the COMMANDS.md non-interactive
+  environment and prepends `$HOME/.local/share/mise/shims` and
+  `$HOME/.local/bin` when present), sourced by the entry scripts that
+  gate node verification (`node-verify.sh`, `verify.sh`, `preflight.sh`,
+  `toolchain-check.sh`, `install.sh`, `scripts/nodes/EP-003.sh`), plus a
+  `scripts/clean-shell-check.sh` regression that runs the real toolchain
+  gate from a scrubbed `env -i` shell and is wired into `verify.sh`.
+  User global shell configuration untouched. Fence amended with the exact
+  changed paths below. Alternative rejected: editing `~/.bashrc` (global
+  shell change, forbidden) or a manual PATH preamble per invocation
+  (the defect itself). Reversal: remove the source lines and the two
+  scripts, revert the fence.
+- 2026-08-12 (M5): **Non-ASCII in `tenant_guard.rs` doc comment.** An
+  em-dash in `crates/nexus-presence/src/tenant_guard.rs` (committed in M2)
+  failed blueprint structural validation; the M1-M4 gates never ran
+  preflight, so the defect surfaced only at node-verify. Fixed with an
+  ASCII hyphen; ASCII scan of all fenced files is clean. Same class as the
+  EP-002 ADR-006 em-dash fix. Evidence: `sh scripts/preflight.sh` now
+  prints `preflight: ok`.
 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## EP-003 operational notes (M5)
+
+Recorded in the ExecPlan per owner clarification (no standalone
+`docs/...` operations file; no authorized exact path exists in the EP-003
+fence beyond `docs/vocabulary/README.md`).
+
+- **Health.** `crates/nexus-identity` and `crates/nexus-presence` are
+  libraries, not services; they have no process health endpoint. Their
+  health is their test suites: `cargo test --locked -p nexus-identity`,
+  `cargo test --locked -p nexus-presence`, and the failure suites prove
+  the components initialize and fail closed. Identity/presence state
+  stored in postgres JSONB is covered by the schema round-trip tests.
+- **Readiness.** No standalone readiness probe; downstream nodes that
+  depend on identity/presence should run the node tests before first use.
+  The canonical command environment (`scripts/env.sh`) must be sourced
+  before any toolchain invocation; `scripts/clean-shell-check.sh` proves
+  this from a clean noninteractive shell.
+- **Backup.** Identity and presence data live in the tenant database
+  (postgres JSONB). Backup = database backup; use `scripts/backup.sh`
+  when the owning database node reaches that milestone. No separate
+  artifact store is owned by this node.
+- **Restore.** Restore the tenant database from the backup taken by
+  `scripts/backup.sh`; schema DDL is owned by the identity schemas under
+  `schemas/identity/` and the integration tests prove container-level
+  restore (fresh postgres:18.4 on dynamic ports).
+- **Upgrade.** Bump versions only via the EP-000 toolchain lock
+  (`mise.toml`, `.tool-versions`, VERSIONS.lock.yaml,
+  SOURCE_VERIFICATION.json) with an ADR and green dependency gate.
+  Library upgrade = workspace dependency change + full node verify.
+- **Disable.** To disable presence fusion fallback, use the M5 FALLBACK
+  path (account plus device identity without probabilistic fusion) which
+  satisfies the same public contract. No runtime kill switch is owned by
+  this node.
+- **Rollback.** Roll back to the previous milestone commit under
+  LOOPS.md; never cross a completed green tag. `git revert` of the
+  milestone commit is the smallest reversible option.

@@ -1,7 +1,7 @@
 //! Cross-tenant and cross-business read guard (EP-003 obligation 4).
 //!
 //! Reads outside the caller's tenant or business boundary fail with a
-//! uniform `NotFound` — the same error whether the resource exists in
+//! uniform `NotFound` - the same error whether the resource exists in
 //! another tenant or does not exist at all. This prevents existence
 //! disclosure through error differentiation.
 

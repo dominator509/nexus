@@ -1,11 +1,7 @@
 #!/usr/bin/env sh
 set -eu
-export CI=true
-export GIT_TERMINAL_PROMPT=0
-export GIT_PAGER=cat
-export PAGER=cat
-export DEBIAN_FRONTEND=noninteractive
-export CARGO_TERM_COLOR=never
+# Canonical environment: mise shims PATH + non-interactive exports.
+. scripts/env.sh
 fail() { echo "install: FAIL - $1" >&2; exit 1; }
 for tool in git sh awk grep sed python3 curl openssl docker; do
   command -v "$tool" >/dev/null 2>&1 || fail "install bootstrap prerequisite $tool through the operating system package manager"

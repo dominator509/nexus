@@ -77,6 +77,7 @@ pub struct Session {
 
 impl Session {
     /// Construct an active session.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         session_id: NexusId,
         tenant_id: TenantId,
