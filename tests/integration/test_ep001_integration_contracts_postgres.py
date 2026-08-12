@@ -21,8 +21,23 @@ from nexus_contracts.generated import (
 
 IMAGE = "postgres:18.4"
 IMAGE_DIGEST = "sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636"
-PORT = 55432
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _host_port(container: str) -> int:
+    """Return the host port docker assigned for container port 5432.
+
+    Uses docker's random host-port allocation (`-p 127.0.0.1::5432`) so
+    parallel/rapid test runs never collide on a fixed port (EP-001 M5 flake
+    fix: fixed ports left orphaned docker-proxy listeners).
+    """
+    out = subprocess.run(
+        ["docker", "port", container, "5432"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return int(out.rsplit(":", 1)[1])
 
 
 def _wait_for_postgres(container: str, timeout: float = 60.0) -> None:
@@ -34,13 +49,14 @@ def _wait_for_postgres(container: str, timeout: float = 60.0) -> None:
     consumes the host port, so readiness is defined by a successful connect
     through that port (EP-001 M5 flake fix, ADR-005 discovery).
     """
+    port = _host_port(container)
     deadline = time.monotonic() + timeout
     last_error: Exception | None = None
     while time.monotonic() < deadline:
         try:
             conn = psycopg.connect(
                 host="127.0.0.1",
-                port=PORT,
+                port=port,
                 user="nexus",
                 password="nexus-test",
                 dbname="nexus",
@@ -51,7 +67,7 @@ def _wait_for_postgres(container: str, timeout: float = 60.0) -> None:
         except psycopg.OperationalError as exc:
             last_error = exc
             time.sleep(0.5)
-    raise TimeoutError(f"postgres host port {PORT} not ready within {timeout}s") from last_error
+    raise TimeoutError(f"postgres host port {port} not ready within {timeout}s") from last_error
 
 
 def ep001_integration_contracts_roundtrip_postgres() -> None:
@@ -71,7 +87,7 @@ def ep001_integration_contracts_roundtrip_postgres() -> None:
             "-e",
             "POSTGRES_DB=nexus",
             "-p",
-            f"127.0.0.1:{PORT}:5432",
+            "127.0.0.1::5432",
             f"{IMAGE}@{IMAGE_DIGEST}",
         ],
         check=True,
@@ -80,10 +96,11 @@ def ep001_integration_contracts_roundtrip_postgres() -> None:
     )
     try:
         _wait_for_postgres(name)
+        port = _host_port(name)
 
         conn = psycopg.connect(
             host="127.0.0.1",
-            port=PORT,
+            port=port,
             user="nexus",
             password="nexus-test",
             dbname="nexus",

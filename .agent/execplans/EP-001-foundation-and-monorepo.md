@@ -345,6 +345,18 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   of 6 attempts. Fixed by defining readiness as a successful connect through
   the actual host port in all three suites (Python integration, Python
   failure, TS integration). Node-verify is now stable across repeated runs.
+- 2026-08-12 (M5 closure): **Fixed host ports were a second, deeper flake
+  source.** Even with host-port readiness probing, the fixed ports
+  (55432/55433/55434) collided under rapid container churn: `docker run`
+  failed with `Bind for 127.0.0.1:55434 failed: port is already allocated`
+  because a stale docker-proxy listener from a previous container still held
+  the port. Fixed by switching every ephemeral postgres container to docker's
+  random host-port allocation (`-p 127.0.0.1::5432`) and reading the assigned
+  port via `docker port` (helper `_host_port` in both Python suites, `hostPort`
+  in the TS suite). The negative tests (closed port, blackhole) now allocate
+  free ports via port-0 binding (`_free_port`). Stability proof: 5 consecutive
+  integration runs and 3 consecutive failure-suite runs, all green, plus two
+  full node-verify passes.
 
 # 13. Decision Log
 

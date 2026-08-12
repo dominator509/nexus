@@ -5,7 +5,6 @@ import { Client } from "pg";
 import type { ActionRequest, NexusControlObject } from "../../generated.js";
 
 const IMAGE = "postgres:18.4";
-const PORT = 55433; // distinct from the Python integration test port
 const PASSWORD = "nexus-test";
 
 function run(args: string[]): void {
@@ -15,10 +14,19 @@ function run(args: string[]): void {
   }
 }
 
-async function waitForPostgres(
-  container: string,
-  timeoutMs = 60000,
-): Promise<void> {
+/** Host port docker assigned for the container's 5432. */
+function hostPort(container: string): number {
+  const res = spawnSync("docker", ["port", container, "5432"], {
+    encoding: "utf8",
+  });
+  if (res.status !== 0) {
+    throw new Error(`docker port ${container} 5432 failed: ${res.stderr}`);
+  }
+  const line = res.stdout.trim();
+  return Number(line.slice(line.lastIndexOf(":") + 1));
+}
+
+async function waitForPostgres(port: number, timeoutMs = 60000): Promise<void> {
   // Readiness is proven by connecting through the PUBLISHED HOST PORT, not
   // pg_isready inside the container: docker's host-port publish can lag the
   // server, and the test consumes the host port (EP-001 M5 flake fix).
@@ -27,7 +35,7 @@ async function waitForPostgres(
   while (Date.now() < deadline) {
     const probe = new Client({
       host: "127.0.0.1",
-      port: PORT,
+      port,
       user: "nexus",
       password: PASSWORD,
       database: "nexus",
@@ -43,7 +51,7 @@ async function waitForPostgres(
     }
   }
   throw new Error(
-    `postgres host port ${PORT} not ready within ${timeoutMs}ms`,
+    `postgres host port ${port} not ready within ${timeoutMs}ms`,
     { cause: lastError },
   );
 }
@@ -63,14 +71,15 @@ describe("EP-001 generated contracts through real PostgreSQL", () => {
       "-e",
       "POSTGRES_DB=nexus",
       "-p",
-      `127.0.0.1:${PORT}:5432`,
+      `127.0.0.1::5432`,
       IMAGE,
     ]);
     try {
-      await waitForPostgres(name);
+      const port = hostPort(name);
+      await waitForPostgres(port);
       const client = new Client({
         host: "127.0.0.1",
-        port: PORT,
+        port,
         user: "nexus",
         password: PASSWORD,
         database: "nexus",
