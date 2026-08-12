@@ -15,27 +15,43 @@ function run(args: string[]): void {
   }
 }
 
-async function waitForPostgres(container: string, timeoutMs = 60000): Promise<void> {
+async function waitForPostgres(
+  container: string,
+  timeoutMs = 60000,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const res = spawnSync("docker", ["exec", container, "pg_isready", "-U", "nexus", "-d", "nexus"], {
-      encoding: "utf8",
-    });
+    const res = spawnSync(
+      "docker",
+      ["exec", container, "pg_isready", "-U", "nexus", "-d", "nexus"],
+      {
+        encoding: "utf8",
+      },
+    );
     if (res.status === 0) return;
     await new Promise((r) => setTimeout(r, 1000));
   }
-  throw new Error(`postgres container ${container} not ready within ${timeoutMs}ms`);
+  throw new Error(
+    `postgres container ${container} not ready within ${timeoutMs}ms`,
+  );
 }
 
 describe("EP-001 generated contracts through real PostgreSQL", () => {
   it("round-trips a NexusControlObject and ActionRequest via SQL", async () => {
     const name = `nexus-ep001-ts-${randomUUID().slice(0, 8)}`;
     run([
-      "run", "-d", "--name", name,
-      "-e", `POSTGRES_USER=nexus`,
-      "-e", `POSTGRES_PASSWORD=${PASSWORD}`,
-      "-e", "POSTGRES_DB=nexus",
-      "-p", `127.0.0.1:${PORT}:5432`,
+      "run",
+      "-d",
+      "--name",
+      name,
+      "-e",
+      `POSTGRES_USER=nexus`,
+      "-e",
+      `POSTGRES_PASSWORD=${PASSWORD}`,
+      "-e",
+      "POSTGRES_DB=nexus",
+      "-p",
+      `127.0.0.1:${PORT}:5432`,
       IMAGE,
     ]);
     try {
@@ -49,7 +65,7 @@ describe("EP-001 generated contracts through real PostgreSQL", () => {
       });
       await client.connect();
       await client.query(
-        "CREATE TABLE contract_roundtrip (id TEXT PRIMARY KEY, payload JSONB NOT NULL)"
+        "CREATE TABLE contract_roundtrip (id TEXT PRIMARY KEY, payload JSONB NOT NULL)",
       );
       const obj: NexusControlObject = {
         schemaVersion: "1",
@@ -79,11 +95,12 @@ describe("EP-001 generated contracts through real PostgreSQL", () => {
       };
       await client.query(
         "INSERT INTO contract_roundtrip (id, payload) VALUES ($1, $2), ($3, $4)",
-        ["obj", JSON.stringify(obj), "req", JSON.stringify(req)]
+        ["obj", JSON.stringify(obj), "req", JSON.stringify(req)],
       );
-      const res = await client.query<{ id: string; payload: Record<string, unknown> }>(
-        "SELECT id, payload FROM contract_roundtrip ORDER BY id"
-      );
+      const res = await client.query<{
+        id: string;
+        payload: Record<string, unknown>;
+      }>("SELECT id, payload FROM contract_roundtrip ORDER BY id");
       const fetched = new Map(res.rows.map((r) => [r.id, r.payload]));
       expect(fetched.get("obj")).toEqual(obj);
       expect(fetched.get("req")).toEqual(req);

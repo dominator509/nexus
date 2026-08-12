@@ -48,7 +48,8 @@ fn control_object_serde_roundtrip() {
     assert!(json.contains("\"approvalRequired\""));
     assert!(json.contains("\"executableInstruction\""));
     assert!(json.contains("\"requiredCapabilities\""));
-    let back: nexus_contracts::NexusControlObject = serde_json::from_str(&json).expect("deserialize");
+    let back: nexus_contracts::NexusControlObject =
+        serde_json::from_str(&json).expect("deserialize");
     assert_eq!(obj, back);
 }
 

@@ -29,6 +29,7 @@ export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 | Format check | `sh scripts/format-check.sh` | `format check: ok` |
 | Typecheck | `sh scripts/typecheck.sh` | `typecheck: ok` |
 | Unit tests | `sh scripts/test-unit.sh` | `unit tests: ok` |
+| Failure tests | `sh scripts/test-failure.sh` | `failure tests: ok` |
 | Integration tests | `sh scripts/test-integration.sh` | `integration tests: ok` |
 | E2E tests | `sh scripts/test-e2e.sh` | `e2e tests: ok` |
 | Build | `sh scripts/build.sh` | `build: ok` |

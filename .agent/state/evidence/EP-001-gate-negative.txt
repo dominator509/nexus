@@ -1,0 +1,44 @@
+=== EP-001 M3 gate-masking defect: negative reproduction ===
+
+Original false-green commit: 99cd9e0
+Corrected replacement commit: 33e8e3a
+
+Mechanism (shell set -e):
+  `set -e` does NOT exit mid-`&&`-list. A failing command in a chain
+  `cmd1 && cmd2 && cmd3` leaves the list's exit status nonzero, but set -e
+  only fires on the final command of the list. When the node script wrapped
+  the gates in a case branch and followed with a trailing
+  `echo "EP-001 M3: ok"`, the failure was silently masked and the gate
+  reported ok despite real test failures.
+
+Reproduction (old pattern):
+  $ sh /tmp/mask-defect.sh
+  EP-001 M3: ok
+  $ echo $?
+  0
+
+  Script:
+    set -e
+    python3 -c "import sys; sys.exit(3)" && echo "gate passed" && true || true
+    echo "EP-001 M3: ok"
+  => exit 0, prints ok. Failure masked.
+
+Corrected pattern (explicit rc capture, as committed in 33e8e3a):
+  $ sh /tmp/mask-fixed.sh
+  EP-001 M3: FAIL (exit 3)
+  $ echo $?
+  3
+
+  Script:
+    set -e
+    rc=0
+    python3 -c "import sys; sys.exit(3)" && echo "gate passed" && true || rc=$?
+    if [ "$rc" -ne 0 ]; then echo "EP-001 M3: FAIL (exit $rc)" >&2; exit "$rc"; fi
+    echo "EP-001 M3: ok"
+  => exit 3, FAIL propagates loudly. Negative test passed.
+
+Why the correction was necessary: 99cd9e0 was committed while the gate lied.
+The milestone was not genuinely green. The fix (explicit GATE_EXIT capture in
+scripts/nodes/EP-001.sh) restores honest gate output; M3 was re-run and
+re-committed as 33e8e3a. All 44 node scripts were scanned; only EP-001 had
+the masking pattern (`;` sequences exit correctly under set -e).

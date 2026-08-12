@@ -49,8 +49,7 @@ def camel(name: str) -> str:
 def ts_type(prop: dict, required: bool) -> str:
     t = prop.get("type")
     if "enum" in prop:
-        vals = " | ".join(json.dumps(v) for v in prop["enum"])
-        return f"({vals})"
+        return " | ".join(json.dumps(v) for v in prop["enum"])
     if isinstance(t, list):
         members: list[str] = []
         for x in t:
@@ -156,7 +155,16 @@ def gen_rust(schemas: list[tuple[str, str, dict]]) -> str:
 
 
 def gen_ts(schemas: list[tuple[str, str, dict]]) -> str:
-    lines = [HEADER, "export type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };", ""]
+    lines = [HEADER]
+    jv_members = ["string", "number", "boolean", "null", "JsonValue[]", "{ [k: string]: JsonValue }"]
+    jv_inline = "export type JsonValue = " + " | ".join(jv_members) + ";"
+    if len(jv_inline) <= 80:
+        lines.append(jv_inline)
+    else:
+        lines.append("export type JsonValue =")
+        for i, m in enumerate(jv_members):
+            lines.append(f"  | {m}{';' if i == len(jv_members) - 1 else ''}")
+    lines.append("")
     for name, _, doc in schemas:
         iface = pascal(name)
         lines.append(f"export interface {iface} {{")
@@ -164,7 +172,24 @@ def gen_ts(schemas: list[tuple[str, str, dict]]) -> str:
             required = pname in doc.get("required", [])
             t = ts_type(prop, required)
             opt = "" if required else "?"
-            lines.append(f"  {camel(pname)}{opt}: {t};")
+            pname_ts = f"{camel(pname)}{opt}"
+            inline = f"  {pname_ts}: {t};"
+            if len(inline) <= 80 or " | " not in t:
+                lines.append(inline)
+                continue
+            if t.startswith("Array<") and t.endswith(">"):
+                inner = t[len("Array<"):-1]
+                members = [m.strip() for m in inner.split(" | ")]
+                lines.append(f"  {pname_ts}: Array<")
+                for m in members:
+                    lines.append(f"    | {m}")
+                lines.append("  >;")
+            else:
+                members = [m.strip() for m in t.split(" | ")]
+                lines.append(f"  {pname_ts}:")
+                for i, m in enumerate(members):
+                    suffix = ";" if i == len(members) - 1 else ""
+                    lines.append(f"    | {m}{suffix}")
         lines.append("}")
         lines.append("")
     return "\n".join(lines)

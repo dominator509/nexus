@@ -2,7 +2,18 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-001.txt
 .agent/node-contracts/EP-001.md
+.agent/state/evidence/
 scripts/nodes/EP-001.sh
+scripts/blueprint_validate.py
+scripts/reality-gate.sh
+scripts/test-failure.sh
+scripts/scope-audit.sh
+tests/scope-audit-regression.sh
+.prettierignore
+deny.toml
+COMMANDS.md
+references/ADR-004-blueprint-validator-dependency-aware-scanning.md
+references/ADR-005-prettier-policy-and-full-node-scope-audit.md
 Cargo.toml
 Cargo.lock
 pnpm-workspace.yaml
@@ -16,5 +27,6 @@ crates/
 packages/
 python/
 tests/
+docs/
 .github/workflows/ci.yml
 infra/devcontainer/

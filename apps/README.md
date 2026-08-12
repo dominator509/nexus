@@ -8,14 +8,14 @@ owning node runs. The workspace manifests at the repository root reference
 these paths so the monorepo builds from committed lockfiles even before an
 app's owning node executes.
 
-| Path | Application | Stack | Owning node |
-| --- | --- | --- | --- |
-| `apps/control-plane` | Public and private control API | Rust (Axum) | control-plane node (graph EP-007+) |
-| `apps/edge` | Home and site edge runtime | Rust | edge runtime node |
-| `apps/cli` | Operator and recovery CLI | Rust | CLI node |
-| `apps/web` | React PWA | TypeScript | EP-033 |
-| `apps/setup` | Tauri onboarding and deployment | Rust + TS | EP-035 |
-| `apps/mobile` | Flutter iOS and Android | Dart | EP-034 |
+| Path                 | Application                     | Stack       | Owning node                        |
+| -------------------- | ------------------------------- | ----------- | ---------------------------------- |
+| `apps/control-plane` | Public and private control API  | Rust (Axum) | control-plane node (graph EP-007+) |
+| `apps/edge`          | Home and site edge runtime      | Rust        | edge runtime node                  |
+| `apps/cli`           | Operator and recovery CLI       | Rust        | CLI node                           |
+| `apps/web`           | React PWA                       | TypeScript  | EP-033                             |
+| `apps/setup`         | Tauri onboarding and deployment | Rust + TS   | EP-035                             |
+| `apps/mobile`        | Flutter iOS and Android         | Dart        | EP-034                             |
 
 Ownership rules:
 

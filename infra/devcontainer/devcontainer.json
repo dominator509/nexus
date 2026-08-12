@@ -13,9 +13,7 @@
     "DEBIAN_FRONTEND": "noninteractive",
     "PNPM_HOME": "/root/.local/share/pnpm"
   },
-  "mounts": [
-    "source=docker-socket,target=/var/run/docker.sock,type=bind"
-  ],
+  "mounts": ["source=docker-socket,target=/var/run/docker.sock,type=bind"],
   "customizations": {
     "vscode": {
       "extensions": [

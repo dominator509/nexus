@@ -1,0 +1,45 @@
+# Vendored dependency trees - never first-party source.
+node_modules/
+.venv/
+venv/
+target/
+dist/
+build/
+.pnpm-store/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.dart_tool/
+coverage/
+
+# Pack-controlled documentation. These are L2 specs, L4 plans, and L1/L5
+# control-plane records shipped by the blueprint pack; reformatting them
+# is out of scope for any node (see ADR-005). The format gate validates
+# first-party code: apps, crates, packages, python, tests, docs/.
+.agent/
+references/
+schemas/
+AGENTS.md
+ARCHITECTURE.md
+ASSUMPTIONS.md
+CLAUDE.md
+COMMANDS.md
+COMPONENT_REGISTRY.yaml
+DECISIONS.md
+ENVIRONMENT.md
+GEMINI.md
+HERMES.md
+LICENSE_POLICY.md
+LIVE_FIRE_PROOFS.md
+OPENCLAW.md
+OPERATIONS.md
+PREFLIGHT.md
+PROJECT_BRIEF.md
+SECURITY.md
+TESTING.md
+VERSIONS.lock.yaml
+.clinerules/
+.github/copilot-instructions.md
+
+# Package-manager-owned lockfile: rewritten by pnpm, not by Prettier.
+pnpm-lock.yaml

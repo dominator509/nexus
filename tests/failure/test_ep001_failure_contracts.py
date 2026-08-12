@@ -27,11 +27,19 @@ def _start_container() -> str:
     name = f"nexus-ep001-fail-{uuid.uuid4().hex[:8]}"
     subprocess.run(
         [
-            "docker", "run", "-d", "--name", name,
-            "-e", "POSTGRES_USER=nexus",
-            "-e", "POSTGRES_PASSWORD=nexus-test",
-            "-e", "POSTGRES_DB=nexus",
-            "-p", f"127.0.0.1:{PORT}:5432",
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            name,
+            "-e",
+            "POSTGRES_USER=nexus",
+            "-e",
+            "POSTGRES_PASSWORD=nexus-test",
+            "-e",
+            "POSTGRES_DB=nexus",
+            "-p",
+            f"127.0.0.1:{PORT}:5432",
             f"{IMAGE}@{IMAGE_DIGEST}",
         ],
         check=True,
@@ -150,15 +158,13 @@ def ep001_failure_duplicate_request_rejected() -> None:
         )
         req = _sample_req()
         conn.execute(
-            "INSERT INTO action_log (idempotency_key, action_id, payload)"
-            " VALUES (%s, %s, %s)",
+            "INSERT INTO action_log (idempotency_key, action_id, payload) VALUES (%s, %s, %s)",
             (req["idempotency_key"], req["action_id"], json.dumps(req)),
         )
         conn.commit()
         try:
             conn.execute(
-                "INSERT INTO action_log (idempotency_key, action_id, payload)"
-                " VALUES (%s, %s, %s)",
+                "INSERT INTO action_log (idempotency_key, action_id, payload) VALUES (%s, %s, %s)",
                 (req["idempotency_key"], req["action_id"], json.dumps(req)),
             )
             conn.commit()
@@ -233,9 +239,7 @@ def ep001_failure_cancelled_work_is_clean() -> None:
         _wait_ready(name)
         conn = _connect()
         conn.execute("CREATE TABLE big (id serial PRIMARY KEY, pad text)")
-        conn.execute(
-            "INSERT INTO big (pad) SELECT repeat('x', 100) FROM generate_series(1, 10000)"
-        )
+        conn.execute("INSERT INTO big (pad) SELECT repeat('x', 100) FROM generate_series(1, 10000)")
         conn.commit()
         cur = conn.cursor()
         import threading

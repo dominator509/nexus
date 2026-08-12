@@ -9,8 +9,29 @@ export CARGO_TERM_COLOR=never
 node="${1:?node id}"
 allowed=".agent/expected-files/$node.txt"
 [ -f "$allowed" ] || { echo "scope audit: FAIL - missing $allowed" >&2; exit 1; }
-changed=$(git diff --name-only HEAD~1 2>/dev/null || git diff --name-only)
+
+# Find the earliest milestone commit for this node; its parent is the node baseline.
+first_milestone=$(git log --reverse --format='%H' --grep="^\[$node\]\[M" | head -n 1)
+if [ -n "$first_milestone" ]; then
+  baseline=$(git rev-parse "$first_milestone^")
+else
+  baseline=$(git rev-parse HEAD~1 2>/dev/null || true)
+fi
+
+# Collect all changed paths: committed (baseline..HEAD), staged, unstaged, untracked.
+changed=$( {
+  if [ -n "$baseline" ]; then git diff --name-only "$baseline"..HEAD 2>/dev/null || true; fi
+  git diff --cached --name-only
+  git diff --name-only
+  git ls-files --others --exclude-standard
+} | sort -u )
+
+fail=0
 for path in $changed; do
+  # L6 always-writable state (ledger + evidence) is governed, not fenced.
+  case "$path" in
+    .agent/state/LEDGER.md|.agent/state/evidence/*) continue ;;
+  esac
   ok=0
   while IFS= read -r rule; do
     [ -n "$rule" ] || continue
@@ -21,6 +42,10 @@ for path in $changed; do
     esac
     [ "$ok" -eq 1 ] && break
   done < "$allowed"
-  [ "$ok" -eq 1 ] || { echo "scope audit: FAIL - $path is outside $node" >&2; exit 1; }
+  if [ "$ok" -ne 1 ]; then
+    echo "scope audit: FAIL - $path is outside $node" >&2
+    fail=1
+  fi
 done
+[ "$fail" -eq 0 ] || exit 1
 echo "scope audit $node: ok"

@@ -1,0 +1,5 @@
+=== EP-001 failure tests (real failure mechanisms) ===
+warning: `VIRTUAL_ENV=/root/hermes-env` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+.......                                                                  [100%]
+7 passed in 20.09s
+failure tests: ok

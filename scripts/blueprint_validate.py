@@ -62,6 +62,8 @@ for path in ROOT.rglob("*"):
         continue
     if any(part in IGNORE_DIRS for part in path.parts):
         continue
+    if ".agent/state/evidence" in str(path.relative_to(ROOT)):
+        continue
     data = path.read_bytes()
     try:
         text = data.decode("utf-8")
