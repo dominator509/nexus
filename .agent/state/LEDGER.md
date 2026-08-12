@@ -33,3 +33,5 @@
 2026-08-12T23:27:04Z | hermes-nexus-main | EP-004 | MILESTONE_PASS | M3 EP-004 M3: ok
 2026-08-12T23:32:44Z | hermes-nexus-main | EP-004 | MILESTONE_PASS | M4 EP-004 M4: ok; schema locks sensitivity enum + retention pattern; 7 ep004_failure tests; security check: ok; license gate: ok
 2026-08-12T23:42:08Z | hermes-nexus-main | EP-004 | NODE_DONE | node verify EP-004: ok; scope audit EP-004: ok; verify: ok; commit d9e4f1b; nexus-data + nexus-memory crates; 6 integration + 7 failure real-postgres tests; schema locks sensitivity/retention; generated bindings regenerated; no production deployment
+2026-08-12T23:42:16Z | hermes-nexus-main | EP-005 | LEASE | EP-004 green; starting EP-005
+2026-08-12T23:46:35Z | hermes-nexus-main | EP-005 | MILESTONE_PASS | M1 EP-005 M1: ok; nexus-events crate; envelope/outbox/inbox/consumer/publisher/provisioner contracts; ADR-009 vocabulary; 12 unit tests + dependency direction; gate rc-capture fixed

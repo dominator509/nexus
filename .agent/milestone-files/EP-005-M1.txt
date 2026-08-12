@@ -4,3 +4,7 @@
 .agent/node-contracts/EP-005.md
 scripts/nodes/EP-005.sh
 crates/nexus-events/
+Cargo.toml
+Cargo.lock
+docs/vocabulary/README.md
+references/ADR-009-events-outbox-and-consumer-vocabulary.md

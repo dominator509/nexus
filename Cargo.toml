@@ -7,6 +7,7 @@ members = [
     "crates/nexus-presence",
     "crates/nexus-data",
     "crates/nexus-memory",
+    "crates/nexus-events",
 ]
 
 [workspace.package]

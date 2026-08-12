@@ -143,6 +143,37 @@ no-expiry retention.
 `MOBILE_PUSH`, `DESKTOP`, `SPEAKER`, `SMS`, `EMAIL`, `PHONE`, `WATCH`,
 `CAR`. (SPEC-014)
 
+## EventType
+
+Dotted lowercase slug, e.g. `memory.record.created`. Event type of an
+`EventEnvelope` (SPEC-023; ADR-009). New types are added by ADR and schema
+update, never invented at runtime.
+
+## EventDataClass
+
+`PUBLIC`, `HOUSEHOLD`, `PERSONAL`, `SENSITIVE`, `BUSINESS_CONFIDENTIAL`,
+`SECURITY`, `SECRET`. Event data classification (SPEC-023 behavior 3,
+SPEC-020; ADR-009). Wire strings match the privacy ladder so event
+filtering and redaction reuse the same policy classes (INV-014).
+
+## OutboxStatus
+
+`PENDING`, `PUBLISHING`, `PUBLISHED`, `FAILED`. Transactional outbox
+lifecycle (SPEC-023 behaviors 1-2; ADR-009). A row becomes `PUBLISHED`
+only after the transport acknowledges durable storage.
+
+## InboxStatus
+
+`NEW`, `PROCESSING`, `DONE`, `FAILED`. Consumer inbox lifecycle
+(SPEC-023 behavior 4; ADR-009). Consumers deduplicate by event ID so
+replay does not create duplicate logical effects.
+
+## DurableConsumer
+
+A consumer with a durable `ConsumerCheckpoint` (consumer, stream,
+subject, last sequence) that resumes after restart (SPEC-023 behavior 4;
+ADR-009). Idempotent by construction.
+
 ## Provider-neutrality rule
 
 No provider brand (Alexa, Google, Apple, Samsung, Philips, Tuya, AWS, Azure,

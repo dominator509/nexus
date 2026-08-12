@@ -270,11 +270,30 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+M1 completed 2026-08-12: `crates/nexus-events/` created with the canonical
+event contracts (SPEC-023): `EventEnvelope` (event ID, type, schema
+version, source, subject, time, tenant, actor, correlation, causation,
+data class, payload; closed wire model via `deny_unknown_fields`),
+`EventType` (dotted lowercase slug), `EventDataClass` (SPEC-020 privacy
+ladder), `EventError`/`EventErrorCode` (SPEC-006 codes), `OutboxRecord`/
+`OutboxStatus`/`OutboxRepository` (transactional outbox behind the
+UnitOfWork boundary), `InboxRecord`/`InboxStatus`/`InboxRepository`
+(deduplication ledger), `ConsumerCheckpoint`/`ConsumerConfig`/
+`EventConsumer` (durable resumable consumers), `StreamConfig`/
+`StreamProvisioner` (one canonical stream), `EventPublisher` (JetStream
+ack precedes outbox completion). ADR-009 adds the event vocabulary to
+`docs/vocabulary/README.md` (EventType, EventDataClass, OutboxStatus,
+InboxStatus, DurableConsumer). 12 `ep005_unit_` Rust tests +
+dependency-direction test pass. Workspace membership extended; Cargo.lock
+regenerated offline (90 packages). Node script M1 gate fixed to capture
+real exit (was swallowing failures and printing `ok` - gate-integrity
+lesson from EP-001). Sentinel: `EP-005 M1: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -283,6 +302,29 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-12 (M1): **Event contracts live in `nexus-events`, provider
+  neutral.** The crate owns the seven public interfaces from the node
+  contract. NATS JetStream implements the ports in `infra/nats` (M2+);
+  the contract crate imports `nexus-domain` (typed IDs) and `nexus-data`
+  (UnitOfWork boundary) only. Evidence: dependency-direction test forbids
+  tokio/nats/postgres/etc. in the resolved tree.
+- 2026-08-12 (M1): **Event vocabulary added by ADR-009.** EventType
+  (dotted slug), EventDataClass (SPEC-020 privacy ladder), OutboxStatus,
+  InboxStatus, DurableConsumer are vocabulary-locked contracts owned by
+  `nexus-events`. Workflow/Activity/Signal/Query/Schedule/
+  ApprovalWorkflow/Compensation are Temporal-owned and deferred to the
+  workflow node. Evidence: ADR-009, vocabulary README, unit tests.
+- 2026-08-12 (M1): **`EventEnvelope` wire model is closed.** Serde
+  `deny_unknown_fields` enforces additionalProperties: false; unknown
+  fields are rejected at parse time, matching the M3 schema contract.
+- 2026-08-12 (M1): **Node script M1 gate was a stub that swallowed test
+  failures.** The original `EP-005.sh` printed `EP-005 M1: ok` even when
+  `cargo test` failed because the rc check block was missing (the
+  EP-001 gate-masking defect class). Fixed with `|| rc=$?` capture and
+  the trailing rc check before printing the sentinel. Evidence: first M1
+  run printed `ok` with a failing test; after the fix the same failure
+  exited nonzero.
 
 # 14. Outcomes & Retrospective
 

@@ -299,6 +299,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-events"
+version = "0.1.0"
+dependencies = [
+ "nexus-data",
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-identity"
 version = "0.1.0"
 dependencies = [
