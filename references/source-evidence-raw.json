@@ -1,0 +1,488 @@
+{
+  "rust": {
+    "repo": "rust-lang/rust",
+    "candidates": [
+      "1.97.1"
+    ],
+    "tag": "1.97.1",
+    "commit": "main",
+    "release_date": "2026-07-16T12:29:15Z",
+    "license": "Apache-2.0"
+  },
+  "uv": {
+    "repo": "astral-sh/uv",
+    "candidates": [
+      "0.12.0"
+    ],
+    "tag": "0.12.0",
+    "commit": "b88d7c5c46cbe3c9896544f10255f85a8f0a8a5e",
+    "release_date": "2026-07-28T18:58:12Z",
+    "license": "Apache-2.0"
+  },
+  "node": {
+    "repo": "nodejs/node",
+    "candidates": [
+      "v24.18.0"
+    ],
+    "tag": "v24.18.0",
+    "commit": "main",
+    "release_date": "2026-06-23T23:11:37Z",
+    "license": "NOASSERTION"
+  },
+  "pnpm": {
+    "repo": "pnpm/pnpm",
+    "candidates": [
+      "v11.17.0"
+    ],
+    "tag": "v11.17.0",
+    "commit": "main",
+    "release_date": "2026-07-23T17:03:37Z",
+    "license": "MIT"
+  },
+  "flutter": {
+    "repo": "flutter/flutter",
+    "candidates": [
+      "3.44.7"
+    ],
+    "tag": "3.44.7",
+    "commit": "84fc5cbb223bc12f83d65b647ff8a56caf779ffd",
+    "release_date": "",
+    "license": "BSD-3-Clause"
+  },
+  "tauri": {
+    "repo": "tauri-apps/tauri",
+    "candidates": [
+      "tauri-v2.11.2",
+      "v2.11.2"
+    ],
+    "tag": "tauri-v2.11.2",
+    "commit": "499df79be65ef8c0670abc0207cd9e37b55d8491",
+    "release_date": "2026-05-16T16:53:28Z",
+    "license": "Apache-2.0"
+  },
+  "react": {
+    "repo": "facebook/react",
+    "candidates": [
+      "v19.2.8"
+    ],
+    "tag": "v19.2.8",
+    "commit": "main",
+    "release_date": "2026-07-21T15:49:09Z",
+    "license": "MIT"
+  },
+  "pgvector": {
+    "repo": "pgvector/pgvector",
+    "candidates": [
+      "v0.8.6"
+    ],
+    "tag": "v0.8.6",
+    "commit": "8ee86c96f0fd72390f890aa8a336fda6d3ab4c6c",
+    "release_date": "",
+    "license": "NOASSERTION"
+  },
+  "nats": {
+    "repo": "nats-io/nats-server",
+    "candidates": [
+      "v2.14.3"
+    ],
+    "tag": "v2.14.3",
+    "commit": "main",
+    "release_date": "2026-06-29T15:36:28Z",
+    "license": "Apache-2.0"
+  },
+  "temporal-server": {
+    "repo": "temporalio/temporal",
+    "candidates": [
+      "v1.31.2"
+    ],
+    "tag": "v1.31.2",
+    "commit": "release/v1.31.x",
+    "release_date": "2026-07-08T17:10:11Z",
+    "license": "MIT"
+  },
+  "temporal-typescript-sdk": {
+    "repo": "temporalio/sdk-typescript",
+    "candidates": [
+      "v1.17.2",
+      "v1.17.1"
+    ],
+    "tag": "v1.17.1",
+    "commit": "main",
+    "release_date": "2026-05-08T18:22:27Z",
+    "license": "MIT"
+  },
+  "keycloak": {
+    "repo": "keycloak/keycloak",
+    "candidates": [
+      "26.7.0"
+    ],
+    "tag": "26.7.0",
+    "commit": "main",
+    "release_date": "2026-07-09T06:58:13Z",
+    "license": "Apache-2.0"
+  },
+  "openfga": {
+    "repo": "openfga/openfga",
+    "candidates": [
+      "v1.18.1"
+    ],
+    "tag": "v1.18.1",
+    "commit": "main",
+    "release_date": "2026-06-29T18:57:07Z",
+    "license": "Apache-2.0"
+  },
+  "opa": {
+    "repo": "open-policy-agent/opa",
+    "candidates": [
+      "v1.16.2"
+    ],
+    "tag": "v1.16.2",
+    "commit": "main",
+    "release_date": "2026-05-12T10:27:35Z",
+    "license": "Apache-2.0"
+  },
+  "openbao": {
+    "repo": "openbao/openbao",
+    "candidates": [
+      "v2.5.4"
+    ],
+    "tag": "v2.5.4",
+    "commit": "main",
+    "release_date": "2026-05-20T16:15:07Z",
+    "license": "MPL-2.0"
+  },
+  "sops": {
+    "repo": "getsops/sops",
+    "candidates": [
+      "v3.13.0"
+    ],
+    "tag": "v3.13.0",
+    "commit": "main",
+    "release_date": "2026-05-08T18:10:42Z",
+    "license": "MPL-2.0"
+  },
+  "headscale": {
+    "repo": "juanfont/headscale",
+    "candidates": [
+      "v0.28.0"
+    ],
+    "tag": "v0.28.0",
+    "commit": "main",
+    "release_date": "2026-02-04T20:40:23Z",
+    "license": "BSD-3-Clause"
+  },
+  "caddy": {
+    "repo": "caddyserver/caddy",
+    "candidates": [
+      "v2.11.4"
+    ],
+    "tag": "v2.11.4",
+    "commit": "master",
+    "release_date": "2026-06-03T06:52:22Z",
+    "license": "Apache-2.0"
+  },
+  "opentofu": {
+    "repo": "opentofu/opentofu",
+    "candidates": [
+      "v1.12.1"
+    ],
+    "tag": "v1.12.1",
+    "commit": "main",
+    "release_date": "2026-05-27T10:44:28Z",
+    "license": "MPL-2.0"
+  },
+  "docker-compose": {
+    "repo": "docker/compose",
+    "candidates": [
+      "v5.1.4"
+    ],
+    "tag": "v5.1.4",
+    "commit": "main",
+    "release_date": "2026-05-20T15:22:40Z",
+    "license": "Apache-2.0"
+  },
+  "opentelemetry-collector": {
+    "repo": "open-telemetry/opentelemetry-collector",
+    "candidates": [
+      "v0.158.0"
+    ],
+    "tag": "v0.158.0",
+    "commit": "main",
+    "release_date": "2026-08-04T13:44:21Z",
+    "license": "Apache-2.0"
+  },
+  "home-assistant-core": {
+    "repo": "home-assistant/core",
+    "candidates": [
+      "2026.7.3"
+    ],
+    "tag": "2026.7.3",
+    "commit": "master",
+    "release_date": "2026-07-21T18:40:38Z",
+    "license": "Apache-2.0"
+  },
+  "frigate": {
+    "repo": "blakeblackshear/frigate",
+    "candidates": [
+      "v0.17.1"
+    ],
+    "tag": "v0.17.1",
+    "commit": "master",
+    "release_date": "2026-03-22T20:29:09Z",
+    "license": "MIT"
+  },
+  "go2rtc": {
+    "repo": "AlexxIT/go2rtc",
+    "candidates": [
+      "v1.9.14"
+    ],
+    "tag": "v1.9.14",
+    "commit": "master",
+    "release_date": "2026-01-19T09:16:56Z",
+    "license": "MIT"
+  },
+  "esphome": {
+    "repo": "esphome/esphome",
+    "candidates": [
+      "2026.7.3"
+    ],
+    "tag": "2026.7.3",
+    "commit": "release",
+    "release_date": "2026-07-28T10:43:27Z",
+    "license": "NOASSERTION"
+  },
+  "whisper.cpp": {
+    "repo": "ggml-org/whisper.cpp",
+    "candidates": [
+      "v1.9.1"
+    ],
+    "tag": "v1.9.1",
+    "commit": "f049fff95a089aa9969deb009cdd4892b3e74916",
+    "release_date": "2026-06-19T05:53:19Z",
+    "license": "MIT"
+  },
+  "asterisk": {
+    "repo": "asterisk/asterisk",
+    "candidates": [
+      "22.10.1"
+    ],
+    "tag": "22.10.1",
+    "commit": "releases/22",
+    "release_date": "2026-06-25T17:17:19Z",
+    "license": "NOASSERTION"
+  },
+  "ictfax": {
+    "repo": "ictinnovations/ictfax",
+    "candidates": [
+      "v4.0.0"
+    ],
+    "tag": "v4.0.0",
+    "commit": "master",
+    "release_date": "2019-02-13T06:25:45Z",
+    "license": "GPL-3.0"
+  },
+  "hylafax": {
+    "repo": "hylafax/hylafax",
+    "candidates": [
+      "HYLAFAX-6_0_7"
+    ],
+    "tag": "HYLAFAX-6_0_7",
+    "commit": "14823cca2de1ecfacbe8a83e6d3659f8a2d6bc27",
+    "release_date": "",
+    "license": "NOASSERTION"
+  },
+  "opnsense": {
+    "repo": "opnsense/core",
+    "candidates": [
+      "26.7.1"
+    ],
+    "tag": "26.7.1",
+    "commit": "bdfe9d0264c7222a0541128b2cb7a1d3b1dc2b56",
+    "release_date": "",
+    "license": "BSD-2-Clause"
+  },
+  "openwrt": {
+    "repo": "openwrt/openwrt",
+    "candidates": [
+      "v25.12.5"
+    ],
+    "tag": "v25.12.5",
+    "commit": "main",
+    "release_date": "2026-07-01T00:10:15Z",
+    "license": "NOASSERTION"
+  },
+  "adguard-home": {
+    "repo": "AdguardTeam/AdGuardHome",
+    "candidates": [
+      "v0.107.76"
+    ],
+    "tag": "v0.107.76",
+    "commit": "master",
+    "release_date": "2026-05-21T18:26:30Z",
+    "license": "GPL-3.0"
+  },
+  "suricata": {
+    "repo": "OISF/suricata",
+    "candidates": [
+      "suricata-8.0.6"
+    ],
+    "tag": "suricata-8.0.6",
+    "commit": "main",
+    "release_date": "2026-07-07T19:26:37Z",
+    "license": "GPL-2.0"
+  },
+  "zeek": {
+    "repo": "zeek/zeek",
+    "candidates": [
+      "v8.0.9"
+    ],
+    "tag": "v8.0.9",
+    "commit": "master",
+    "release_date": "2026-07-10T20:04:48Z",
+    "license": "NOASSERTION"
+  },
+  "crowdsec": {
+    "repo": "crowdsecurity/crowdsec",
+    "candidates": [
+      "v1.7.8"
+    ],
+    "tag": "v1.7.8",
+    "commit": "refs/heads/releases/1.7.x",
+    "release_date": "2026-05-11T07:53:36Z",
+    "license": "MIT"
+  },
+  "wazuh": {
+    "repo": "wazuh/wazuh",
+    "candidates": [
+      "v4.14.5"
+    ],
+    "tag": "v4.14.5",
+    "commit": "4.14.5",
+    "release_date": "2026-04-23T11:46:46Z",
+    "license": "NOASSERTION"
+  },
+  "postiz": {
+    "repo": "gitroomhq/postiz-app",
+    "candidates": [
+      "v2.21.8"
+    ],
+    "tag": "v2.21.8",
+    "commit": "main",
+    "release_date": "2026-05-22T18:29:02Z",
+    "license": "AGPL-3.0"
+  },
+  "a2a-protocol": {
+    "repo": "a2aproject/A2A",
+    "candidates": [
+      "v1.0.1"
+    ],
+    "tag": "v1.0.1",
+    "commit": "3303592588e388e62e0f69f701af531d2f4e3991",
+    "release_date": "2026-05-28T11:34:36Z",
+    "license": "Apache-2.0"
+  },
+  "a2a-js-sdk": {
+    "repo": "a2aproject/a2a-js",
+    "candidates": [
+      "v1.0.0"
+    ],
+    "tag": "v1.0.0",
+    "commit": "e111657166eaf3932a8b3b0dc88bcc2a506938de",
+    "release_date": "2026-07-22T15:03:42Z",
+    "license": "Apache-2.0"
+  },
+  "seaweedfs": {
+    "repo": "seaweedfs/seaweedfs",
+    "candidates": [
+      "4.29"
+    ],
+    "tag": "4.29",
+    "commit": "master",
+    "release_date": "2026-05-26T05:57:10Z",
+    "license": "Apache-2.0"
+  },
+  "minio-community": {
+    "repo": "minio/minio",
+    "candidates": [
+      "RELEASE.2025-10-15T17-29-55Z"
+    ],
+    "tag": "RELEASE.2025-10-15T17-29-55Z",
+    "commit": "master",
+    "release_date": "2025-10-16T19:33:51Z",
+    "license": "AGPL-3.0"
+  },
+  "docker-engine": {
+    "repo": "moby/moby",
+    "candidates": [
+      "docker-v29.1.0",
+      "docker-v29.1.1",
+      "docker-v29.1.3"
+    ],
+    "tag": "docker-v29.1.0",
+    "commit": "master",
+    "release_date": "2025-11-27T17:35:17Z",
+    "license": "Apache-2.0"
+  },
+  "mcp-spec": {
+    "repo": "modelcontextprotocol/modelcontextprotocol",
+    "candidates": [
+      "2025-11-25"
+    ],
+    "tag": "2025-11-25",
+    "commit": "main",
+    "release_date": "2025-11-25T21:17:42Z",
+    "license": "NOASSERTION"
+  },
+  "python": {
+    "url": "https://www.python.org/downloads/release/python-3146/",
+    "owner": "Python Software Foundation",
+    "version": "3.14.6",
+    "license": "PSF-2.0"
+  },
+  "postgresql": {
+    "url": "https://www.postgresql.org/docs/18/release-18-4.html",
+    "owner": "PostgreSQL Global Development Group",
+    "version": "18.4",
+    "license": "PostgreSQL"
+  },
+  "agent-skills-spec": {
+    "url": "https://agentskills.io/specification",
+    "owner": "Agent Skills community",
+    "version": "snapshot-2026-08-12",
+    "license": "Apache-2.0-code",
+    "note": "vendored spec snapshot per VERSIONS.lock.yaml; retrieval via agentskills.io specification snapshot dated 2026-08-12"
+  },
+  "glitchtip": {
+    "url": "https://hub.docker.com/r/glitchtip/glitchtip/tags",
+    "owner": "GlitchTip (gitlab.com/glitchtip/glitchtip)",
+    "version": "6.1.8",
+    "license": "MIT",
+    "note": "GitHub mirror has no tags; authoritative release artifacts are Docker Hub images. 6.1.8 confirmed present."
+  },
+  "openwakeword": {
+    "url": "https://github.com/dscripka/openWakeWord",
+    "owner": "dscripka",
+    "commit": "368c03716d1e92591906a84949bc477f3a834455",
+    "commit_date": "2025-12-30T16:47:22Z",
+    "license": "Apache-2.0",
+    "version": "source-commit-pinned-in-EP-000",
+    "note": "runtime code pinned; bundled upstream noncommercial weights must not ship (SPEC-019)"
+  },
+  "silero-vad": {
+    "url": "https://github.com/snakers4/silero-vad",
+    "owner": "snakers4",
+    "commit": "76e3dc408eb2a5c655c34e230d2d5459b4439daa",
+    "commit_date": "2026-07-16T12:50:07Z",
+    "license": "MIT",
+    "version": "source-commit-pinned-in-EP-000"
+  },
+  "kokoro": {
+    "url": "https://github.com/hexgrad/kokoro",
+    "owner": "hexgrad",
+    "version": "0.19 (model) / 0.9.4 (pyproject)",
+    "license": "Apache-2.0",
+    "release_date": "",
+    "commit": "",
+    "note": "VERSIONS.lock 0.19 refers to model release lineage; upstream pyproject currently 0.9.4. Recorded as discrepancy for ADR review."
+  }
+}
