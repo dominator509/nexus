@@ -7,16 +7,23 @@ export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
+rc=0
 case "$mode" in
-  M1) python3 scripts/node-artifact-check.py EP-001 M1 ;;
-  M2) python3 scripts/node-artifact-check.py EP-001 M2; sh scripts/lint.sh && sh scripts/typecheck.sh && sh scripts/test-unit.sh ;;
-  M3) python3 scripts/node-artifact-check.py EP-001 M3; sh scripts/lint.sh && sh scripts/typecheck.sh && sh scripts/test-unit.sh ;;
-  M4) python3 scripts/node-artifact-check.py EP-001 M4; sh scripts/lint.sh && sh scripts/typecheck.sh && sh scripts/test-unit.sh ;;
+  M1) python3 scripts/node-artifact-check.py EP-001 M1 || rc=$? ;;
+  M2) python3 scripts/node-artifact-check.py EP-001 M2 && sh scripts/lint.sh && sh scripts/typecheck.sh && sh scripts/test-unit.sh || rc=$? ;;
+  M3) python3 scripts/node-artifact-check.py EP-001 M3 && sh scripts/lint.sh && sh scripts/typecheck.sh && sh scripts/test-unit.sh || rc=$? ;;
+  M4) python3 scripts/node-artifact-check.py EP-001 M4 && sh scripts/lint.sh && sh scripts/typecheck.sh && sh scripts/test-unit.sh || rc=$? ;;
   M5|verify)
-      python3 scripts/node-artifact-check.py EP-001 M5
-      sh scripts/lint.sh && sh scripts/typecheck.sh && sh scripts/test-unit.sh
-      :
+      python3 scripts/node-artifact-check.py EP-001 M5 \
+      && sh scripts/lint.sh \
+      && sh scripts/typecheck.sh \
+      && sh scripts/test-unit.sh
+      rc=$?
       ;;
   *) echo "EP-001: FAIL - unknown mode $mode" >&2; exit 2;;
 esac
+if [ "$rc" -ne 0 ]; then
+  echo "EP-001 $mode: FAIL (exit $rc)" >&2
+  exit "$rc"
+fi
 echo "EP-001 $mode: ok"
