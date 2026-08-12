@@ -5,7 +5,7 @@
 //! record and a reference time, it reports whether the record is eligible
 //! for deletion or must be retained.
 
-use nexus_data::{DataError, DataErrorCode, MemoryRecord, MemoryStatus, RetentionUnit};
+use nexus_data::{DataError, DataErrorCode, MemoryRecord, RetentionUnit};
 
 /// Retention evaluation error.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -181,7 +181,7 @@ fn format_unix_rfc3339(unix: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nexus_data::{RetentionPolicy, Sensitivity};
+    use nexus_data::{MemoryStatus, RetentionPolicy, Sensitivity};
     use nexus_domain::MemoryType;
     use nexus_domain::{NexusId, TenantId};
 

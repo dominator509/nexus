@@ -30,3 +30,4 @@
 2026-08-12T22:23:23Z | hermes-nexus-main | EP-004 | LEASE | EP-003 green; starting EP-004
 2026-08-12T22:33:19Z | hermes-nexus-main | EP-004 | MILESTONE_PASS | M1 EP-004 M1: ok; nexus-data crate; memory contracts + ports; ADR-008 vocabulary; 13 Rust + 7 Python tests; fence extended
 2026-08-12T22:36:19Z | hermes-nexus-main | EP-004 | MILESTONE_PASS | M2 EP-004 M2: ok; nexus-memory behavior engines; proposal/retention/lifecycle/retrieval; 19 Rust tests + dependency direction
+2026-08-12T23:27:04Z | hermes-nexus-main | EP-004 | MILESTONE_PASS | M3 EP-004 M3: ok

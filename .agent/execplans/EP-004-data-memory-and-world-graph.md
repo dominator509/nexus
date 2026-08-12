@@ -277,7 +277,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -304,6 +304,23 @@ deletion and supersession target validation), `RetrievalPolicy` (hybrid
 blend ranking + per-namespace diversity cap). 19 `ep004_unit_` tests +
 dependency-direction test pass. Sentinel: `EP-004 M2: ok`. Workspace
 membership extended; Cargo.lock regenerated offline.
+
+M3 completed 2026-08-12: `migrations/` created with two additive SQL
+migrations. `001_memory_and_world_graph.sql`: `memory_records`
+(SPEC-002 behavior 4, mirroring `schemas/memory-record.schema.json`;
+native UUID keys, JSONB content, content_hash check, tenant status
+constraint, supersedes self-check, tenant-scoped indexes, GIN FTS),
+`world_graph_edges` adjacency table (fallback doctrine; recursive walks
+only, no dedicated graph database). `002_memory_embeddings_vector.sql`:
+pgvector extension, `memory_embeddings` (memory_id FK cascade, model and
+dimensions provenance, `vector(384)`), tenant index, HNSW
+`vector_cosine_ops` index. 6 `ep004_integration_` tests against real
+`pgvector/pgvector:pg18` (pinned VERSIONS.lock.yaml) in ephemeral
+containers with dynamically allocated host ports: JSONB round-trip,
+tenant isolation, transactional supersession, recursive adjacency walk,
+vector extension + HNSW + cosine proof, migration idempotency. postgres
+0.19.14 dev-dep with `with-serde_json-1` + `with-uuid-1`; uuid dev-dep.
+Cargo.lock regenerated offline (90 packages). Sentinel: `EP-004 M3: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -355,6 +372,33 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   Hinnant civil-from-days algorithm. Evidence: round-trip test. Consequence:
   only the canonical UTC form is accepted; fractional seconds and offsets
   are rejected (schema uses date-time UTC).
+- 2026-08-12 (M3): **Memory and graph tables use native PostgreSQL UUID
+  columns.** SPEC-002 requires typed IDs; EP-003 used TEXT columns, but the
+  EP-004 migrations declare `UUID PRIMARY KEY` / `UUID NOT NULL` and the
+  integration tests pass `uuid::Uuid` values via the postgres
+  `with-uuid-1` feature. Evidence: `ep004_integration_*` green against
+  `pgvector/pgvector:pg18`; `uid()` parse helper in
+  `tests/integration_postgres.rs`. Alternative rejected: TEXT columns
+  (loses DB-level type enforcement) and the `uuid` crate's `Uuid` only as
+  strings (client-side ToSql mismatch, observed as WrongType errors).
+  Consequence: uuid 1.x dev-dep; dev-deps stay invisible to the
+  dependency-direction gate.
+- 2026-08-12 (M3): **Timestamp parameters use SQL literals, not typed
+  parameters.** The postgres crate rejects `&str` for a `$n::timestamptz`
+  parameter (client-side ToSql type check) and the workspace deliberately
+  avoids chrono, so the tests embed fixed RFC 3339 UTC literals with
+  `::timestamptz` casts. Evidence: round-trip / supersession tests green.
+  Alternative rejected: adding chrono + `with-chrono-1` (introduces the
+  dependency the M2 decision explicitly excluded).
+- 2026-08-12 (M3): **pgvector test values are generated 384-dimension
+  literals embedded in SQL.** The postgres crate cannot map `String` to
+  the `vector` OID (client-side ToSql rejection), so the test builds a
+  384-dimension `[0.1,...]` literal and interpolates it into the SQL text
+  with `::vector` cast; the embedding row also inserts its parent
+  `memory_records` row first because the FK is real and enforced.
+  Evidence: `ep004_integration_pgvector_extension_and_hnsw_are_real`
+  green. Consequence: the HNSW index and cosine operator are exercised
+  against the real extension.
 
 # 14. Outcomes & Retrospective
 
