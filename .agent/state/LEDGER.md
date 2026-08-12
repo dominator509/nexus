@@ -27,3 +27,5 @@
 2026-08-12T22:04:49Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M4 EP-003 M4: ok; security check: ok; license gate: ok; 9 Rust + 8 Python failure tests; real failure mechanisms; redaction-corruption repair
 2026-08-12T22:18:46Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M5 EP-003 M5: ok; node verify EP-003: ok; scope audit EP-003: ok; canonical mise PATH bootstrap env.sh + clean-shell-check regression; ops notes in ExecPlan; clippy/ASCII fixes
 2026-08-12T22:23:15Z | hermes-nexus-main | EP-003 | NODE_DONE | node verify EP-003: ok; scope audit EP-003: ok; verify: ok; commit ac8d8c8; 10 public interfaces; ADR-007; PresenceFusionEngine; 9 identity JSON Schemas; 9 Rust + 8 Python failure tests; canonical mise PATH bootstrap; no production deployment
+2026-08-12T22:23:23Z | hermes-nexus-main | EP-004 | LEASE | EP-003 green; starting EP-004
+2026-08-12T22:33:19Z | hermes-nexus-main | EP-004 | MILESTONE_PASS | M1 EP-004 M1: ok; nexus-data crate; memory contracts + ports; ADR-008 vocabulary; 13 Rust + 7 Python tests; fence extended

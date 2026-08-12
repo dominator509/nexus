@@ -1,6 +1,7 @@
 .agent/execplans/EP-004-data-memory-and-world-graph.md
 .agent/state/LEDGER.md
 .agent/expected-files/EP-004.txt
+.agent/milestone-files/EP-004-M1.txt
 .agent/node-contracts/EP-004.md
 scripts/nodes/EP-004.sh
 crates/nexus-data/
@@ -9,3 +10,7 @@ migrations/
 schemas/memory-record.schema.json
 tests/data/
 tests/memory/
+Cargo.toml
+Cargo.lock
+docs/vocabulary/README.md
+references/ADR-008-memory-and-data-vocabulary.md

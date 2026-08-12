@@ -275,11 +275,24 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+M1 completed 2026-08-12: `crates/nexus-data/` created with the canonical
+memory/data contracts - `MemoryRecord`, `MemoryQuery`, `MemoryCandidate`,
+`MemoryProposal`, `RetentionPolicy`/`RetentionUnit`, `Sensitivity`,
+`MemoryStatus`, `EmbeddingRef` (matching `schemas/memory-record.schema.json`
+exactly), `DataError`/`DataErrorCode` (SPEC-006 codes), `UnitOfWork`,
+`RepositorySet`, and the `MemoryRepository`, `WorldGraphRepository`,
+`PostgresWorldGraphRepository`, `VectorRepository` ports. ADR-008 adds the
+memory vocabulary to `docs/vocabulary/README.md`; workspace membership and
+Cargo.lock regenerated offline (89 packages). 13 `ep004_unit_` Rust tests +
+dependency-direction test and 7 `tests/memory/` Python agreement tests pass.
+Sentinel: `EP-004 M1: ok`. Fence extended with Cargo.toml, Cargo.lock,
+docs/vocabulary/README.md, references/ADR-008, milestone M1 file.
 
 # 12. Surprises & Discoveries
 
@@ -288,6 +301,33 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-12 (M1): **Memory/data contracts live in `nexus-data`; behavior
+  and PostgreSQL adapters in `nexus-memory` (M2).** The node contract's
+  interface map lists all ten interfaces under the memory boundary;
+  the milestone fences split them: M1 owns `crates/nexus-data/` and
+  `tests/memory/`, M2 owns `crates/nexus-memory/`. Decision: `nexus-data`
+  holds the provider-neutral contracts and ports (UnitOfWork, RepositorySet,
+  MemoryRepository, WorldGraphRepository, VectorRepository, MemoryRecord,
+  MemoryQuery, MemoryCandidate, MemoryProposal, RetentionPolicy, enums,
+  errors); `nexus-memory` will hold behavior and the PostgreSQL/pgvector
+  implementations. Evidence: EP-004 milestone fences, M1 gate green.
+  Alternative rejected: put everything in one crate (violates the M1/M2
+  fence split).
+- 2026-08-12 (M1): **Memory vocabulary added by ADR-008.** Sensitivity,
+  MemoryStatus, RetentionUnit, EmbeddingRef, MemoryProposal are
+  vocabulary-locked contracts owned by `nexus-data`; MemoryType stays in
+  `nexus-domain`. Wire values mirror `schemas/memory-record.schema.json`
+  (bootstrap; M4 amends the schema to lock enum values). Evidence: ADR-008,
+  vocabulary README, unit tests, Python agreement tests. Alternative
+  rejected: free-form strings (lose parse-time rejection).
+- 2026-08-12 (M1): **`supersedes`/`derived_from`/`embedding_ref` are
+  optional on the wire.** The bootstrap schema requires 15 fields and marks
+  the provenance-chain and index-reference fields optional; the Python
+  agreement test initially asserted 18 required and was corrected to the
+  schema's actual contract. Evidence: `tests/memory/` green against the
+  real schema. Consequence: `MemoryRecord` validation requires the 15 core
+  fields; provenance chains are optional enrichment.
 
 # 14. Outcomes & Retrospective
 

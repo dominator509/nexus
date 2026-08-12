@@ -282,6 +282,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-data"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-domain"
 version = "0.1.0"
 dependencies = [

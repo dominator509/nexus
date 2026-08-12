@@ -5,6 +5,7 @@ members = [
     "crates/nexus-domain",
     "crates/nexus-identity",
     "crates/nexus-presence",
+    "crates/nexus-data",
 ]
 
 [workspace.package]

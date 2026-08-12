@@ -119,6 +119,25 @@ governance, A2A, artifacts). (SPEC-022)
 `WORKING`, `EPISODIC`, `SEMANTIC`, `ENTITY`, `PROCEDURAL`, `DECISION`,
 `SKILL`, `SYSTEM`. (SPEC-002)
 
+## Sensitivity
+
+`PUBLIC`, `HOUSEHOLD`, `PERSONAL`, `SENSITIVE`, `BUSINESS_CONFIDENTIAL`,
+`SECURITY`, `SECRET`. Memory-record data classification (SPEC-002, SPEC-020;
+ADR-008). Wire strings match the privacy ladder so memory filtering and
+redaction reuse the same policy classes (INV-014).
+
+## MemoryStatus
+
+`PROPOSED`, `ACTIVE`, `SUPERSEDED`, `REJECTED`, `DELETED`. Memory record
+lifecycle (SPEC-002 behaviors 5, 8; ADR-008). `PROPOSED` records are
+policy-evaluated proposals, never canonical facts.
+
+## RetentionUnit
+
+`HOURS`, `DAYS`, `WEEKS`, `MONTHS`, `YEARS`, `INDEFINITE`. Retention policy
+durations (SPEC-002, SPEC-020; ADR-008). `INDEFINITE` covers legal hold and
+no-expiry retention.
+
 ## NotificationChannel
 
 `MOBILE_PUSH`, `DESKTOP`, `SPEAKER`, `SMS`, `EMAIL`, `PHONE`, `WATCH`,
