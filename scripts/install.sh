@@ -14,6 +14,12 @@ if [ -f infra/devcontainer/Dockerfile ]; then
   docker build --pull=false -f infra/devcontainer/Dockerfile -t nexus-devtoolchain:locked .
 fi
 if [ -f Cargo.toml ]; then cargo fetch --locked; fi
+if [ -f Cargo.toml ] && ! command -v cargo-deny >/dev/null 2>&1; then
+  cargo install cargo-deny --locked --version 0.20.2
+fi
+if [ -f Cargo.toml ] && ! command -v cargo-audit >/dev/null 2>&1; then
+  cargo install cargo-audit --locked --version 0.22.2
+fi
 if [ -f pnpm-lock.yaml ]; then corepack enable; pnpm install --frozen-lockfile --offline; fi
 if [ -f uv.lock ]; then uv sync --frozen --offline; fi
 if [ -f apps/mobile/pubspec.lock ]; then (cd apps/mobile && flutter pub get --offline); fi

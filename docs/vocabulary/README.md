@@ -13,20 +13,20 @@ strings (`8-4-4-4-12` hex layout, version nibble `7`, variant nibble
 `8/9/a/b`). Each kind is a distinct Rust newtype and is not interchangeable
 at compile time.
 
-| ID | Meaning | Spec |
-| --- | --- | --- |
-| `NexusId` | Nexus-wide opaque identifier | SPEC-001 |
-| `TenantId` | Tenant boundary | SPEC-001 |
-| `PersonId` | Person | SPEC-001 |
-| `HouseholdId` | Household | SPEC-001 |
-| `BusinessId` | Business | SPEC-001 |
-| `DeviceId` | Device | SPEC-001 |
-| `ObjectiveId` | Objective | SPEC-001 |
-| `TaskId` | Task | SPEC-001 |
-| `CapabilityId` | Capability | SPEC-003/022 |
-| `ArtifactId` | Immutable artifact | SPEC-003 |
-| `EventId` | Event | SPEC-022 |
-| `CorrelationId` | Correlation | SPEC-003 |
+| ID              | Meaning                      | Spec         |
+| --------------- | ---------------------------- | ------------ |
+| `NexusId`       | Nexus-wide opaque identifier | SPEC-001     |
+| `TenantId`      | Tenant boundary              | SPEC-001     |
+| `PersonId`      | Person                       | SPEC-001     |
+| `HouseholdId`   | Household                    | SPEC-001     |
+| `BusinessId`    | Business                     | SPEC-001     |
+| `DeviceId`      | Device                       | SPEC-001     |
+| `ObjectiveId`   | Objective                    | SPEC-001     |
+| `TaskId`        | Task                         | SPEC-001     |
+| `CapabilityId`  | Capability                   | SPEC-003/022 |
+| `ArtifactId`    | Immutable artifact           | SPEC-003     |
+| `EventId`       | Event                        | SPEC-022     |
+| `CorrelationId` | Correlation                  | SPEC-003     |
 
 ## Risk
 

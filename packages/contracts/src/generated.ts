@@ -9,52 +9,52 @@ export type JsonValue =
   | { [k: string]: JsonValue };
 
 export interface ActionRequest {
-  actionId: string;
-  approvalClass: string;
+  action_id: string;
+  approval_class: string;
   arguments: Record<string, unknown>;
-  capabilityId: string;
-  expectedState: Record<string, unknown>;
-  idempotencyKey: string;
-  invocation: unknown;
-  principalId: string;
+  capability_id: string;
+  expected_state: Record<string, unknown>;
+  idempotency_key: string;
+  invocation: InvocationContext;
+  principal_id: string;
   reversal: string;
   risk: "R0" | "R1" | "R2" | "R3" | "R4";
-  tenantId: string;
+  tenant_id: string;
 }
 
 export interface CapabilityDescriptor {
   approval: "NONE" | "POLICY" | "HUMAN" | "STRONG_HUMAN" | "FOUR_EYES";
   availability: "AVAILABLE" | "DEGRADED" | "UNAVAILABLE" | "UNCERTIFIED";
   class: "QUERY" | "COMMAND" | "WORKFLOW" | "STREAM" | "ADMINISTRATIVE";
-  dataClasses?: Array<string> | null;
+  data_classes?: Array<string> | null;
   description: string;
-  eventTypes?: Array<string> | null;
+  event_types?: Array<string> | null;
   id: string;
   idempotency: "NOT_APPLICABLE" | "OPTIONAL" | "REQUIRED";
-  inputSchema: string;
+  input_schema: string;
   locality?:
     | "ANY"
     | "CONTROL_PLANE"
     | "HOME_EDGE"
     | "CLIENT_DEVICE"
     | "HARDWARE_NODE";
-  outputSchema: string;
-  providerId?: string | null;
-  requiredScopes: Array<string>;
+  output_schema: string;
+  provider_id?: string | null;
+  required_scopes: Array<string>;
   reversal: "NONE" | "COMPENSATING" | "SNAPSHOT" | "IRREVERSIBLE";
   risk: "R0" | "R1" | "R2" | "R3" | "R4";
   version: string;
 }
 
 export interface ConnectorManifest {
-  capabilities: Array<unknown>;
+  capabilities: Array<CapabilityDescriptor>;
   certification?: "UNCERTIFIED" | "LAB" | "CERTIFIED" | "DEPRECATED";
-  dataClasses?: Array<string> | null;
+  data_classes?: Array<string> | null;
   events: Array<string>;
   health: string;
   id: string;
   license: string;
-  networkOrigins: Array<string>;
+  network_origins: Array<string>;
   runtime: "RUST" | "PYTHON" | "TYPESCRIPT" | "WASM" | "SIDECAR" | "APPLIANCE";
   secrets: Array<string>;
   tier: "TIER1" | "TIER2" | "TIER3";
@@ -67,52 +67,52 @@ export interface DeploymentProfile {
   id: string;
   mode: "MANAGED" | "BYOC" | "EXISTING_SSH" | "HYBRID" | "FULLY_LOCAL";
   nodes: Array<Record<string, unknown>>;
-  releaseChannel: "STABLE" | "BETA" | "DEVELOPER" | "PINNED";
-  remoteAccess: Record<string, unknown>;
+  release_channel: "STABLE" | "BETA" | "DEVELOPER" | "PINNED";
+  remote_access: Record<string, unknown>;
 }
 
 export interface EventEnvelope {
-  actorRef?: string | null;
-  causationId?: string | null;
-  correlationId: string;
-  dataClass: string;
-  eventId: string;
-  eventType: string;
-  observedAt?: string | null;
-  occurredAt: string;
+  actor_ref?: string | null;
+  causation_id?: string | null;
+  correlation_id: string;
+  data_class: string;
+  event_id: string;
+  event_type: string;
+  observed_at?: string | null;
+  occurred_at: string;
   payload: Record<string, unknown>;
-  requestId?: string | null;
-  schemaVersion: string;
+  request_id?: string | null;
+  schema_version: string;
   source: string;
   subject: string;
-  tenantId: string;
+  tenant_id: string;
 }
 
 export interface InvocationContext {
-  approvalId?: string | null;
-  causationId?: string | null;
+  approval_id?: string | null;
+  causation_id?: string | null;
   channel?: string | null;
-  correlationId: string;
-  deviceId?: string | null;
-  externalActorId: string;
-  externalActorType: "HUMAN" | "SERVICE" | "AGENT" | "DEVICE" | "SYSTEM";
-  objectiveId?: string | null;
-  originSystem: string;
-  requestId: string;
-  roomId?: string | null;
-  taskId?: string | null;
+  correlation_id: string;
+  device_id?: string | null;
+  external_actor_id: string;
+  external_actor_type: "HUMAN" | "SERVICE" | "AGENT" | "DEVICE" | "SYSTEM";
+  objective_id?: string | null;
+  origin_system: string;
+  request_id: string;
+  room_id?: string | null;
+  task_id?: string | null;
 }
 
 export interface MemoryRecord {
   actor: string;
   confidence: number;
   content: Record<string, unknown>;
-  contentHash: string;
-  createdAt: string;
-  derivedFrom?: Array<string> | null;
-  embeddingRef?: string | null;
-  memoryId: string;
-  memoryType:
+  content_hash: string;
+  created_at: string;
+  derived_from?: Array<string> | null;
+  embedding_ref?: string | null;
+  memory_id: string;
+  memory_type:
     | "WORKING"
     | "EPISODIC"
     | "SEMANTIC"
@@ -122,23 +122,23 @@ export interface MemoryRecord {
     | "SKILL"
     | "SYSTEM";
   namespace: string;
-  observedAt: string;
+  observed_at: string;
   purpose: string;
   retention: string;
   sensitivity: string;
   source: string;
   status: "PROPOSED" | "ACTIVE" | "SUPERSEDED" | "REJECTED" | "DELETED";
   supersedes?: string | null;
-  tenantId: string;
+  tenant_id: string;
 }
 
 export interface NexusControlObject {
   ambiguity: number;
-  approvalRequired: boolean;
+  approval_required: boolean;
   confidence: number;
   entities: Record<string, unknown>;
-  escalationReason?: string | null;
-  executableInstruction: boolean;
+  escalation_reason?: string | null;
+  executable_instruction: boolean;
   intent: string;
   privacy:
     | "PUBLIC"
@@ -148,7 +148,7 @@ export interface NexusControlObject {
     | "BUSINESS_CONFIDENTIAL"
     | "SECURITY"
     | "SECRET";
-  requiredCapabilities: Array<string>;
+  required_capabilities: Array<string>;
   risk: "R0" | "R1" | "R2" | "R3" | "R4";
   route:
     | "DETERMINISTIC"
@@ -158,12 +158,12 @@ export interface NexusControlObject {
     | "SPECIALIST_AGENT"
     | "CLARIFY"
     | "REJECT";
-  schemaVersion: unknown;
+  schema_version: "1.0.0";
   workflow?: Record<string, unknown> | null;
 }
 
 export interface NotificationEnvelope {
-  actionRef?: string | null;
+  action_ref?: string | null;
   channels: Array<
     | "MOBILE_PUSH"
     | "DESKTOP"
@@ -174,10 +174,10 @@ export interface NotificationEnvelope {
     | "WATCH"
     | "CAR"
   >;
-  correlationId: string;
-  expiresAt: string;
-  notificationId: string;
-  personId: string;
+  correlation_id: string;
+  expires_at: string;
+  notification_id: string;
+  person_id: string;
   privacy: string;
   summary: string;
   title: string;

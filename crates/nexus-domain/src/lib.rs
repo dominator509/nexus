@@ -13,8 +13,8 @@ pub mod id;
 pub mod vocabulary;
 
 pub use id::{
-    ArtifactId, BusinessId, CapabilityId, CorrelationId, DeviceId, EventId, HouseholdId, NexusId,
-    ObjectiveId, PersonId, TaskId, TenantId,
+    ArtifactId, BusinessId, CapabilityId, CorrelationId, DeviceId, EventId, HouseholdId, IdError,
+    NexusId, ObjectiveId, PersonId, TaskId, TenantId,
 };
 pub use vocabulary::{
     ApprovalClass, Availability, CapabilityClass, Idempotency, Locality, MemoryType,

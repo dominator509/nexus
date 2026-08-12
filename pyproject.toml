@@ -17,7 +17,7 @@ packages = ["python/nexus_contracts"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit", "tests/integration", "tests/failure"]
-python_functions = ["test_*", "ep001_unit_*", "ep001_integration_*", "ep001_failure_*"]
+python_functions = ["test_*", "ep001_unit_*", "ep001_integration_*", "ep001_failure_*", "ep002_unit_*", "ep002_integration_*", "ep002_failure_*"]
 
 [tool.ruff]
 line-length = 100

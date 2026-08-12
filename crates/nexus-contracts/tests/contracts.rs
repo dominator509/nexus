@@ -23,13 +23,13 @@ fn generated_contracts_match() {
     );
 }
 
-/// The generated NexusControlObject serializes with camelCase field names
-/// exactly as the canonical schema expects (schema_version, approval_required,
-/// executable_instruction, required_capabilities).
+/// The generated NexusControlObject serializes with the canonical snake_case
+/// wire names exactly as the schema property names define (schema_version,
+/// approval_required, executable_instruction, required_capabilities).
 #[test]
 fn control_object_serde_roundtrip() {
     let obj = nexus_contracts::NexusControlObject {
-        schema_version: serde_json::json!("1"),
+        schema_version: "1.0.0".into(),
         intent: "home.lights.set".into(),
         route: "DETERMINISTIC".into(),
         risk: "R0".into(),
@@ -44,17 +44,17 @@ fn control_object_serde_roundtrip() {
         workflow: None,
     };
     let json = serde_json::to_string(&obj).expect("serialize");
-    assert!(json.contains("\"schemaVersion\""));
-    assert!(json.contains("\"approvalRequired\""));
-    assert!(json.contains("\"executableInstruction\""));
-    assert!(json.contains("\"requiredCapabilities\""));
+    assert!(json.contains("\"schema_version\":\"1.0.0\""));
+    assert!(json.contains("\"approval_required\""));
+    assert!(json.contains("\"executable_instruction\""));
+    assert!(json.contains("\"required_capabilities\""));
     let back: nexus_contracts::NexusControlObject =
         serde_json::from_str(&json).expect("deserialize");
     assert_eq!(obj, back);
 }
 
 /// ActionRequest carries the canonical SPEC-006 fields: idempotency key, risk,
-/// approval class, and reversal must round-trip.
+/// approval class, and reversal must round-trip with snake_case wire names.
 #[test]
 fn action_request_roundtrip() {
     let req = nexus_contracts::ActionRequest {
@@ -68,11 +68,25 @@ fn action_request_roundtrip() {
         reversal: "COMPENSATING".into(),
         arguments: serde_json::json!({"door": "front"}),
         expected_state: serde_json::json!({"locked": true}),
-        invocation: serde_json::json!({"channel": "voice"}),
+        invocation: nexus_contracts::InvocationContext {
+            request_id: "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6073".into(),
+            correlation_id: "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6074".into(),
+            origin_system: "voice".into(),
+            external_actor_id: "user_1".into(),
+            external_actor_type: "PERSON".into(),
+            channel: Some(Some("voice".into())),
+            causation_id: None,
+            approval_id: None,
+            device_id: None,
+            objective_id: None,
+            room_id: None,
+            task_id: None,
+        },
     };
     let json = serde_json::to_string(&req).expect("serialize");
-    assert!(json.contains("\"idempotencyKey\""));
-    assert!(json.contains("\"approvalClass\""));
+    assert!(json.contains("\"idempotency_key\""));
+    assert!(json.contains("\"approval_class\""));
+    assert!(json.contains("\"request_id\""));
     let back: nexus_contracts::ActionRequest = serde_json::from_str(&json).expect("deserialize");
     assert_eq!(req, back);
 }

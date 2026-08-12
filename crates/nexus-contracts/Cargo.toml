@@ -8,3 +8,4 @@ description = "Generated Nexus cross-language contracts (canonical source: schem
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain" }

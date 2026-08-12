@@ -15,3 +15,4 @@
 2026-08-12T19:14:36Z | hermes-nexus-main | EP-001 | NODE_DONE | node verify EP-001: ok; scope audit EP-001: ok; verify: ok; prettier clean; cargo-deny 0.20.2; ADR-005; dynamic-port tests
 2026-08-12T19:14:42Z | hermes-nexus-main | EP-002 | LEASE | EP-001 green; starting EP-002
 2026-08-12T19:18:25Z | hermes-nexus-main | EP-002 | MILESTONE_PASS | M1 EP-002 M1: ok; nexus-domain crate; typed UUIDv7 IDs; vocabulary enums; 16 tests
+2026-08-12T20:25:33Z | hermes-nexus-main | EP-002 | MILESTONE_PASS | M2 EP-002 M2: ok; canonical snake_case wire names in Rust/TS/Python/Dart; schema_version const typed; Dart binding added; Python class_ alias; ADR-006; cargo-deny 0.20.2 + cargo-audit 0.22.2 pinned

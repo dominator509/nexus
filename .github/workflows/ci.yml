@@ -21,6 +21,11 @@ jobs:
           install: true
           cache: true
 
+      - name: Install pinned cargo security tools
+        run: |
+          if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
+          if ! cargo-audit --version | grep -F '0.22.2'; then cargo install cargo-audit --locked --version 0.22.2; fi
+
       - name: Preflight
         run: sh scripts/preflight.sh
 
@@ -35,6 +40,9 @@ jobs:
 
       - name: Unit tests
         run: sh scripts/test-unit.sh
+
+      - name: Dependency audit
+        run: sh scripts/dependency-audit.sh
 
       - name: Security gate
         run: sh scripts/security-check.sh

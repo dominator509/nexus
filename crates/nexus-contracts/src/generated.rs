@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct ActionRequest {
     pub action_id: String,
     pub approval_class: String,
@@ -11,7 +11,7 @@ pub struct ActionRequest {
     pub capability_id: String,
     pub expected_state: serde_json::Value,
     pub idempotency_key: String,
-    pub invocation: serde_json::Value,
+    pub invocation: InvocationContext,
     pub principal_id: String,
     pub reversal: String,
     pub risk: String,
@@ -19,7 +19,7 @@ pub struct ActionRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct CapabilityDescriptor {
     pub approval: String,
     pub availability: String,
@@ -44,9 +44,9 @@ pub struct CapabilityDescriptor {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct ConnectorManifest {
-    pub capabilities: Vec<serde_json::Value>,
+    pub capabilities: Vec<CapabilityDescriptor>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub certification: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -63,7 +63,7 @@ pub struct ConnectorManifest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct DeploymentProfile {
     pub backup: serde_json::Value,
     pub components: Vec<String>,
@@ -75,7 +75,7 @@ pub struct DeploymentProfile {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct EventEnvelope {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actor_ref: Option<Option<String>>,
@@ -98,7 +98,7 @@ pub struct EventEnvelope {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct InvocationContext {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub approval_id: Option<Option<String>>,
@@ -122,7 +122,7 @@ pub struct InvocationContext {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct MemoryRecord {
     pub actor: String,
     pub confidence: f64,
@@ -148,7 +148,7 @@ pub struct MemoryRecord {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct NexusControlObject {
     pub ambiguity: f64,
     pub approval_required: bool,
@@ -162,13 +162,13 @@ pub struct NexusControlObject {
     pub required_capabilities: Vec<String>,
     pub risk: String,
     pub route: String,
-    pub schema_version: serde_json::Value,
+    pub schema_version: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workflow: Option<Option<serde_json::Value>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct NotificationEnvelope {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub action_ref: Option<Option<String>>,

@@ -8,38 +8,47 @@ import {
 describe("generated contracts", () => {
   it("exports the canonical control object shape", () => {
     const obj: NexusControlObject = {
-      schemaVersion: "1",
+      schema_version: "1.0.0",
       intent: "home.lights.set",
       route: "DETERMINISTIC",
       risk: "R0",
       privacy: "HOUSEHOLD",
       ambiguity: 0,
-      approvalRequired: false,
-      executableInstruction: true,
+      approval_required: false,
+      executable_instruction: true,
       confidence: 0.99,
-      requiredCapabilities: ["home.lights.set"],
+      required_capabilities: ["home.lights.set"],
       entities: {},
     };
     expect(obj.intent).toBe("home.lights.set");
-    expect(obj.requiredCapabilities).toHaveLength(1);
+    expect(obj.required_capabilities).toHaveLength(1);
+    expect(obj.schema_version).toBe("1.0.0");
   });
 
   it("accepts an action request with canonical fields", () => {
     const req: ActionRequest = {
-      actionId: "act_1",
-      tenantId: "tenant_1",
-      principalId: "user_1",
-      capabilityId: "cap.lock",
-      idempotencyKey: "key_1",
+      action_id: "act_1",
+      tenant_id: "tenant_1",
+      principal_id: "user_1",
+      capability_id: "cap.lock",
+      idempotency_key: "key_1",
       risk: "R3",
-      approvalClass: "HUMAN",
+      approval_class: "HUMAN",
       reversal: "COMPENSATING",
       arguments: { door: "front" },
-      expectedState: { locked: true },
-      invocation: { channel: "voice" },
+      expected_state: { locked: true },
+      invocation: {
+        request_id: "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6073",
+        correlation_id: "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6074",
+        origin_system: "voice",
+        external_actor_id: "user_1",
+        external_actor_type: "PERSON",
+        channel: "voice",
+      },
     };
-    expect(req.idempotencyKey).toBe("key_1");
-    expect(req.approvalClass).toBe("HUMAN");
+    expect(req.idempotency_key).toBe("key_1");
+    expect(req.approval_class).toBe("HUMAN");
+    expect(req.invocation.request_id).toMatch(/^0190/);
   });
 
   it("JsonValue covers nested structures", () => {

@@ -255,3 +255,13 @@ locks:
     license: "AGPL-3.0"
     class: object-store-compatibility
     policy: archived-optional-only
+  - component: cargo-deny
+    version: "0.20.2"
+    license: "MIT OR Apache-2.0"
+    class: security-tool
+    policy: pinned
+  - component: cargo-audit
+    version: "0.22.2"
+    license: "MIT OR Apache-2.0"
+    class: security-tool
+    policy: pinned

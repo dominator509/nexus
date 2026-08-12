@@ -294,9 +294,50 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-12 (M2): **Wire-name drift**. The generator emitted camelCase wire
+  names for Rust (`#[serde(rename_all = "camelCase")]`) and TypeScript
+  (`camel(pname)`) while Python stayed snake_case. The canonical schemas are
+  snake_case (`schema_version`, `approval_required`, `class`); payloads with
+  camelCase fail validation under `additionalProperties: false`. Fixed in the
+  generator (ADR-006): all four languages now emit schema property names
+  verbatim. The corrected EP-001 round-trip tests prove it.
+- 2026-08-12 (M2): **schema_version was an unconstrained
+  `serde_json::Value`/`unknown`/`object`**. nexus-control-object pins
+  `schema_version` to `{"const": "1.0.0"}` but the generator emitted
+  `serde_json::Value` (Rust), `unknown` (TS), `object` (Python). Generator now
+  emits typed constants (`String` / `"1.0.0"` / `Literal["1.0.0"]` / `String`
+  + static const) and the validated wrapper enforces the exact constant.
+- 2026-08-12 (M2): **Dart binding was missing**. The generator documented
+  Rust/TS/Python only, yet the node contract requires Dart agreement. Added
+  `gen_dart` (generated.dart) with canonical keys and keyword-safe `class_`
+  aliasing; `dart analyze` reports no issues.
+- 2026-08-12 (M2): **CapabilityDescriptor.id is a slug, not a UUIDv7**. The
+  validated wrapper tried to parse it as `CapabilityId`; the schema pins
+  `^[a-z][a-z0-9_.-]+$`. The validated view now keeps the opaque slug string;
+  ActionRequest.capability_id remains a UUIDv7 `CapabilityId`.
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-12 (M2): **Canonical wire names = schema property names verbatim in
+  all four languages.** Evidence: `tests/unit/test_ep002_unit_agreement.py`
+  (field-name, enum, const, UUID-format, additionalProperties agreement),
+  `crates/nexus-contracts/tests/contracts.rs` round-trips, TS + Python tests,
+  `dart analyze` clean. Alternative rejected: keep camelCase and rewrite the
+  schemas (would invalidate the verified source-of-truth pack). Consequence:
+  EP-001 round-trip tests updated from camelCase to snake_case; wire now
+  matches the canonical schemas. Reversal: revert ADR-006 + generator change.
+  Security: additionalProperties:false now enforced in Rust via
+  `deny_unknown_fields`. Compatibility: breaking wire change contained within
+  the pre-release contract layer.
+- 2026-08-12 (M2): **cargo-deny 0.20.2 and cargo-audit 0.22.2 pinned in every
+  toolchain surface.** Evidence: VERSIONS.lock.yaml entries, SOURCE_VERIFICATION
+  records (52), toolchain-check.sh version guards, install.sh pinned installs,
+  dependency-audit.sh guard, CI install step + audit job. Alternative rejected:
+  pin the RustSec advisory DB (hides advisories). Consequence: fresh clones
+  reproduce the working security toolchain. Reversal: remove the entries.
+  Security: CVSS 4.0 advisory parsing stays available.
 
 # 14. Outcomes & Retrospective
 
