@@ -673,5 +673,18 @@
   "commit": "main",
   "release_date": "2025-09-11T00:00:00Z",
   "license": "MIT OR Apache-2.0"
+ },
+ {
+  "component": "rust-postgres-client",
+  "url": "https://github.com/rust-postgres/rust-postgres",
+  "authoritative_owner": "rust-postgres",
+  "source_kind": "github",
+  "retrieval_date": "2026-08-12T20:29:15Z",
+  "decision_status": "VERIFIED",
+  "version": "0.19.14",
+  "tag": "v0.19.14",
+  "commit": "main",
+  "release_date": "2025-08-07T00:00:00Z",
+  "license": "MIT OR Apache-2.0"
  }
 ]

@@ -9,3 +9,6 @@ description = "Generated Nexus cross-language contracts (canonical source: schem
 serde.workspace = true
 serde_json.workspace = true
 nexus-domain = { path = "../nexus-domain" }
+
+[dev-dependencies]
+postgres = { version = "0.19.14", features = ["with-serde_json-1"] }

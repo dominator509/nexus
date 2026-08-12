@@ -5,263 +5,268 @@ policy:
   ep_000_must_verify_each_release_and_license: true
   security_patch_may_advance_with_adr: true
 locks:
-  - component: rust
-    version: "1.97.1"
-    license: "MIT OR Apache-2.0"
-    class: toolchain
-    policy: pinned
-  - component: python
-    version: "3.14.6"
-    license: "PSF-2.0"
-    class: toolchain
-    policy: pinned
-  - component: uv
-    version: "0.12.0"
-    license: "Apache-2.0 OR MIT"
-    class: toolchain
-    policy: pinned
-  - component: node
-    version: "24.18.0"
-    license: "MIT"
-    class: toolchain
-    policy: pinned-lts
-  - component: pnpm
-    version: "11.17.0"
-    license: "MIT"
-    class: toolchain
-    policy: pinned
-  - component: flutter
-    version: "3.44.7"
-    license: "BSD-3-Clause"
-    class: toolchain
-    policy: pinned
-  - component: tauri
-    version: "2.11.2"
-    license: "MIT OR Apache-2.0"
-    class: application-framework
-    policy: pinned
-  - component: react
-    version: "19.2.8"
-    license: "MIT"
-    class: frontend
-    policy: pinned
-  - component: postgresql
-    version: "18.4"
-    license: "PostgreSQL"
-    class: database
-    policy: pinned
-  - component: pgvector
-    version: "0.8.6"
-    license: "PostgreSQL"
-    class: database-extension
-    policy: pinned
-  - component: nats
-    version: "2.14.3"
-    license: "Apache-2.0"
-    class: event-bus
-    policy: pinned
-  - component: temporal-server
-    version: "1.31.2"
-    license: "MIT"
-    class: workflow
-    policy: pinned
-  - component: temporal-typescript-sdk
-    version: "1.17.2"
-    license: "MIT"
-    class: workflow-sdk
-    policy: pinned
-  - component: keycloak
-    version: "26.7.0"
-    license: "Apache-2.0"
-    class: identity
-    policy: pinned
-  - component: openfga
-    version: "1.18.1"
-    license: "Apache-2.0"
-    class: authorization
-    policy: pinned
-  - component: opa
-    version: "1.16.2"
-    license: "Apache-2.0"
-    class: policy
-    policy: pinned
-  - component: openbao
-    version: "2.5.4"
-    license: "MPL-2.0"
-    class: secrets
-    policy: pinned
-  - component: sops
-    version: "3.13.0"
-    license: "MPL-2.0"
-    class: secrets-bootstrap
-    policy: pinned
-  - component: headscale
-    version: "0.28.0"
-    license: "BSD-3-Clause"
-    class: private-mesh
-    policy: pinned
-  - component: caddy
-    version: "2.11.4"
-    license: "Apache-2.0"
-    class: ingress
-    policy: pinned-security
-  - component: opentofu
-    version: "1.12.1"
-    license: "MPL-2.0"
-    class: provisioning
-    policy: pinned
-  - component: docker-engine
-    version: "29.1"
-    license: "Apache-2.0"
-    class: container-runtime
-    policy: minimum-major-minor
-  - component: docker-compose
-    version: "5.1.4"
-    license: "Apache-2.0"
-    class: orchestration
-    policy: pinned
-  - component: opentelemetry-collector
-    version: "0.158.0"
-    license: "Apache-2.0"
-    class: observability
-    policy: pinned
-  - component: glitchtip
-    version: "6.1.8"
-    license: "MIT"
-    class: incident-ui
-    policy: pinned
-  - component: home-assistant-core
-    version: "2026.7.3"
-    license: "Apache-2.0"
-    class: home-control
-    policy: pinned-stable
-  - component: frigate
-    version: "0.17.1"
-    license: "MIT"
-    class: nvr-vision
-    policy: pinned
-  - component: go2rtc
-    version: "1.9.14"
-    license: "MIT"
-    class: media-gateway
-    policy: pinned
-  - component: esphome
-    version: "2026.7.3"
-    license: "GPL-3.0"
-    class: voice-satellite
-    policy: sidecar-or-device
-  - component: whisper.cpp
-    version: "1.9.1"
-    license: "MIT"
-    class: stt
-    policy: pinned
-  - component: kokoro
-    version: "0.19"
-    license: "Apache-2.0"
-    class: tts
-    policy: pinned-model-and-code
-  - component: openwakeword
-    version: "source-commit-pinned-in-EP-000"
-    license: "Apache-2.0"
-    class: wake-word-runtime
-    policy: custom-weights-only
-  - component: silero-vad
-    version: "source-commit-pinned-in-EP-000"
-    license: "MIT"
-    class: vad
-    policy: pinned-by-commit
-  - component: asterisk
-    version: "22.10.1"
-    license: "GPL-2.0"
-    class: telephony
-    policy: isolated-sidecar-lts
-  - component: ictfax
-    version: "4.0"
-    license: "GPL-3.0"
-    class: fax
-    policy: isolated-sidecar
-  - component: hylafax
-    version: "6.0.7"
-    license: "BSD-like"
-    class: fax-compatibility
-    policy: optional-sidecar
-  - component: opnsense
-    version: "26.7.1"
-    license: "BSD-2-Clause"
-    class: firewall
-    policy: external-appliance
-  - component: openwrt
-    version: "25.12.5"
-    license: "GPL-2.0"
-    class: firewall
-    policy: external-appliance
-  - component: adguard-home
-    version: "0.107.76"
-    license: "GPL-3.0"
-    class: dns-security
-    policy: isolated-sidecar
-  - component: suricata
-    version: "8.0.6"
-    license: "GPL-2.0"
-    class: ids-ips
-    policy: isolated-sidecar
-  - component: zeek
-    version: "8.0.9"
-    license: "BSD-3-Clause"
-    class: network-telemetry
-    policy: optional-sidecar-lts
-  - component: crowdsec
-    version: "1.7.8"
-    license: "MIT"
-    class: reputation-blocking
-    policy: optional-sidecar
-  - component: wazuh
-    version: "4.14.5"
-    license: "GPL-2.0 AND Apache-2.0"
-    class: endpoint-security
-    policy: optional-sidecar
-  - component: postiz
-    version: "2.21.8"
-    license: "AGPL-3.0"
-    class: social
-    policy: isolated-sidecar
-  - component: a2a-protocol
-    version: "1.0.1"
-    license: "Apache-2.0"
-    class: agent-interop
-    policy: pinned-spec
-  - component: a2a-js-sdk
-    version: "1.0.0"
-    license: "Apache-2.0"
-    class: agent-interop-sdk
-    policy: pinned
-  - component: agent-skills-spec
-    version: "snapshot-2026-08-12"
-    license: "Apache-2.0-code"
-    class: skills
-    policy: vendored-spec-snapshot
-  - component: mcp-spec
-    version: "2025-11-25"
-    license: "specification"
-    class: tool-interop
-    policy: pinned-spec
-  - component: seaweedfs
-    version: "4.29"
-    license: "Apache-2.0"
-    class: self-hosted-object-store
-    policy: preferred-scalable-local
-  - component: minio-community
-    version: "RELEASE.2025-10-15T17-29-55Z"
-    license: "AGPL-3.0"
-    class: object-store-compatibility
-    policy: archived-optional-only
-  - component: cargo-deny
-    version: "0.20.2"
-    license: "MIT OR Apache-2.0"
-    class: security-tool
-    policy: pinned
-  - component: cargo-audit
-    version: "0.22.2"
-    license: "MIT OR Apache-2.0"
-    class: security-tool
-    policy: pinned
+- component: rust
+  version: 1.97.1
+  license: MIT OR Apache-2.0
+  class: toolchain
+  policy: pinned
+- component: python
+  version: 3.14.6
+  license: PSF-2.0
+  class: toolchain
+  policy: pinned
+- component: uv
+  version: 0.12.0
+  license: Apache-2.0 OR MIT
+  class: toolchain
+  policy: pinned
+- component: node
+  version: 24.18.0
+  license: MIT
+  class: toolchain
+  policy: pinned-lts
+- component: pnpm
+  version: 11.17.0
+  license: MIT
+  class: toolchain
+  policy: pinned
+- component: flutter
+  version: 3.44.7
+  license: BSD-3-Clause
+  class: toolchain
+  policy: pinned
+- component: tauri
+  version: 2.11.2
+  license: MIT OR Apache-2.0
+  class: application-framework
+  policy: pinned
+- component: react
+  version: 19.2.8
+  license: MIT
+  class: frontend
+  policy: pinned
+- component: postgresql
+  version: '18.4'
+  license: PostgreSQL
+  class: database
+  policy: pinned
+- component: pgvector
+  version: 0.8.6
+  license: PostgreSQL
+  class: database-extension
+  policy: pinned
+- component: nats
+  version: 2.14.3
+  license: Apache-2.0
+  class: event-bus
+  policy: pinned
+- component: temporal-server
+  version: 1.31.2
+  license: MIT
+  class: workflow
+  policy: pinned
+- component: temporal-typescript-sdk
+  version: 1.17.2
+  license: MIT
+  class: workflow-sdk
+  policy: pinned
+- component: keycloak
+  version: 26.7.0
+  license: Apache-2.0
+  class: identity
+  policy: pinned
+- component: openfga
+  version: 1.18.1
+  license: Apache-2.0
+  class: authorization
+  policy: pinned
+- component: opa
+  version: 1.16.2
+  license: Apache-2.0
+  class: policy
+  policy: pinned
+- component: openbao
+  version: 2.5.4
+  license: MPL-2.0
+  class: secrets
+  policy: pinned
+- component: sops
+  version: 3.13.0
+  license: MPL-2.0
+  class: secrets-bootstrap
+  policy: pinned
+- component: headscale
+  version: 0.28.0
+  license: BSD-3-Clause
+  class: private-mesh
+  policy: pinned
+- component: caddy
+  version: 2.11.4
+  license: Apache-2.0
+  class: ingress
+  policy: pinned-security
+- component: opentofu
+  version: 1.12.1
+  license: MPL-2.0
+  class: provisioning
+  policy: pinned
+- component: docker-engine
+  version: '29.1'
+  license: Apache-2.0
+  class: container-runtime
+  policy: minimum-major-minor
+- component: docker-compose
+  version: 5.1.4
+  license: Apache-2.0
+  class: orchestration
+  policy: pinned
+- component: opentelemetry-collector
+  version: 0.158.0
+  license: Apache-2.0
+  class: observability
+  policy: pinned
+- component: glitchtip
+  version: 6.1.8
+  license: MIT
+  class: incident-ui
+  policy: pinned
+- component: home-assistant-core
+  version: 2026.7.3
+  license: Apache-2.0
+  class: home-control
+  policy: pinned-stable
+- component: frigate
+  version: 0.17.1
+  license: MIT
+  class: nvr-vision
+  policy: pinned
+- component: go2rtc
+  version: 1.9.14
+  license: MIT
+  class: media-gateway
+  policy: pinned
+- component: esphome
+  version: 2026.7.3
+  license: GPL-3.0
+  class: voice-satellite
+  policy: sidecar-or-device
+- component: whisper.cpp
+  version: 1.9.1
+  license: MIT
+  class: stt
+  policy: pinned
+- component: kokoro
+  version: '0.19'
+  license: Apache-2.0
+  class: tts
+  policy: pinned-model-and-code
+- component: openwakeword
+  version: source-commit-pinned-in-EP-000
+  license: Apache-2.0
+  class: wake-word-runtime
+  policy: custom-weights-only
+- component: silero-vad
+  version: source-commit-pinned-in-EP-000
+  license: MIT
+  class: vad
+  policy: pinned-by-commit
+- component: asterisk
+  version: 22.10.1
+  license: GPL-2.0
+  class: telephony
+  policy: isolated-sidecar-lts
+- component: ictfax
+  version: '4.0'
+  license: GPL-3.0
+  class: fax
+  policy: isolated-sidecar
+- component: hylafax
+  version: 6.0.7
+  license: BSD-like
+  class: fax-compatibility
+  policy: optional-sidecar
+- component: opnsense
+  version: 26.7.1
+  license: BSD-2-Clause
+  class: firewall
+  policy: external-appliance
+- component: openwrt
+  version: 25.12.5
+  license: GPL-2.0
+  class: firewall
+  policy: external-appliance
+- component: adguard-home
+  version: 0.107.76
+  license: GPL-3.0
+  class: dns-security
+  policy: isolated-sidecar
+- component: suricata
+  version: 8.0.6
+  license: GPL-2.0
+  class: ids-ips
+  policy: isolated-sidecar
+- component: zeek
+  version: 8.0.9
+  license: BSD-3-Clause
+  class: network-telemetry
+  policy: optional-sidecar-lts
+- component: crowdsec
+  version: 1.7.8
+  license: MIT
+  class: reputation-blocking
+  policy: optional-sidecar
+- component: wazuh
+  version: 4.14.5
+  license: GPL-2.0 AND Apache-2.0
+  class: endpoint-security
+  policy: optional-sidecar
+- component: postiz
+  version: 2.21.8
+  license: AGPL-3.0
+  class: social
+  policy: isolated-sidecar
+- component: a2a-protocol
+  version: 1.0.1
+  license: Apache-2.0
+  class: agent-interop
+  policy: pinned-spec
+- component: a2a-js-sdk
+  version: 1.0.0
+  license: Apache-2.0
+  class: agent-interop-sdk
+  policy: pinned
+- component: agent-skills-spec
+  version: snapshot-2026-08-12
+  license: Apache-2.0-code
+  class: skills
+  policy: vendored-spec-snapshot
+- component: mcp-spec
+  version: '2025-11-25'
+  license: specification
+  class: tool-interop
+  policy: pinned-spec
+- component: seaweedfs
+  version: '4.29'
+  license: Apache-2.0
+  class: self-hosted-object-store
+  policy: preferred-scalable-local
+- component: minio-community
+  version: RELEASE.2025-10-15T17-29-55Z
+  license: AGPL-3.0
+  class: object-store-compatibility
+  policy: archived-optional-only
+- component: cargo-deny
+  version: 0.20.2
+  license: MIT OR Apache-2.0
+  class: security-tool
+  policy: pinned
+- component: cargo-audit
+  version: 0.22.2
+  license: MIT OR Apache-2.0
+  class: security-tool
+  policy: pinned
+- component: rust-postgres-client
+  version: 0.19.14
+  license: MIT OR Apache-2.0
+  class: database-client
+  policy: pinned
