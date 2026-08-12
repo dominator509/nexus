@@ -284,11 +284,11 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M1: Contract, vocabulary, and package boundary
+- [x] M2: Core behavior and deterministic invariants
+- [x] M3: Real dependency and transport integration
+- [x] M4: Forced failures, abuse cases, and observability
+- [x] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
 
@@ -315,6 +315,18 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   validated wrapper tried to parse it as `CapabilityId`; the schema pins
   `^[a-z][a-z0-9_.-]+$`. The validated view now keeps the opaque slug string;
   ActionRequest.capability_id remains a UUIDv7 `CapabilityId`.
+- 2026-08-12 (M2): **Python and Dart keyword aliases preserve canonical wire
+  keys**. Python's `class_` field alias and Dart's `class_` key mapping
+  round-trip to the canonical wire key `class` via to_wire/from_wire and
+  toJson/fromJson; the agreement test proves the serialized name is never the
+  language keyword.
+- 2026-08-12 (M3/M4): **Real PostgreSQL tests use dynamic host ports and real
+  failure mechanisms**. Ephemeral postgres:18.4 containers are published on
+  random host ports (`-p 127.0.0.1::5432` + `docker port`) with host-port
+  readiness probes; M4 failure tests exercise unavailable dependencies,
+  statement_timeout cancellation, malformed input, duplicate requests, denied
+  permissions, cancelled work, and partial side effects against the live
+  database engine - no mocks, no fixed ports.
 
 # 13. Decision Log
 
@@ -342,3 +354,44 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+- Changed files vs fence: all changes under `.agent/expected-files/EP-002.txt`
+  (execplan, LEDGER, node contract, node script, crates/nexus-domain,
+  crates/nexus-contracts, Cargo.toml/Cargo.lock, packages/contracts,
+  python/nexus_contracts, schemas, docs/vocabulary, tests/unit/
+  test_ep002_unit_agreement.py, pyproject.toml, VERSIONS.lock.yaml,
+  references/SOURCE_VERIFICATION.json, references/ADR-006,
+  scripts/toolchain-check.sh, scripts/install.sh, scripts/dependency-audit.sh,
+  .github/workflows/ci.yml).
+- Sentinels observed:
+  - `EP-002 M1: ok` (commit 4109784)
+  - `EP-002 M2: ok` (commit 9895666)
+  - `EP-002 M3: ok` (commit 3a19d32)
+  - `EP-002 M4: ok` + `security check: ok` + `license gate: ok` (commit 549e3f0)
+  - `EP-002 M5: ok`
+  - `node verify EP-002: ok` (see node-verify output)
+  - `scope audit EP-002: ok`
+  - `preflight: ok`
+  - `pnpm exec prettier --check .` -> All matched files use Prettier code style!
+  - `dart analyze packages/contracts/src/generated.dart` -> No issues found!
+- Test evidence:
+  - nexus-domain: 16 passed (3 suites)
+  - nexus-contracts: 8 unit + 4 integration + 7 failure + 3 contract round-trip
+  - TS: 4 passed (generated + real postgres round-trip)
+  - Python: 10 passed (3 EP-001 + 7 EP-002 agreement)
+- Assumptions confirmed: canonical wire names = schema property names
+  verbatim (ADR-006); CapabilityDescriptor.id is a slug, not a UUIDv7.
+- M5 closure notes: `nexus-domain` path dependency carries its real package
+  version (`version = "0.1.0"` with `path = "../nexus-domain"`) so the
+  cargo-deny wildcard ban passes without loosening policy or changing the
+  crate version. Generator re-run after the fix is idempotent: generated
+  Rust/TS/Python/Dart bindings are byte-identical (`contract generation: ok`).
+- No production deployment occurred during EP-002; all integration and
+  failure tests run against ephemeral postgres:18.4 containers on random
+  host ports.
+- Provider/hardware status: no external provider or hardware owned by this
+  node; postgres:18.4 real dependency tests green.
+- Remaining risks: Dart binding has no runtime test suite yet (no Dart
+  consumer until the mobile node); it is verified by `dart analyze` and the
+  cross-language agreement tests.
+- Green tag: `green/EP-002`.

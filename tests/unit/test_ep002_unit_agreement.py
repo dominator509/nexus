@@ -74,7 +74,8 @@ def py_typeddict_fields() -> dict[str, dict[str, str]]:
     """Map TypedDict class name -> {python-safe field name -> py type}."""
     text = GENERATED_PY.read_text(encoding="utf-8")
     result: dict[str, dict[str, str]] = {}
-    for m in re.finditer(r"class (\w+)\(TypedDict\):\n(.*?)(?=\nclass |\nWIRE_ALIASES|\Z)", text, re.S):
+    pattern = r"class (\w+)\(TypedDict\):\n(.*?)(?=\nclass |\nWIRE_ALIASES|\Z)"
+    for m in re.finditer(pattern, text, re.S):
         cls, body = m.group(1), m.group(2)
         fields: dict[str, str] = {}
         for fm in re.finditer(r"^\s{4}(\w+): (?:NotRequired\[)?([^\n]+?)\]?\s*$", body, re.M):
@@ -97,24 +98,99 @@ def dart_class_fields() -> dict[str, dict[str, str]]:
 
 
 def py_safe(name: str) -> str:
-    return name + "_" if name in {
-        "False", "None", "True", "and", "as", "assert", "async", "await",
-        "break", "class", "continue", "def", "del", "elif", "else", "except",
-        "finally", "for", "from", "global", "if", "import", "in", "is",
-        "lambda", "nonlocal", "not", "or", "pass", "raise", "return", "try",
-        "while", "with", "yield",
-    } else name
+    return (
+        name + "_"
+        if name
+        in {
+            "False",
+            "None",
+            "True",
+            "and",
+            "as",
+            "assert",
+            "async",
+            "await",
+            "break",
+            "class",
+            "continue",
+            "def",
+            "del",
+            "elif",
+            "else",
+            "except",
+            "finally",
+            "for",
+            "from",
+            "global",
+            "if",
+            "import",
+            "in",
+            "is",
+            "lambda",
+            "nonlocal",
+            "not",
+            "or",
+            "pass",
+            "raise",
+            "return",
+            "try",
+            "while",
+            "with",
+            "yield",
+        }
+        else name
+    )
 
 
 def dart_safe(name: str) -> str:
-    return name + "_" if name in {
-        "abstract", "as", "assert", "async", "await", "break", "case",
-        "catch", "class", "const", "continue", "default", "do", "else",
-        "enum", "extends", "false", "final", "finally", "for", "if",
-        "implements", "import", "in", "interface", "is", "new", "null",
-        "override", "rethrow", "return", "super", "switch", "this", "throw",
-        "true", "try", "var", "void", "while", "with",
-    } else name
+    return (
+        name + "_"
+        if name
+        in {
+            "abstract",
+            "as",
+            "assert",
+            "async",
+            "await",
+            "break",
+            "case",
+            "catch",
+            "class",
+            "const",
+            "continue",
+            "default",
+            "do",
+            "else",
+            "enum",
+            "extends",
+            "false",
+            "final",
+            "finally",
+            "for",
+            "if",
+            "implements",
+            "import",
+            "in",
+            "interface",
+            "is",
+            "new",
+            "null",
+            "override",
+            "rethrow",
+            "return",
+            "super",
+            "switch",
+            "this",
+            "throw",
+            "true",
+            "try",
+            "var",
+            "void",
+            "while",
+            "with",
+        }
+        else name
+    )
 
 
 def ep002_unit_wire_field_names_agree_in_all_languages() -> None:
@@ -150,20 +226,24 @@ def ep002_unit_wire_field_names_agree_in_all_languages() -> None:
         )
 
         pfields = py[tname]
-        assert set(pfields) == {py_safe(p) for p in props}, (
-            f"Python {tname} fields {sorted(pfields)} != schema-safe {sorted({py_safe(p) for p in props})}"
+        expected_py = {py_safe(p) for p in props}
+        assert set(pfields) == expected_py, (
+            f"Python {tname} fields {sorted(pfields)} != schema-safe {sorted(expected_py)}"
         )
 
         dfields = dart[tname]
-        assert set(dfields) == {dart_safe(p) for p in props}, (
-            f"Dart {tname} fields {sorted(dfields)} != schema-safe {sorted({dart_safe(p) for p in props})}"
+        expected_dart = {dart_safe(p) for p in props}
+        assert set(dfields) == expected_dart, (
+            f"Dart {tname} fields {sorted(dfields)} != schema-safe {sorted(expected_dart)}"
         )
 
         # Required fields must be non-optional in every language.
         for pname in required:
             assert not rfields[pname].startswith("Option<"), f"Rust {tname}.{pname} optional"
             assert not tfields[pname].endswith(" | null"), f"TS {tname}.{pname} nullable"
-            assert "NotRequired" not in pfields[py_safe(pname)], f"Python {tname}.{pname} NotRequired"
+            assert "NotRequired" not in pfields[py_safe(pname)], (
+                f"Python {tname}.{pname} NotRequired"
+            )
             assert "?" not in dfields[dart_safe(pname)], f"Dart {tname}.{pname} nullable"
 
 
@@ -202,9 +282,7 @@ def ep002_unit_enum_values_agree_in_ts_and_python() -> None:
                 continue
             values = prop["enum"]
             for v in values:
-                assert json.dumps(v) in ts[tname][pname], (
-                    f"TS {tname}.{pname} missing enum {v!r}"
-                )
+                assert json.dumps(v) in ts[tname][pname], f"TS {tname}.{pname} missing enum {v!r}"
                 assert json.dumps(v) in py[tname][py_safe(pname)], (
                     f"Python {tname}.{pname} missing enum {v!r}"
                 )

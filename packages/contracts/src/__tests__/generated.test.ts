@@ -42,7 +42,7 @@ describe("generated contracts", () => {
         correlation_id: "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6074",
         origin_system: "voice",
         external_actor_id: "user_1",
-        external_actor_type: "PERSON",
+        external_actor_type: "HUMAN",
         channel: "voice",
       },
     };

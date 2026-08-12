@@ -7,21 +7,18 @@
 //! port - EP-001 M5 flake fix). Host ports are dynamically allocated so
 //! parallel runs never collide on a fixed port.
 
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use nexus_contracts::{ActionRequest, InvocationContext, NexusControlObject};
 use postgres::{Client, NoTls};
 
 const IMAGE: &str = "postgres:18.4";
-const IMAGE_DIGEST: &str =
-    "sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636";
 
 /// A running ephemeral postgres container with a dynamically published host port.
 struct TestPostgres {
     container: String,
     port: u16,
-    child: Option<Child>,
 }
 
 impl TestPostgres {
@@ -59,11 +56,7 @@ impl TestPostgres {
         let container = name;
         let port = Self::host_port(&container);
         Self::wait_ready(port);
-        Self {
-            container,
-            port,
-            child: None,
-        }
+        Self { container, port }
     }
 
     fn host_port(container: &str) -> u16 {
@@ -74,10 +67,12 @@ impl TestPostgres {
                 .expect("docker port failed");
             if out.status.success() {
                 let line = String::from_utf8_lossy(&out.stdout).trim().to_string();
-                if let Some(port) = line.rsplit(':').next() {
-                    if let Ok(p) = port.trim().parse::<u16>() {
-                        return p;
-                    }
+                if let Some(port) = line
+                    .rsplit(':')
+                    .next()
+                    .and_then(|p| p.trim().parse::<u16>().ok())
+                {
+                    return port;
                 }
             }
             std::thread::sleep(Duration::from_millis(200));

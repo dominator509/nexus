@@ -68,10 +68,12 @@ impl TestPostgres {
                 .expect("docker port failed");
             if out.status.success() {
                 let line = String::from_utf8_lossy(&out.stdout).trim().to_string();
-                if let Some(port) = line.rsplit(':').next() {
-                    if let Ok(p) = port.trim().parse::<u16>() {
-                        return p;
-                    }
+                if let Some(port) = line
+                    .rsplit(':')
+                    .next()
+                    .and_then(|p| p.trim().parse::<u16>().ok())
+                {
+                    return port;
                 }
             }
             std::thread::sleep(Duration::from_millis(200));
