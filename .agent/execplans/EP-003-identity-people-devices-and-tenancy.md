@@ -276,7 +276,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -296,6 +296,14 @@ stale-evidence fail-closed), `GuestPolicy` (bounded local permissions for
 unknown/guest principals), and `TenantGuard` (uniform NotFound across
 tenant boundaries, no existence disclosure). 13 `ep003_unit_` tests +
 dependency-direction test pass. Sentinel: `EP-003 M2: ok`.
+
+M3 completed 2026-08-12: `schemas/identity/` created with nine canonical
+JSON Schemas (principal, person-profile, household, business-binding,
+device-identity, presence-evidence, identity-confidence,
+interaction-context, privacy-context, session); 4 `ep003_integration_` tests
+prove identity records, sessions, and presence evidence round-trip through
+real postgres:18.4 on dynamic host ports with container cleanup. Sentinel:
+`EP-003 M3: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -332,6 +340,14 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   identity types stay in `nexus-identity`; the engine, guest bounds, and
   tenant guard are behavior in the presence crate. Alternative rejected:
   fold behavior into `nexus-identity` (blurs the M1/M2 fence).
+- 2026-08-12 (M3): **Identity schemas are standalone canonical contracts.**
+  `schemas/identity/` holds nine JSON Schema 2020-12 documents mirroring
+  the identity enums and wire names; the generator globs top-level schemas
+  only, so identity bindings are not generated until a later node owns
+  cross-language identity contracts. Evidence: integration tests
+  round-trip the Rust types through real postgres JSONB with exact enum
+  wire values. Alternative rejected: force `schemas/identity/` into the
+  generator now (out of this node's fence).
 
 # 14. Outcomes & Retrospective
 

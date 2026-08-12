@@ -1,0 +1,36 @@
+{
+  "$id": "https://schemas.nexus.local/identity-confidence/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "evidence": {
+      "items": {
+        "$ref": "presence-evidence.schema.json"
+      },
+      "type": "array"
+    },
+    "fused_at_unix_s": {
+      "type": "integer"
+    },
+    "level": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ]
+    },
+    "score": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    }
+  },
+  "required": [
+    "evidence",
+    "fused_at_unix_s",
+    "level",
+    "score"
+  ],
+  "title": "IdentityConfidence",
+  "type": "object"
+}

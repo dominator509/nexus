@@ -1,0 +1,51 @@
+{
+  "$id": "https://schemas.nexus.local/person-profile/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "person_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "display_name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "lifecycle_state": {
+      "enum": [
+        "PENDING",
+        "ACTIVE",
+        "SUSPENDED",
+        "DISABLED",
+        "ARCHIVED"
+      ]
+    },
+    "household_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "business_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "person_id",
+    "tenant_id",
+    "display_name",
+    "lifecycle_state",
+    "business_ids"
+  ],
+  "title": "PersonProfile",
+  "type": "object"
+}

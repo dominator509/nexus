@@ -1,0 +1,31 @@
+{
+  "$id": "https://schemas.nexus.local/principal/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "principal_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "principal_type": {
+      "enum": [
+        "HUMAN",
+        "SERVICE",
+        "AGENT",
+        "DEVICE",
+        "SYSTEM"
+      ]
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "principal_id",
+    "principal_type",
+    "tenant_id"
+  ],
+  "title": "Principal",
+  "type": "object"
+}

@@ -1,0 +1,56 @@
+{
+  "$id": "https://schemas.nexus.local/device-identity/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "device_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "display_name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "PHONE",
+        "TABLET",
+        "DESKTOP",
+        "LAPTOP",
+        "SPEAKER",
+        "CAMERA",
+        "DISPLAY",
+        "SERVER",
+        "APPLIANCE",
+        "UNKNOWN"
+      ]
+    },
+    "trust_level": {
+      "enum": [
+        "UNVERIFIED",
+        "LOCAL",
+        "VERIFIED"
+      ]
+    },
+    "owner_person_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "device_id",
+    "tenant_id",
+    "display_name",
+    "kind",
+    "trust_level"
+  ],
+  "title": "DeviceIdentity",
+  "type": "object"
+}

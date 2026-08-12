@@ -1,0 +1,64 @@
+{
+  "$id": "https://schemas.nexus.local/session/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "created_at_unix_s": {
+      "type": "integer"
+    },
+    "created_by_correlation": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "device_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "expires_at_unix_s": {
+      "type": "integer"
+    },
+    "principal_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "principal_type": {
+      "enum": [
+        "HUMAN",
+        "SERVICE",
+        "AGENT",
+        "DEVICE",
+        "SYSTEM"
+      ]
+    },
+    "session_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "ACTIVE",
+        "EXPIRED",
+        "REVOKED"
+      ]
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "created_at_unix_s",
+    "created_by_correlation",
+    "expires_at_unix_s",
+    "principal_id",
+    "principal_type",
+    "session_id",
+    "state",
+    "tenant_id"
+  ],
+  "title": "Session",
+  "type": "object"
+}

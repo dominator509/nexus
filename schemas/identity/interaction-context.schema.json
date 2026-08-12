@@ -1,0 +1,66 @@
+{
+  "$id": "https://schemas.nexus.local/interaction-context/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "channel": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "correlation_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "device_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "objective_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "presence_evidence": {
+      "items": {
+        "$ref": "presence-evidence.schema.json"
+      },
+      "type": "array"
+    },
+    "principal": {
+      "$ref": "principal.schema.json"
+    },
+    "privacy": {
+      "$ref": "privacy-context.schema.json"
+    },
+    "room_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "task_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "correlation_id",
+    "objective_ids",
+    "presence_evidence",
+    "principal",
+    "privacy"
+  ],
+  "title": "InteractionContext",
+  "type": "object"
+}

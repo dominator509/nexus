@@ -1,0 +1,27 @@
+{
+  "$id": "https://schemas.nexus.local/privacy-context/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "privacy_class": {
+      "enum": [
+        "PUBLIC",
+        "HOUSEHOLD",
+        "PERSONAL",
+        "SENSITIVE",
+        "BUSINESS_CONFIDENTIAL",
+        "SECURITY",
+        "SECRET"
+      ]
+    },
+    "shared_room": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "privacy_class",
+    "shared_room"
+  ],
+  "title": "PrivacyContext",
+  "type": "object"
+}

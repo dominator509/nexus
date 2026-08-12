@@ -1,0 +1,38 @@
+{
+  "$id": "https://schemas.nexus.local/presence-evidence/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "kind": {
+      "enum": [
+        "VOICE",
+        "ROOM",
+        "BLE",
+        "MOBILE",
+        "CAMERA"
+      ]
+    },
+    "observed_at_unix_s": {
+      "type": "integer"
+    },
+    "source_device_id": {
+      "format": "uuid",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "confidence",
+    "kind",
+    "observed_at_unix_s"
+  ],
+  "title": "PresenceEvidence",
+  "type": "object"
+}

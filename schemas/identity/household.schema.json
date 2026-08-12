@@ -1,0 +1,34 @@
+{
+  "$id": "https://schemas.nexus.local/household/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "household_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "member_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "household_id",
+    "tenant_id",
+    "name",
+    "member_ids"
+  ],
+  "title": "Household",
+  "type": "object"
+}
