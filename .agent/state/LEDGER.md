@@ -35,3 +35,4 @@
 2026-08-12T23:42:08Z | hermes-nexus-main | EP-004 | NODE_DONE | node verify EP-004: ok; scope audit EP-004: ok; verify: ok; commit d9e4f1b; nexus-data + nexus-memory crates; 6 integration + 7 failure real-postgres tests; schema locks sensitivity/retention; generated bindings regenerated; no production deployment
 2026-08-12T23:42:16Z | hermes-nexus-main | EP-005 | LEASE | EP-004 green; starting EP-005
 2026-08-12T23:46:35Z | hermes-nexus-main | EP-005 | MILESTONE_PASS | M1 EP-005 M1: ok; nexus-events crate; envelope/outbox/inbox/consumer/publisher/provisioner contracts; ADR-009 vocabulary; 12 unit tests + dependency direction; gate rc-capture fixed
+2026-08-12T23:58:08Z | hermes-nexus-main | EP-005 | MILESTONE_PASS | M2 EP-005 M2: ok; infra/nats nexus-nats adapter; subject namespace + envelope encoding + provisioner/publisher/consumer on async-nats 0.47; 7 adapter unit tests; 205 packages locked

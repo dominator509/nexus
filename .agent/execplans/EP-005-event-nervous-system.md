@@ -271,7 +271,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -294,6 +294,22 @@ dependency-direction test pass. Workspace membership extended; Cargo.lock
 regenerated offline (90 packages). Node script M1 gate fixed to capture
 real exit (was swallowing failures and printing `ok` - gate-integrity
 lesson from EP-001). Sentinel: `EP-005 M1: ok`.
+
+M2 completed 2026-08-12: `infra/nats/` created as the `nexus-nats`
+workspace crate implementing the nexus-events ports on NATS JetStream
+(pinned nats 2.14.3, async-nats 0.47.0, tokio 1.x). `subject.rs`
+derives the canonical subject namespace (`nexus.<domain>.<event>.<tenant>`,
+domain/tenant wildcards, consumer subjects); `encode.rs` serializes and
+validates EventEnvelope <-> JetStream payload bytes (closed wire model);
+`NatsStreamProvisioner` idempotently ensures the canonical stream;
+`NatsEventPublisher` blocks on the JetStream ack so outbox completion
+only follows durable storage (SPEC-023 behavior 2); `NatsEventConsumer`
+exposes a durable pull consumer resuming from the last checkpoint
+(SPEC-023 behavior 4). The port traits are synchronous, so each adapter
+owns a tokio current-thread runtime bridge. 7 `ep005_unit_` tests in the
+adapter + 12 in the contracts crate + dependency-direction pass; clippy
+clean. Cargo.lock regenerated offline (205 packages). Sentinel:
+`EP-005 M2: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -325,6 +341,23 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   the trailing rc check before printing the sentinel. Evidence: first M1
   run printed `ok` with a failing test; after the fix the same failure
   exited nonzero.
+- 2026-08-12 (M2): **Adapter crate lives at `infra/nats/` as
+  `nexus-nats`, a workspace member.** The M2 fence owns `infra/nats/`;
+  the adapter implements the provider-neutral ports with real async-nats
+  0.47.0 (pinned nats 2.14.3) and tokio 1.x. The contracts crate remains
+  infrastructure-free (dependency-direction test still forbids nats/
+  tokio there). Evidence: cargo tree check, M2 gate green.
+- 2026-08-12 (M2): **Sync ports bridged to the async client with an
+  owned tokio current-thread runtime.** The nexus-events port traits are
+  synchronous (matching the sync postgres adapters), while async-nats
+  0.47 is async. Each adapter owns a runtime and blocks on the async
+  calls; JetStream publish ack semantics are preserved because
+  `publish(...).await` returns only after the server ack.
+- 2026-08-12 (M2): **One canonical subject namespace.** Subjects are
+  derived deterministically: `nexus.<domain>.<event>.<tenant>`. A
+  single-segment event type lives under the `general` domain. Wildcard
+  helpers exist for domain and tenant-scoped durable consumers
+  (SPEC-023 fallback doctrine: one stream, no sharding).
 
 # 14. Outcomes & Retrospective
 

@@ -8,7 +8,7 @@ use nexus_data::UnitOfWork;
 use serde::{Deserialize, Serialize};
 
 use crate::envelope::EventEnvelope;
-use crate::error::{EventError, EventErrorCode};
+use crate::error::EventError;
 
 /// Lifecycle of an outbox row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -89,15 +89,4 @@ pub trait OutboxRepository {
 
     /// Mark a record failed with a redacted reason.
     fn mark_failed(&self, outbox_id: &str, reason: &str) -> Result<(), EventError>;
-}
-
-/// Guard that an operation is only legal for a pending record.
-pub(crate) fn ensure_pending(status: OutboxStatus, outbox_id: &str) -> Result<(), EventError> {
-    if status == OutboxStatus::Published {
-        return Err(EventError::new(
-            EventErrorCode::Conflict,
-            format!("outbox record {outbox_id} already published"),
-        ));
-    }
-    Ok(())
 }
