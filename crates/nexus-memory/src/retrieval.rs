@@ -162,7 +162,7 @@ mod tests {
 
     fn candidate(ns: &str, id_byte: u8, confidence: f64) -> MemoryCandidate {
         let record = nexus_data::MemoryRecord {
-            memory_id: NexusId::new(&format!("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6e{id_byte:02x}"))
+            memory_id: NexusId::new(format!("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6e{id_byte:02x}"))
                 .unwrap(),
             tenant_id: TenantId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6e02").unwrap(),
             namespace: ns.to_string(),

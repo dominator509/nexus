@@ -2,6 +2,7 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-004.txt
 .agent/milestone-files/EP-004-M1.txt
+.agent/milestone-files/EP-004-M4.txt
 .agent/node-contracts/EP-004.md
 scripts/nodes/EP-004.sh
 crates/nexus-data/
@@ -14,3 +15,5 @@ Cargo.toml
 Cargo.lock
 docs/vocabulary/README.md
 references/ADR-008-memory-and-data-vocabulary.md
+packages/contracts/src/generated.ts
+python/nexus_contracts/generated.py

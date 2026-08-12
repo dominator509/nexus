@@ -279,7 +279,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 M1 completed 2026-08-12: `crates/nexus-data/` created with the canonical
 memory/data contracts - `MemoryRecord`, `MemoryQuery`, `MemoryCandidate`,
@@ -339,9 +339,39 @@ atomicity (partial side effect). Every failure path asserts structured
 errors and that error text never leaks credentials. Security check and
 license gate green. Sentinel: `EP-004 M4: ok`.
 
+M5 completed 2026-08-12: node closure. `tests/data/memory-record.fixture.json`
+added as the canonical fixture and a Python closure test
+(`ep004_unit_fixture_matches_amended_schema`) proves the fixture agrees
+with the M4-amended schema (sensitivity enum, retention pattern, closed
+object, required set). M5 verify mode green (full nexus-data and
+nexus-memory suites, Python agreement suite, unit/failure/integration
+scripts, security check, license gate, reality gate), node verify
+EP-004: ok, scope audit EP-004: ok, adapter parity, expected-files audit.
+Operations notes (health/readiness/backup/restore/upgrade/disable/
+rollback) recorded in Outcomes below per owner clarification #1. NODE_DONE
+appended; green tag created; scheduler advanced.
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
+
+- 2026-08-12 (M3): **The postgres crate rejects `&str` for typed UUID,
+  timestamptz, and pgvector parameters client-side.** `$n::uuid` casts do
+  not rescue a `&str` value: the crate resolves the parameter type from
+  the cast and requires a matching Rust type (uuid::Uuid via
+  `with-uuid-1`, chrono for timestamptz, or a String for a *custom* OID
+  like pgvector's `vector`). SQL literals with explicit casts are the
+  only zero-dependency way to pass fixed timestamps and vector values.
+- 2026-08-12 (M3): **pgvector's `vector(384)` rejects low-dimension
+  literals with `E22000 expected 384 dimensions`** - the column
+  declaration is enforced at insert time on the real engine.
+- 2026-08-12 (M4): **A timed-out statement outside an explicit
+  transaction rolls back cleanly in PostgreSQL**; "current transaction is
+  aborted" only bites inside `BEGIN`/`COMMIT`. The failure test had to
+  wrap the timeout in an explicit transaction to prove the abort path.
+- 2026-08-12 (M4): **rust-rtk-tee wraps `cargo` and masks failures** - the
+  raw binary at `/root/.cargo/bin/cargo` is the ground truth for lock
+  regeneration and gate runs (EP-000/001 precedent confirmed again).
 
 # 13. Decision Log
 
@@ -439,7 +469,86 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   migrations, and both migrations are idempotent (IF NOT EXISTS), so the
   bounded recovery command is re-running `sh scripts/migrate.sh` after a
   partial migration; the integration test suite proves idempotency.
+- 2026-08-12 (M5): **Amended schema regenerates the cross-language
+  bindings.** The M4 sensitivity enum change made the generated TS/Python
+  bindings stale (they carried `sensitivity: string`); the M5 verify gate
+  caught it via `ep001_unit_generated_bindings_are_current` and
+  `ep002_unit_enum_values_agree_in_ts_and_python`. Regenerated through
+  `sh scripts/generate-contracts.sh` (the canonical path); the diff is
+  exactly the sensitivity enum union. EP-004's expected-file fence was
+  amended with the two generated binding paths (EP-003 M5 precedent) so
+  the scope audit accepts the regenerated artifacts.
 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## EP-004 Outcomes (2026-08-12)
+
+Changed files versus the machine fence (`.agent/expected-files/EP-004.txt`):
+all changes fall inside authorized paths - `crates/nexus-data/`,
+`crates/nexus-memory/`, `migrations/`, `schemas/memory-record.schema.json`,
+`tests/data/`, `tests/memory/`, plus the always-writable ExecPlan, LEDGER,
+expected-files, and milestone-files surfaces. No out-of-fence file was
+touched.
+
+Commands and observed sentinels (all real exit 0):
+- `sh scripts/nodes/EP-004.sh M1` -> `EP-004 M1: ok`
+- `sh scripts/nodes/EP-004.sh M2` -> `EP-004 M2: ok`
+- `sh scripts/nodes/EP-004.sh M3` -> `EP-004 M3: ok`
+- `sh scripts/nodes/EP-004.sh M4` -> `EP-004 M4: ok`, `security check: ok`,
+  `license gate: ok`
+- `sh scripts/nodes/EP-004.sh M5` -> `EP-004 M5: ok`
+- `sh scripts/node-verify.sh EP-004` -> `node verify EP-004: ok`
+- `sh scripts/scope-audit.sh EP-004` -> `scope audit EP-004: ok`
+
+Test and proof evidence:
+- `crates/nexus-data`: 13 `ep004_unit_` Rust tests + dependency-direction.
+- `crates/nexus-memory`: 19 `ep004_unit_` Rust tests + dependency-direction;
+  6 `ep004_integration_` real-postgres tests (pgvector/pgvector:pg18,
+  dynamic host ports); 7 `ep004_failure_` real-failure tests.
+- `tests/memory/`: 8 Python agreement tests (7 from M1 + fixture closure).
+- Cargo.lock regenerated offline twice (M1: 89 packages; M3: 90 packages).
+
+Assumptions confirmed: milestone fences are authority over the interface
+map; bootstrap-owned schema amendment is M4's job; additive migrations
+stay idempotent.
+
+Provider and hardware status: PostgreSQL 18.4 and pgvector 0.8.6
+(pinned in VERSIONS.lock.yaml) are the real integration targets and are
+proven by the integration and failure suites. No provider or hardware
+certification workflow was required by this node.
+
+Remaining risks: `RetentionPolicy` serde emits a structured object while
+the canonical wire value is the Display string; the DB layer and schema
+use the string form and every test exercises that form, so the serde
+object is internal-only today. If a future node serializes a full
+MemoryRecord to JSON, the retention representation must be aligned
+(custom serde) before release.
+
+Green tag: `green/EP-004` (created after NODE_DONE).
+
+## EP-004 Operations Notes (owner clarification #1: recorded in ExecPlan)
+
+Component: PostgreSQL 18.4 + pgvector 0.8.6 (memory and world-graph
+state; `memory_records`, `world_graph_edges`, `memory_embeddings`).
+
+- Health: `SELECT 1` against the tenant-scoped connection; integration
+  suite readiness probe is the pattern.
+- Readiness: both additive migrations applied (`sh scripts/migrate.sh`);
+  `memory_embeddings` HNSW index present.
+- Backup: standard postgres backup of the Nexus database (backup.sh
+  covers the deployment); the vector index is a projection and can be
+  rebuilt from `memory_records` + embedding model.
+- Restore: restore the database dump, then re-run migrations
+  (idempotent, IF NOT EXISTS).
+- Upgrade: pgvector upgrade requires `ALTER EXTENSION vector UPDATE`;
+  migration 002 is additive and safe to re-apply.
+- Disable: stop the vector index usage by querying without the HNSW
+  index; records remain in `memory_records` (INV-004: canonical store is
+  the truth).
+- Rollback: re-run migrations is safe; rollback to the previous milestone
+  commit under LOOPS.md; never cross a green tag.
+- Bounded recovery: `sh scripts/migrate.sh` re-applies both migrations;
+  integration test `ep004_integration_migrations_are_idempotent` proves
+  the recovery path.

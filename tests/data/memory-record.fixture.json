@@ -1,0 +1,22 @@
+{
+  "memory_id": "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f9001",
+  "tenant_id": "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f9002",
+  "namespace": "household",
+  "memory_type": "SEMANTIC",
+  "content": {
+    "note": "fixture memory record"
+  },
+  "content_hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "source": "voice",
+  "actor": "principal",
+  "created_at": "2026-08-12T00:00:00Z",
+  "observed_at": "2026-08-12T00:00:00Z",
+  "confidence": 0.95,
+  "sensitivity": "HOUSEHOLD",
+  "purpose": "remember",
+  "retention": "Days 30",
+  "status": "ACTIVE",
+  "derived_from": [],
+  "supersedes": null,
+  "embedding_ref": null
+}

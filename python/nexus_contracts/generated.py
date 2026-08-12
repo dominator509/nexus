@@ -101,7 +101,7 @@ class MemoryRecord(TypedDict):
     observed_at: str
     purpose: str
     retention: str
-    sensitivity: str
+    sensitivity: Literal["PUBLIC", "HOUSEHOLD", "PERSONAL", "SENSITIVE", "BUSINESS_CONFIDENTIAL", "SECURITY", "SECRET"]
     source: str
     status: Literal["PROPOSED", "ACTIVE", "SUPERSEDED", "REJECTED", "DELETED"]
     supersedes: NotRequired[str | None]

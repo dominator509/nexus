@@ -99,9 +99,7 @@ def ep004_unit_schema_content_hash_is_sha256_hex() -> None:
     schema = _schema()
     pattern = schema["properties"]["content_hash"]["pattern"]
     assert re.fullmatch(pattern, "a" * 64)
-    assert re.fullmatch(pattern, "0" * 64) is None or re.fullmatch(
-        pattern, "0123456789abcdef" * 4
-    )
+    assert re.fullmatch(pattern, "0" * 64) is None or re.fullmatch(pattern, "0123456789abcdef" * 4)
 
 
 def ep004_unit_schema_confidence_is_bounded() -> None:
@@ -129,3 +127,32 @@ def ep004_unit_wire_model_is_snake_case_and_closed() -> None:
         assert field in props, f"missing property {field}"
         assert "_" in field or field.islower(), f"{field} is not snake_case"
     assert set(props) == set(CANONICAL_FIELDS), "schema carries unknown fields"
+
+
+def ep004_unit_fixture_matches_amended_schema() -> None:
+    """The M5 fixture in tests/data agrees with the amended schema.
+
+    M4 locked `sensitivity` to the canonical enum and constrained
+    `retention` to the canonical wire form; the checked-in fixture must
+    satisfy both (stdlib-only validation, no jsonschema dependency).
+    """
+    schema = _schema()
+    fixture = json.loads((ROOT / "tests" / "data" / "memory-record.fixture.json").read_text())
+    # Required fields all present.
+    for field in schema["required"]:
+        assert field in fixture, f"fixture missing required field {field}"
+    # Closed object: no unknown fields.
+    assert set(fixture) == set(CANONICAL_FIELDS), (
+        f"fixture carries unknown fields: {set(fixture) ^ set(CANONICAL_FIELDS)}"
+    )
+    # M4-locked sensitivity enum.
+    sens_enum = schema["properties"]["sensitivity"]["enum"]
+    assert fixture["sensitivity"] in sens_enum, "fixture sensitivity not in enum"
+    # M4-locked retention pattern.
+    pattern = schema["properties"]["retention"]["pattern"]
+    assert re.fullmatch(pattern, fixture["retention"]), (
+        f"fixture retention {fixture['retention']!r} does not match {pattern}"
+    )
+    # Existing locked enums still hold.
+    assert fixture["memory_type"] in schema["properties"]["memory_type"]["enum"]
+    assert fixture["status"] in schema["properties"]["status"]["enum"]

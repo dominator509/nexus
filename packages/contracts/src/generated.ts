@@ -125,7 +125,14 @@ export interface MemoryRecord {
   observed_at: string;
   purpose: string;
   retention: string;
-  sensitivity: string;
+  sensitivity:
+    | "PUBLIC"
+    | "HOUSEHOLD"
+    | "PERSONAL"
+    | "SENSITIVE"
+    | "BUSINESS_CONFIDENTIAL"
+    | "SECURITY"
+    | "SECRET";
   source: string;
   status: "PROPOSED" | "ACTIVE" | "SUPERSEDED" | "REJECTED" | "DELETED";
   supersedes?: string | null;

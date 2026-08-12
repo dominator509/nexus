@@ -116,15 +116,12 @@ impl TestPostgres {
                 ),
                 NoTls,
             );
-            match res {
-                Ok(mut client) => {
-                    let ok = client.simple_query("SELECT 1").is_ok();
-                    drop(client);
-                    if ok {
-                        return;
-                    }
+            if let Ok(mut client) = res {
+                let ok = client.simple_query("SELECT 1").is_ok();
+                drop(client);
+                if ok {
+                    return;
                 }
-                Err(_) => {}
             }
             assert!(
                 Instant::now() < deadline,
@@ -396,8 +393,7 @@ fn ep004_integration_pgvector_extension_and_hnsw_are_real() {
     // a real 384-dimension vector matching the column declaration.
     let dims_384 = format!(
         "[{}]",
-        std::iter::repeat("0.1")
-            .take(384)
+        std::iter::repeat_n("0.1", 384)
             .collect::<Vec<_>>()
             .join(",")
     );

@@ -118,15 +118,12 @@ impl TestPostgres {
                 ),
                 NoTls,
             );
-            match res {
-                Ok(mut client) => {
-                    let ok = client.simple_query("SELECT 1").is_ok();
-                    drop(client);
-                    if ok {
-                        return;
-                    }
+            if let Ok(mut client) = res {
+                let ok = client.simple_query("SELECT 1").is_ok();
+                drop(client);
+                if ok {
+                    return;
                 }
-                Err(_) => {}
             }
             assert!(
                 Instant::now() < deadline,
