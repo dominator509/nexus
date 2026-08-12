@@ -1,0 +1,12 @@
+[package]
+name = "nexus-memory"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Nexus memory behavior: proposal evaluation, retention, supersession, deletion, and retrieval policy (SPEC-002, EP-004 M2)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-data = { path = "../nexus-data", version = "0.1.0" }
