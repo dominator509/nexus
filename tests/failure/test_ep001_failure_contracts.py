@@ -50,17 +50,30 @@ def _start_container() -> str:
 
 
 def _wait_ready(container: str, timeout: float = 60.0) -> None:
+    """Wait until a real connection through the published host port succeeds.
+
+    In-container pg_isready can report ready while docker's host-port publish
+    is still settling; the tests consume the host port, so readiness must be
+    proven with a connect through that port (EP-001 M5 flake fix).
+    """
     deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
     while time.monotonic() < deadline:
-        probe = subprocess.run(
-            ["docker", "exec", container, "pg_isready", "-U", "nexus", "-d", "nexus"],
-            capture_output=True,
-            text=True,
-        )
-        if probe.returncode == 0:
+        try:
+            conn = psycopg.connect(
+                host="127.0.0.1",
+                port=PORT,
+                user="nexus",
+                password="nexus-test",
+                dbname="nexus",
+                connect_timeout=2,
+            )
+            conn.close()
             return
-        time.sleep(1)
-    raise TimeoutError(f"container {container} not ready")
+        except psycopg.OperationalError as exc:
+            last_error = exc
+            time.sleep(0.5)
+    raise TimeoutError(f"postgres host port {PORT} not ready") from last_error
 
 
 def _connect() -> psycopg.Connection:

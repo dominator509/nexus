@@ -337,6 +337,14 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   initialization race (`advisory-dbs/` created during the first fetch);
   consecutive re-runs were green. Neither was a code defect; both are recorded
   for flake-awareness.
+- 2026-08-12 (M5 closure): **Root cause of the postgres test flakes: readiness
+  was probed inside the container, but the tests connect through the published
+  host port.** `pg_isready` via `docker exec` can report ready while docker's
+  host-port publish (proxy/iptables) is still settling. Reproduced with a
+  6-iteration probe: after in-container ready, host-port connect failed on 3
+  of 6 attempts. Fixed by defining readiness as a successful connect through
+  the actual host port in all three suites (Python integration, Python
+  failure, TS integration). Node-verify is now stable across repeated runs.
 
 # 13. Decision Log
 

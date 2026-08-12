@@ -19,20 +19,32 @@ async function waitForPostgres(
   container: string,
   timeoutMs = 60000,
 ): Promise<void> {
+  // Readiness is proven by connecting through the PUBLISHED HOST PORT, not
+  // pg_isready inside the container: docker's host-port publish can lag the
+  // server, and the test consumes the host port (EP-001 M5 flake fix).
   const deadline = Date.now() + timeoutMs;
+  let lastError: unknown = null;
   while (Date.now() < deadline) {
-    const res = spawnSync(
-      "docker",
-      ["exec", container, "pg_isready", "-U", "nexus", "-d", "nexus"],
-      {
-        encoding: "utf8",
-      },
-    );
-    if (res.status === 0) return;
-    await new Promise((r) => setTimeout(r, 1000));
+    const probe = new Client({
+      host: "127.0.0.1",
+      port: PORT,
+      user: "nexus",
+      password: PASSWORD,
+      database: "nexus",
+      connectionTimeoutMillis: 2000,
+    });
+    try {
+      await probe.connect();
+      await probe.end();
+      return;
+    } catch (err) {
+      lastError = err;
+      await new Promise((r) => setTimeout(r, 500));
+    }
   }
   throw new Error(
-    `postgres container ${container} not ready within ${timeoutMs}ms`,
+    `postgres host port ${PORT} not ready within ${timeoutMs}ms`,
+    { cause: lastError },
   );
 }
 

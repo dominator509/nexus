@@ -26,18 +26,32 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def _wait_for_postgres(container: str, timeout: float = 60.0) -> None:
-    """Probe pg_isready inside the container until ready or timeout."""
+    """Wait until a real connection through the published host port succeeds.
+
+    Probing only `pg_isready` inside the container is insufficient: docker's
+    port-publish (proxy/iptables) can lag behind the server being ready, so a
+    host-port connect can fail right after pg_isready reports ready. The test
+    consumes the host port, so readiness is defined by a successful connect
+    through that port (EP-001 M5 flake fix, ADR-005 discovery).
+    """
     deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
     while time.monotonic() < deadline:
-        probe = subprocess.run(
-            ["docker", "exec", container, "pg_isready", "-U", "nexus", "-d", "nexus"],
-            capture_output=True,
-            text=True,
-        )
-        if probe.returncode == 0:
+        try:
+            conn = psycopg.connect(
+                host="127.0.0.1",
+                port=PORT,
+                user="nexus",
+                password="nexus-test",
+                dbname="nexus",
+                connect_timeout=2,
+            )
+            conn.close()
             return
-        time.sleep(1)
-    raise TimeoutError(f"postgres container {container} not ready within {timeout}s")
+        except psycopg.OperationalError as exc:
+            last_error = exc
+            time.sleep(0.5)
+    raise TimeoutError(f"postgres host port {PORT} not ready within {timeout}s") from last_error
 
 
 def ep001_integration_contracts_roundtrip_postgres() -> None:
