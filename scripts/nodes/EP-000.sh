@@ -21,6 +21,7 @@ case "$mode" in
       python3 scripts/node-artifact-check.py EP-000 M3
       python3 scripts/blueprint_validate.py
       python3 references/tests/test_ep000_contracts.py
+      python3 references/tests/test_ep000_integration.py
       sh scripts/source-verify.sh
       ;;
   M4)
