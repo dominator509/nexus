@@ -12,3 +12,6 @@
 2026-08-12T17:29:09Z | hermes-nexus-main | EP-001 | MILESTONE_PASS | M3 EP-001 M3: ok
 2026-08-12T17:39:54Z | hermes-nexus-main | EP-001 | MILESTONE_PASS | M4 EP-001 M4: ok; security check: ok; license gate: ok
 2026-08-12T18:42:05Z | hermes-nexus-main | EP-001 | MILESTONE_PASS | M5 EP-001 M5: ok; node verify EP-001: ok; scope audit EP-001: ok; prettier --check clean; deny.toml; ADR-005
+2026-08-12T19:14:36Z | hermes-nexus-main | EP-001 | NODE_DONE | node verify EP-001: ok; scope audit EP-001: ok; verify: ok; prettier clean; cargo-deny 0.20.2; ADR-005; dynamic-port tests
+2026-08-12T19:14:42Z | hermes-nexus-main | EP-002 | LEASE | EP-001 green; starting EP-002
+2026-08-12T19:18:25Z | hermes-nexus-main | EP-002 | MILESTONE_PASS | M1 EP-002 M1: ok; nexus-domain crate; typed UUIDv7 IDs; vocabulary enums; 16 tests

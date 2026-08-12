@@ -1,0 +1,10 @@
+[package]
+name = "nexus-domain"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Nexus pure domain: typed IDs, canonical vocabulary, and provider-neutral value objects (SPEC-001/003/022)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
