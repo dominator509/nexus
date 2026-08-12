@@ -13,6 +13,8 @@ components:
     implementation: "custom Rust"
     license: "proprietary"
     integration_mode: embedded
+    replacement_contract: "Nexus proprietary API; internal ownership"
+    commercial_review: "Proprietary; no external license obligation"
     status: required
     rationale: "Nexus proprietary control plane and API"
   - id: nexus-edge
@@ -20,6 +22,8 @@ components:
     implementation: "custom Rust"
     license: "proprietary"
     integration_mode: embedded
+    replacement_contract: "Nexus proprietary edge runtime; internal ownership"
+    commercial_review: "Proprietary; no external license obligation"
     status: required
     rationale: "Local fast path, device gateway, audio and policy cache"
   - id: deepseek-v4-flash
@@ -27,6 +31,8 @@ components:
     implementation: "DeepSeek API"
     license: "commercial API terms"
     integration_mode: external-provider
+    replacement_contract: "ReflexProvider contract; OpenAI or Gemini fast provider fallback (PREFLIGHT optional table)"
+    commercial_review: "Usage-based commercial API; no data-training rights assumed; cache optimization only"
     status: required-v1
     rationale: "Primary V1 ReflexProvider with cache optimization"
   - id: bifrost
@@ -34,6 +40,8 @@ components:
     implementation: "Bifrost"
     license: "Apache-2.0"
     integration_mode: replaceable-sidecar
+    replacement_contract: "ModelGateway contract; Bifrost preferred but replaceable (SOURCE_REGISTRY.md)"
+    commercial_review: "Apache-2.0; commercial use permitted"
     status: preferred
     rationale: "Provider gateway, not irrevocably locked"
   - id: postgresql
@@ -41,6 +49,8 @@ components:
     implementation: "PostgreSQL"
     license: "PostgreSQL"
     integration_mode: sidecar
+    replacement_contract: "PostgreSQL 18.4 locked; version advance only by ADR; compatible relational engine requires full contract parity"
+    commercial_review: "PostgreSQL License; commercial use permitted"
     status: required
     rationale: "Canonical durable data store"
   - id: pgvector
@@ -48,6 +58,8 @@ components:
     implementation: "pgvector"
     license: "PostgreSQL"
     integration_mode: extension
+    replacement_contract: "Vector index behind WorldGraphRepository port; dedicated graph DB optional (INV-015)"
+    commercial_review: "PostgreSQL License; commercial use permitted"
     status: required
     rationale: "Initial vector search"
   - id: nats
@@ -55,6 +67,8 @@ components:
     implementation: "NATS JetStream"
     license: "Apache-2.0"
     integration_mode: sidecar
+    replacement_contract: "Event bus abstraction; NATS is projection/transport not truth (INV-004)"
+    commercial_review: "Apache-2.0; commercial use permitted"
     status: required
     rationale: "Durable event nervous system"
   - id: temporal
@@ -62,6 +76,8 @@ components:
     implementation: "Temporal"
     license: "MIT"
     integration_mode: sidecar
+    replacement_contract: "Durable workflow engine; Temporal TS SDK locked; workflow contracts isolate engine"
+    commercial_review: "MIT; commercial use permitted"
     status: required
     rationale: "Long-running durable workflows and approvals"
   - id: keycloak
@@ -69,6 +85,8 @@ components:
     implementation: "Keycloak"
     license: "Apache-2.0"
     integration_mode: sidecar
+    replacement_contract: "OIDC/OAuth2 provider contract; Keycloak owns identities, Nexus owns references"
+    commercial_review: "Apache-2.0; commercial use permitted"
     status: required
     rationale: "OIDC, OAuth, passkeys, federation"
   - id: openfga
@@ -76,6 +94,8 @@ components:
     implementation: "OpenFGA"
     license: "Apache-2.0"
     integration_mode: sidecar
+    replacement_contract: "Relationship authorization model; decision receipts owned by Nexus audit"
+    commercial_review: "Apache-2.0; commercial use permitted"
     status: required
     rationale: "Relationship authorization"
   - id: opa
@@ -83,6 +103,8 @@ components:
     implementation: "OPA"
     license: "Apache-2.0"
     integration_mode: sidecar
+    replacement_contract: "Contextual policy engine; OPA owns compiled policy, Nexus audit stores receipts"
+    commercial_review: "Apache-2.0; commercial use permitted"
     status: required
     rationale: "Contextual policy decisions"
   - id: openbao
@@ -90,6 +112,8 @@ components:
     implementation: "OpenBao"
     license: "MPL-2.0"
     integration_mode: sidecar
+    replacement_contract: "Secret store contract; SOPS+age bootstrap path exists for secrets before OpenBao is up"
+    commercial_review: "MPL-2.0; obligation analysis required per SPEC-019"
     status: required-prod
     rationale: "Central secret service"
   - id: home-assistant
@@ -97,6 +121,8 @@ components:
     implementation: "Home Assistant"
     license: "Apache-2.0"
     integration_mode: sidecar
+    replacement_contract: "Home control provider contract; canonical device mapping isolates provider"
+    commercial_review: "Apache-2.0; commercial use permitted"
     status: home-profile
     rationale: "Primary home abstraction"
   - id: frigate
@@ -104,6 +130,8 @@ components:
     implementation: "Frigate"
     license: "MIT"
     integration_mode: sidecar
+    replacement_contract: "NVR/vision provider contract; camera streams stay on home edge"
+    commercial_review: "MIT; commercial use permitted"
     status: camera-profile
     rationale: "Primary local NVR and vision event source"
   - id: whisper-cpp
@@ -111,6 +139,8 @@ components:
     implementation: "whisper.cpp"
     license: "MIT"
     integration_mode: sidecar-or-library
+    replacement_contract: "STT provider contract; Deepgram or OpenAI speech fallback (PREFLIGHT optional table)"
+    commercial_review: "MIT; commercial use permitted"
     status: voice-profile
     rationale: "Local STT default"
   - id: kokoro
@@ -118,6 +148,8 @@ components:
     implementation: "Kokoro"
     license: "Apache-2.0"
     integration_mode: sidecar
+    replacement_contract: "TTS provider contract; ElevenLabs or Azure Speech fallback"
+    commercial_review: "Apache-2.0; model/code/output rights assessed separately (SPEC-019)"
     status: voice-profile
     rationale: "Local TTS default"
   - id: openwakeword
@@ -125,6 +157,8 @@ components:
     implementation: "openWakeWord runtime"
     license: "Apache-2.0"
     integration_mode: library
+    replacement_contract: "Wake word runtime; Nexus trains/signs own weights (noncommercial upstream weights prohibited)"
+    commercial_review: "Runtime Apache-2.0; bundled noncommercial weights must not ship (SPEC-019)"
     status: voice-profile
     rationale: "Custom commercially safe wake models only"
   - id: asterisk
@@ -132,6 +166,8 @@ components:
     implementation: "Asterisk"
     license: "GPL-2.0"
     integration_mode: isolated-sidecar
+    replacement_contract: "SIP/PSTN gateway contract; GPL kept behind isolated process boundary"
+    commercial_review: "GPL-2.0; isolated-sidecar process boundary required (LICENSE_POLICY.md)"
     status: communications-profile
     rationale: "SIP and PSTN media gateway"
   - id: ictfax
@@ -139,6 +175,8 @@ components:
     implementation: "ICTFax"
     license: "GPL-3.0"
     integration_mode: isolated-sidecar
+    replacement_contract: "Fax gateway contract; HylaFAX compatibility or carrier fallback (Telnyx Fax, Phaxio)"
+    commercial_review: "GPL-3.0; isolated-sidecar process boundary required"
     status: fax-profile
     rationale: "Primary self-hosted fax control"
   - id: postiz
@@ -146,6 +184,8 @@ components:
     implementation: "Postiz"
     license: "AGPL-3.0"
     integration_mode: isolated-sidecar
+    replacement_contract: "Social connector contract; official direct APIs as fallback"
+    commercial_review: "AGPL-3.0; isolated-sidecar process boundary required (COMPONENT_REGISTRY policy)"
     status: social-profile
     rationale: "Initial social publishing connector"
   - id: opnsense
@@ -153,6 +193,8 @@ components:
     implementation: "OPNsense"
     license: "BSD-2-Clause"
     integration_mode: external-appliance
+    replacement_contract: "Firewall provider contract; OpenWrt alternate external appliance"
+    commercial_review: "BSD-2-Clause; commercial use permitted"
     status: sentinel-profile
     rationale: "Primary serious firewall"
   - id: openwrt
@@ -160,6 +202,8 @@ components:
     implementation: "OpenWrt"
     license: "GPL-2.0"
     integration_mode: external-appliance
+    replacement_contract: "Firewall provider contract; OPNsense alternate"
+    commercial_review: "GPL-2.0; external appliance boundary required"
     status: sentinel-profile
     rationale: "Consumer and embedded firewall option"
   - id: adguard-home
@@ -167,6 +211,8 @@ components:
     implementation: "AdGuard Home"
     license: "GPL-3.0"
     integration_mode: isolated-sidecar
+    replacement_contract: "DNS security contract; isolated-sidecar process boundary"
+    commercial_review: "GPL-3.0; isolated-sidecar process boundary required"
     status: sentinel-profile
     rationale: "DNS security default"
   - id: glitchtip
@@ -174,6 +220,8 @@ components:
     implementation: "GlitchTip"
     license: "MIT"
     integration_mode: sidecar
+    replacement_contract: "Incident UI contract; OpenTelemetry collector upstream; Sentry-compatible API"
+    commercial_review: "MIT; commercial use permitted"
     status: required-prod
     rationale: "Error and incident UI"
   - id: seaweedfs
@@ -181,6 +229,8 @@ components:
     implementation: "SeaweedFS"
     license: "Apache-2.0"
     integration_mode: sidecar
+    replacement_contract: "ArtifactStore contract; local filesystem/NAS default, R2/B2/S3 fallback"
+    commercial_review: "Apache-2.0; commercial use permitted"
     status: optional
     rationale: "Preferred scalable local S3-compatible store"
   - id: minio
@@ -188,5 +238,7 @@ components:
     implementation: "MinIO community"
     license: "AGPL-3.0"
     integration_mode: isolated-sidecar
+    replacement_contract: "S3-compatibility fallback only; SeaweedFS preferred; archived upstream"
+    commercial_review: "AGPL-3.0; compatibility-only, isolated-sidecar boundary, upstream archived"
     status: legacy-optional
     rationale: "Compatibility only because upstream is archived"

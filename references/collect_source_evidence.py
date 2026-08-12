@@ -172,13 +172,23 @@ def main() -> int:
     raw: dict[str, dict] = {}
     failures: list[str] = []
 
+    # Preserve previously recorded retrieval dates so re-runs are deterministic
+    # (idempotent evidence: the first retrieval is the authoritative one).
+    previous: dict[str, str] = {}
+    if OUT.is_file():
+        try:
+            for old in json.loads(OUT.read_text(encoding="utf-8")):
+                previous[old.get("component", "")] = old.get("retrieval_date", "")
+        except json.JSONDecodeError:
+            previous = {}
+
     for component, (repo, tags) in GITHUB.items():
         entry = {
             "component": component,
             "url": f"https://github.com/{repo}",
             "authoritative_owner": repo.split("/")[0],
             "source_kind": "github",
-            "retrieval_date": RETRIEVED,
+            "retrieval_date": previous.get(component, RETRIEVED),
             "decision_status": "VERIFIED",
         }
         try:
@@ -206,7 +216,7 @@ def main() -> int:
             "license": info["license"],
             "release_date": "",
             "commit": "",
-            "retrieval_date": RETRIEVED,
+            "retrieval_date": previous.get(component, RETRIEVED),
             "decision_status": "VERIFIED_DOCUMENTED",
         }
         records.append(entry)
@@ -223,7 +233,7 @@ def main() -> int:
             "commit": info.get("commit", ""),
             "commit_date": info.get("commit_date", ""),
             "release_date": info.get("release_date", ""),
-            "retrieval_date": RETRIEVED,
+            "retrieval_date": previous.get(component, RETRIEVED),
             "decision_status": "VERIFIED_COMMIT_PIN",
             "note": info.get("note", ""),
         }

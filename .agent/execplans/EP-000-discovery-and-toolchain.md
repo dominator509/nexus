@@ -270,20 +270,54 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M1: Contract, vocabulary, and package boundary
+- [x] M2: Core behavior and deterministic invariants
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-12: The pack's own L5 gates do not pass on the unmodified pack. Three
+  defects found and fixed with ADRs: (1) security-check.sh regex `sk-[A-Za-z0-9_-]{24,}`
+  false-positives on the canonical EP-025 artifact name `EP-025-asterisk-telephony-and-ai-calling.md`
+  (ADR-001); (2) COMPONENT_REGISTRY.yaml lacked `replacement_contract:` and
+  `commercial_review:` fields required by license_validate.py (ADR-002); (3)
+  LICENSE_POLICY.md lacked the literal token `copyleft` required by license_validate.py
+  even though the SIDECAR class is copyleft policy in substance (ADR-003).
+- 2026-08-12: Upstream mappings in VERSIONS.lock.yaml needed correction to reach
+  authoritative sources: temporal-typescript-sdk v1.17.2 has no GitHub release
+  (npm shasum verified instead), glitchtip releases are Docker Hub images (6.1.8
+  confirmed), ictfax is ictinnovations/ictfax, a2a-js-sdk is a2aproject/a2a-js,
+  docker-engine tags are `docker-v29.1.x`, kokoro lock version 0.19 refers to the
+  model lineage while pyproject reports 0.9.4 (recorded for ADR review).
+- 2026-08-12: The host toolchain is older than the lock (rust 1.96.0 vs 1.97.1,
+  node 24.16.0 vs 24.18.0, etc.). The devcontainer is the canonical fallback;
+  mise (the repo's declared toolchain manager) is being used to provision locked
+  versions on the host for verification parity.
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-12 | ADR-001 | Fix security gate regex precision with left word boundary
+  instead of allowlisting Asterisk-named files. Evidence: gate reproduced failing,
+  fixed, negative control still catches real secrets. Alternative: allowlist (rejected).
+  Reversal: revert one-line regex. Security: gate now catches only true secrets.
+- 2026-08-12 | ADR-002 | Complete COMPONENT_REGISTRY.yaml with real
+  replacement_contract and commercial_review values for all 26 components,
+  grounded in VERSIONS.lock.yaml + SOURCE_REGISTRY.md + SOURCE_VERIFICATION.json.
+  Alternative: weaken gate (rejected). Reversal: revert registry diff + fence line.
+- 2026-08-12 | ADR-003 | Add `copyleft` token to LICENSE_POLICY.md SIDECAR class
+  description. Documentation-only vocabulary alignment; substance unchanged.
+  Reversal: revert one-line edit.
+- 2026-08-12 | Source evidence collector preserves original retrieval_date on
+  re-runs so the evidence file is deterministic and idempotent (first retrieval
+  is authoritative). Failure test enforces byte-identical re-runs.
+- 2026-08-12 | .tool-versions uses mise tool names; `tofu` maps to lock component
+  `opentofu`. Alias recorded in the unit test and verified.
 
 # 14. Outcomes & Retrospective
 
-At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+- M1: 7 unit tests, 50/50 source records verified. Commit 5c91e3f.
+- M2: devcontainer + mise.toml. Commit 8127fb1.
+- M3: source-verify.sh + 3 live integration tests against upstreams. Commit 9821b91.
+- M4 in progress: failure tests, security + license gate fixes (ADR-001..003), version-verify.sh.

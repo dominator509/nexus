@@ -87,11 +87,8 @@ def test_ep000_unit_tool_versions_match_lock() -> None:
     """ToolchainLock in .tool-versions agrees with VERSIONS.lock.yaml for pinned tools."""
     lock = load_lock()
     tool_versions = load_tool_versions()
-    # mise tool name -> VERSIONS.lock component name
-    alias = {"tofu": "opentofu"}
     for tool, version in tool_versions.items():
-        lock_name = alias.get(tool, tool)
-        lock_entries = [c for c in lock["locks"] if c["component"] == lock_name]
+        lock_entries = [c for c in lock["locks"] if c["component"] == tool]
         assert lock_entries, f"{tool} in .tool-versions but not in VERSIONS.lock.yaml"
         locked_version = lock_entries[0]["version"]
         assert version == locked_version, f"{tool}: .tool-versions {version} != lock {locked_version}"

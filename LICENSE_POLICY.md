@@ -8,7 +8,7 @@ Nexus is commercially sellable as self-hosted software and managed SaaS. Open-so
 
 - GREEN: MIT, Apache-2.0, BSD, ISC, PostgreSQL, PSF, and equivalent permissive licenses. May be linked or embedded after security review.
 - REVIEW: MPL-2.0 and LGPL. May be used when file-level or dynamic-link obligations are documented and the boundary remains replaceable.
-- SIDECAR: GPL and AGPL components. Run as independent processes or external appliances, communicate through documented APIs, preserve notices and source-offer duties, and obtain legal review before distribution.
+- SIDECAR: GPL and AGPL components (copyleft). Run as independent processes or external appliances, communicate through documented APIs, preserve notices and source-offer duties, and obtain legal review before distribution.
 - EXTERNAL: commercial API or user-owned appliance governed by provider terms.
 - PROHIBITED: noncommercial code or model weights, unclear provenance, source-available licenses incompatible with the intended offering, and packages that cannot satisfy redistribution obligations.
 

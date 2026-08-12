@@ -54,6 +54,7 @@ RUN curl -fsSL https://storage.googleapis.com/flutter_infra_release/releases/sta
     && mkdir -p /opt/flutter \
     && tar -xJf /tmp/flutter.tar.xz -C /opt/flutter --strip-components=1 \
     && rm /tmp/flutter.tar.xz \
+    && git config --global --add safe.directory /opt/flutter \
     && ln -sf /opt/flutter/bin/flutter /usr/local/bin/flutter \
     && ln -sf /opt/flutter/bin/dart /usr/local/bin/dart \
     && flutter config --no-analytics

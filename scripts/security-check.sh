@@ -7,7 +7,7 @@ export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 [ ! -f .env ] || git ls-files --error-unmatch .env >/dev/null 2>&1 && { echo "security check: FAIL - .env is tracked" >&2; exit 1; } || true
-patterns='AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|sk-[A-Za-z0-9_-]{24,}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|AGE-SECRET-KEY-1[A-Z0-9]{20,}'
+patterns='AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_-]{24,}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|AGE-SECRET-KEY-1[A-Z0-9]{20,}'
 tracked=$(git ls-files 2>/dev/null || true)
 if [ -n "$tracked" ]; then
   hits=$(printf '%s

@@ -8,7 +8,7 @@ uv = "0.12.0"
 node = "24.18.0"
 pnpm = "11.17.0"
 flutter = "3.44.7"
-tofu = "1.12.1"
+opentofu = "1.12.1"
 
 [env]
 CI = "true"

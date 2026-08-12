@@ -7,6 +7,9 @@ references/
 infra/devcontainer/
 scripts/source-verify.sh
 scripts/version-verify.sh
+scripts/security-check.sh
+COMPONENT_REGISTRY.yaml
+LICENSE_POLICY.md
 rust-toolchain.toml
 .tool-versions
 mise.toml
