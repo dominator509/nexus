@@ -47,6 +47,38 @@ at compile time.
 
 `HUMAN`, `SERVICE`, `AGENT`, `DEVICE`, `SYSTEM`. (SPEC-001/005)
 
+## EvidenceKind
+
+`VOICE`, `ROOM`, `BLE`, `MOBILE`, `CAMERA`. Evidence combines into
+confidence; it is never cryptographic authentication (INV-003, SPEC-005
+behavior 3, EP-003 acceptance obligation 2).
+
+## ConfidenceLevel
+
+`LOW`, `MEDIUM`, `HIGH`. Deterministic bands over fused presence evidence
+(EP-003; ADR-007).
+
+## DeviceKind
+
+`PHONE`, `TABLET`, `DESKTOP`, `LAPTOP`, `SPEAKER`, `CAMERA`, `DISPLAY`,
+`SERVER`, `APPLIANCE`, `UNKNOWN`. Provider-neutral device classes
+(SPEC-012/017; ADR-007).
+
+## TrustLevel
+
+`UNVERIFIED`, `LOCAL`, `VERIFIED`. Device trust ladder; never a substitute
+for cryptographic step-up (SPEC-005 behaviors 3-4; ADR-007).
+
+## LifecycleState
+
+`PENDING`, `ACTIVE`, `SUSPENDED`, `DISABLED`, `ARCHIVED`. World-entity
+lifecycle (SPEC-001; ADR-007).
+
+## SessionState
+
+`ACTIVE`, `EXPIRED`, `REVOKED`. Sessions are independently scoped from
+people and devices (EP-003 acceptance obligation 1; ADR-007).
+
 ## CapabilityClass
 
 `QUERY`, `COMMAND`, `WORKFLOW`, `STREAM`, `ADMINISTRATIVE`. (SPEC-003)

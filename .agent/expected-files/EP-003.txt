@@ -7,3 +7,7 @@ crates/nexus-identity/
 crates/nexus-presence/
 schemas/identity/
 tests/identity/
+Cargo.toml
+Cargo.lock
+docs/vocabulary/README.md
+references/ADR-007-identity-and-presence-vocabulary.md

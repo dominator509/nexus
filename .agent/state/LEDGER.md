@@ -20,3 +20,5 @@
 2026-08-12T20:31:04Z | hermes-nexus-main | EP-002 | MILESTONE_PASS | M4 EP-002 M4: ok; security check: ok; license gate: ok; 7 ep002_failure tests; unavailable dep, timeout, malformed, duplicate, denied permission, rollback, structured errors; scope audit ok
 2026-08-12T21:15:21Z | hermes-nexus-main | EP-002 | MILESTONE_PASS | M5 EP-002 M5: ok; live-fire evidence; operations docs; node verify EP-002: ok; scope audit EP-002: ok; wildcard path dep version fix; generator idempotent
 2026-08-12T21:15:21Z | hermes-nexus-main | EP-002 | NODE_DONE | node verify EP-002: ok; scope audit EP-002: ok; verify: ok; commit e75d0a8; canonical snake_case wire names all languages; schema_version const; Dart binding; CapabilityDescriptor.id slug; cargo-deny 0.20.2 pinned; real postgres dynamic-port tests; no production deployment
+2026-08-12T21:15:52Z | hermes-nexus-main | EP-003 | LEASE | EP-002 green; starting EP-003
+2026-08-12T21:25:02Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M1 EP-003 M1: ok; nexus-identity crate; all 10 public interfaces; ADR-007 vocabulary; 30 unit tests + dependency direction; fence extended

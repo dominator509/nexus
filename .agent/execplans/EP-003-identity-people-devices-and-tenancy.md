@@ -274,11 +274,21 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+M1 completed 2026-08-12: `crates/nexus-identity` created with all ten public
+interfaces (Principal, PersonProfile, Household, BusinessBinding,
+DeviceIdentity, PresenceEvidence, IdentityConfidence, InteractionContext,
+PrivacyContext) plus Session/SessionState; vocabulary enums added by
+ADR-007 (EvidenceKind, ConfidenceLevel, DeviceKind, TrustLevel,
+LifecycleState, SessionState); 30 `ep003_unit_` tests + dependency-direction
+test pass. Sentinel: `EP-003 M1: ok`. Fence extended with Cargo.toml,
+Cargo.lock, docs/vocabulary/README.md, references/ADR-007; node-contract
+spec path typo fixed.
 
 # 12. Surprises & Discoveries
 
@@ -287,6 +297,25 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-12 (M1): **Identity vocabulary added by ADR-007.** EvidenceKind,
+  ConfidenceLevel, DeviceKind, TrustLevel, LifecycleState, SessionState are
+  vocabulary-locked enums owned by `nexus-identity`. Evidence: ADR-007,
+  vocabulary README, unit tests, M3 schemas. Alternative rejected: free-form
+  strings (lose parse-time rejection). Consequence: `nexus-identity`
+  depends on `nexus-domain` and serde only. Reversal: remove enums, ADR, and
+  vocabulary entries together.
+- 2026-08-12 (M1): **Workspace membership and fence extension.** Adding
+  `crates/nexus-identity` requires root Cargo.toml membership; Cargo.lock
+  regenerated offline (89 packages, +9 lines for the new member). The
+  node's machine fence was extended with Cargo.toml, Cargo.lock,
+  docs/vocabulary/README.md, and references/ADR-007 per the EP-002
+  precedent. Alternative rejected: stand-alone crate outside the workspace
+  (breaks `--locked` workspace gates). Reversal: remove the member.
+- 2026-08-12 (M1): **Session revocation dominates expiry.** A revoked
+  session stays revoked even if `expire()` is called later; the unit test
+  caught the naive overwrite. Alternative rejected: allow expiry to
+  downgrade revocation (weaker fail-closed semantics).
 
 # 14. Outcomes & Retrospective
 
