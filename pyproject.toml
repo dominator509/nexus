@@ -16,7 +16,7 @@ dev = ["pytest>=8", "ruff>=0.9", "mypy>=1.14", "psycopg[binary]>=3.2"]
 packages = ["python/nexus_contracts"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests/unit", "tests/integration"]
+testpaths = ["tests/unit", "tests/integration", "tests/failure"]
 python_functions = ["test_*", "ep001_unit_*", "ep001_integration_*", "ep001_failure_*"]
 
 [tool.ruff]

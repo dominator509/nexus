@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate:
+    name: GraphLock gates
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install locked toolchain (mise)
+        uses: jdx/mise-action@v2
+        with:
+          version: 2026.8.5
+          install: true
+          cache: true
+
+      - name: Preflight
+        run: sh scripts/preflight.sh
+
+      - name: Blueprint validation
+        run: python3 scripts/blueprint_validate.py
+
+      - name: Lint
+        run: sh scripts/lint.sh
+
+      - name: Typecheck
+        run: sh scripts/typecheck.sh
+
+      - name: Unit tests
+        run: sh scripts/test-unit.sh
+
+      - name: Security gate
+        run: sh scripts/security-check.sh
+
+      - name: License gate
+        run: sh scripts/license-gate.sh
+
+      - name: Reality gate
+        run: sh scripts/reality-gate.sh
+
+  integration:
+    name: Integration (real PostgreSQL)
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install locked toolchain (mise)
+        uses: jdx/mise-action@v2
+        with:
+          version: 2026.8.5
+          install: true
+          cache: true
+
+      - name: Preflight
+        run: sh scripts/preflight.sh
+
+      - name: Integration tests
+        run: sh scripts/test-integration.sh

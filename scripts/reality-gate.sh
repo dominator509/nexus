@@ -12,9 +12,14 @@ allow=.agent/reality-allow
 hits=0
 for dir in apps crates packages services python mobile infra; do
   [ -d "$dir" ] || continue
-  out=$(grep -RInE -f "$pat" "$dir" 2>/dev/null | grep -vE -f "$allow" || true)
-  if [ -n "$out" ]; then printf '%s
-' "$out"; hits=1; fi
+  out=$(grep -RInE -f "$pat" "$dir" 2>/dev/null \
+    | grep -v '/node_modules/' \
+    | grep -v '/.venv/' \
+    | grep -v '/target/' \
+    | grep -v '/dist/' \
+    | grep -v '/build/' \
+    | grep -vE -f "$allow" || true)
+  if [ -n "$out" ]; then printf '%s\n' "$out"; hits=1; fi
 done
 [ "$hits" -eq 0 ] || { echo "reality gate: FAIL" >&2; exit 1; }
 echo "reality gate: ok"
