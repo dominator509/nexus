@@ -278,7 +278,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 M1 completed 2026-08-12: `crates/nexus-data/` created with the canonical
@@ -321,6 +321,23 @@ tenant isolation, transactional supersession, recursive adjacency walk,
 vector extension + HNSW + cosine proof, migration idempotency. postgres
 0.19.14 dev-dep with `with-serde_json-1` + `with-uuid-1`; uuid dev-dep.
 Cargo.lock regenerated offline (90 packages). Sentinel: `EP-004 M3: ok`.
+
+M4 completed 2026-08-12: `schemas/memory-record.schema.json` amended to
+lock the remaining vocabulary values: `sensitivity` is now a closed enum
+(PUBLIC, HOUSEHOLD, PERSONAL, SENSITIVE, BUSINESS_CONFIDENTIAL, SECURITY,
+SECRET - matching `Sensitivity` in nexus-data) and `retention` is a
+pattern-constrained string (INDEFINITE or `Unit N` where Unit in
+Hours/Days/Weeks/Months/Years - matching the canonical Display form used
+by the DB layer). 7 `ep004_failure_` tests exercise REAL failure
+mechanisms against `pgvector/pgvector:pg18`: container termination
+(unavailable dependency), statement_timeout budget exhaustion (timeout,
+explicit transaction abort), CHECK-constraint rejection (malformed
+content_hash and status), PRIMARY KEY conflict (duplicate request),
+cross-tenant UPDATE/DELETE affecting zero rows (denied permission),
+`pg_cancel_backend` (cancelled work), and FK-violation rollback proving
+atomicity (partial side effect). Every failure path asserts structured
+errors and that error text never leaks credentials. Security check and
+license gate green. Sentinel: `EP-004 M4: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -399,6 +416,29 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   Evidence: `ep004_integration_pgvector_extension_and_hnsw_are_real`
   green. Consequence: the HNSW index and cosine operator are exercised
   against the real extension.
+- 2026-08-12 (M4): **Schema locks the remaining vocabulary values.**
+  M1 deferred enum locking to M4 (bootstrap-owned schema amendment).
+  `sensitivity` is now a closed enum mirroring `Sensitivity` exactly, and
+  `retention` is pattern-constrained to the canonical Display wire form
+  (INDEFINITE or `Unit N`), which is what the DB layer stores and what
+  `RetentionPolicy::to_string()` emits. Evidence: schema diff, Python
+  agreement tests still green (they assert property/required sets, which
+  are unchanged). Alternative rejected: leave `sensitivity`/`retention`
+  as free strings (no parse-time rejection on the wire).
+- 2026-08-12 (M4): **Failure tests use real failure mechanisms, never
+  mocks.** Container kill for unavailable dependency, `statement_timeout`
+  + explicit transaction abort for timeout, CHECK constraints for
+  malformed input, PRIMARY KEY for duplicate, tenant-filtered 0-row
+  writes for denied permission, `pg_cancel_backend` for cancellation, and
+  FK violation + rollback for partial side effects. Every error path also
+  asserts the error text never contains the connection password
+  (redacted-logs obligation). Evidence: `ep004_failure_*` 7/7 green.
+- 2026-08-12 (M4): **Operations diagnostic and bounded recovery for the
+  new pgvector surface stay in the ExecPlan (owner clarification #1).**
+  No new docs file: the existing `scripts/migrate.sh` applies the additive
+  migrations, and both migrations are idempotent (IF NOT EXISTS), so the
+  bounded recovery command is re-running `sh scripts/migrate.sh` after a
+  partial migration; the integration test suite proves idempotency.
 
 # 14. Outcomes & Retrospective
 

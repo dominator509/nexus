@@ -1,1 +1,2 @@
 schemas/memory-record.schema.json
+crates/nexus-memory/tests/failure_postgres.rs
