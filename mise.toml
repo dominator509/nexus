@@ -1,0 +1,19 @@
+# Nexus mise configuration (EP-000). Canonical toolchain lock.
+# Tool versions must match VERSIONS.lock.yaml and .tool-versions.
+# Verified against authoritative sources in references/SOURCE_VERIFICATION.json.
+[tools]
+rust = "1.97.1"
+python = "3.14.6"
+uv = "0.12.0"
+node = "24.18.0"
+pnpm = "11.17.0"
+flutter = "3.44.7"
+tofu = "1.12.1"
+
+[env]
+CI = "true"
+CARGO_TERM_COLOR = "never"
+GIT_TERMINAL_PROMPT = "0"
+GIT_PAGER = "cat"
+PAGER = "cat"
+DEBIAN_FRONTEND = "noninteractive"

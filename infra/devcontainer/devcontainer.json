@@ -1,0 +1,29 @@
+{
+  "name": "Nexus Locked Devtoolchain",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "root",
+  "containerEnv": {
+    "CI": "true",
+    "CARGO_TERM_COLOR": "never",
+    "GIT_TERMINAL_PROMPT": "0",
+    "GIT_PAGER": "cat",
+    "PAGER": "cat",
+    "DEBIAN_FRONTEND": "noninteractive",
+    "PNPM_HOME": "/root/.local/share/pnpm"
+  },
+  "mounts": [
+    "source=docker-socket,target=/var/run/docker.sock,type=bind"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "ms-python.python",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}

@@ -123,6 +123,54 @@ def test_ep000_unit_source_urls_are_authoritative_domains() -> None:
             assert bad not in url, f"{record['component']} uses non-authoritative url {url}"
 
 
+def test_ep000_unit_devcontainer_pins_locked_toolchain() -> None:
+    """The devcontainer Dockerfile pins every locked toolchain version (no latest)."""
+    dockerfile = (ROOT / "infra/devcontainer/Dockerfile").read_text(encoding="utf-8")
+    expected_pins = {
+        "rust": "1.97.1",
+        "uv": "0.12.0",
+        "node": "v24.18.0",
+        "pnpm": "11.17.0",
+        "flutter": "3.44.7",
+        "sops": "v3.13.0",
+    }
+    for tool, version in expected_pins.items():
+        assert version in dockerfile, f"devcontainer missing {tool} pin {version}"
+    assert "latest" not in dockerfile, "devcontainer must not use unpinned latest"
+
+
+def test_ep000_unit_mise_matches_tool_versions() -> None:
+    """mise.toml and .tool-versions must agree with each other and the lock."""
+    import tomllib
+
+    mise = tomllib.loads((ROOT / "mise.toml").read_text(encoding="utf-8"))
+    tools = mise["tools"]
+    tool_versions = load_tool_versions()
+    assert set(tools) == set(tool_versions), "mise.toml and .tool-versions tool sets differ"
+    for tool in tools:
+        assert str(tools[tool]) == tool_versions[tool], f"{tool} version differs"
+
+
+def test_ep000_unit_devcontainer_syntax() -> None:
+    """devcontainer.json parses and points at the Dockerfile."""
+    import json as _json
+
+    cfg = _json.loads((ROOT / "infra/devcontainer/devcontainer.json").read_text(encoding="utf-8"))
+    assert cfg["build"]["dockerfile"] == "Dockerfile"
+    assert cfg["name"]
+
+
+def test_ep000_unit_no_unpinned_reference_in_toolchain() -> None:
+    """No toolchain file references a floating 'latest' or empty version."""
+    import tomllib
+
+    mise = tomllib.loads((ROOT / "mise.toml").read_text(encoding="utf-8"))
+    for tool, version in mise["tools"].items():
+        assert version != "latest" and str(version).strip(), f"{tool} unpinned"
+    dockerfile = (ROOT / "infra/devcontainer/Dockerfile").read_text(encoding="utf-8")
+    assert "latest" not in dockerfile
+
+
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):
