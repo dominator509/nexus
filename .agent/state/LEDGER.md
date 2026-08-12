@@ -17,3 +17,4 @@
 2026-08-12T19:18:25Z | hermes-nexus-main | EP-002 | MILESTONE_PASS | M1 EP-002 M1: ok; nexus-domain crate; typed UUIDv7 IDs; vocabulary enums; 16 tests
 2026-08-12T20:25:33Z | hermes-nexus-main | EP-002 | MILESTONE_PASS | M2 EP-002 M2: ok; canonical snake_case wire names in Rust/TS/Python/Dart; schema_version const typed; Dart binding added; Python class_ alias; ADR-006; cargo-deny 0.20.2 + cargo-audit 0.22.2 pinned
 2026-08-12T20:29:38Z | hermes-nexus-main | EP-002 | MILESTONE_PASS | M3 EP-002 M3: ok; real postgres:18.4 integration; 4 ep002_integration tests; roundtrip, idempotency, statement_timeout recovery, container isolation; rust-postgres-client 0.19.14 pinned
+2026-08-12T20:31:04Z | hermes-nexus-main | EP-002 | MILESTONE_PASS | M4 EP-002 M4: ok; security check: ok; license gate: ok; 7 ep002_failure tests; unavailable dep, timeout, malformed, duplicate, denied permission, rollback, structured errors; scope audit ok
