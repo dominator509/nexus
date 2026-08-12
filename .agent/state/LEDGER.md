@@ -7,3 +7,4 @@
 2026-08-12T16:49:36Z | hermes-nexus-main | EP-000 | MILESTONE_PASS | M4 EP-000 M4: ok
 2026-08-12T17:04:37Z | hermes-nexus-main | EP-000 | MILESTONE_PASS | M5 EP-000 M5: ok
 2026-08-12T17:04:37Z | hermes-nexus-main | EP-000 | NODE_DONE | node verify EP-000: ok; scope audit EP-000: ok; verify: ok
+2026-08-12T17:06:41Z | hermes-nexus-main | EP-001 | LEASE | EP-000 green; starting EP-001

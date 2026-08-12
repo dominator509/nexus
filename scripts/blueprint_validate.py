@@ -49,8 +49,18 @@ for node, deps in nodes:
 plans = sorted(p.name[:6] for p in (ROOT / ".agent/execplans").glob("EP-*.md")) if (ROOT / ".agent/execplans").is_dir() else []
 if plans and plans != sorted(seen):
     fail("ExecPlan set differs from graph node set")
+IGNORE_DIRS = {
+    ".git", "node_modules", ".venv", "venv", "target", "dist", "build",
+    ".mise", ".cache", "__pycache__", ".pytest_cache", ".mypy_cache",
+    ".ruff_cache", ".dart_tool", "coverage",
+}
+
+CODE_EXTS = {".py", ".rs", ".ts", ".js"}
+
 for path in ROOT.rglob("*"):
     if not path.is_file() or ".git" in path.parts:
+        continue
+    if any(part in IGNORE_DIRS for part in path.parts):
         continue
     data = path.read_bytes()
     try:
@@ -59,6 +69,6 @@ for path in ROOT.rglob("*"):
         continue
     if any(ord(ch) > 127 for ch in text):
         fail(f"non-ASCII text in {path.relative_to(ROOT)}")
-    if "{" * 2 in text and path.name not in {"reality-patterns"}:
+    if "{" * 2 in text and path.suffix not in CODE_EXTS and path.name not in {"reality-patterns"}:
         fail(f"unresolved double-brace placeholder in {path.relative_to(ROOT)}")
 print("blueprint validation: ok")

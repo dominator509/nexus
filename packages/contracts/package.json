@@ -1,0 +1,23 @@
+{
+  "name": "@nexus/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Generated Nexus cross-language contracts (canonical source: schemas/)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "python3 scripts/generate.py",
+    "generate:check": "python3 scripts/generate.py --check",
+    "test:unit": "vitest run src/__tests__",
+    "test:integration": "vitest run src/__tests__/integration",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0"
+  }
+}
