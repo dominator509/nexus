@@ -317,7 +317,15 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 14. Outcomes & Retrospective
 
+- 2026-08-12 | Completion sequence corrected: LEASE_RELEASE was appended after
+  NODE_DONE, which made ledger status return PENDING (status reads the last
+  event) and deadlocked the scheduler on NEXT EP-000. Per HOW_TO_USE.md,
+  LEASE_RELEASE is for a stopping agent mid-node; a completed node terminates
+  with NODE_DONE as the last event plus the green tag. Removed the erroneous
+  line before push and re-tagged green/EP-000 at the M5 commit.
 - M1: 7 unit tests, 50/50 source records verified. Commit 5c91e3f.
 - M2: devcontainer + mise.toml. Commit 8127fb1.
 - M3: source-verify.sh + 3 live integration tests against upstreams. Commit 9821b91.
-- M4 in progress: failure tests, security + license gate fixes (ADR-001..003), version-verify.sh.
+- M4: failure tests, security + license gate fixes (ADR-001..003), version-verify.sh. Commit 04b0340.
+- M5: rust-toolchain.toml; full verify green; node verify EP-000: ok; scope audit EP-000: ok.
+  Green tag green/EP-000. Devcontainer built successfully (nexus-devtoolchain:locked).

@@ -39,7 +39,10 @@ case "$mode" in
       python3 references/tests/test_ep000_contracts.py
       sh scripts/source-verify.sh
       sh scripts/version-verify.sh
-      sh scripts/node-verify.sh EP-000
+      if [ "$mode" = "M5" ]; then
+        sh scripts/node-verify.sh EP-000
+        sh scripts/scope-audit.sh EP-000
+      fi
       :
       ;;
   *) echo "EP-000: FAIL - unknown mode $mode" >&2; exit 2;;

@@ -5,3 +5,5 @@
 2026-08-12T16:29:17Z | hermes-nexus-main | EP-000 | MILESTONE_PASS | M3 EP-000 M3: ok
 2026-08-12T16:40:50Z | hermes-nexus-main | EP-000 | HEARTBEAT | M4 in progress; ADR-001/002/003 recorded; devcontainer rebuild + mise install running
 2026-08-12T16:49:36Z | hermes-nexus-main | EP-000 | MILESTONE_PASS | M4 EP-000 M4: ok
+2026-08-12T17:04:37Z | hermes-nexus-main | EP-000 | MILESTONE_PASS | M5 EP-000 M5: ok
+2026-08-12T17:04:37Z | hermes-nexus-main | EP-000 | NODE_DONE | node verify EP-000: ok; scope audit EP-000: ok; verify: ok

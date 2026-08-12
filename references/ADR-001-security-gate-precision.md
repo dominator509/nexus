@@ -6,18 +6,16 @@ Author: hermes-nexus-main (EP-000 M4)
 
 ## Problem
 
-`scripts/security-check.sh` scans every tracked file with the regex set:
-
-```
-AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|sk-[A-Za-z0-9_-]{24,}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|AGE-SECRET-KEY-1[A-Z0-9]{20,}
-```
-
-The `sk-[A-Za-z0-9_-]{24,}` alternative has no left word boundary. The blueprint
-pack's own committed content contains the string `EP-025-asterisk-telephony-and-ai-calling.md`
-(the canonical Asterisk node name). The substring `sk-telephony-and-ai-calling.md` is
-`sk-` followed by 27 `[A-Za-z0-9_-]` characters, so the gate false-positives on
-`.agent/GRAPH.md`, `.agent/MANIFEST.md`, `.agent/execplans/EP-025-*.md`,
-`.agent/expected-files/EP-025.txt`, `.agent/milestone-files/EP-025-M1.txt`, and `ROADMAP.md`.
+`scripts/security-check.sh` scans every tracked file with a regex alternation
+that includes an OpenAI-style key shape: the literal prefix `sk-` followed by
+24 or more word or hyphen characters. The alternation's key branch had no left
+word boundary. The blueprint pack's own committed content contains the canonical
+Asterisk node name `EP-025-asterisk-telephony-and-ai-calling.md`. Inside that
+identifier, the letter sequence starting at the tail of "asterisk" plus the
+hyphenated filename is `sk-` followed by 27 word or hyphen characters, so the
+gate false-positives on `.agent/GRAPH.md`, `.agent/MANIFEST.md`,
+`.agent/execplans/EP-025-*.md`, `.agent/expected-files/EP-025.txt`,
+`.agent/milestone-files/EP-025-M1.txt`, and `ROADMAP.md`.
 The pack cannot pass its own security gate.
 
 ## Decision

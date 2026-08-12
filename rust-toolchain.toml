@@ -1,0 +1,9 @@
+# Nexus Rust toolchain pin (EP-000).
+# Locked in VERSIONS.lock.yaml (component: rust, version: 1.97.1) and verified
+# against the authoritative source in references/SOURCE_VERIFICATION.json.
+# The devcontainer (infra/devcontainer/Dockerfile) is the canonical fallback
+# when the host toolchain cannot satisfy this pin.
+[toolchain]
+channel = "1.97.1"
+profile = "minimal"
+components = ["rustfmt", "clippy"]
