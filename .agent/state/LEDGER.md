@@ -22,3 +22,4 @@
 2026-08-12T21:15:21Z | hermes-nexus-main | EP-002 | NODE_DONE | node verify EP-002: ok; scope audit EP-002: ok; verify: ok; commit e75d0a8; canonical snake_case wire names all languages; schema_version const; Dart binding; CapabilityDescriptor.id slug; cargo-deny 0.20.2 pinned; real postgres dynamic-port tests; no production deployment
 2026-08-12T21:15:52Z | hermes-nexus-main | EP-003 | LEASE | EP-002 green; starting EP-003
 2026-08-12T21:25:02Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M1 EP-003 M1: ok; nexus-identity crate; all 10 public interfaces; ADR-007 vocabulary; 30 unit tests + dependency direction; fence extended
+2026-08-12T21:26:41Z | hermes-nexus-main | EP-003 | MILESTONE_PASS | M2 EP-003 M2: ok; nexus-presence; PresenceFusionEngine single-source cap 0.6; GuestPolicy; TenantGuard no-disclosure; 13 unit tests + dependency direction

@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["crates/nexus-contracts", "crates/nexus-domain", "crates/nexus-identity"]
+members = [
+    "crates/nexus-contracts",
+    "crates/nexus-domain",
+    "crates/nexus-identity",
+    "crates/nexus-presence",
+]
 
 [workspace.package]
 version = "0.1.0"

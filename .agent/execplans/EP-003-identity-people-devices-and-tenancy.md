@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -289,6 +289,13 @@ LifecycleState, SessionState); 30 `ep003_unit_` tests + dependency-direction
 test pass. Sentinel: `EP-003 M1: ok`. Fence extended with Cargo.toml,
 Cargo.lock, docs/vocabulary/README.md, references/ADR-007; node-contract
 spec path typo fixed.
+
+M2 completed 2026-08-12: `crates/nexus-presence` created with the
+`PresenceFusionEngine` (recency-weighted fusion, single-source cap 0.6,
+stale-evidence fail-closed), `GuestPolicy` (bounded local permissions for
+unknown/guest principals), and `TenantGuard` (uniform NotFound across
+tenant boundaries, no existence disclosure). 13 `ep003_unit_` tests +
+dependency-direction test pass. Sentinel: `EP-003 M2: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -316,6 +323,15 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   session stays revoked even if `expire()` is called later; the unit test
   caught the naive overwrite. Alternative rejected: allow expiry to
   downgrade revocation (weaker fail-closed semantics).
+- 2026-08-12 (M2): **Single-source presence cap.** `PresenceFusionEngine`
+  caps fused confidence at 0.6 when only one evidence kind is fresh, so a
+  lone camera or BLE observation can never reach HIGH. Evidence: fusion
+  unit tests. Alternative rejected: trust any single evidence source
+  (violates the combine-multiple-kinds obligation and INV-003).
+- 2026-08-12 (M2): **Presence behavior lives in `nexus-presence`.** The
+  identity types stay in `nexus-identity`; the engine, guest bounds, and
+  tenant guard are behavior in the presence crate. Alternative rejected:
+  fold behavior into `nexus-identity` (blurs the M1/M2 fence).
 
 # 14. Outcomes & Retrospective
 

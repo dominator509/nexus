@@ -1,0 +1,12 @@
+[package]
+name = "nexus-presence"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Nexus presence behavior: evidence fusion, guest bounds, and cross-tenant no-disclosure guards (SPEC-005, EP-003)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../nexus-identity", version = "0.1.0" }
