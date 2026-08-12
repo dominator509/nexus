@@ -277,7 +277,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 M1 completed 2026-08-12: `crates/nexus-identity` created with all ten public
@@ -304,6 +304,16 @@ interaction-context, privacy-context, session); 4 `ep003_integration_` tests
 prove identity records, sessions, and presence evidence round-trip through
 real postgres:18.4 on dynamic host ports with container cleanup. Sentinel:
 `EP-003 M3: ok`.
+
+M4 completed 2026-08-12: `crates/nexus-identity/tests/failure_postgres.rs`
+(9 Rust failure tests) and `tests/identity/test_ep003_failure_identity.py`
+(8 Python failure tests) prove EP-003 fails safely: terminated test
+container, `statement_timeout`, malformed JSONB, duplicate key, denied role,
+partial side effects with rollback, cancelled-work recovery, and
+cross-tenant no-disclosure. All use real failure mechanisms; no mocks of the
+component under proof. Sentinel: `EP-003 M4: ok`; `security check: ok`;
+`license gate: ok`. Failure-suite wiring added to `scripts/nodes/EP-003.sh`
+M4 and M5|verify modes via explicit pytest invocation.
 
 # 12. Surprises & Discoveries
 
@@ -348,6 +358,28 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   round-trip the Rust types through real postgres JSONB with exact enum
   wire values. Alternative rejected: force `schemas/identity/` into the
   generator now (out of this node's fence).
+- 2026-08-12 (M4): **`postgres::Error` is an opaque struct; use
+  `as_db_error()`, not a `Db(...)` variant.** The failure suite initially
+  matched on a non-existent `postgres::Error::Db` variant (compile error).
+  The 0.19.14 API exposes `as_db_error().code()` for SQLSTATE checks.
+  Evidence: failure tests compile and pass on the real engine. Alternative
+  rejected: string-matching error messages (brittle).
+- 2026-08-12 (M4): **psycopg3 aborts the transaction on a failed
+  statement; ROLLBACK reverts uncommitted DDL.** The Python failure suite
+  hit `InFailedSqlTransaction` after intentional failures; recovery requires
+  an explicit rollback, and DDL must be committed before entering the
+  failure transaction or the container teardown reverts the schema.
+  Evidence: `tests/identity/test_ep003_failure_identity.py` green on real
+  postgres. Alternative rejected: creating a fresh container per case
+  (slower, still proves less).
+- 2026-08-12 (M4): **Tool-output redaction can swallow contiguous source
+  strings; verify bytes, not display.** The write path dropped a full
+  `"-e",` line between POSTGRES_PASSWORD and POSTGRES_DB; the file was
+  repaired by splicing the known-good byte pattern from EP-002's
+  integration block, and verified with `od`/`py_compile` rather than
+  display. Evidence: M4 gate green on the repaired file. Consequence:
+  treat `***`-masked display as a corruption signal, never as proof of
+  content.
 
 # 14. Outcomes & Retrospective
 
