@@ -3,6 +3,16 @@ packages:
   - "infra/*"
   - "tests/workflows"
   - "apps/web"
+# protobufjs is pulled transitively by @temporalio/proto@1.17.2; the
+# resolved 7.5.5 carries 11 advisories (GHSA-66ff-xgx4-vchm,
+# GHSA-75px-5xx7-5xc7, GHSA-jvwf-75h9-cwgg, GHSA-685m-2w69-288q,
+# GHSA-wcpc-wj8m-hjx6, GHSA-2pr8-phx7-x9h3, GHSA-fx83-v9x8-x52w,
+# GHSA-q6x5-8v7m-xcrf, GHSA-jggg-4jg4-v7c6, GHSA-f38q-mgvj-vph7,
+# GHSA-j3f2-48v5-ccww). The latest advisory requires >=7.6.5, so the
+# override pins the patched 7.x line. API-compatible minor bump within
+# the 7.x series; EP-006 M4 security gate fix (no allowlist).
+overrides:
+  protobufjs: ">=7.6.5 <8"
 allowBuilds:
   esbuild: true
   protobufjs: true

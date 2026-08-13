@@ -31,7 +31,7 @@ run_ep006_tests() {
     tail -20 "$log" >&2
     return 1
   fi
-  if ! sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -q "passed ("; then
+  if ! sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -qE 'Tests[[:space:]]+[1-9][0-9]* passed'; then
     echo "EP-006: FAIL - no passing tests matched filter '$filter' (vacuity guard)" >&2
     tail -10 "$log" >&2
     return 1

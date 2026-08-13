@@ -82,7 +82,13 @@ function assertSameFingerprint(
   }
 }
 
-function redact(text: string, secret: string): string {
+/** Redact a secret from diagnostic text (observability requirement). */
+export function redact(text: string, secret: string): string {
+  if (secret.length === 0) {
+    // Empty secret is degenerate: split("") would interleave
+    // <redacted> between every character. No-op is the safe behavior.
+    return text;
+  }
   return text.split(secret).join("<redacted>");
 }
 

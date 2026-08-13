@@ -93,6 +93,33 @@ async function compensateStep(
   });
 }
 
+/**
+ * Compensate every EXECUTED (VERIFIED) step in REVERSE order
+ * (SPEC-006 behavior 8; state/compensation.ts contract: executed
+ * effects compensate in reverse order, each exactly once by key). The
+ * state machine's markStepGateCompensated records the terminal state;
+ * the actual rollback of executed effects happens here, through the
+ * applyCompensation activity.
+ */
+async function compensateExecutedSteps<O>(
+  activities: NexusActivityRegistry,
+  record: StepGateRecord,
+  opts: StepGateRunOptions<O>,
+  reason: string,
+): Promise<void> {
+  const executed = record.steps
+    .filter((step) => step.state === "VERIFIED")
+    .reverse();
+  for (const step of executed) {
+    await compensateStep(
+      activities,
+      opts.seed.workflowId,
+      opts.effectKeyFor(step),
+      reason,
+    );
+  }
+}
+
 export async function runStepGateWorkflow<O = unknown>(
   opts: StepGateRunOptions<O>,
 ): Promise<WorkflowResult & { output?: O }> {
@@ -143,6 +170,12 @@ export async function runStepGateWorkflow<O = unknown>(
         if (!decided && !cancelRequested) {
           record = timeoutStepGate(record, env.nowIso());
         }
+        if (cancelRequested) {
+          // Exit the loop so the post-loop cancel handler runs: without
+          // this break the predicate stays true and the loop would keep
+          // cycling without ever reaching the cancel/compensation path.
+          break;
+        }
         continue;
       }
       if (step.state === "APPROVED") {
@@ -170,6 +203,15 @@ export async function runStepGateWorkflow<O = unknown>(
             effectKey,
             `step ${step.stepId} verification failed`,
           );
+          // Roll back every earlier EXECUTED step too (partial side
+          // effect: an effect that succeeded before this failure must
+          // also be compensated, reverse order).
+          await compensateExecutedSteps(
+            activities,
+            record,
+            opts,
+            "verification failed",
+          );
           record = markStepGateCompensated(record, env.nowIso());
         }
       } else {
@@ -185,6 +227,8 @@ export async function runStepGateWorkflow<O = unknown>(
       ) {
         const step = currentStep(record);
         if (step !== undefined) {
+          // The cancelled step's activity may have partially executed;
+          // compensating its key is idempotent and safe.
           await compensateStep(
             activities,
             opts.seed.workflowId,
@@ -192,6 +236,13 @@ export async function runStepGateWorkflow<O = unknown>(
             "workflow cancelled",
           );
         }
+        // Roll back every earlier EXECUTED step too, reverse order.
+        await compensateExecutedSteps(
+          activities,
+          record,
+          opts,
+          "workflow cancelled",
+        );
         record = markStepGateCompensated(record, env.nowIso());
       }
     } else {
@@ -206,7 +257,9 @@ export async function runStepGateWorkflow<O = unknown>(
       record.state === "COMPENSATING"
     ) {
       const step = currentStep(record);
-      if (step !== undefined) {
+      if (step !== undefined && step.state !== "AWAITING_APPROVAL") {
+        // The current step's effect may have started; compensating its
+        // key is idempotent and safe.
         await compensateStep(
           activities,
           opts.seed.workflowId,
@@ -214,6 +267,13 @@ export async function runStepGateWorkflow<O = unknown>(
           "workflow cancelled by signal",
         );
       }
+      // Roll back every EXECUTED step (VERIFIED) in reverse order.
+      await compensateExecutedSteps(
+        activities,
+        record,
+        opts,
+        "workflow cancelled by signal",
+      );
       record = markStepGateCompensated(record, env.nowIso());
     }
   }

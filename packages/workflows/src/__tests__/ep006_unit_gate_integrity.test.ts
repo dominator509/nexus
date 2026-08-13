@@ -41,8 +41,12 @@ describe("ep006_unit_gate_integrity", () => {
   it("ep006_unit_gate_helper_has_vacuity_guard", () => {
     const script = readFileSync(EP006_SH, "utf8");
     // vitest exits 0 when the name filter matches zero tests; the gate
-    // must fail closed unless the summary shows a passed test.
-    expect(script).toContain('grep -q "passed ("');
+    // must fail closed unless the summary shows at least one passed
+    // test. Pattern covers BOTH summary shapes: "94 passed (94)" and
+    // the mixed-shape "15 passed | 94 skipped (109)" (vitest switches
+    // to the pipe form when any tests in the run are skipped - the M4
+    // failure filter matches some files and skips the rest).
+    expect(script).toContain("grep -qE 'Tests[[:space:]]+[1-9][0-9]* passed'");
     expect(script).toContain("vacuity guard");
   });
 
