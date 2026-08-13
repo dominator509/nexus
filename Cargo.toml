@@ -9,6 +9,7 @@ members = [
     "crates/nexus-memory",
     "crates/nexus-events",
     "crates/nexus-auth",
+    "crates/nexus-policy",
     "infra/nats",
     "infra/keycloak",
 ]

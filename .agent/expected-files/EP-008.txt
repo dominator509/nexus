@@ -9,3 +9,9 @@ infra/openfga/
 infra/opa/
 policies/
 tests/policy/
+Cargo.toml
+Cargo.lock
+deny.toml
+COMPONENT_REGISTRY.yaml
+docs/vocabulary/README.md
+references/ADR-012-authorization-policy-vocabulary.md

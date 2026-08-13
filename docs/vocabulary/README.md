@@ -294,3 +294,35 @@ No provider brand (Alexa, Google, Apple, Samsung, Philips, Tuya, AWS, Azure,
 GCP, ...) appears in a canonical class name. Provider objects are external
 bounded-context records referenced by stable external identities; they never
 become domain primary keys (SPEC-001 requirement 7).
+
+## ActionLifecycleState
+
+`REQUESTED`, `EVALUATED`, `AWAITING_APPROVAL`, `APPROVED`, `EXECUTING`,
+`VERIFYING`, `SUCCEEDED`, `FAILED`, `COMPENSATING`, `COMPENSATED`,
+`REJECTED` (SPEC-006 behavior 4; ADR-012). Every consequential action
+moves through this deterministic lifecycle; the Action Gateway and
+receipts reference the state at each boundary.
+
+## GrantState
+
+`ACTIVE`, `REVOKED`, `EXPIRED` (SPEC-005 behavior 5; ADR-012).
+Capability grants never outlive expiry and never widen scope.
+
+## ApprovalDecision
+
+`APPROVED`, `REJECTED` (SPEC-005; ADR-012). Approval assertions bind an
+approver to an exact action digest; digest mismatch or expiry is a
+rejection.
+
+## ReceiptState
+
+`ISSUED`, `SUPERSEDED` (SPEC-005 behavior 9; ADR-012). Authorization
+receipts are redacted, versioned, and may be superseded by later
+compensation/verification records.
+
+## DenialReason
+
+`RELATIONSHIP`, `POLICY`, `INSUFFICIENT_STRENGTH`, `NO_CAPABILITY`,
+`MISSING_APPROVAL`, `VERIFICATION_FAILED` (SPEC-006; ADR-012). Stable
+machine reasons for gateway denials; `RiskClass` is the existing `Risk`
+(R0..R4) ladder.
