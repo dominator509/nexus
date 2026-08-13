@@ -1,0 +1,22 @@
+{
+  "name": "@nexus/workflows",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus durable workflow contracts (Temporal-owned vocabulary per SPEC-023, ADR-010). Provider-neutral: engine imports belong in infra/, never here.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "test:integration": "vitest run src/__tests__/integration",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}

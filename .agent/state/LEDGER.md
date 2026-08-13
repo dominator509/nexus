@@ -40,3 +40,6 @@
 2026-08-13T00:36:14Z | hermes-nexus-main | EP-005 | MILESTONE_PASS | M4 EP-005 M4: ok; security check: ok; license gate: ok
 2026-08-13T01:08:40Z | hermes-nexus-main | EP-005 | MILESTONE_PASS | M5 EP-005 M5: ok
 2026-08-13T01:08:40Z | hermes-nexus-main | EP-005 | NODE_DONE | node verify EP-005: ok; scope audit EP-005: ok; verify: ok
+2026-08-13T01:09:05Z | hermes-nexus-main | EP-006 | LEASE | EP-005 green; starting EP-006
+2026-08-13T02:06:15Z | hermes-nexus-main | EP-006 | HEARTBEAT | resuming M1: owner hard invariants for Temporal determinism/replay; contracts + vocabulary ADR-010 + M1 gate test fix; package boundary
+2026-08-13T02:23:37Z | hermes-nexus-main | EP-006 | MILESTONE_PASS | M1 EP-006 M1: ok; packages/workflows contracts; ADR-010 vocabulary; 94 ep006_unit tests; gate vacuity-guard hardened (EP-001 class); fence amended; prettier+blueprint clean

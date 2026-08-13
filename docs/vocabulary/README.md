@@ -174,6 +174,75 @@ A consumer with a durable `ConsumerCheckpoint` (consumer, stream,
 subject, last sequence) that resumes after restart (SPEC-023 behavior 4;
 ADR-009). Idempotent by construction.
 
+## Workflow
+
+A durable, deterministic, versioned unit of long-running work (SPEC-023
+behavior 5; ADR-010). Owned by `packages/workflows`
+(`@nexus/workflows`). Time and I/O flow only through the workflow
+context; every side effect lives in an activity (behavior 6).
+`WorkflowKind`: `OBJECTIVE`, `APPROVAL`, `CONNECTOR_CERTIFICATION`,
+`INCIDENT_REMEDIATION`, `DEPLOYMENT`. `WorkflowState`: `REQUESTED`,
+`EVALUATED`, `AWAITING_APPROVAL`, `APPROVED`, `EXECUTING`, `VERIFYING`,
+`SUCCEEDED`, `FAILED`, `REJECTED`, `COMPENSATING`, `COMPENSATED`,
+`CANCELLED`, `TIMED_OUT` (the last two are explicit Temporal-owned
+terminals; EP-006 acceptance obligation 3).
+
+## Activity
+
+The only surface that touches the outside world (SPEC-023 behavior 6;
+ADR-010). `ActivityKind`: `EXTERNAL_EFFECT`, `VERIFY`, `COMPENSATE`.
+Every activity carries an idempotency key and a bounded,
+error-classified retry policy (SPEC-006 behaviors 2, 5, 7, 8).
+`RetryErrorClass`: `TRANSIENT`, `RATE_LIMIT`, `UNAVAILABLE`, `TIMEOUT`,
+`PERMANENT` (never retried).
+
+## Signal
+
+An immutable, durable, idempotent message to a workflow (SPEC-023
+behavior 7; ADR-010). Every signal carries a `signalId` (UUIDv7);
+duplicate signals collapse on the canonical `signalKey` (workflow +
+type + signalId). `SignalType`: `APPROVAL`, `CANCEL`, `RESUME`. New
+signal types require an ADR.
+
+## Query
+
+A deterministic, read-only view of workflow state (ADR-010). Answers
+derive from the durable event history, so replay answers identically.
+`QueryType`: `WORKFLOW_STATUS`, `PENDING_APPROVAL`, `ACTIVITY_STATE`,
+`ACTION_RECEIPT`.
+
+## Schedule
+
+Temporal-owned scheduled execution (SPEC-023 canonical term; ADR-010).
+Vocabulary reserved for later nodes.
+
+## ApprovalWorkflow
+
+A durable human-approval gate (SPEC-023; ADR-010). An approval is an
+immutable `ApprovalAssertion` carrying the exact action digest, the
+signer principal, and the authentication strength/context; it binds to
+the exact action payload digest, never to free text. `ApprovalDecision`:
+`APPROVE`, `REJECT`. `CancelAction`: `CANCEL` (fail closed) or
+`COMPENSATE` (rollback).
+
+## Compensation
+
+An explicit rollback capability registered per effect, executed in
+reverse order (SPEC-006 behavior 8; ADR-010). Every `EXTERNAL_EFFECT`
+activity declares a compensation step.
+
+## AuthenticationStrength
+
+`NONE`, `SINGLE_FACTOR`, `MULTI_FACTOR`, `STEP_UP` (SPEC-005 canonical
+term; ADR-010). SPEC-005 behavior 4 requires a cryptographic step-up for
+R3 and R4 actions; R4 never accepts model approval.
+
+## ActionDigest
+
+Canonical lowercase SHA-256 hex string (64 chars) of the exact action
+payload being approved (ADR-010). The approval binds to this digest,
+never to human text.
+
 ## Provider-neutrality rule
 
 No provider brand (Alexa, Google, Apple, Samsung, Philips, Tuya, AWS, Azure,

@@ -4,3 +4,6 @@
 .agent/node-contracts/EP-006.md
 scripts/nodes/EP-006.sh
 packages/workflows/
+pnpm-lock.yaml
+docs/vocabulary/README.md
+references/ADR-010-workflow-and-durable-approval-vocabulary.md

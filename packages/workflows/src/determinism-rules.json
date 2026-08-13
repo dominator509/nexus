@@ -1,0 +1,60 @@
+{
+  "rules": [
+    {
+      "pattern": "Date\\.now\\s*\\(",
+      "reason": "host wall clock is non-deterministic across replay"
+    },
+    {
+      "pattern": "\\bnew\\s+Date\\s*\\(",
+      "reason": "host wall clock is non-deterministic across replay"
+    },
+    {
+      "pattern": "\\bMath\\.random\\s*\\(",
+      "reason": "non-deterministic random source breaks replay"
+    },
+    {
+      "pattern": "crypto\\.(getRandomValues|randomUUID)\\s*\\(",
+      "reason": "non-deterministic random source breaks replay"
+    },
+    {
+      "pattern": "\\bfetch\\s*\\(",
+      "reason": "network I/O must live in activities, never workflow code"
+    },
+    {
+      "pattern": "\\bXMLHttpRequest\\b",
+      "reason": "network I/O must live in activities, never workflow code"
+    },
+    {
+      "pattern": "\\bWebSocket\\b",
+      "reason": "network I/O must live in activities, never workflow code"
+    },
+    {
+      "pattern": "\\bchild_process\\b",
+      "reason": "process I/O must live in activities, never workflow code"
+    },
+    {
+      "pattern": "require\\s*\\(\\s*['\"](?:node:)?(?:http|https|net|dns|fs|child_process|pg|mysql|redis|sqlite|mongodb)['\"]\\s*\\)",
+      "reason": "node I/O and database drivers must live in activities"
+    },
+    {
+      "pattern": "from\\s+['\"](?:node:)?(?:http|https|net|dns|fs|child_process|pg|mysql|redis|sqlite|mongodb)['\"]",
+      "reason": "node I/O and database drivers must live in activities"
+    },
+    {
+      "pattern": "\\bprocess\\.",
+      "reason": "environment access is non-deterministic across replay"
+    },
+    {
+      "pattern": "\\bglobalThis\\b",
+      "reason": "global state is non-deterministic across replay"
+    },
+    {
+      "pattern": "\\blocalStorage\\b|\\bindexedDB\\b",
+      "reason": "browser storage must live in activities"
+    },
+    {
+      "pattern": "\\bnew\\s+Pool\\s*\\(|\\bcreateClient\\s*\\(",
+      "reason": "database I/O must live in activities, never workflow code"
+    }
+  ]
+}

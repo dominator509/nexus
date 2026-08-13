@@ -1,8 +1,12 @@
 .agent/execplans/EP-006-durable-workflows.md
 .agent/state/LEDGER.md
 .agent/expected-files/EP-006.txt
+.agent/milestone-files/EP-006-M1.txt
 .agent/node-contracts/EP-006.md
 scripts/nodes/EP-006.sh
 packages/workflows/
 infra/temporal/
 tests/workflows/
+pnpm-lock.yaml
+docs/vocabulary/README.md
+references/ADR-010-workflow-and-durable-approval-vocabulary.md
