@@ -1,0 +1,16 @@
+[package]
+name = "nexus-action-gateway"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Nexus deterministic action gateway engine: combines relationship, contextual policy, risk, capability, and approval into fail-closed action decisions (SPEC-005, SPEC-006, EP-008)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../nexus-identity", version = "0.1.0" }
+nexus-auth = { path = "../nexus-auth", version = "0.1.0" }
+nexus-policy = { path = "../nexus-policy", version = "0.1.0" }
+
+[dev-dependencies]

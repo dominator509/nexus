@@ -16,6 +16,26 @@ use serde::{Deserialize, Serialize};
 /// Re-export the canonical risk class (SPEC-006 `R0`..`R4`).
 pub use nexus_domain::Risk as RiskClass;
 
+/// Deterministic risk ordering (R0 < R1 < ... < R4).
+///
+/// The locked domain `Risk` enum does not derive `Ord`; this is the
+/// canonical rank function owned by EP-008 so the gateway can compare
+/// classes without widening the domain vocabulary.
+pub const fn risk_rank(risk: Risk) -> u8 {
+    match risk {
+        Risk::R0 => 0,
+        Risk::R1 => 1,
+        Risk::R2 => 2,
+        Risk::R3 => 3,
+        Risk::R4 => 4,
+    }
+}
+
+/// Whether `a` is at or above `threshold` in the R0..R4 ladder.
+pub const fn risk_at_least(risk: Risk, threshold: Risk) -> bool {
+    risk_rank(risk) >= risk_rank(threshold)
+}
+
 /// Inputs for risk classification.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RiskAssessmentInput {

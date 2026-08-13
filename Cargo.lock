@@ -590,6 +590,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-action-gateway"
+version = "0.1.0"
+dependencies = [
+ "nexus-auth",
+ "nexus-domain",
+ "nexus-identity",
+ "nexus-policy",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-auth"
 version = "0.1.0"
 dependencies = [

@@ -274,8 +274,8 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M1: Contract, vocabulary, and package boundary - `EP-008 M1: ok` (25 ep008_unit tests + 1 dependency-direction in crates/nexus-policy); 8 public interfaces (RelationshipAuthorizer, ContextPolicyEngine, RiskClassifier, ActionGateway, CapabilityGrant, ApprovalAssertion, ActionReceipt, VerificationPlan); ADR-012 policy vocabulary; vocabulary README entries; workspace member registered
+- [x] M2: Core behavior and deterministic invariants - `EP-008 M2: ok` (18 ep008_unit engine tests); DeterministicGateway combines relationship, contextual policy, deterministic risk floor, capability grant, approval into fail-closed decisions; R3/R4 require human approval (digest-bound), R4 rejects model approval; grant actor/target/scope/expiry binding; pure engine (no clock/random/network) with injected DecisionInput
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -287,6 +287,12 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-13 | Fence amended (EP-001/EP-003/EP-007 precedent) | `.agent/expected-files/EP-008.txt` adds `Cargo.toml` + `Cargo.lock` (workspace member registration for nexus-policy/nexus-action-gateway), `deny.toml` + `COMPONENT_REGISTRY.yaml` (dependency governance when the node adds crates), `docs/vocabulary/README.md` + `references/ADR-012-authorization-policy-vocabulary.md` (new ADR). Mirrors the EP-007 M1 fence amendment. | Scope audit would otherwise reject these legitimately changed paths.
+- 2026-08-13 | ADR-012 authorization policy vocabulary | SPEC-005/SPEC-006 canonical terms locked: `ActionLifecycleState` (11 states per SPEC-006 behavior 4), `GrantState`, `ApprovalDecision`, `ReceiptState`, `DenialReason`; `RiskClass` reuses existing nexus-domain `Risk` (R0..R4). New struct types (`RelationshipTuple`, `PolicyInput`, `PolicyDecision`, `CapabilityGrant`, `ApprovalAssertion`, `ActionRequest`, `ActionDecision`, `ActionReceipt`, `VerificationPlan`, `ExpectedState`, `VerificationResult`) are interface records, not vocabulary classes. | New synonyms require ADR + vocabulary update (ADR-011 precedent).
+- 2026-08-13 | nexus-policy is provider-neutral (M1) | The policy crate depends only on nexus-domain + nexus-identity + nexus-auth + serde (enforced by `ep008_unit_policy_crate_has_no_infrastructure_dependencies` over real cargo tree). OpenFGA/OPA adapters live in `infra/` (M3/M4). | Reversal: engine import would fail dependency-direction test.
+- 2026-08-13 | Deterministic risk floor (M2) | `deterministic_risk_floor` in nexus-policy maps capability + reversal + secret to R0..R4 (QUERY=R0, STREAM=R1, COMMAND/WORKFLOW=R2, ADMINISTRATIVE=R3; irreversible raises; secret raises). SPEC-005 behavior 4: R3/R4 require step-up or human approval; R4 never accepts model approval. `risk_rank`/`risk_at_least` added because the locked domain `Risk` has no Ord (nexus-domain is outside the EP-008 fence). | Provider classifiers may only raise, never lower.
+- 2026-08-13 | Deterministic gateway engine (M2) | `DeterministicGateway` in `crates/nexus-action-gateway` is pure: no wall clock, randomness, network, or database. All external inputs (relationship result, policy decision, risk descriptors, grant, approval, actor, time) arrive via `DecisionInput` and injected provider ports; same inputs -> same decision (Temporal-replayable). The `ActionGateway` trait port method fails closed without `DecisionInput` (internal-invariant error) because the engine requires the authenticated actor and current time — adapters must call `evaluate_input`. | Reversal: reading wall clock/randomness in the engine would break replay determinism.
 
 # 14. Outcomes & Retrospective
 
