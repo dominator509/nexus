@@ -43,3 +43,4 @@
 2026-08-13T01:09:05Z | hermes-nexus-main | EP-006 | LEASE | EP-005 green; starting EP-006
 2026-08-13T02:06:15Z | hermes-nexus-main | EP-006 | HEARTBEAT | resuming M1: owner hard invariants for Temporal determinism/replay; contracts + vocabulary ADR-010 + M1 gate test fix; package boundary
 2026-08-13T02:23:37Z | hermes-nexus-main | EP-006 | MILESTONE_PASS | M1 EP-006 M1: ok; packages/workflows contracts; ADR-010 vocabulary; 94 ep006_unit tests; gate vacuity-guard hardened (EP-001 class); fence amended; prettier+blueprint clean
+2026-08-13T02:52:41Z | hermes-nexus-main | EP-006 | MILESTONE_PASS | M2 EP-006 M2: ok; @nexus/temporal adapter Temporal TS SDK 1.17.2; pure approval/step-gate/compensation state machines; 51 adapter ep006_unit tests; gate runs both packages; pnpm allowBuilds; contract amendments for digest binding

@@ -6,14 +6,23 @@ export NO_COLOR=1
 mode="${1:-verify}"
 rc=0
 
-# Run a named ep006 test filter and fail closed if no test actually ran.
-# vitest exits 0 when a name filter matches zero tests (EP-001 gate-masking
-# class), so the summary must show at least one passed test before the
-# milestone sentinel may be printed.
+# Run a named ep006 test filter across the workflow packages and fail
+# closed if no test actually ran. vitest exits 0 when a name filter
+# matches zero tests (EP-001 gate-masking class), so the combined summary
+# must show at least one passed test before the milestone sentinel may be
+# printed.
 run_ep006_tests() {
   filter="$1"
   log="/tmp/ep006-vitest-${filter}.log"
-  if ! pnpm --filter @nexus/workflows exec vitest run -t "$filter" >"$log" 2>&1; then
+  : > "$log"
+  ok=1
+  # @nexus/workflows contracts suite (M1).
+  pnpm --filter @nexus/workflows exec vitest run -t "$filter" >>"$log" 2>&1 || ok=0
+  # @nexus/temporal adapter suite (M2+).
+  if [ -f infra/temporal/package.json ]; then
+    pnpm --filter @nexus/temporal exec vitest run -t "$filter" >>"$log" 2>&1 || ok=0
+  fi
+  if [ "$ok" -ne 1 ]; then
     echo "EP-006: FAIL - vitest filter '$filter' failed" >&2
     tail -20 "$log" >&2
     return 1
@@ -23,7 +32,7 @@ run_ep006_tests() {
     tail -10 "$log" >&2
     return 1
   fi
-  tail -6 "$log"
+  tail -8 "$log"
 }
 
 case "$mode" in

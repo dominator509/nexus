@@ -1,5 +1,8 @@
 packages:
   - "packages/*"
+  - "infra/*"
   - "apps/web"
 allowBuilds:
   esbuild: true
+  protobufjs: true
+  "@swc/core": true

@@ -8,5 +8,6 @@ packages/workflows/
 infra/temporal/
 tests/workflows/
 pnpm-lock.yaml
+pnpm-workspace.yaml
 docs/vocabulary/README.md
 references/ADR-010-workflow-and-durable-approval-vocabulary.md

@@ -80,7 +80,8 @@ export interface WorkflowInput {
 
 export interface WorkflowResult {
   readonly state: WorkflowState;
-  readonly outcome: WorkflowOutcome;
+  /** Terminal outcomes only; in-flight workflows have none yet. */
+  readonly outcome?: WorkflowOutcome;
   /** One terminal receipt per mutation (SPEC-006 acceptance). */
   readonly receiptId?: string;
 }
@@ -128,7 +129,16 @@ export interface ApprovalInput extends WorkflowInput {
 export interface ConnectorCertificationInput extends WorkflowInput {
   readonly connectorId: import("./ids.js").ActivityId;
   readonly provider: string;
-  readonly capabilityIds: readonly string[];
+  /**
+   * Certification steps, each bound to the exact action digest the
+   * approval will be checked against (ADR-010 digest-binding invariant).
+   */
+  readonly steps: readonly {
+    readonly stepId: import("./ids.js").ActivityId;
+    readonly title: string;
+    readonly actionId: ActionId;
+    readonly actionDigest: import("./ids.js").ActionDigest;
+  }[];
 }
 
 export interface IncidentRemediationInput extends WorkflowInput {

@@ -269,8 +269,8 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [x] M1: Contract, vocabulary, and package boundary - `EP-006 M1: ok` (94 ep006_unit tests, 11 files); ADR-010; vocabulary README; gate hardened against zero-match vacuity (EP-001 class); commit pending
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M1: Contract, vocabulary, and package boundary - `EP-006 M1: ok` (94 ep006_unit tests, 11 files); ADR-010; vocabulary README; gate hardened against zero-match vacuity (EP-001 class); commit d24d580
+- [x] M2: Core behavior and deterministic invariants - `EP-006 M2: ok` (94 contracts + 51 adapter ep006_unit tests); @nexus/temporal adapter on Temporal TS SDK 1.17.2; pure approval/step-gate/compensation state machines; worker/client factories; gate now runs both packages
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -281,15 +281,21 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-13: vitest's human summary embeds ANSI color codes even with CI=true (verified via od: `ESC[2m Tests ESC[22m ESC[1m ESC[32m94 passed ESC[39m...`), so a plain `grep "passed ("` on captured output misses. The gate strips ANSI (`sed 's/\x1b\[[0-9;]*m//g'`) before grepping, and exports NO_COLOR=1.
 - 2026-08-13: shared test fixture mutation bug caught by the suite: one test mutated `AUTH_STEP_UP.strength` through a shallow spread, corrupting later tests. `makeApprovalSignal` now clones principal/authentication per call.
 - 2026-08-13: `pnpm typecheck` / `pnpm --filter @nexus/contracts typecheck` fail in this environment because the rtk-tee shim intercepts `tsc` and emits help text (pre-existing; contracts fails identically). Direct `./node_modules/.bin/tsc --noEmit` passes for @nexus/workflows (exit 0). Not introduced by EP-006 M1; the M1 gate (vitest) is unaffected.
+- 2026-08-13: pnpm refuses installs with `ERR_PNPM_IGNORED_BUILDS` for Temporal SDK deps (@swc/core, protobufjs postinstall). `pnpm-workspace.yaml allowBuilds` extended; the rtk-tee shim swallows pnpm output so the real error only appeared when invoking the corepack pnpm binary directly.
+- 2026-08-13: the Temporal TS SDK's `WorkerOptions.logger` option is deprecated (Runtime.logger is canonical); the worker factory avoids it.
 
 # 13. Decision Log
 
 - 2026-08-13 | ADR-010 workflow vocabulary | SPEC-023 defers Workflow/Activity/Signal/Query/Schedule/ApprovalWorkflow/Compensation to this node (ADR-009); SPEC-005 locks Authentication Strength and Approval Assertion. Added all to docs/vocabulary/README.md; owned by packages/workflows. Alternatives considered and rejected: reuse EP-005 events for signals; free-text approval binding. | Vocabulary parse-time rejection; new names require ADR.
 - 2026-08-13 | Provider-neutral contracts package | @nexus/workflows never imports a Temporal SDK; WorkflowContext is the port implemented by infra/temporal in M2. Engine neutrality is enforced by ep006_unit_dependency_direction tests over real source. | Reversal: engine import in contracts would fail dependency-direction test.
 - 2026-08-13 | M1 gate hardened (EP-001 class) | Original M1 branch ran only node-artifact-check (masked pass). Now: artifact check && run_ep006_tests ep006_unit with rc capture, NO_COLOR=1, ANSI-stripped vacuity guard (grep "passed ("). Negative proof: zero-match filter exits 0 in vitest but the guard fails closed. | Never weaken; regression-guarded by ep006_unit_gate_integrity tests.
-- 2026-08-13 | Fence amended | Added pnpm-lock.yaml (new workspace package), references/ADR-010-*.md, docs/vocabulary/README.md to EP-006.txt and EP-006-M1.txt (EP-001/EP-003 M5 precedent). | Scope audit would otherwise reject these legitimately changed paths.
+- 2026-08-13 | Fence amended | Added pnpm-lock.yaml (new workspace package), references/ADR-010-*.md, docs/vocabulary/README.md to EP-006.txt and EP-006-M1.txt (EP-001/EP-003 M5 precedent). M2 adds pnpm-workspace.yaml (infra/* glob + allowBuilds). | Scope audit would otherwise reject these legitimately changed paths.
 - 2026-08-13 | @types/node in workflows devDeps | Test zone needs node:fs/path/url for the determinism and dependency-direction audits; tsconfig types now ["node"]. Production engine-neutrality is still enforced by import-scan tests, not by absence of node types. | Reversal: remove only with a test-zone split tsconfig.
 - 2026-08-13 | ids parsers throw WorkflowContractError | parseUuidV7/parseActionDigest previously threw plain Error, breaking the typed-error contract for signal validation. | Aligned with SPEC-006 typed errors.
+- 2026-08-13 | @nexus/temporal adapter package | infra/temporal owns the engine adapter (Temporal TS SDK 1.17.2 pinned by VERSIONS.lock.yaml): five workflow execute() functions, pure state machines (src/state), approval-owned activities, worker/client factories. Domain rules stay pure and unit-tested; engine bridges (context.ts) are the one place the isolate-patched clock is read and are excluded from the determinism scan of src/workflows + src/state. | Later nodes register provider activities through the worker factory extraActivities; unregistered activity invocations fail closed.
+- 2026-08-13 | M1 contract amendments for digest binding | ConnectorCertificationInput.capabilityIds replaced by steps with actionId+actionDigest; WorkflowResult.outcome made optional (in-flight workflows have no outcome). The approval binding invariant forces every approved step to carry an exact digest from the caller. | Recorded in the same node before closure; contract version remains 1.0.0 within the node's own contract.
+- 2026-08-13 | pnpm allowBuilds extension | Temporal SDK native deps (@swc/core, protobufjs) require postinstall scripts; allowBuilds extended with pinned justification. | Required for the worker's native bundling; no arbitrary script approval.
+- 2026-08-13 | Shared step-gate runner | Objective/certification/remediation/deployment workflows share runStepGateWorkflow (approval per step, idempotent effect, verify, reverse-order compensation) instead of four near-identical loops. State machines remain pure and unit-tested.
 
 # 14. Outcomes & Retrospective
 
