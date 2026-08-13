@@ -26,12 +26,19 @@ pub struct EventType(String);
 
 impl EventType {
     /// Validate and construct an event type slug.
+    ///
+    /// Matches the canonical schema pattern `^[a-z0-9]+(\.[a-z0-9]+)*$`:
+    /// lowercase alphanumeric segments joined by single dots, no leading
+    /// or trailing dot, no consecutive dots.
     pub fn new(s: impl Into<String>) -> Result<Self, EventError> {
         let s = s.into();
         let valid = !s.is_empty()
             && s.len() <= 128
             && s.chars()
-                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.');
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.')
+            && !s.starts_with('.')
+            && !s.ends_with('.')
+            && !s.contains("..");
         if !valid {
             return Err(EventError::new(
                 EventErrorCode::Validation,

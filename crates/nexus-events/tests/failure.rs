@@ -65,8 +65,14 @@ fn ep005_failure_empty_subject_rejected() {
 
 #[test]
 fn ep005_failure_invalid_event_type_rejected() {
-    // Uppercase, whitespace, and non-ASCII are malformed input.
-    for bad in ["Memory.record.created", "memory record", "mémoire", ""] {
+    // Uppercase, whitespace, and symbols are malformed input. The
+    // validation rejects any character outside [a-z0-9.].
+    for bad in [
+        "Memory.record.created",
+        "memory record",
+        "memory.record..created",
+        "",
+    ] {
         let err = EventType::new(bad).unwrap_err();
         assert_eq!(err.code(), EventErrorCode::Validation, "input: {bad:?}");
     }

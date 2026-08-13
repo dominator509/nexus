@@ -26,3 +26,16 @@ ignore = []
 [bans]
 multiple-versions = "deny"
 wildcards = "deny"
+# Targeted skips for build-time / cross-platform version splits that
+# cannot be unified without breaking pinned transitive dependencies.
+# Each entry names the exact crate and the specific duplicate versions;
+# this is not a broad allowlist.
+skip = [
+  # syn 2 vs 3: proc-macro ecosystem split. syn 3 is required by
+  # displaydoc 0.2.7 (icu, pulled by idna/url from async-nats 0.47,
+  # pinned) and by newer proc-macro crates; syn 2 remains required by
+  # the majority of the tree (serde, futures, etc.). Build-time only,
+  # never linked into the final binary.
+  { name = "syn", version = "3.0.3" },
+]
+skip-tree = []

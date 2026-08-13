@@ -77,24 +77,19 @@ pub struct DeploymentProfile {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct EventEnvelope {
+    pub actor: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub actor_ref: Option<Option<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub causation_id: Option<Option<String>>,
+    pub causation_id: Option<serde_json::Value>,
     pub correlation_id: String,
     pub data_class: String,
     pub event_id: String,
     pub event_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub observed_at: Option<Option<String>>,
-    pub occurred_at: String,
     pub payload: serde_json::Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_id: Option<Option<String>>,
     pub schema_version: String,
     pub source: String,
     pub subject: String,
     pub tenant_id: String,
+    pub time: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -10,7 +10,7 @@ serde.workspace = true
 serde_json.workspace = true
 nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
 nexus-events = { path = "../../crates/nexus-events", version = "0.1.0" }
-async-nats = { version = "0.47.0", features = ["jetstream"] }
+async-nats = { version = "0.47.0", default-features = false, features = ["jetstream", "server_2_12"] }
 futures-util = "0.3"
 
 [dev-dependencies]

@@ -72,20 +72,25 @@ export interface DeploymentProfile {
 }
 
 export interface EventEnvelope {
-  actor_ref?: string | null;
-  causation_id?: string | null;
+  actor: string;
+  causation_id?: unknown | null;
   correlation_id: string;
-  data_class: string;
+  data_class:
+    | "PUBLIC"
+    | "HOUSEHOLD"
+    | "PERSONAL"
+    | "SENSITIVE"
+    | "BUSINESS_CONFIDENTIAL"
+    | "SECURITY"
+    | "SECRET";
   event_id: string;
   event_type: string;
-  observed_at?: string | null;
-  occurred_at: string;
   payload: Record<string, unknown>;
-  request_id?: string | null;
-  schema_version: string;
+  schema_version: "1.0.0";
   source: string;
   subject: string;
   tenant_id: string;
+  time: string;
 }
 
 export interface InvocationContext {

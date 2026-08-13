@@ -38,3 +38,5 @@
 2026-08-12T23:58:08Z | hermes-nexus-main | EP-005 | MILESTONE_PASS | M2 EP-005 M2: ok; infra/nats nexus-nats adapter; subject namespace + envelope encoding + provisioner/publisher/consumer on async-nats 0.47; 7 adapter unit tests; 205 packages locked
 2026-08-13T00:27:30Z | hermes-nexus-main | EP-005 | MILESTONE_PASS | M3 EP-005 M3: ok
 2026-08-13T00:36:14Z | hermes-nexus-main | EP-005 | MILESTONE_PASS | M4 EP-005 M4: ok; security check: ok; license gate: ok
+2026-08-13T01:08:40Z | hermes-nexus-main | EP-005 | MILESTONE_PASS | M5 EP-005 M5: ok
+2026-08-13T01:08:40Z | hermes-nexus-main | EP-005 | NODE_DONE | node verify EP-005: ok; scope audit EP-005: ok; verify: ok

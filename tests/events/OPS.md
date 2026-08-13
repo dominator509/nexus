@@ -1,4 +1,4 @@
-# EP-005 M4 — Event Nervous System Operations Diagnostic & Bounded Recovery
+# EP-005 M4 - Event Nervous System Operations Diagnostic & Bounded Recovery
 
 Owned component: NATS JetStream event bus (`nats:2.14.3`, pinned in
 `VERSIONS.lock.yaml` / `COMPONENT_REGISTRY.yaml`).
@@ -9,7 +9,7 @@ Run these from the repository root with the canonical environment
 (`. scripts/env.sh`):
 
 1. **Container health**
-   `docker ps --filter name=nexus --format '{{.Names}} {{.Status}}'`
+   `docker ps --filter name=nexus`
 
 2. **Server reachability (through the published host port)**
    `cargo test --locked -p nexus-nats ep005_integration_stream_provisioning_is_idempotent`
@@ -38,10 +38,10 @@ bounded retry with redacted failure reasons (`OutboxRecord::fail`).
 
 ## Failure evidence
 
-- `crates/nexus-events/tests/failure.rs` — contract-layer failures
+- `crates/nexus-events/tests/failure.rs` - contract-layer failures
   (malformed input, duplicate state, denied codes, redaction, bounded
   retry). Run: `cargo test --locked -p nexus-events ep005_failure`.
-- `infra/nats/tests/failure_nats.rs` — real-dependency failures against
+- `infra/nats/tests/failure_nats.rs` - real-dependency failures against
   `nats:2.14.3` (container kill, corrupt message quarantine, unowned
   subject denial, unacked pending deliveries, cleanup on failure).
   Run: `cargo test --locked -p nexus-nats ep005_failure`.

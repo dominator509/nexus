@@ -8,6 +8,13 @@ crates/nexus-events/
 infra/nats/
 schemas/event-envelope.schema.json
 tests/events/
+crates/nexus-contracts/src/generated.rs
+crates/nexus-contracts/src/validated.rs
+packages/contracts/src/generated.ts
+packages/contracts/src/generated.dart
+python/nexus_contracts/generated.py
+tests/unit/test_ep002_unit_agreement.py
+deny.toml
 Cargo.toml
 Cargo.lock
 docs/vocabulary/README.md

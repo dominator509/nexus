@@ -238,70 +238,63 @@ class DeploymentProfile {
 }
 
 class EventEnvelope {
-  final String? actor_ref;
-  final String? causation_id;
+  final String actor;
+  final dynamic? causation_id;
   final String correlation_id;
   final String data_class;
   final String event_id;
   final String event_type;
-  final String? observed_at;
-  final String occurred_at;
   final Map<String, dynamic> payload;
-  final String? request_id;
   final String schema_version;
   final String source;
   final String subject;
   final String tenant_id;
+  final String time;
+  static const String schema_versionConst = "1.0.0";
 
   const EventEnvelope({
-    this.actor_ref,
+    required this.actor,
     this.causation_id,
     required this.correlation_id,
     required this.data_class,
     required this.event_id,
     required this.event_type,
-    this.observed_at,
-    required this.occurred_at,
     required this.payload,
-    this.request_id,
     required this.schema_version,
     required this.source,
     required this.subject,
     required this.tenant_id,
+    required this.time,
   });
 
   factory EventEnvelope.fromJson(Map<String, dynamic> json) => EventEnvelope(
-    actor_ref: json['actor_ref'] as String?,
-    causation_id: json['causation_id'] as String?,
+    actor: json['actor'] as String,
+    causation_id: json['causation_id'],
     correlation_id: json['correlation_id'] as String,
     data_class: json['data_class'] as String,
     event_id: json['event_id'] as String,
     event_type: json['event_type'] as String,
-    observed_at: json['observed_at'] as String?,
-    occurred_at: json['occurred_at'] as String,
     payload: json['payload'] as Map<String, dynamic>,
-    request_id: json['request_id'] as String?,
     schema_version: json['schema_version'] as String,
     source: json['source'] as String,
     subject: json['subject'] as String,
     tenant_id: json['tenant_id'] as String,
+    time: json['time'] as String,
   );
 
   Map<String, dynamic> toJson() => {
-    'actor_ref': actor_ref,
+    'actor': actor,
     'causation_id': causation_id,
     'correlation_id': correlation_id,
     'data_class': data_class,
     'event_id': event_id,
     'event_type': event_type,
-    'observed_at': observed_at,
-    'occurred_at': occurred_at,
     'payload': payload,
-    'request_id': request_id,
     'schema_version': schema_version,
     'source': source,
     'subject': subject,
     'tenant_id': tenant_id,
+    'time': time,
   };
 }
 

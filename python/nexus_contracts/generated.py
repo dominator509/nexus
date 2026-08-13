@@ -58,20 +58,18 @@ class DeploymentProfile(TypedDict):
     remote_access: dict[str, object]
 
 class EventEnvelope(TypedDict):
-    actor_ref: NotRequired[str | None]
-    causation_id: NotRequired[str | None]
+    actor: str
+    causation_id: NotRequired[object]
     correlation_id: str
-    data_class: str
+    data_class: Literal["PUBLIC", "HOUSEHOLD", "PERSONAL", "SENSITIVE", "BUSINESS_CONFIDENTIAL", "SECURITY", "SECRET"]
     event_id: str
     event_type: str
-    observed_at: NotRequired[str | None]
-    occurred_at: str
     payload: dict[str, object]
-    request_id: NotRequired[str | None]
-    schema_version: str
+    schema_version: Literal["1.0.0"]
     source: str
     subject: str
     tenant_id: str
+    time: str
 
 class InvocationContext(TypedDict):
     approval_id: NotRequired[str | None]

@@ -274,7 +274,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 M1 completed 2026-08-12: `crates/nexus-events/` created with the canonical
 event contracts (SPEC-023): `EventEnvelope` (event ID, type, schema
@@ -339,6 +339,18 @@ failure. `tests/events/OPS.md` documents diagnostics and bounded
 recovery. M4 gate strengthened to run both failure suites; security
 check and license gate green. Sentinels: `EP-005 M4: ok`, `security
 check: ok`, `license gate: ok`.
+
+M5 completed 2026-08-12: node closure. `EP-005 M5: ok` with unit,
+failure, integration, security, license, and reality gates all green.
+Live-fire evidence in `.agent/state/evidence/EP-005-M5-live-fire.md`.
+Schema ripple resolved: generated TS/Python/Dart/Rust bindings
+regenerated for the event envelope; `ValidatedEventEnvelope` corrected
+to canonical `time`; EP-002 agreement test updated. async-nats trimmed
+to minimal features (jetstream + server_2_12); cargo-deny bans resolved
+with a targeted syn-3 skip; disk-pressure recovery completed (49.8GB
+dangling volumes pruned). `node verify EP-005: ok`, `scope audit
+EP-005: ok`. Sentinels: `EP-005 M5: ok`, `node verify EP-005: ok`,
+`scope audit EP-005: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -448,6 +460,38 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   reachability, stream status, pending-delivery checks, and bounded
   recovery (single restart, idempotent re-provision, checkpoint resume).
   No new service scripts; recovery is bounded and idempotent by design.
+- 2026-08-12 (M5): **Event-envelope schema ripples regenerated the
+  cross-language bindings.** The M3 canonical `event-envelope.schema.json`
+  added `time`, `actor`, `data_class` enum, and const schema_version;
+  the generated TS/Python/Dart/Rust bindings were stale (old
+  `occurred_at`/`request_id` shape). Regenerated via
+  `python3 packages/contracts/scripts/generate.py` (9 schemas, 4
+  languages); `ValidatedEventEnvelope` in nexus-contracts corrected from
+  `occurred_at` to canonical `time`; EP-002 agreement test updated to
+  assert the const `"1.0.0"` schema_version (EP-003 M5 precedent:
+  regenerate from canonical schema + amend expected-file fence with
+  exact generated paths). Evidence: M5 verify green after regen.
+- 2026-08-12 (M5): **async-nats trimmed to minimal features; cargo-deny
+  bans resolved with targeted skips.** `nexus-nats` was pulling the full
+  async-nats default feature stack (ring TLS, websockets, kv,
+  object-store, nkeys, nuid) which dragged rustls/webpki-roots into the
+  tree. Set `default-features = false, features = ["jetstream",
+  "server_2_12"]` (localhost, unauthenticated JetStream needs no TLS),
+  removing webpki-roots entirely. Remaining cargo-deny duplicate ban
+  (syn 2 vs 3) is a build-time proc-macro ecosystem split: syn 3 comes
+  from displaydoc/icu via idna/url (unconditional in pinned async-nats
+  0.47), syn 2 from serde/futures etc. Recorded a targeted `skip` for
+  `syn 3.0.3` with justification - not a broad allowlist. Windows-sys
+  duplicates became stale lock entries after the trim (no reachable
+  0.52) and required no skip. Evidence: `cargo deny check` bans ok,
+  licenses ok; 6/6 integration tests still green after the trim.
+- 2026-08-12 (M5): **Disk-pressure recovery during verify.** The full
+  repository verify exposed a 100% full root filesystem caused by 1037
+  dangling docker volumes (49.8GB) leaked by earlier test runs. Pruned
+  with `docker volume prune -f` (dangling only; live services
+  untouched), removed stale EP-001 failure containers, and re-ran
+  verify green. No test was weakened; the postgres/EP-004 tests that
+  failed under disk exhaustion passed once space was restored.
 
 # 14. Outcomes & Retrospective
 

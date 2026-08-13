@@ -262,11 +262,16 @@ def ep002_unit_schema_version_is_typed_constant() -> None:
     assert py["NexusControlObject"]["schema_version"].startswith("Literal[")
     assert dart["NexusControlObject"]["schema_version"] == "String"
 
-    # event-envelope declares schema_version as a plain string.
-    assert schemas["event-envelope"]["properties"]["schema_version"]["type"] == "string"
+    # event-envelope pins schema_version to const "1.0.0" (EP-005 M1/M3:
+    # EventEnvelope::validate rejects any other version, matching the
+    # Rust EVENT_SCHEMA_VERSION constant).
+    assert schemas["event-envelope"]["properties"]["schema_version"] == {
+        "const": "1.0.0",
+        "type": "string",
+    }
     assert rust["EventEnvelope"]["schema_version"] == "String"
-    assert ts["EventEnvelope"]["schema_version"] == "string"
-    assert py["EventEnvelope"]["schema_version"] == "str"
+    assert ts["EventEnvelope"]["schema_version"] == '"1.0.0"'
+    assert py["EventEnvelope"]["schema_version"].startswith("Literal[")
     assert dart["EventEnvelope"]["schema_version"] == "String"
 
 
