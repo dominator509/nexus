@@ -1,0 +1,10 @@
+# Minimal dynamic config for the EP-006 M3 real-server integration
+# stack (Temporal server 1.31.2). Transcribed from the upstream
+# temporalio/docker-compose development-sql.yaml, which the server image
+# requires at /etc/temporal/config/dynamicconfig/docker.yaml.
+limit.maxIDLength:
+  - value: 255
+    constraints: {}
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true
+    constraints: {}

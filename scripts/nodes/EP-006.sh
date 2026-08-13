@@ -22,6 +22,10 @@ run_ep006_tests() {
   if [ -f infra/temporal/package.json ]; then
     pnpm --filter @nexus/temporal exec vitest run -t "$filter" >>"$log" 2>&1 || ok=0
   fi
+  # tests/workflows real-server integration suite (M3+).
+  if [ -f tests/workflows/package.json ]; then
+    pnpm --filter @nexus/workflows-tests exec vitest run -t "$filter" >>"$log" 2>&1 || ok=0
+  fi
   if [ "$ok" -ne 1 ]; then
     echo "EP-006: FAIL - vitest filter '$filter' failed" >&2
     tail -20 "$log" >&2
@@ -38,7 +42,7 @@ run_ep006_tests() {
 case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-006 M1 && run_ep006_tests ep006_unit || rc=$? ;;
   M2) python3 scripts/node-artifact-check.py EP-006 M2 && run_ep006_tests ep006_unit || rc=$? ;;
-  M3) python3 scripts/node-artifact-check.py EP-006 M3 && run_ep006_tests ep006_integration || rc=$? ;;
+  M3) python3 scripts/node-artifact-check.py EP-006 M3 && run_ep006_tests ep006_integration && sh scripts/ep006-orphan-audit.sh || rc=$? ;;
   M4) python3 scripts/node-artifact-check.py EP-006 M4 && run_ep006_tests ep006_failure && sh scripts/security-check.sh && sh scripts/license-gate.sh || rc=$? ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-006 M5 \

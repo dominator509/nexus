@@ -127,8 +127,17 @@ export async function runStepGateWorkflow<O = unknown>(
         break;
       }
       if (step.state === "AWAITING_APPROVAL") {
+        // Wake when the approval signal advances the CURRENT step to
+        // APPROVED, when the whole run turns terminal, or on cancel.
+        // A signal handler mutates `record` (closure) so the predicate
+        // must re-read the live step state - checking only terminal
+        // states here would deadlock: step-gate APPROVED is not a
+        // terminal workflow state.
         const decided = await condition(
-          () => isTerminalStepGateState(record.state) || cancelRequested,
+          () =>
+            cancelRequested ||
+            isTerminalStepGateState(record.state) ||
+            currentStep(record)?.state !== "AWAITING_APPROVAL",
           perStepTimeoutMs,
         );
         if (!decided && !cancelRequested) {

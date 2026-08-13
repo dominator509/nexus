@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "infra/*"
+  - "tests/workflows"
   - "apps/web"
 allowBuilds:
   esbuild: true

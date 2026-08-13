@@ -11,3 +11,5 @@ pnpm-lock.yaml
 pnpm-workspace.yaml
 docs/vocabulary/README.md
 references/ADR-010-workflow-and-durable-approval-vocabulary.md
+COMMANDS.md
+scripts/ep006-orphan-audit.sh

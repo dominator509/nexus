@@ -124,6 +124,14 @@ export interface ApprovalInput extends WorkflowInput {
   readonly actionDigest: import("./ids.js").ActionDigest;
   /** Approval class requirement (SPEC-005 behavior 4). */
   readonly requiredAuthenticationStrength: import("./vocabulary.js").AuthenticationStrength;
+  /**
+   * Optional per-workflow approval deadline in milliseconds. When set, it
+   * overrides the contract default approvalTimeoutMs so each workflow can
+   * carry an explicit timeout (SPEC-023 error-state TIMEOUT; EP-006
+   * invariant: timeout paths are explicit and testable). Omit to use the
+   * contract policy default.
+   */
+  readonly approvalTimeoutMs?: number;
 }
 
 export interface ConnectorCertificationInput extends WorkflowInput {

@@ -69,6 +69,39 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(supports-color@8.1.1)(terser@5.50.0)
 
+  tests/workflows:
+    devDependencies:
+      '@nexus/temporal':
+        specifier: workspace:*
+        version: link:../../infra/temporal
+      '@nexus/workflows':
+        specifier: workspace:*
+        version: link:../../packages/workflows
+      '@temporalio/activity':
+        specifier: 1.17.2
+        version: 1.17.2
+      '@temporalio/client':
+        specifier: 1.17.2
+        version: 1.17.2
+      '@temporalio/testing':
+        specifier: 1.17.2
+        version: 1.17.2(esbuild@0.28.2)(postcss@8.5.26)
+      '@temporalio/worker':
+        specifier: 1.17.2
+        version: 1.17.2(esbuild@0.28.2)(postcss@8.5.26)
+      '@temporalio/workflow':
+        specifier: 1.17.2
+        version: 1.17.2
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.1
+      typescript:
+        specifier: ~5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(supports-color@8.1.1)(terser@5.50.0)
+
 packages:
 
   '@esbuild/aix-ppc64@0.28.2':
