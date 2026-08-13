@@ -75,6 +75,7 @@ These are legal only after the owning workspace file exists:
 - `uv run pytest <locked-test-path> -q`
 - `flutter test <locked-test-path>`
 - `docker compose -f <locked-compose-file> logs --tail=100 <locked-service>`
+- `docker run --rm --network <locked-network> --entrypoint temporal temporalio/admin-tools:1.31.2 operator cluster health --address temporal:7233` — real-server health gate for the EP-006 M3 integration suite (`tests/workflows/`); command surface verified against the pinned admin-tools image in the EP-006 Decision Log.
 
 The exact crate, package, test, and compose names must already appear in an accepted spec, active ExecPlan, or checked-in workspace manifest.
 
