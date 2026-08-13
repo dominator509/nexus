@@ -3,17 +3,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
-    "actor_ref": {
-      "type": [
-        "string",
-        "null"
-      ]
+    "actor": {
+      "type": "string"
     },
     "causation_id": {
-      "format": "uuid",
-      "type": [
-        "string",
-        "null"
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "correlation_id": {
@@ -21,42 +22,32 @@
       "type": "string"
     },
     "data_class": {
-      "type": "string"
+      "enum": [
+        "PUBLIC",
+        "HOUSEHOLD",
+        "PERSONAL",
+        "SENSITIVE",
+        "BUSINESS_CONFIDENTIAL",
+        "SECURITY",
+        "SECRET"
+      ]
     },
     "event_id": {
       "format": "uuid",
       "type": "string"
     },
     "event_type": {
-      "pattern": "^[a-z][a-z0-9_.-]+\\.v[0-9]+$",
-      "type": "string"
-    },
-    "observed_at": {
-      "format": "date-time",
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "occurred_at": {
-      "format": "date-time",
+      "pattern": "^[a-z0-9]+(\\.[a-z0-9]+)*$",
       "type": "string"
     },
     "payload": {
       "type": "object"
     },
-    "request_id": {
-      "format": "uuid",
-      "type": [
-        "string",
-        "null"
-      ]
-    },
     "schema_version": {
+      "const": "1.0.0",
       "type": "string"
     },
     "source": {
-      "format": "uri-reference",
       "type": "string"
     },
     "subject": {
@@ -64,6 +55,10 @@
     },
     "tenant_id": {
       "format": "uuid",
+      "type": "string"
+    },
+    "time": {
+      "format": "date-time",
       "type": "string"
     }
   },
@@ -73,8 +68,9 @@
     "schema_version",
     "source",
     "subject",
-    "occurred_at",
+    "time",
     "tenant_id",
+    "actor",
     "correlation_id",
     "data_class",
     "payload"

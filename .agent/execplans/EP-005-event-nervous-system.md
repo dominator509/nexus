@@ -272,7 +272,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -310,6 +310,21 @@ owns a tokio current-thread runtime bridge. 7 `ep005_unit_` tests in the
 adapter + 12 in the contracts crate + dependency-direction pass; clippy
 clean. Cargo.lock regenerated offline (205 packages). Sentinel:
 `EP-005 M2: ok`.
+
+M3 completed 2026-08-12: `schemas/event-envelope.schema.json` written
+(closed wire model, event_type dotted-slug pattern, data_class enum,
+required set, schema_version const 1.0.0). Owner architecture
+clarification corrected an EP-005 contract defect: the M1 port traits
+were synchronous, forcing M2's per-adapter current-thread tokio runtime
+bridges. Publisher/Consumer/Provisioner operations are now natively
+`async fn`; the adapter never owns a runtime; M3 integration tests run
+on `#[tokio::test(flavor = "multi_thread")]` against a real
+`nats:2.14.3` container with dynamically allocated host ports. Six
+`ep005_integration_` tests prove stream provisioning idempotency,
+JetStream publish-ack precedence, durable consumption with explicit
+server-observed acks (`num_ack_pending` 3 -> 0), full envelope
+round-trip equality, checkpoint resume semantics, and clean shutdown
+with zero orphaned containers. Sentinel: `EP-005 M3: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -358,6 +373,41 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   single-segment event type lives under the `general` domain. Wildcard
   helpers exist for domain and tenant-scoped durable consumers
   (SPEC-023 fallback doctrine: one stream, no sharding).
+- 2026-08-12 (M3): **CONTRACT DEFECT CORRECTED: event ports made natively
+  async; per-adapter runtimes removed.** M1 declared the
+  infrastructure-facing ports synchronous; M2 therefore owned a tokio
+  current-thread runtime inside every adapter instance and bridged with
+  `Runtime::block_on`. Owner architecture clarification: Nexus
+  infrastructure must use one process-owned async runtime (composition
+  root); adapters must never own a runtime, call `block_on` from async
+  context, or leak runtime lifecycle into domain contracts. `Publisher`,
+  `Consumer`, and `Provisioner` operations are now declared `async fn`
+  (native Rust async fn in traits, edition 2024; `async_fn_in_trait`
+  lint allowed at crate root with Send-enforcement rationale). The NATS
+  adapter stores only the JetStream context; `connect()` is async and
+  must be called inside the composition root's runtime. M3 integration
+  tests run on `#[tokio::test(flavor = "multi_thread")]` (the canonical
+  test harness runtime), never on adapter-owned runtimes. The
+  adapter's `ack` now retains delivered JetStream messages and
+  explicitly acknowledges them on the server (verified via raw
+  `num_ack_pending` on the real container). Evidence: 6/6 real
+  nats:2.14.3 integration tests green; clippy `-D warnings` clean;
+  `EP-005 M3: ok`.
+- 2026-08-12 (M3): **Real-dependency M3 proofs against nats:2.14.3.**
+  Six `ep005_integration_` tests prove: stream provisioning is
+  idempotent; publish returns only after JetStream durable-storage ack;
+  a durable pull consumer receives events and explicit acks clear
+  `num_ack_pending` on the server; envelope survives
+  encode/publish/consume/decode with full equality; checkpoint resume
+  skips already-processed sequences; clean shutdown (dropping adapter
+  handles + container) leaves zero orphaned containers. Host ports are
+  dynamically allocated; readiness is proven through the published host
+  port. No in-memory substitute; the pinned `nats:2.14.3` image is used.
+- 2026-08-12 (M3): **Integration test fixture UUID corrected.** The
+  event_id fixture format `...2c3d4e5fc{seed:02x}` produced an
+  11-character final UUID group (Malformed). Corrected to
+  `...2c3d4e5fc0{seed:02x}` to match the 12-character group shape used
+  by tenant/correlation fixtures.
 
 # 14. Outcomes & Retrospective
 

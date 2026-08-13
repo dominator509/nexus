@@ -22,6 +22,14 @@
 //! NATS JetStream implements these ports in `infra/nats` (EP-005 M2+).
 
 #![forbid(unsafe_code)]
+// EP-005 architecture decision (owner directive): event ports are
+// natively async, so trait methods are declared `async fn`. Auto-trait
+// bounds on the returned futures are intentionally unspecified at the
+// trait level; concrete adapter futures are Send (async-nats) and the
+// composition root drives them from a multi-thread Tokio runtime, which
+// enforces Send at compile time (the M3 integration tests run under
+// `#[tokio::test(flavor = "multi_thread")]`).
+#![allow(async_fn_in_trait)]
 
 pub mod consumer;
 pub mod envelope;

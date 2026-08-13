@@ -11,8 +11,8 @@ serde_json.workspace = true
 nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
 nexus-events = { path = "../../crates/nexus-events", version = "0.1.0" }
 async-nats = { version = "0.47.0", features = ["jetstream"] }
-tokio = { version = "1", features = ["rt", "macros"] }
 futures-util = "0.3"
 
 [dev-dependencies]
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 uuid = { version = "1", features = ["v4"] }

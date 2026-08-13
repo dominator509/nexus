@@ -4,6 +4,9 @@
 //! restart, consumption resumes from the last checkpoint; replay does not
 //! create duplicate logical effects because the inbox deduplicates by
 //! event ID.
+//!
+//! The port is natively async. Runtime lifecycle belongs to the Nexus
+//! application composition root, never to a port or adapter.
 
 use serde::{Deserialize, Serialize};
 
@@ -39,18 +42,18 @@ pub struct ConsumerConfig {
 /// Port: durable event consumption with resumable checkpoints.
 pub trait EventConsumer {
     /// Fetch the durable checkpoint for this consumer.
-    fn checkpoint(&self, consumer: &str) -> Result<Option<ConsumerCheckpoint>, EventError>;
+    async fn checkpoint(&self, consumer: &str) -> Result<Option<ConsumerCheckpoint>, EventError>;
 
     /// Persist a checkpoint after processing (resume point).
-    fn save_checkpoint(&self, checkpoint: &ConsumerCheckpoint) -> Result<(), EventError>;
+    async fn save_checkpoint(&self, checkpoint: &ConsumerCheckpoint) -> Result<(), EventError>;
 
     /// Poll the next batch of events at or after `after_sequence`.
-    fn poll(
+    async fn poll(
         &self,
         config: &ConsumerConfig,
         after_sequence: u64,
     ) -> Result<Vec<EventEnvelope>, EventError>;
 
     /// Acknowledge an event as processed (inbox deduplication).
-    fn ack(&self, consumer: &str, event_id: &str) -> Result<(), EventError>;
+    async fn ack(&self, consumer: &str, event_id: &str) -> Result<(), EventError>;
 }

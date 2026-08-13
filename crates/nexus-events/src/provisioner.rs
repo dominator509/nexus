@@ -4,6 +4,9 @@
 //! sharding. The provisioner ensures the durable stream exists and
 //! reports its status; it never invents subjects or streams beyond the
 //! canonical namespace.
+//!
+//! The port is natively async. Runtime lifecycle belongs to the Nexus
+//! application composition root, never to a port or adapter.
 
 use serde::{Deserialize, Serialize};
 
@@ -36,8 +39,8 @@ pub struct StreamStatus {
 /// Port: ensure the canonical stream exists.
 pub trait StreamProvisioner {
     /// Create or update the canonical stream; idempotent.
-    fn ensure_stream(&self, config: &StreamConfig) -> Result<StreamStatus, EventError>;
+    async fn ensure_stream(&self, config: &StreamConfig) -> Result<StreamStatus, EventError>;
 
     /// Report current stream status without mutating it.
-    fn status(&self, stream: &str) -> Result<StreamStatus, EventError>;
+    async fn status(&self, stream: &str) -> Result<StreamStatus, EventError>;
 }
