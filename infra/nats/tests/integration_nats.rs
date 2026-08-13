@@ -150,7 +150,10 @@ async fn provision(url: &str) -> nexus_events::StreamStatus {
         max_messages: 100_000,
         max_age_seconds: 86_400,
     };
-    provisioner.ensure_stream(&config).await.expect("ensure stream")
+    provisioner
+        .ensure_stream(&config)
+        .await
+        .expect("ensure stream")
 }
 
 /// Server-observed number of delivered-but-unacknowledged messages for a

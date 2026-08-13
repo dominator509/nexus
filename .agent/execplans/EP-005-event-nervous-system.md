@@ -273,7 +273,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 M1 completed 2026-08-12: `crates/nexus-events/` created with the canonical
@@ -325,6 +325,20 @@ JetStream publish-ack precedence, durable consumption with explicit
 server-observed acks (`num_ack_pending` 3 -> 0), full envelope
 round-trip equality, checkpoint resume semantics, and clean shutdown
 with zero orphaned containers. Sentinel: `EP-005 M3: ok`.
+
+M4 completed 2026-08-12: forced-failure and abuse coverage. Contract
+layer (`crates/nexus-events/tests/failure.rs`, 11 `ep005_failure_`
+tests): malformed input rejection, duplicate-state dedup conflict,
+outbox redaction + bounded retry, stable SPEC-006 codes with
+correlation, closed-wire rejection. Real dependency
+(`infra/nats/tests/failure_nats.rs`, 5 `ep005_failure_` tests against
+real nats:2.14.3): container kill -> typed UNAVAILABLE (never false
+Ok), corrupt payload quarantine, out-of-namespace subject denial,
+unacked-pending fail-closed semantics, and container cleanup after
+failure. `tests/events/OPS.md` documents diagnostics and bounded
+recovery. M4 gate strengthened to run both failure suites; security
+check and license gate green. Sentinels: `EP-005 M4: ok`, `security
+check: ok`, `license gate: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -408,6 +422,32 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   11-character final UUID group (Malformed). Corrected to
   `...2c3d4e5fc0{seed:02x}` to match the 12-character group shape used
   by tenant/correlation fixtures.
+- 2026-08-12 (M4): **Failure tests use real failure mechanisms, never
+  mocks.** Contract-layer `ep005_failure_*` tests in
+  `crates/nexus-events/tests/failure.rs` (11 tests, synchronous,
+  dependency-free per the dependency-direction gate): malformed input
+  rejection (schema version, empty source/actor/subject, invalid event
+  type, unknown data class), duplicate-processing state as dedup
+  conflict, outbox fail with redacted reason and bounded retry,
+  UNAVAILABLE/TIMEOUT/AUTHORIZATION code stability with correlation
+  preservation, and closed-wire unknown-field rejection. Real-dependency
+  `ep005_failure_*` tests in `infra/nats/tests/failure_nats.rs` (5
+  tests, real nats:2.14.3 container): container kill mid-operation
+  surfaces typed UNAVAILABLE and never a false Ok; corrupt payload is
+  quarantined (never delivered, never crashes); out-of-namespace
+  subjects are denied by construction (message_count 0 vs 1); unacked
+  deliveries stay pending on the server (fail-closed redelivery);
+  containers are cleaned up even after a failed dependency. The M4 gate
+  was strengthened to run BOTH failure suites (`-p nexus-events
+  ep005_failure && -p nexus-nats ep005_failure`) - the original gate
+  only ran the contract crate, which would have silently skipped the
+  real-container failures (EP-001 gate-masking class).
+- 2026-08-12 (M4): **Operations diagnostic and bounded recovery for the
+  NATS surface live in `tests/events/OPS.md`.** The M4 milestone fence
+  owns `tests/events/`; the runbook documents container health,
+  reachability, stream status, pending-delivery checks, and bounded
+  recovery (single restart, idempotent re-provision, checkpoint resume).
+  No new service scripts; recovery is bounded and idempotent by design.
 
 # 14. Outcomes & Retrospective
 

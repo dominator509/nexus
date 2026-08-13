@@ -42,16 +42,12 @@ impl StreamProvisioner for NatsStreamProvisioner {
             max_age: std::time::Duration::from_secs(config.max_age_seconds.max(0) as u64),
             ..Default::default()
         };
-        let mut stream = self
-            .context
-            .get_or_create_stream(spec)
-            .await
-            .map_err(|e| {
-                EventError::new(
-                    EventErrorCode::ExternalProvider,
-                    format!("nats stream create: {e}"),
-                )
-            })?;
+        let mut stream = self.context.get_or_create_stream(spec).await.map_err(|e| {
+            EventError::new(
+                EventErrorCode::ExternalProvider,
+                format!("nats stream create: {e}"),
+            )
+        })?;
         let info = stream.info().await.map_err(|e| {
             EventError::new(
                 EventErrorCode::ExternalProvider,

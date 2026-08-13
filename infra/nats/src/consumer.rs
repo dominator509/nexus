@@ -115,7 +115,10 @@ impl EventConsumer for NatsEventConsumer {
                         Ok(envelope) => {
                             // Retain the delivery for explicit ack.
                             self.pending.lock().unwrap().insert(
-                                (config.consumer.clone(), envelope.event_id.as_str().to_string()),
+                                (
+                                    config.consumer.clone(),
+                                    envelope.event_id.as_str().to_string(),
+                                ),
                                 msg,
                             );
                             out.push(envelope);
