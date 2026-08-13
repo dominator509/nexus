@@ -22,8 +22,12 @@ pub mod discovery;
 pub mod realm;
 pub mod tokens;
 pub mod urls;
+pub mod verify;
 
 pub use discovery::{DiscoveryError, ProviderMetadata};
 pub use realm::{NexusRealm, RealmClient, RealmError, RealmFlow};
 pub use tokens::{KeycloakClaims, TokenMappingError};
 pub use urls::{AuthorizeUrl, ClientCredentialsBody, RefreshBody, UrlError};
+pub use verify::{
+    VerifiedJwt, VerifyError, verify_access_token, verify_and_validate, verify_service_token,
+};

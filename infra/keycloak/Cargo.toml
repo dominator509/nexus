@@ -10,5 +10,17 @@ serde.workspace = true
 serde_json.workspace = true
 nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
 nexus-auth = { path = "../../crates/nexus-auth", version = "0.1.0" }
+# Vetted JOSE/JWT implementation (directive C: production crypto boundary).
+# jsonwebtoken 11.0.0 (MIT) enforces fixed algorithm (RS256), signature
+# verification, kid/JWKS key selection, issuer, audience, exp/nbf, and
+# algorithm-confusion rejection. The aws_lc_rs crypto provider is
+# constant-time and has no unpatched audit advisories (the `rsa` crate
+# backend carries RUSTSEC-2023-0071 with no fix). use_pem enables
+# EncodingKey in tests (from_jwk requires no feature).
+jsonwebtoken = { version = "11.0.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 
 [dev-dependencies]
+# Test-only key generation for the production verifier unit tests; the
+# security gate forbids committed private keys, so tests mint ephemeral
+# RSA keys at runtime with the same aws-lc-rs backend jsonwebtoken uses.
+aws-lc-rs = "1.18"

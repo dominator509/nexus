@@ -129,7 +129,7 @@ impl OidcClient {
         Ok(Self {
             client_id,
             issuer_url,
-            redirect_url: redirect_url.into(),
+            redirect_url,
             permitted_flows,
             required_scopes,
         })
@@ -269,10 +269,11 @@ impl TokenValidator {
         {
             return TokenValidationOutcome::Rejected(OidcError::MissingScope);
         }
-        if let Some(expected) = &self.expected_device_id {
-            if claims.device_id.as_deref() != Some(expected.as_str()) {
+        match (&self.expected_device_id, claims.device_id.as_deref()) {
+            (Some(expected), actual) if actual != Some(expected.as_str()) => {
                 return TokenValidationOutcome::Rejected(OidcError::DeviceContextMismatch);
             }
+            _ => {}
         }
         TokenValidationOutcome::Accepted(ValidatedToken {
             token_class: claims.token_class,

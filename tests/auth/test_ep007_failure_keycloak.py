@@ -50,33 +50,38 @@ def ep007_failure_keycloak_container_terminated_fails_closed() -> None:
     with _bootstrap_ctx() as (name, port, boot):
         # Real discovery works before termination.
         doc = t._http_get_json(
-            f"http://127.0.0.1:{port}/realms/nexus/.well-known/openid-configuration")
+            f"http://127.0.0.1:{port}/realms/nexus/.well-known/openid-configuration"
+        )
         assert doc["issuer"].endswith(f":{port}/realms/nexus")
         # Terminate the REAL dependency (SIGKILL, not graceful stop).
-        killed = subprocess.run([t.DOCKER, "kill", "-s", "KILL", name],
-                                capture_output=True, text=True)
+        killed = subprocess.run(
+            [t.DOCKER, "kill", "-s", "KILL", name], capture_output=True, text=True
+        )
         assert killed.returncode == 0, "docker kill failed"
         # The next request MUST fail closed with a real connection error.
         try:
             t._http_get_json(
                 f"http://127.0.0.1:{port}/realms/nexus/.well-known/openid-configuration",
-                timeout=3.0)
+                timeout=3.0,
+            )
             raise AssertionError("request to a terminated dependency unexpectedly succeeded")
-        except (urllib.error.URLError, ConnectionError, OSError):
+        except urllib.error.URLError, ConnectionError, OSError:
             pass  # fail closed
         # The token endpoint must fail the same way.
         token_url = f"http://127.0.0.1:{port}/realms/nexus/protocol/openid-connect/token"
-        body = urllib.parse.urlencode({
-            "grant_type": "client_credentials",
-            "client_id": t.SERVICE_SCHEDULER,
-            "client_secret": boot["scheduler_secret"],
-        }).encode()
+        body = urllib.parse.urlencode(
+            {
+                "grant_type": "client_credentials",
+                "client_id": t.SERVICE_SCHEDULER,
+                "client_secret": boot["scheduler_secret"],
+            }
+        ).encode()
         try:
             req = urllib.request.Request(token_url, data=body, method="POST")
             req.add_header("Content-Type", "application/x-www-form-urlencoded")
             urllib.request.urlopen(req, timeout=3.0)
             raise AssertionError("token request to a terminated dependency unexpectedly succeeded")
-        except (urllib.error.URLError, ConnectionError, OSError):
+        except urllib.error.URLError, ConnectionError, OSError:
             pass  # fail closed
 
 
@@ -84,12 +89,15 @@ def ep007_failure_wrong_client_secret_denied() -> None:
     """A wrong service secret is denied by the real token endpoint."""
     with _bootstrap_ctx() as (_name, port, boot):
         try:
-            t._token_request(port, {
-                "grant_type": "client_credentials",
-                "client_id": t.SERVICE_SCHEDULER,
-                "client_secret": "definitely-not-the-secret",
-                "scope": "openid",
-            })
+            t._token_request(
+                port,
+                {
+                    "grant_type": "client_credentials",
+                    "client_id": t.SERVICE_SCHEDULER,
+                    "client_secret": "definitely-not-the-secret",
+                    "scope": "openid",
+                },
+            )
             raise AssertionError("wrong client secret was accepted")
         except t.TokenGrantError as exc:
             assert exc.status in (400, 401)
@@ -102,20 +110,37 @@ def ep007_failure_disabled_service_client_denied() -> None:
     """A disabled service client is denied at the real boundary (revocation)."""
     with _bootstrap_ctx() as (name, port, boot):
         # Grant works while enabled.
-        ok = t._token_request(port, {
-            "grant_type": "client_credentials",
-            "client_id": t.SERVICE_CONNECTOR,
-            "client_secret": boot["connector_secret"],
-            "scope": "openid",
-        })
+        ok = t._token_request(
+            port,
+            {
+                "grant_type": "client_credentials",
+                "client_id": t.SERVICE_CONNECTOR,
+                "client_secret": boot["connector_secret"],
+                "scope": "openid",
+            },
+        )
         assert ok["access_token"]
         # Revoke by disabling the client through the real Admin API.
-        admin_user = subprocess.run(
-            [t.DOCKER, "exec", name, "sh", "-c", "printf %s \"${KC_BOOTSTRAP_ADMIN_USERNAME:-}\""],
-            capture_output=True, text=True).stdout.strip() or "admin"
+        admin_user = (
+            subprocess.run(
+                [
+                    t.DOCKER,
+                    "exec",
+                    name,
+                    "sh",
+                    "-c",
+                    'printf %s "${KC_BOOTSTRAP_ADMIN_USERNAME:-}"',
+                ],
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            or "admin"
+        )
         admin_pw = subprocess.run(
-            [t.DOCKER, "exec", name, "sh", "-c", "printf %s \"${KC_BOOTSTRAP_ADMIN_PASSWORD:-}\""],
-            capture_output=True, text=True).stdout.strip()
+            [t.DOCKER, "exec", name, "sh", "-c", 'printf %s "${KC_BOOTSTRAP_ADMIN_PASSWORD:-}"'],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
         tok = t._admin_token(port, admin_user, admin_pw)
         clients = t._admin(port, tok, "GET", "/admin/realms/nexus/clients") or []
         connector = next(c for c in clients if c["clientId"] == t.SERVICE_CONNECTOR)
@@ -123,12 +148,15 @@ def ep007_failure_disabled_service_client_denied() -> None:
         t._admin(port, tok, "PUT", f"/admin/realms/nexus/clients/{connector['id']}", connector)
         # New grants are denied (real revocation effect).
         try:
-            t._token_request(port, {
-                "grant_type": "client_credentials",
-                "client_id": t.SERVICE_CONNECTOR,
-                "client_secret": boot["connector_secret"],
-                "scope": "openid",
-            })
+            t._token_request(
+                port,
+                {
+                    "grant_type": "client_credentials",
+                    "client_id": t.SERVICE_CONNECTOR,
+                    "client_secret": boot["connector_secret"],
+                    "scope": "openid",
+                },
+            )
             raise AssertionError("disabled service client was still granted")
         except t.TokenGrantError as exc:
             assert exc.status in (401, 403)
@@ -140,7 +168,8 @@ def ep007_failure_corrupted_access_token_rejected() -> None:
     with _bootstrap_ctx() as (_name, port, boot):
         verifier = secrets.token_urlsafe(48)[:64]
         code, _state, _r, _nn = t._complete_auth_code_pkce_flow(
-            port, username="owner", password=boot["owner_password"], verifier=verifier)
+            port, username="owner", password=boot["owner_password"], verifier=verifier
+        )
         tokens = t._exchange_code(port, code, verifier)
         jwks = t._fetch_jwks(port)
         assert t._verify_rs256(tokens["access_token"], jwks), "baseline token must verify"
@@ -148,8 +177,9 @@ def ep007_failure_corrupted_access_token_rejected() -> None:
         raw_sig = bytearray(t._b64url_decode(sig))
         raw_sig[0] ^= 0x01  # flip one bit in the real signature
         corrupted = f"{head}.{payload}.{t._b64url_encode(bytes(raw_sig))}"
-        assert not t._verify_rs256(corrupted, jwks), \
+        assert not t._verify_rs256(corrupted, jwks), (
             "corrupted signature must fail real RS256 verification"
+        )
 
 
 def ep007_failure_wrong_issuer_or_audience_rejected() -> None:
@@ -157,17 +187,21 @@ def ep007_failure_wrong_issuer_or_audience_rejected() -> None:
     with _bootstrap_ctx() as (_name, port, boot):
         verifier = secrets.token_urlsafe(48)[:64]
         code, _state, _r, _nn = t._complete_auth_code_pkce_flow(
-            port, username="owner", password=boot["owner_password"], verifier=verifier)
+            port, username="owner", password=boot["owner_password"], verifier=verifier
+        )
         tokens = t._exchange_code(port, code, verifier)
         _h, claims, _s = t._decode_jwt(tokens["access_token"])
-        wrong_issuer = t.BoundaryValidator("https://evil.example/realms/nexus", HUMAN_CLIENT,
-                                           required_scopes=("openid", "profile"))
+        wrong_issuer = t.BoundaryValidator(
+            "https://evil.example/realms/nexus", HUMAN_CLIENT, required_scopes=("openid", "profile")
+        )
         assert "issuer" in wrong_issuer.rejections(claims)
-        wrong_audience = t.BoundaryValidator(t._issuer(port), "evil-client",
-                                             required_scopes=("openid", "profile"))
+        wrong_audience = t.BoundaryValidator(
+            t._issuer(port), "evil-client", required_scopes=("openid", "profile")
+        )
         assert "audience" in wrong_audience.rejections(claims)
-        missing_scope = t.BoundaryValidator(t._issuer(port), HUMAN_CLIENT,
-                                            required_scopes=("openid", "nexus.missing"))
+        missing_scope = t.BoundaryValidator(
+            t._issuer(port), HUMAN_CLIENT, required_scopes=("openid", "nexus.missing")
+        )
         assert "scope" in missing_scope.rejections(claims)
 
 
@@ -181,8 +215,8 @@ def ep007_failure_wrong_password_budget_exhausted() -> None:
             verifier = secrets.token_urlsafe(48)[:64]
             try:
                 t._complete_auth_code_pkce_flow(
-                    port, username="owner", password="wrong-password-budget",
-                    verifier=verifier)
+                    port, username="owner", password="wrong-password-budget", verifier=verifier
+                )
                 raise AssertionError("wrong password unexpectedly authenticated")
             except AssertionError as exc:
                 assert "authentication failed" in str(exc), exc
@@ -202,5 +236,5 @@ def ep007_failure_closed_port_fails_fast() -> None:
     try:
         t._http_get_json(f"http://{t.CALLBACK_HOST}:{t.CALLBACK_PORT}/callback", timeout=2.0)
         raise AssertionError("closed port unexpectedly answered")
-    except (urllib.error.URLError, ConnectionError, OSError):
+    except urllib.error.URLError, ConnectionError, OSError:
         pass  # fail fast and closed

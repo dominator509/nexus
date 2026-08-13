@@ -89,6 +89,15 @@ components:
     commercial_review: "Apache-2.0; commercial use permitted"
     status: required
     rationale: "OIDC, OAuth, passkeys, federation"
+  - id: jsonwebtoken
+    capability: identity.jose
+    implementation: "jsonwebtoken 11.0.0 (aws-lc-rs crypto provider)"
+    license: "MIT"
+    integration_mode: embedded
+    replacement_contract: "JOSE/JWT verification contract; fixed RS256, kid/JWKS selection, issuer/audience/exp/nbf enforcement, algorithm-confusion rejection"
+    commercial_review: "MIT; commercial use permitted"
+    status: required
+    rationale: "Production JWT signature verification (EP-007 M5 directive C); aws-lc-rs provider is constant-time with no unpatched audit advisories"
   - id: openfga
     capability: authz.relationship
     implementation: "OpenFGA"

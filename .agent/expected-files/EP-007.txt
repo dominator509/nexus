@@ -4,6 +4,7 @@
 .agent/node-contracts/EP-007.md
 scripts/nodes/EP-007.sh
 scripts/ep007-keycloak-diag.sh
+scripts/ep007-orphan-audit.sh
 COMMANDS.md
 crates/nexus-auth/
 infra/keycloak/
@@ -11,5 +12,7 @@ tests/auth/
 schemas/auth/
 Cargo.toml
 Cargo.lock
+deny.toml
+COMPONENT_REGISTRY.yaml
 docs/vocabulary/README.md
 references/ADR-011-authentication-and-passkey-vocabulary.md

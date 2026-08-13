@@ -37,5 +37,28 @@ skip = [
   # the majority of the tree (serde, futures, etc.). Build-time only,
   # never linked into the final binary.
   { name = "syn", version = "3.0.3" },
+  # getrandom 0.2 vs 0.4: major-version split across pinned transitive
+  # chains. 0.2.17 is required by jsonwebtoken 11.0.0 (EP-007 pinned
+  # production verifier) and rand 0.8.7 (async-nats 0.47, pinned);
+  # 0.4.3 is required by the aws-lc-sys build chain (cc -> jobserver,
+  # pinned by aws-lc-rs 1.18.0) and rand 0.10.2 (postgres-protocol ->
+  # tokio-postgres). Cannot be unified without breaking pinned pins.
+  { name = "getrandom", version = "0.4.3" },
+  # rand_core 0.6 vs 0.10: same major-version split. 0.6.4 is required
+  # by rand 0.8.7 (async-nats 0.47, pinned); 0.10.1 is required by
+  # rand 0.10.2 (postgres-protocol -> tokio-postgres). Not unified
+  # because the two rand lines are API-incompatible majors.
+  { name = "rand_core", version = "0.10.1" },
+  # thiserror 1 vs 2: major-version split. 1.0.69 is required by
+  # async-nats 0.47 (pinned); 2.0.20 is required by simple_asn1 0.6.4,
+  # a transitive of jsonwebtoken 11.0.0 (EP-007 pinned production
+  # verifier). simple_asn1 pins thiserror 2; async-nats pins thiserror 1.
+  { name = "thiserror", version = "2.0.20" },
+  { name = "thiserror-impl", version = "2.0.20" },
+  # untrusted 0.7 vs 0.9: 0.7.1 is required by aws-lc-rs 1.18.0
+  # (EP-007 pinned); 0.9.0 is required by rustls-webpki 0.103
+  # (async-nats/rustls chain, pinned). Two independent ring-compat
+  # lines; cannot be unified.
+  { name = "untrusted", version = "0.7.1" },
 ]
 skip-tree = []

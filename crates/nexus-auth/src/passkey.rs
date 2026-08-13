@@ -380,6 +380,6 @@ mod tests {
         let json = serde_json::to_string(&credential).unwrap();
         let back: RegisteredCredential = serde_json::from_str(&json).unwrap();
         assert_eq!(back, credential);
-        assert!(json.contains("\"REGISTERED\"") == false); // credential has no state; challenge does
+        assert!(!json.contains("\"REGISTERED\"")); // credential has no state; challenge does
     }
 }

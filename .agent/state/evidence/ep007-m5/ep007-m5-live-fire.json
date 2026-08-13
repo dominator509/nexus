@@ -1,0 +1,50 @@
+{
+ "node": "EP-007",
+ "milestone": "M5",
+ "certification": {
+  "web_authn_protocol_provider": "PASS",
+  "physical_passkey_hardware": "NOT ASSERTED"
+ },
+ "ceremony": {
+  "ok": true,
+  "register": {
+   "codeLength": 98,
+   "credentialAdded": 1,
+   "credentialIdHash": "12e1ad751104a185",
+   "resident": true,
+   "rpId": "localhost",
+   "signCount": 1
+  },
+  "authenticate": {
+   "codeLength": 98,
+   "credentialAsserted": 1,
+   "credentialIdHash": "12e1ad751104a185",
+   "signCount": 2,
+   "sameCredential": true
+  },
+  "pageErrors": [],
+  "consoleErrors": []
+ },
+ "token_metadata": {
+  "aud": [
+   "nexus-app",
+   "account"
+  ],
+  "iss": "http://localhost:34424/realms/nexus",
+  "scope": "openid nexus.read email profile",
+  "exp_iat_seconds": 300
+ },
+ "validation": {
+  "production_validator": true,
+  "tampered_rejected": true,
+  "wrong_issuer_rejected": true,
+  "wrong_audience_rejected": true,
+  "refresh_after_revocation_rejected": true,
+  "userinfo_after_revocation_rejected": true
+ },
+ "no_secrets": {
+  "access_token_in_evidence": false,
+  "refresh_token_in_evidence": false,
+  "password_in_evidence": false
+ }
+}
