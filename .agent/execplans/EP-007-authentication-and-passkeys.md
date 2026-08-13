@@ -270,7 +270,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary - `EP-007 M1: ok` (56 ep007_unit tests + 1 dependency-direction; 8 files in crates/nexus-auth); ADR-011; vocabulary README entries; 7 public interfaces (OidcClient, TokenValidator, PasskeyEnrollment, DeviceEnrollment, SessionService, StepUpChallenge, RecoveryKit); workspace member registered; challenge time windows issuance-to-expiry
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -282,7 +282,10 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-13 | ADR-011 authentication vocabulary | SPEC-005 locks Authentication Strength, Service Identity, Capability Token, Secret Reference, Trust Zone; ADR-010 documented AuthenticationStrength for the workflow package but no Rust representation existed. Added ADR-011 + Rust enums in `crates/nexus-auth` (AuthenticationStrength ordered ladder NONE < SINGLE_FACTOR < MULTI_FACTOR < STEP_UP, TokenClass, PasskeyState, DeviceEnrollmentState, StepUpState, RecoveryMaterialKind, GrantFlow, RecoveryKitState) + vocabulary README entries. Service Identity / Capability Token / Secret Reference / Trust Zone remain locked names owned by later nodes. | Vocabulary parse-time rejection; new names require ADR.
+- 2026-08-13 | Provider-neutral auth contracts crate | `crates/nexus-auth` never imports an OIDC/Keycloak/WebAuthn SDK; it depends only on nexus-domain + nexus-identity + serde (enforced by ep007_unit_auth_crate_has_no_infrastructure_dependencies over real cargo tree). Keycloak adapter lives in infra/keycloak (M2). | Reversal: engine import in contracts would fail dependency-direction test.
+- 2026-08-13 | Fence amended (EP-001/EP-003 precedent) | `.agent/expected-files/EP-007.txt` adds `Cargo.toml` + `Cargo.lock` (workspace member registration for the new crate), `docs/vocabulary/README.md` (auth vocabulary entries), `references/ADR-011-authentication-and-passkey-vocabulary.md` (new ADR). Mirrors the EP-003 fence (which lists Cargo.toml, Cargo.lock, docs/vocabulary/README.md, references/ADR-007). | Scope audit would otherwise reject these legitimately changed paths.
+- 2026-08-13 | Challenge time windows are issuance-to-expiry | PasskeyChallenge and StepUpChallenge carry `created_at_unix_s`; `is_valid_at` requires `created_at <= now < expires` (a challenge is not usable before issuance). Construction rejects inverted windows. Test suite caught the gap (is_valid_at(999) before creation was wrongly true). | Honest validity windows; no challenge usable before issuance.
 
 # 14. Outcomes & Retrospective
 

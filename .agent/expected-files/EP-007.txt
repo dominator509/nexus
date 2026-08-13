@@ -7,3 +7,7 @@ crates/nexus-auth/
 infra/keycloak/
 tests/auth/
 schemas/auth/
+Cargo.toml
+Cargo.lock
+docs/vocabulary/README.md
+references/ADR-011-authentication-and-passkey-vocabulary.md

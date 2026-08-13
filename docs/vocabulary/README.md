@@ -234,8 +234,53 @@ activity declares a compensation step.
 ## AuthenticationStrength
 
 `NONE`, `SINGLE_FACTOR`, `MULTI_FACTOR`, `STEP_UP` (SPEC-005 canonical
-term; ADR-010). SPEC-005 behavior 4 requires a cryptographic step-up for
-R3 and R4 actions; R4 never accepts model approval.
+term; ADR-010; Rust mirror ADR-011). Ordered strength ladder
+`NONE < SINGLE_FACTOR < MULTI_FACTOR < STEP_UP`. SPEC-005 behavior 4
+requires a cryptographic step-up for R3 and R4 actions; R4 never
+accepts model approval.
+
+## TokenClass
+
+`ACCESS`, `REFRESH`, `ID` (SPEC-005; ADR-011). ACCESS tokens are
+short-lived bearer tokens; REFRESH tokens are rotation-only credentials,
+never used as bearer; ID tokens carry identity claims.
+
+## PasskeyState
+
+`PENDING_CHALLENGE`, `REGISTERED`, `REVOKED` (SPEC-005; ADR-011).
+Passkeys are WebAuthn-based possession factors; a challenge must be
+satisfied before a credential registers.
+
+## DeviceEnrollmentState
+
+`PENDING_VERIFICATION`, `ENROLLED`, `REJECTED`, `REVOKED` (SPEC-005;
+ADR-011). Trust is evidence, never cryptographic authentication
+(INV-003); enrollment completes only after verification evidence is
+accepted.
+
+## StepUpState
+
+`PENDING`, `SATISFIED`, `EXPIRED`, `CANCELLED` (SPEC-005 behavior 4;
+ADR-011). A step-up challenge proves the operator is present and has
+satisfied the configured strength before a high-risk action proceeds.
+
+## RecoveryMaterialKind
+
+`SEALED_ENVELOPE`, `SPLIT_SHARES`, `RECOVERY_CODE` (SPEC-005 behavior 6;
+ADR-011). Offline recovery material is sealed at the boundary and
+referenced by secret reference, never stored plaintext.
+
+## GrantFlow
+
+`AUTHORIZATION_CODE`, `CLIENT_CREDENTIALS`, `REFRESH_TOKEN` (SPEC-005;
+ADR-011). OIDC/OAuth2 authorization grant families; service identities
+use client credentials.
+
+## RecoveryKitState
+
+`PROVISIONED`, `SEALED`, `VERIFIED`, `REVOKED` (SPEC-005 behavior 6;
+ADR-011). Recovery kits are sealed after provisioning and verified by
+successful recovery exercises.
 
 ## ActionDigest
 
