@@ -35,16 +35,19 @@ import type { StepGateRecord, StepGateSeed } from "../state/step-gate.js";
 const NOW = "2026-08-13T00:00:00Z";
 
 function approvalRecord(): ApprovalRecord {
-  return initialApprovalState({
-    workflowId: workflowIdA,
-    actionId: actionIdA,
-    actionDigest: actionDigestA,
-    requiredAuthenticationStrength: "STEP_UP",
-    approvalTimeoutMs: 30_000,
-    tenantId: "tenant-m4",
-    correlationId: "corr-denied",
-    principal: { id: "p-hob", type: "HUMAN" },
-  }, NOW);
+  return initialApprovalState(
+    {
+      workflowId: workflowIdA,
+      actionId: actionIdA,
+      actionDigest: actionDigestA,
+      requiredAuthenticationStrength: "STEP_UP",
+      approvalTimeoutMs: 30_000,
+      tenantId: "tenant-m4",
+      correlationId: "corr-denied",
+      principal: { id: "p-hob", type: "HUMAN" },
+    },
+    NOW,
+  );
 }
 
 const SEED: StepGateSeed = {

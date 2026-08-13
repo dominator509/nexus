@@ -15,14 +15,14 @@ DOCKER_BIN=$(command -v docker)
 STATE=/tmp/nexus-ep006-stack-state.json
 fail=0
 
-leftovers=$("$DOCKER_BIN" ps -a --filter name=nexus-ep006 --format '{{.Names}}' | sed '/^$/d')
+leftovers=$("$DOCKER_BIN" ps -a --filter name=nexus-ep006 | awk 'NR>1 {print $NF}' | sed '/^$/d')
 if [ -n "$leftovers" ]; then
   echo "EP-006 orphan audit: FAIL - leftover containers:" >&2
   echo "$leftovers" >&2
   fail=1
 fi
 
-leftover_nets=$("$DOCKER_BIN" network ls --filter name=nexus-ep006 --format '{{.Name}}' | sed '/^$/d')
+leftover_nets=$("$DOCKER_BIN" network ls --filter name=nexus-ep006 | awk 'NR>1 {print $2}' | sed '/^$/d')
 if [ -n "$leftover_nets" ]; then
   echo "EP-006 orphan audit: FAIL - leftover networks:" >&2
   echo "$leftover_nets" >&2

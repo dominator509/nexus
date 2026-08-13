@@ -3,13 +3,13 @@
  *
  * vitest 3 removed `globalTeardown`; a `globalSetup` file may export a
  * `teardown` function which vitest runs after the whole suite (in the
- * main process, even when tests failed — see Vitest.close() →
+ * main process, even when tests failed - see Vitest.close() ->
  * _teardownGlobalSetup()).
  *
  * The fork process registers every started stack in the registry file
  * (tests/workflows/src/helpers/stack.ts); this teardown disposes every
  * registered stack with REAL docker, accumulating failures. Any failure
- * here throws and fails the vitest run — teardown failures are test
+ * here throws and fails the vitest run - teardown failures are test
  * failures.
  *
  * This is a safety net AND the shared session's primary disposer: the

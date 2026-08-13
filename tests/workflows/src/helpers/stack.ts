@@ -51,8 +51,7 @@ const POSTGRES_USER: string = "nexus";
 const POSTGRES_DEFAULT_DB: string = "postgres";
 const DBNAME: string = "temporal";
 const VISIBILITY_DBNAME: string = "temporal_visibility";
-const DYNAMIC_CONFIG_TARGET =
-  "/etc/temporal/config/dynamicconfig/docker.yaml";
+const DYNAMIC_CONFIG_TARGET = "/etc/temporal/config/dynamicconfig/docker.yaml";
 
 /** In-memory credential object; the password never leaves this process. */
 interface StackCredentials {
@@ -151,10 +150,7 @@ function readStateEntries(): StackResources[] {
 }
 
 function writeStateEntries(entries: StackResources[]): void {
-  writeFileSync(
-    STACK_STATE_FILE,
-    `${JSON.stringify({ entries }, null, 2)}\n`,
-  );
+  writeFileSync(STACK_STATE_FILE, `${JSON.stringify({ entries }, null, 2)}\n`);
 }
 
 /** Register a live stack so suite-level cleanup can find it later. */
@@ -249,9 +245,7 @@ function sweepNetworkContainers(network: string, failures: string[]): void {
  * attempted even when earlier steps fail; returns every failure.
  * Order matters: containers before network, network before volumes.
  */
-export function disposeStackResourcesSync(
-  resources: StackResources,
-): string[] {
+export function disposeStackResourcesSync(resources: StackResources): string[] {
   const failures: string[] = [];
   sweepNetworkContainers(resources.network, failures);
   removeContainer(resources.serverContainer, failures);
@@ -359,10 +353,7 @@ function probeTcp(port: number): Promise<void> {
 }
 
 /** Real postgres readiness: pg_isready inside the container. */
-function waitForPostgres(
-  container: string,
-  timeoutMs = 60_000,
-): void {
+function waitForPostgres(container: string, timeoutMs = 60_000): void {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
@@ -519,7 +510,11 @@ function waitForServerRunning(
     }
     sleep(2000);
   }
-  const evidence = captureServerExitEvidence(container, credentials.password, config);
+  const evidence = captureServerExitEvidence(
+    container,
+    credentials.password,
+    config,
+  );
   throw new Error(
     `temporal server container never reached running within ${timeoutMs}ms; status=${containerStatus(container)}\n` +
       `logs:\n${evidence.logs}`,
@@ -653,9 +648,21 @@ export async function startTemporalStack(): Promise<TemporalStack> {
 
   // One immutable credential object; every consumer must match its
   // fingerprint. Log only a short non-reversible prefix.
-  assertSameFingerprint("postgres", credentials.password, credentials.fingerprint);
-  assertSameFingerprint("sql-tool", credentials.password, credentials.fingerprint);
-  assertSameFingerprint("server", credentials.password, credentials.fingerprint);
+  assertSameFingerprint(
+    "postgres",
+    credentials.password,
+    credentials.fingerprint,
+  );
+  assertSameFingerprint(
+    "sql-tool",
+    credentials.password,
+    credentials.fingerprint,
+  );
+  assertSameFingerprint(
+    "server",
+    credentials.password,
+    credentials.fingerprint,
+  );
   // eslint-disable-next-line no-console
   console.log(
     `[ep006] postgres credential sha256 prefix: ${credentials.fingerprint.slice(0, 12)} (generated per-stack)`,
@@ -823,11 +830,7 @@ export async function startTemporalStack(): Promise<TemporalStack> {
 
     // 7. Observe container state FIRST (owner plan); capture full
     // evidence if it exits.
-    waitForServerRunning(
-      serverContainer,
-      credentials,
-      serverConfig,
-    );
+    waitForServerRunning(serverContainer, credentials, serverConfig);
 
     // 8. Real cluster health (COMMANDS.md) before any namespace work.
     assertClusterHealth(network, serverContainer, credentials.password);

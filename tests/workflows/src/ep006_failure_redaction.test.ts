@@ -24,10 +24,7 @@ describe("ep006_failure_redaction", () => {
 
   it("ep006_failure_redaction_masks_repeated_and_adjacent", () => {
     const secret = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
-    const out = redact(
-      `${secret}${secret} between ${secret}`,
-      secret,
-    );
+    const out = redact(`${secret}${secret} between ${secret}`, secret);
     expect(out).not.toContain(secret);
     expect(out.match(/<redacted>/g)).toHaveLength(3);
   });

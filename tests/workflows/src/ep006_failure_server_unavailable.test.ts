@@ -16,7 +16,11 @@ import { describe, expect, it } from "vitest";
 
 import { TASK_QUEUES, WORKFLOW_TYPES, signalChannel } from "@nexus/temporal";
 import type { ApprovalInput } from "@nexus/workflows";
-import { parseActionDigest, parseSignalId, parseWorkflowId } from "@nexus/workflows";
+import {
+  parseActionDigest,
+  parseSignalId,
+  parseWorkflowId,
+} from "@nexus/workflows";
 import { Client, Connection } from "@temporalio/client";
 
 import {
@@ -36,7 +40,9 @@ import {
 
 const WID_UNAVAILABLE = "0193a1f2-0000-7000-8000-000000000501";
 
-function approvalInput(workflowId: ReturnType<typeof parseWorkflowId>): ApprovalInput {
+function approvalInput(
+  workflowId: ReturnType<typeof parseWorkflowId>,
+): ApprovalInput {
   return {
     workflowId,
     tenantId: "tenant-m4",

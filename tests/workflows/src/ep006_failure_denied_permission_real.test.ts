@@ -13,7 +13,11 @@ import { describe, expect, it } from "vitest";
 
 import { TASK_QUEUES, WORKFLOW_TYPES, signalChannel } from "@nexus/temporal";
 import type { ApprovalInput } from "@nexus/workflows";
-import { parseSignalId, parseWorkflowId, type WorkflowId } from "@nexus/workflows";
+import {
+  parseSignalId,
+  parseWorkflowId,
+  type WorkflowId,
+} from "@nexus/workflows";
 
 import {
   actionDigestA,

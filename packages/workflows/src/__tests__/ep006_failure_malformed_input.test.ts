@@ -51,7 +51,10 @@ describe("ep006_failure_malformed_input", () => {
     const raw = { ...makeApprovalSignal(), actionDigest: "short" };
     expect(() => validateApprovalSignal(raw)).toThrow(/sha256/);
     // Uppercase hex is not a canonical lowercase sha256 digest.
-    const upper = { ...makeApprovalSignal(), actionDigest: DIGEST_B.toUpperCase() };
+    const upper = {
+      ...makeApprovalSignal(),
+      actionDigest: DIGEST_B.toUpperCase(),
+    };
     expect(() => validateApprovalSignal(upper)).toThrow(/sha256/);
   });
 

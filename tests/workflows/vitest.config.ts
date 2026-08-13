@@ -34,7 +34,7 @@ export default defineConfig({
     isolate: false,
     fileParallelism: false,
     sequence: { concurrent: false },
-    // Suite-level teardown net: vitest 3 globalSetup pattern — the
+    // Suite-level teardown net: vitest 3 globalSetup pattern - the
     // `teardown` export in global-setup.ts disposes every registered
     // stack even when the fork dies mid-run (see global-setup.ts).
     globalSetup: "./global-setup.ts",

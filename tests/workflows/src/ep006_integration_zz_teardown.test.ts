@@ -1,7 +1,7 @@
 /**
  * EP-006 M3: deterministic teardown as a hard invariant.
  *
- * 1. ep006_integration_teardown_dispose_leaves_no_resources — starts an
+ * 1. ep006_integration_teardown_dispose_leaves_no_resources - starts an
  *    INDEPENDENT real stack (not the shared session), runs one minimal
  *    REAL workflow interaction, then explicitly `await stack.dispose()`
  *    from finally. After disposal it queries real Docker/process state
@@ -10,7 +10,7 @@
  *    server child process are all gone. The worker runs in-process, so
  *    "no worker process" is proven by the awaited shutdown completing
  *    without a run() rejection (any rejection throws here).
- * 2. ep006_integration_teardown_forced_failure_is_surfaced — at the
+ * 2. ep006_integration_teardown_forced_failure_is_surfaced - at the
  *    narrowest safe layer, forces a REAL docker cleanup failure (volume
  *    in use by a container dispose was not told about) and proves the
  *    error is surfaced (never swallowed) while the remaining cleanup
@@ -19,7 +19,7 @@
  * NOTE on suite ordering: vitest does NOT guarantee alphabetical file
  * order, so this file never disposes the SHARED session. The shared
  * session is disposed by the suite-level globalTeardown
- * (vitest.config.ts / global-teardown.ts) — an explicit async dispose
+ * (vitest.config.ts / global-teardown.ts) - an explicit async dispose
  * that runs after every test file, independent of file order. The
  * process-exit hook in helpers/session.ts is only the last-resort
  * emergency net. This file's own stack proves the primary per-stack

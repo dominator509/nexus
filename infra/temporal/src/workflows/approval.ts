@@ -106,7 +106,8 @@ export async function approvalWorkflowV1(
 
   const approvalTimeoutMs =
     input.approvalTimeoutMs ??
-    (ApprovalContract.policy.timeouts.approvalTimeoutMs ?? 0);
+    ApprovalContract.policy.timeouts.approvalTimeoutMs ??
+    0;
 
   try {
     const decided = await condition(

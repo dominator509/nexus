@@ -9,7 +9,6 @@
   },
   "scripts": {
     "test:unit": "vitest run src/__tests__",
-    "test:integration": "vitest run src/__tests__/integration",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json"

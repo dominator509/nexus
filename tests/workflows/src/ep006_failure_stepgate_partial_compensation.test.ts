@@ -151,14 +151,11 @@ describe("ep006_failure_stepgate_partial_compensation", () => {
       await waitForStatus(client, handle, "AWAITING_APPROVAL");
 
       // Cancel before step 2: compensation must roll back step 1.
-      await handle.signal(
-        signalChannel(WORKFLOW_TYPES.OBJECTIVE, "cancel"),
-        {
-          signalId: workflowId,
-          reason: "m4 partial compensation",
-          requestedAt: "2026-08-13T00:05:00Z",
-        },
-      );
+      await handle.signal(signalChannel(WORKFLOW_TYPES.OBJECTIVE, "cancel"), {
+        signalId: workflowId,
+        reason: "m4 partial compensation",
+        requestedAt: "2026-08-13T00:05:00Z",
+      });
 
       const result = await handle.result();
       expect(result.state).toBe("COMPENSATED");
@@ -202,7 +199,5 @@ async function waitForStatus(
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error(
-    `workflow status did not reach ${expected} within timeout`,
-  );
+  throw new Error(`workflow status did not reach ${expected} within timeout`);
 }

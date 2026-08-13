@@ -263,9 +263,7 @@ async function waitFor(
  */
 async function waitForStatus(
   session: TestSession,
-  handle: Awaited<
-    ReturnType<typeof session.client.workflow.start>
-  >,
+  handle: Awaited<ReturnType<typeof session.client.workflow.start>>,
   expected: string,
   timeoutMs = 15_000,
 ): Promise<void> {

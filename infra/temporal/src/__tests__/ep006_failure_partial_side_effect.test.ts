@@ -144,7 +144,7 @@ describe("ep006_failure_partial_side_effect", () => {
         requiredAuthenticationStrength: "STEP_UP",
         approvalTimeoutMs: 30_000,
         tenantId: "tenant-m4",
-    correlationId: "corr-partial",
+        correlationId: "corr-partial",
         principal: { id: "p-hob", type: "HUMAN" },
       },
       NOW,

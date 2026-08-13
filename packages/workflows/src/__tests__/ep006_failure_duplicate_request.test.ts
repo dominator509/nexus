@@ -14,7 +14,11 @@ import {
   signalKey,
   validateApprovalSignal,
 } from "../index.js";
-import { makeApprovalSignal, signalIdA, signalIdB } from "./helpers/fixtures.js";
+import {
+  makeApprovalSignal,
+  signalIdA,
+  signalIdB,
+} from "./helpers/fixtures.js";
 
 describe("ep006_failure_duplicate_request", () => {
   it("ep006_failure_duplicate_signal_same_key", () => {
