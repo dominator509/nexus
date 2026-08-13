@@ -1,0 +1,94 @@
+{
+  "$id": "https://schemas.nexus.local/token-claims/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "token_class": {
+      "enum": [
+        "ACCESS",
+        "ID",
+        "REFRESH"
+      ]
+    },
+    "subject": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "issuer": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "audiences": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "scopes": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "not_before_unix_s": {
+      "type": "integer"
+    },
+    "expires_at_unix_s": {
+      "type": "integer"
+    },
+    "device_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "strength": {
+      "enum": [
+        "NONE",
+        "SINGLE_FACTOR",
+        "MULTI_FACTOR",
+        "STEP_UP"
+      ]
+    },
+    "signature_verified": {
+      "type": "boolean"
+    },
+    "correlation": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "principal_type": {
+      "enum": [
+        "HUMAN",
+        "SERVICE",
+        "AGENT",
+        "DEVICE",
+        "SYSTEM"
+      ]
+    }
+  },
+  "required": [
+    "token_class",
+    "subject",
+    "issuer",
+    "audiences",
+    "scopes",
+    "not_before_unix_s",
+    "expires_at_unix_s",
+    "strength",
+    "signature_verified",
+    "correlation",
+    "tenant_id",
+    "principal_type"
+  ],
+  "title": "TokenClaims",
+  "type": "object"
+}

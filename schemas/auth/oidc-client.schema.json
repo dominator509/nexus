@@ -1,0 +1,49 @@
+{
+  "$id": "https://schemas.nexus.local/oidc-client/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "client_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "issuer_url": {
+      "format": "uri",
+      "pattern": "^https://",
+      "type": "string"
+    },
+    "redirect_url": {
+      "format": "uri",
+      "type": "string"
+    },
+    "permitted_flows": {
+      "items": {
+        "enum": [
+          "AUTHORIZATION_CODE",
+          "REFRESH_TOKEN",
+          "CLIENT_CREDENTIALS"
+        ]
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "required_scopes": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "client_id",
+    "issuer_url",
+    "redirect_url",
+    "permitted_flows",
+    "required_scopes"
+  ],
+  "title": "OidcClient",
+  "type": "object"
+}

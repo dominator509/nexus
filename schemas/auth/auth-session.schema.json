@@ -1,0 +1,65 @@
+{
+  "$id": "https://schemas.nexus.local/auth-session/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "session_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "principal_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "device_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "grant_flow": {
+      "enum": [
+        "AUTHORIZATION_CODE",
+        "REFRESH_TOKEN",
+        "CLIENT_CREDENTIALS"
+      ]
+    },
+    "strength": {
+      "enum": [
+        "NONE",
+        "SINGLE_FACTOR",
+        "MULTI_FACTOR",
+        "STEP_UP"
+      ]
+    },
+    "created_at_unix_s": {
+      "type": "integer"
+    },
+    "expires_at_unix_s": {
+      "type": "integer"
+    },
+    "revoked": {
+      "type": "boolean"
+    },
+    "correlation": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "principal_id",
+    "tenant_id",
+    "device_id",
+    "grant_flow",
+    "strength",
+    "created_at_unix_s",
+    "expires_at_unix_s",
+    "revoked",
+    "correlation"
+  ],
+  "title": "AuthSession",
+  "type": "object"
+}

@@ -1,0 +1,59 @@
+{
+  "$id": "https://schemas.nexus.local/passkey-challenge/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "challenge_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "principal_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "device_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "challenge": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "created_at_unix_s": {
+      "type": "integer"
+    },
+    "expires_at_unix_s": {
+      "type": "integer"
+    },
+    "correlation": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "PENDING_CHALLENGE",
+        "REGISTERED",
+        "REVOKED",
+        "EXPIRED",
+        "FAILED"
+      ]
+    }
+  },
+  "required": [
+    "challenge_id",
+    "tenant_id",
+    "principal_id",
+    "device_id",
+    "challenge",
+    "created_at_unix_s",
+    "expires_at_unix_s",
+    "correlation",
+    "state"
+  ],
+  "title": "PasskeyChallenge",
+  "type": "object"
+}

@@ -1,0 +1,72 @@
+{
+  "$id": "https://schemas.nexus.local/step-up-challenge/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "challenge_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "principal_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "risk": {
+      "enum": [
+        "R1",
+        "R2",
+        "R3",
+        "R4"
+      ]
+    },
+    "required_strength": {
+      "enum": [
+        "NONE",
+        "SINGLE_FACTOR",
+        "MULTI_FACTOR",
+        "STEP_UP"
+      ]
+    },
+    "challenge": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "created_at_unix_s": {
+      "type": "integer"
+    },
+    "expires_at_unix_s": {
+      "type": "integer"
+    },
+    "correlation": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "PENDING",
+        "COMPLETED",
+        "FAILED",
+        "EXPIRED",
+        "CANCELLED"
+      ]
+    }
+  },
+  "required": [
+    "challenge_id",
+    "tenant_id",
+    "principal_id",
+    "risk",
+    "required_strength",
+    "challenge",
+    "created_at_unix_s",
+    "expires_at_unix_s",
+    "correlation",
+    "state"
+  ],
+  "title": "StepUpChallenge",
+  "type": "object"
+}

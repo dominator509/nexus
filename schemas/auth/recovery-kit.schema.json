@@ -1,0 +1,47 @@
+{
+  "$id": "https://schemas.nexus.local/recovery-kit/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "kit_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "principal_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "material_kind": {
+      "enum": [
+        "RECOVERY_CODES",
+        "OFFLINE_PASSPHRASE",
+        "DEVICE_BACKUP"
+      ]
+    },
+    "created_at_unix_s": {
+      "type": "integer"
+    },
+    "expires_at_unix_s": {
+      "type": "integer"
+    },
+    "correlation": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kit_id",
+    "principal_id",
+    "tenant_id",
+    "material_kind",
+    "created_at_unix_s",
+    "expires_at_unix_s",
+    "correlation"
+  ],
+  "title": "RecoveryKit",
+  "type": "object"
+}
