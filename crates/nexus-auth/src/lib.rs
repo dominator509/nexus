@@ -27,7 +27,7 @@ pub mod vocabulary;
 pub use device::{DeviceEnrollment, DeviceEnrollmentError, VerificationEvidence};
 pub use oidc::{
     GrantFlow, OidcClient, OidcError, ServiceIdentity, TokenClaims, TokenValidationOutcome,
-    ValidatedToken,
+    TokenValidator, ValidatedToken,
 };
 pub use passkey::{
     PasskeyAssertion, PasskeyChallenge, PasskeyError, RegisteredCredential, RegistrationResponse,

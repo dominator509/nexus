@@ -1,0 +1,14 @@
+[package]
+name = "nexus-keycloak"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Keycloak adapter implementing the nexus-auth contracts on Keycloak 26.7.0 (SPEC-005, EP-007 M2). Keycloak owns identities; Nexus owns references (replacement contract)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-auth = { path = "../../crates/nexus-auth", version = "0.1.0" }
+
+[dev-dependencies]

@@ -6,7 +6,7 @@ mode="${1:-verify}"
 rc=0
 case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-007 M1 && cargo test --locked -p nexus-auth ep007_unit || rc=$? ;;
-  M2) python3 scripts/node-artifact-check.py EP-007 M2 && cargo test --locked -p nexus-auth ep007_unit || rc=$? ;;
+  M2) python3 scripts/node-artifact-check.py EP-007 M2 && cargo test --locked -p nexus-auth ep007_unit && cargo test --locked -p nexus-keycloak ep007_unit || rc=$? ;;
   M3) python3 scripts/node-artifact-check.py EP-007 M3 && cargo test --locked -p nexus-auth ep007_integration || rc=$? ;;
   M4) python3 scripts/node-artifact-check.py EP-007 M4 && cargo test --locked -p nexus-auth ep007_failure && uv run --frozen pytest tests/auth -q -o python_functions="ep007_failure_*" && sh scripts/security-check.sh && sh scripts/license-gate.sh || rc=$? ;;
   M5|verify)

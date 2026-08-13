@@ -10,6 +10,7 @@ members = [
     "crates/nexus-events",
     "crates/nexus-auth",
     "infra/nats",
+    "infra/keycloak",
 ]
 
 [workspace.package]

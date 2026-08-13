@@ -566,6 +566,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-keycloak"
+version = "0.1.0"
+dependencies = [
+ "nexus-auth",
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-memory"
 version = "0.1.0"
 dependencies = [
