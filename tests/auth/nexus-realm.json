@@ -1,0 +1,57 @@
+{
+  "realm": "nexus",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "defaultSignatureAlgorithm": "RS256",
+  "sslRequired": "external",
+  "roles": {
+    "realm": [
+      {
+        "name": "nexus-admin",
+        "description": "Canonical realm role required at the Nexus protected boundary"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "nexus-app",
+      "name": "Nexus application (human clients)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://127.0.0.1:8477/callback"],
+      "webOrigins": ["http://127.0.0.1:8477"],
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "nexus-scheduler",
+      "name": "Nexus scheduler service identity",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "nexus-connector-runtime",
+      "name": "Nexus connector runtime service identity",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "defaultDefaultClientScopes": [],
+  "defaultOptionalClientScopes": []
+}
