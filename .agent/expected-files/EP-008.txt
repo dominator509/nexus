@@ -3,6 +3,7 @@
 .agent/expected-files/EP-008.txt
 .agent/node-contracts/EP-008.md
 scripts/nodes/EP-008.sh
+scripts/ep008-orphan-audit.sh
 crates/nexus-policy/
 crates/nexus-action-gateway/
 infra/openfga/

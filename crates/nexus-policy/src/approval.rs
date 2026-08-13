@@ -3,7 +3,7 @@
 //! An `ApprovalAssertion` is the signed evidence that a specific
 //! principal approved a specific action digest at a specific time, with
 //! the authentication strength and approval class recorded. It binds
-//! the approver to the exact action digest — a digest mismatch is a
+//! the approver to the exact action digest - a digest mismatch is a
 //! rejection, never a reuse.
 
 use std::fmt;

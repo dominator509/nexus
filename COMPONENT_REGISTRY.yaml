@@ -100,13 +100,13 @@ components:
     rationale: "Production JWT signature verification (EP-007 M5 directive C); aws-lc-rs provider is constant-time with no unpatched audit advisories"
   - id: openfga
     capability: authz.relationship
-    implementation: "OpenFGA"
+    implementation: "OpenFGA 1.18.1 (openfga/openfga@sha256:ec73e86c629f7c7b290cde0cf52bcea7c3e0315f30f65386fe4df532f4b83deb)"
     license: "Apache-2.0"
     integration_mode: sidecar
     replacement_contract: "Relationship authorization model; decision receipts owned by Nexus audit"
     commercial_review: "Apache-2.0; commercial use permitted"
     status: required
-    rationale: "Relationship authorization"
+    rationale: "Relationship authorization (EP-008 M3); canonical Nexus-to-OpenFGA mapping and tenant isolation recorded in the EP-008 Decision Log"
   - id: opa
     capability: authz.context
     implementation: "OPA"

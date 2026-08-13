@@ -1,7 +1,7 @@
 //! EP-008 M2 unit tests: the deterministic gateway engine.
 //!
 //! Proves the acceptance obligations with real provider ports (simple
-//! in-test implementations of the nexus-policy traits — test-double
+//! in-test implementations of the nexus-policy traits - test-double
 //! zone per TESTING.md): fail closed on relationship/policy/capability/
 //! approval, R3/R4 approval requirements, digest binding, model-approval
 //! rejection, determinism, and grant scoping.
@@ -25,7 +25,7 @@ fn tenant() -> TenantId {
 }
 
 fn id(n: u32) -> NexusId {
-    NexusId::new(&format!("018f0f6f-9c1e-7b6e-8000-{n:012}")).unwrap()
+    NexusId::new(format!("018f0f6f-9c1e-7b6e-8000-{n:012}")).unwrap()
 }
 
 fn corr() -> CorrelationId {

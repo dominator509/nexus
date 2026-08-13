@@ -1,0 +1,21 @@
+[package]
+name = "nexus-openfga"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "OpenFGA adapter implementing the nexus-policy RelationshipAuthorizer contract on OpenFGA 1.18.1 (SPEC-005, EP-008 M3). OpenFGA proves relationship authorization only; Nexus owns contextual policy, risk, approval, and audit receipts."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../../crates/nexus-identity", version = "0.1.0" }
+nexus-policy = { path = "../../crates/nexus-policy", version = "0.1.0" }
+# Minimal real HTTP/1.1 client for the OpenFGA sidecar surface (local
+# container, no TLS in the integration surface). MIT OR Apache-2.0.
+# json feature only; no gzip/cookies/native-tls/brotli chains.
+ureq = { version = "2.12.1", default-features = false, features = ["json"] }
+
+[dev-dependencies]
+nexus-action-gateway = { path = "../../crates/nexus-action-gateway", version = "0.1.0" }
+nexus-auth = { path = "../../crates/nexus-auth", version = "0.1.0" }

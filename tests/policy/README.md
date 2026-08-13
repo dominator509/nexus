@@ -3,8 +3,8 @@
 Owned by EP-008 (authorization policy and action gateway). This
 directory holds the real-dependency test suites for the policy stack:
 
-- `ep008_integration_*` — real OpenFGA + OPA containers (M3).
-- `ep008_failure_*` — forced provider failures, fail-closed proofs (M4).
+- `ep008_integration_*` - real OpenFGA + OPA containers (M3).
+- `ep008_failure_*` - forced provider failures, fail-closed proofs (M4).
 
 The Rust provider-neutral contracts under test live in
 `crates/nexus-policy` (interfaces) and `crates/nexus-action-gateway`
