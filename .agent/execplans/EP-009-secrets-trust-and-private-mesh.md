@@ -275,14 +275,23 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-  - Gate: `sh scripts/nodes/EP-009.sh M2` → `EP-009 M2: ok` (17 unit +
+  - Gate: `sh scripts/nodes/EP-009.sh M2` -> `EP-009 M2: ok` (17 unit +
     19 integration + 13 failure + orphan audit ok)
   - Live proof: `cargo run --locked -p nexus-openbao --example
-    sops_live_proof --offline` → `EP-009 M2 SOPS adapter live proof: ok`
+    sops_live_proof --offline` -> `EP-009 M2 SOPS adapter live proof: ok`
   - All gates: `scope audit EP-009: ok`, `security check: ok`,
     `license gate: ok`, `reality gate: ok`, `format check: ok`,
     `lint: ok`, `EP-009 orphan audit: ok`
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
+  - Gate: `sh scripts/nodes/EP-009.sh M3` -> `EP-009 M3: ok` (12
+    nexus-headscale unit + 10 ep009_integration_headscale_* pytest
+    incl. Rust adapter live proof + orphan audit ok)
+  - Live proof: `mesh_live_proof` example (REAL HeadscaleMeshController
+    against REAL headscale/headscale:0.23.0 container over gRPC TLS +
+    API key) -> `EP-009 M3 headscale live proof: ok`
+  - All gates: `scope audit EP-009: ok`, `security check: ok`,
+    `license gate: ok`, `reality gate: ok`, `format check: ok`,
+    `lint: ok`, `EP-009 orphan audit: ok`
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -303,8 +312,23 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   match specific markers, never the footer. Also: the old broad
   `stderr.contains("failed to decrypt")` matcher silently misclassified
   corrupted documents (whose real stderr says `failed to decrypt and
-  authenticate payload chunk`) as ProviderAuthorization — a latent
+  authenticate payload chunk`) as ProviderAuthorization -- a latent
   integrity-vs-authorization confusion fixed by the ordered classifier.
+- 2026-08-14 (M3): the pinned `headscale/headscale:0.23.0` image is a
+  scratch (distroless) image with NO shell -- `docker exec ... sh`
+  fails, and the binary lives at `/ko-app/headscale` (ko layout). The
+  CLI config search requires a config file to exist; `HEADSCALE_CONFIG`
+  env makes the adapter self-contained. Remote CLI requires TLS
+  (`cli.insecure` uses InsecureSkipVerify, NOT plaintext), so the test
+  server must present a certificate even though
+  `grpc_allow_insecure: true` is set -- the plaintext gRPC path is not
+  reachable from the CLI's remote mode.
+- 2026-08-14 (M3): `headscale users create` exits 1 with "user already
+  exists" on repeat calls (not idempotent by default) -- the adapter
+  treats "already exists" as success. `debug create-node -o json`
+  omits the numeric `id` field (only register/list carry it). Node
+  expiry (`nodes expire`) is observable as a non-negative `expiry`
+  timestamp; `nodes delete --force` is terminal.
 
 # 13. Decision Log
 
@@ -350,7 +374,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-14 | AppRole least-privilege authentication | OpenBao
   adapter authenticates via AppRole with per-tenant policies and a
   bounded 15-minute token TTL; renewal is explicit only. No root token,
-  no wildcard super-policy. Evidence: live probe — tenant A allowed;
+  no wildcard super-policy. Evidence: live probe -- tenant A allowed;
   tenant B, sys/auth, policy-creation all denied (403); token TTL
   bounded at 900s; wrong SecretID rejected (400). Alternatives: root
   token (rejected: unbounded authority). Reversal: policy edit.
@@ -366,8 +390,8 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   License: none. Compatibility: none.
 - 2026-08-14 | Response wrapping one-time semantics | Secret handoff
   uses OpenBao response wrapping: a wrapped READ carries no plaintext;
-  unwrap #1 returns the secret; unwrap #2 → 400 (`wrapping token is
-  not valid or does not exist`); expired wrap → 400. Wrapping token
+  unwrap #1 returns the secret; unwrap #2 -> 400 (`wrapping token is
+  not valid or does not exist`); expired wrap -> 400. Wrapping token
   never logged (redacted `Debug`). Evidence: live probe + failure
   suite (13 tests). Alternatives: plaintext handoff (rejected:
   reusable bearer). Reversal: none. Security: token single-use,
@@ -390,7 +414,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   `ep009_integration_sops_no_private_identity_in_repository` +
   security-check. Alternatives: none. Reversal: none. Security:
   hard invariant (directive M). License: none. Compatibility: none.
-- 2026-08-14 | SOPS wrong-valid-identity → ProviderAuthorization |
+- 2026-08-14 | SOPS wrong-valid-identity -> ProviderAuthorization |
   Real sops 3.13.0 with a valid-but-wrong age identity exits 128 and
   emits `Failed to get the data key required to decrypt the SOPS
   file.` / `age: no identity matched any of the recipients.` The
@@ -403,20 +427,20 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   valid-identity-but-no-key to ProviderAuthorization. Evidence:
   `ep009_unit_sops_classifier_*` (9 tests) + live proof.
   Alternatives: broadening the match to any `identity` substring
-  (rejected: directive B — too broad). Reversal: none. Security:
+  (rejected: directive B -- too broad). Reversal: none. Security:
   typed fail-closed distinction preserved. License: none.
   Compatibility: none.
 - 2026-08-14 | SOPS classifier real failure shapes (captured) |
   Exact non-secret stderr shapes from pinned sops 3.13.0 / age 1.1.1:
-  missing sealed document → exit 100 `cannot operate on non-existent
-  file` (NotFound); missing SOPS_AGE_KEY_FILE → exit 128 `failed to
+  missing sealed document -> exit 100 `cannot operate on non-existent
+  file` (NotFound); missing SOPS_AGE_KEY_FILE -> exit 128 `failed to
   open SOPS_AGE_KEY_FILE file: open <path>: no such file or
-  directory` (NotFound); malformed identity → exit 128 `failed to
+  directory` (NotFound); malformed identity -> exit 128 `failed to
   parse 'SOPS_AGE_KEY_FILE' age identities: unknown identity type`
-  (MalformedProviderResponse); corrupted document → exit 128 `failed
+  (MalformedProviderResponse); corrupted document -> exit 128 `failed
   to decrypt and authenticate payload chunk, file may be corrupted or
   tampered with` (MalformedProviderResponse); valid-but-wrong
-  identity → exit 128 `age: no identity matched any of the
+  identity -> exit 128 `age: no identity matched any of the
   recipients` (ProviderAuthorization). The generic footer `Recovery
   failed because no master key was able to decrypt the file...`
   appears in EVERY failure and never drives classification. Evidence:
@@ -449,6 +473,46 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   gate output. Alternatives: leaving containers (rejected: explicit
   cleanup doctrine). Reversal: none. Security: no leftover identity
   material. License: none. Compatibility: none.
+- 2026-08-14 | Headscale image pin (M3) | `headscale/headscale:0.23.0`
+  pinned by digest
+  `sha256:ffe793968ef6fbec78a8d095893fe03112e6a74231afe366eb504fbc822afea6`
+  in `VERSIONS.lock.yaml` (replacing a speculative 0.28.0 blueprint
+  pin); the pinned CLI binary is extracted from that exact image
+  (`/ko-app/headscale`) to `/usr/local/bin/headscale` and version
+  checked (v0.23.0). Evidence: M3 gate + live proof. Alternatives:
+  0.28.0 (unproven). Reversal: pin update with digest re-verification.
+  Security: API key in-memory only, never logged. License:
+  BSD-3-Clause. Compatibility: none.
+- 2026-08-14 | Headscale transport (M3) | The adapter drives the REAL
+  headscale CLI binary over REAL gRPC (TLS + API key) to the REAL
+  server -- the same transport the provider's own admin tooling uses.
+  The CLI requires a config file; `HEADSCALE_CONFIG` env makes the
+  adapter self-contained. Remote CLI always uses TLS; `cli.insecure`
+  enables InsecureSkipVerify (test/self-host path). Evidence:
+  `ep009_integration_headscale_wrong_api_key_fails_closed` (auth
+  error) + `..._dead_server_fails_closed` (Unavailable, never
+  succeeds). Alternatives: direct gRPC client in-process (heavier,
+  duplicates provider tooling). Reversal: none. Security: API key
+  redacted in Debug; keys never in evidence. License: none.
+  Compatibility: none.
+- 2026-08-14 | MeshController mapping (M3) | Contract port maps onto
+  real headscale ops: `register_node` = ensure user (idempotent) +
+  `debug create-node` (fresh mkey) + `nodes register` (real IP
+  allocation from 100.64.0.0/10 + fd7a:...::/48); `list_nodes` =
+  `nodes list -u`; `wireguard_config` = node addresses + other
+  registered nodes as peers (private key reference points into the
+  OpenBao store); `node_state(Revoked)` = `nodes expire`; `revoke_node`
+  = expire + delete (terminal). Evidence: live proof (2 registered,
+  wg_peers derived, 1 revoked) + integration suite. Alternatives:
+  none. Reversal: none. Security: node keys never logged. License:
+  none. Compatibility: `TrustZone::PrivateMesh` used (not `Mesh`).
+- 2026-08-14 | Orphan audit extension (M3) | `scripts/ep009-orphan-audit.sh`
+  now also scans headscale temp dirs and `headscale serve` processes;
+  the headscale integration suite removes its container + network
+  explicitly and asserts zero leftovers. Evidence:
+  `ep009_integration_headscale_teardown_leaves_no_orphans` +
+  `EP-009 orphan audit: ok`. Reversal: none. Security: no leftover
+  certs/keys/data. License: none. Compatibility: none.
 
 # 14. Outcomes & Retrospective
 

@@ -649,6 +649,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-headscale"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-identity",
+ "nexus-trust",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-identity"
 version = "0.1.0"
 dependencies = [

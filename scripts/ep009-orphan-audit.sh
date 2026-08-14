@@ -46,11 +46,19 @@ if [ -n "$age_leftovers" ]; then
   fail=1
 fi
 
+# headscale temp dirs (TLS certs, sqlite data, configs): zero may survive.
+hs_leftovers=$(find /tmp -maxdepth 1 -name 'nexus-ep009-hs-*' 2>/dev/null | sed '/^$/d')
+if [ -n "$hs_leftovers" ]; then
+  echo "EP-009 orphan audit: FAIL - leftover headscale temp files:" >&2
+  echo "$hs_leftovers" >&2
+  fail=1
+fi
+
 # helper processes (directive Q): zero may survive. The bracket trick
 # avoids matching this script's own grep; the pattern targets actual
 # daemon/helper binaries, not shell wrappers whose command line merely
 # mentions the node name.
-procs=$(ps aux | grep -E '[o]penbao server -dev|[b]ao server -dev|[s]ops --decrypt|[a]ge-keygen' | grep -v grep | sed '/^$/d')
+procs=$(ps aux | grep -E '[o]penbao server -dev|[b]ao server -dev|[s]ops --decrypt|[a]ge-keygen|[h]eadscale serve' | grep -v grep | sed '/^$/d')
 if [ -n "$procs" ]; then
   echo "EP-009 orphan audit: FAIL - leftover helper processes:" >&2
   echo "$procs" >&2

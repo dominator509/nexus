@@ -17,6 +17,7 @@ members = [
     "infra/openfga",
     "infra/opa",
     "infra/openbao",
+    "infra/headscale",
 ]
 
 [workspace.package]

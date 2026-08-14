@@ -17,7 +17,13 @@ case "$mode" in
       && uv run --frozen pytest tests/trust -q --tb=native -o python_functions="ep009_failure_*" \
       && sh scripts/ep009-orphan-audit.sh
       ;;
-  M3) python3 scripts/node-artifact-check.py EP-009 M3; cargo test --locked -p nexus-trust ep009_integration ;;
+  M3)
+      python3 scripts/node-artifact-check.py EP-009 M3 \
+      && cargo test --locked -p nexus-trust ep009_unit \
+      && cargo test --locked -p nexus-headscale ep009_unit \
+      && uv run --frozen pytest tests/trust -q --tb=native -o python_functions="ep009_integration_headscale_*" \
+      && sh scripts/ep009-orphan-audit.sh
+      ;;
   M4) python3 scripts/node-artifact-check.py EP-009 M4; cargo test --locked -p nexus-trust ep009_failure ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-009 M5

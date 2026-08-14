@@ -101,7 +101,8 @@ locks:
   class: secrets-bootstrap
   policy: pinned
 - component: headscale
-  version: 0.28.0
+  version: 0.23.0
+  image: headscale/headscale@sha256:ffe793968ef6fbec78a8d095893fe03112e6a74231afe366eb504fbc822afea6
   license: BSD-3-Clause
   class: private-mesh
   policy: pinned
