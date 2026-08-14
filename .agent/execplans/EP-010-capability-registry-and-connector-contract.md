@@ -286,7 +286,16 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   - 37 `ep010_unit_*` lib tests + 1 dependency-direction test; clippy
     clean; `EP-010 M1: ok`; format check ok; lint ok; fence amended
     (vocabulary README, ADR-015, Cargo.toml, Cargo.lock).
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
+  - `crates/nexus-connectors` deterministic core: in-memory
+    capability registry (tenant-keyed, idempotent registration,
+    availability-filtered discovery), typed capability dispatcher
+    (class-validated entry points; a generic execute string is
+    impossible), and idempotency tracker (key bound to capability,
+    replay on retry, cross-capability reuse = conflict).
+  - 18 `ep010_unit_*` tests + 1 dependency-direction test; clippy
+    clean; `EP-010 M2: ok`; format check ok; lint ok; gate script
+    wired to `nexus-connectors`.
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -333,6 +342,31 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   `crates/nexus-domain/src/lib.rs` export list. Consequence: no fence
   change to nexus-domain; full-path import is stable. Reversal: domain
   root re-export later. Security/license: none.
+- 2026-08-14 - Decision: the deterministic core uses interior
+  mutability (`Mutex`) for the registry and idempotency tracker so
+  both implement the `&self` port methods while remaining shareable
+  across dispatchers and threads. Evidence: `CapabilityRegistry` port
+  methods take `&self`; `Arc<dyn CapabilityRegistry + Send + Sync>`
+  requires `Sync`. Alternatives: `&mut self` ports (rejected: breaks
+  sharing and the adapter pattern), `RefCell` (rejected: not `Sync`).
+  Consequence: all registry/tracker operations are serialized, which
+  keeps them deterministic for a given call sequence. Reversal: ADR +
+  port change. Security/license: none.
+- 2026-08-14 - Decision: the dispatcher is the only composition path
+  and every entry point is class-validated before a port is touched.
+  Evidence: acceptance obligation 2 (read/proposal/command/workflow
+  classes remain distinct) and obligation 3 (a generic execute string
+  is impossible). Consequence: a `QUERY` capability cannot be invoked
+  through the command path and vice versa; each dispatch method is a
+  typed method (`dispatch_query`, `dispatch_command`,
+  `dispatch_workflow`, `dispatch_health`, `dispatch_changefeed`).
+  Reversal: ADR + schema update. Security/license: none.
+- 2026-08-14 - Decision: M2 gate script wired to run
+  `nexus-connectors ep010_unit` (the scaffold had pointed at
+  `nexus-capabilities` for every milestone). Evidence: M2 CHANGE block
+  owns `crates/nexus-connectors/`. Consequence: milestone gates
+  exercise the milestone's actual artifact. Reversal: none.
+  Security/license: none.
 
 # 14. Outcomes & Retrospective
 

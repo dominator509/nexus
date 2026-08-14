@@ -1,0 +1,15 @@
+[package]
+name = "nexus-connectors"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Nexus capability and connector core behavior: deterministic capability registry, typed capability dispatcher (no generic execute string), and idempotency tracking (SPEC-003, SPEC-006, SPEC-022, EP-010)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../nexus-identity", version = "0.1.0" }
+nexus-capabilities = { path = "../nexus-capabilities", version = "0.1.0" }
+
+[dev-dependencies]
