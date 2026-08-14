@@ -6,7 +6,7 @@ mode="${1:-verify}"
 rc=0
 case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-012 M1 && cargo test --locked -p nexus-fabric ep012_unit || rc=$? ;;
-  M2) python3 scripts/node-artifact-check.py EP-012 M2 && cargo test --locked -p nexus-fabric ep012_unit || rc=$? ;;
+  M2) python3 scripts/node-artifact-check.py EP-012 M2 && cargo test --locked -p nexus-fabric ep012_unit && cargo test --locked -p nexus-mcp ep012_unit || rc=$? ;;
   M3) python3 scripts/node-artifact-check.py EP-012 M3 && cargo test --locked -p nexus-fabric ep012_integration || rc=$? ;;
   M4) python3 scripts/node-artifact-check.py EP-012 M4 && cargo test --locked -p nexus-fabric ep012_failure || rc=$? ;;
   M5|verify)

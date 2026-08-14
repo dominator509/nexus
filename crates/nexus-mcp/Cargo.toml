@@ -1,0 +1,13 @@
+[package]
+name = "nexus-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-012 MCP Streamable HTTP engine: authenticated, tenant-safe, origin-validated MCP server behavior targeting specification 2025-11-25 (SPEC-003, EP-012)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-auth = { path = "../nexus-auth", version = "0.1.0" }
+nexus-fabric = { path = "../nexus-fabric", version = "0.1.0" }

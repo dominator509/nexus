@@ -272,8 +272,15 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M1: Contract, vocabulary, and package boundary
+- [x] M2: Core behavior and deterministic invariants
+  - `crates/nexus-mcp/` real MCP Streamable HTTP engine: origin
+    allowlist (exact match, before session work), authentication-before-
+    tenant-resolution sessions, protocol negotiation (2025-11-25 only),
+    exact-name tool registry with input/output schema validation,
+    start/complete call records with real cancellation, deterministic
+    idempotency replay, strength gate; 22 ep012_unit tests + dependency
+    direction; clippy clean; gate `EP-012 M2: ok`.
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -285,6 +292,42 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-14 - Decision (EP-012 M2): the MCP engine models tool calls as
+  start/complete records so cancellation is a REAL path: `start_call`
+  registers an in-flight record, `cancel` marks it cancelled, and
+  `complete_call` fails closed (CONFLICT) for a cancelled call. Evidence:
+  `ep012_unit_mcp_engine_cancelled_call_never_yields_output` proves a
+  cancelled call can never yield output; the atomic `call_tool`
+  convenience composes start + registry dispatch + complete.
+  Alternatives: a boolean "cancelled" set with no start/complete split
+  (rejected: cancellation could never be observed mid-flight), no
+  cancellation (rejected: SPEC-003 required behavior 2). Consequence:
+  deterministic cancellation semantics without async machinery.
+  Reversal: none. Security: none.
+- 2026-08-14 - Decision (EP-012 M2): declared output schemas are checked
+  by a minimal deterministic JSON-Schema-subset validator
+  (`SchemaValidator`: type, properties, required, items) inside the MCP
+  crate rather than pulling `jsonschema` (EP-010 dev-dep) into the
+  production tree. Evidence: `ep012_unit_mcp_registry_validates_output_schema`
+  proves a schema-violating handler output becomes
+  MALFORMED_PROVIDER_RESPONSE, never a success; dependency-direction
+  test forbids jsonschema in `nexus-mcp`. Alternatives: depend on
+  jsonschema (rejected: new production dependency, infrastructure edge
+  for a contract crate), skip output validation (rejected: SPEC-003
+  requires declared output schemas). Consequence: structured content is
+  contract-checked deterministically with zero new deps. Reversal: a
+  future ADR if full JSON Schema is required. Security: none.
+- 2026-08-14 - Decision (EP-012 M2): tenant selection is impossible
+  through untrusted metadata: `McpSession::enforce_tenant` compares any
+  claimed tenant in a request body against the tenant in the
+  AUTHENTICATED binding and fails closed on mismatch (SPEC-003 required
+  behavior 7). Evidence:
+  `ep012_unit_mcp_engine_tenant_never_from_untrusted_metadata`.
+  Alternatives: accept body tenant (rejected: violates SPEC-003),
+  ignore body tenant silently (rejected: hidden ambiguity).
+  Consequence: MCP is tenant-safe by construction. Reversal: none.
+  Security: the SECURITY.md tenant boundary.
 
 # 14. Outcomes & Retrospective
 
