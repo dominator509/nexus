@@ -28,9 +28,15 @@ pub struct TaskMessage {
 }
 
 /// A2A task (opaque agent work unit).
+///
+/// Carries the AUTHENTICATED tenant and principal (SPEC-003 required
+/// behavior 4: every external request carries principal and tenant).
+/// Tenant is never selectable through untrusted metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct A2ATask {
     pub task_id: A2ATaskId,
+    pub tenant_id: String,
+    pub principal_id: String,
     pub status: A2ATaskStatus,
     pub messages: Vec<TaskMessage>,
 }
@@ -116,6 +122,8 @@ mod tests {
     fn ep012_unit_a2a_task_round_trip() {
         let task = A2ATask {
             task_id: A2ATaskId("task-1".into()),
+            tenant_id: "tenant-1".into(),
+            principal_id: "agent:alice".into(),
             status: A2ATaskStatus {
                 state: StreamState::Running,
                 message: None,
@@ -129,6 +137,7 @@ mod tests {
         let json = serde_json::to_value(&task).unwrap();
         let back: A2ATask = serde_json::from_value(json).unwrap();
         assert_eq!(back.task_id, A2ATaskId("task-1".into()));
+        assert_eq!(back.tenant_id, "tenant-1");
         assert_eq!(back.status.state, StreamState::Running);
     }
 }

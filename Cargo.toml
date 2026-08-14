@@ -18,6 +18,7 @@ members = [
     "crates/nexus-sidecar",
     "crates/nexus-fabric",
     "crates/nexus-mcp",
+    "crates/nexus-a2a",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

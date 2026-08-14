@@ -281,7 +281,15 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
     start/complete call records with real cancellation, deterministic
     idempotency replay, strength gate; 22 ep012_unit tests + dependency
     direction; clippy clean; gate `EP-012 M2: ok`.
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
+  - `crates/nexus-a2a/` real A2A gateway across the fabric trait
+    boundary: opaque task lifecycle (SUBMITTED -> WORKING ->
+    COMPLETED/FAILED/CANCELLED), streaming status with deterministic
+    cursors, idempotent cancellation, push notifications, hash-bound
+    artifact attachment (fail-closed on missing), tenant-scoped access;
+    fabric `A2ATask` amended to carry authenticated tenant/principal;
+    13 unit + 6 integration + dependency direction; clippy clean; gate
+    `EP-012 M3: ok`.
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -328,6 +336,35 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   ignore body tenant silently (rejected: hidden ambiguity).
   Consequence: MCP is tenant-safe by construction. Reversal: none.
   Security: the SECURITY.md tenant boundary.
+
+- 2026-08-14 - Decision (EP-012 M3): the fabric `A2ATask` carries the
+  AUTHENTICATED tenant and principal (SPEC-003 required behavior 4) -
+  the M1 contract lacked tenant context on the A2A task, which would
+  have forced the gateway to trust task-carried metadata. Evidence:
+  `ep012_integration_a2a_trait_send_get_stream` proves tenant/principal
+  survive the trait boundary; the gateway's inherent API still
+  re-checks tenant on every access. Alternatives: tenant in a side
+  channel (rejected: implicit and ambiguous), tenant from body metadata
+  (rejected: SPEC-003 behavior 7). Consequence: A2A tasks are
+  tenant-safe by construction. Reversal: none. Security: the tenant
+  boundary.
+- 2026-08-14 - Decision (EP-012 M3): A2A task messages reuse the
+  canonical `nexus_fabric::a2a::TaskMessage` instead of a local twin
+  type. Evidence: a local duplicate caused a type mismatch across the
+  trait boundary; the fabric owns the canonical A2A types per the M1
+  contract. Alternatives: keep the local type and convert at the
+  boundary (rejected: duplicate vocabulary, conversion surface).
+  Consequence: one canonical message type. Reversal: none. Security:
+  none.
+- 2026-08-14 - Decision (EP-012 M3): cancellation emits a stream event
+  only when the task state actually changes; idempotent re-cancellation
+  is a no-op. Evidence: an earlier version pushed a duplicate CANCELLED
+  event on the second idempotent cancel (stream showed 3 events instead
+  of 2); `ep012_unit_a2a_gateway_cancel_idempotent_and_streams` now
+  asserts exactly SUBMITTED + CANCELLED. Alternatives: push on every
+  call (rejected: duplicate events corrupt deterministic replay).
+  Consequence: streams are deterministic. Reversal: none. Security:
+  none.
 
 # 14. Outcomes & Retrospective
 
