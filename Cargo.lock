@@ -704,6 +704,7 @@ dependencies = [
  "nexus-auth",
  "nexus-domain",
  "nexus-identity",
+ "nexus-openfga",
  "nexus-policy",
  "serde",
  "serde_json",

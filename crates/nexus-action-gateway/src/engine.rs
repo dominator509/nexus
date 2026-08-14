@@ -251,6 +251,7 @@ where
             }
         };
         if !grant.is_usable_at(now)
+            || grant.tenant_id != request.tenant_id
             || grant.actor != input.actor.principal_id
             || grant.target_id != request.target_id
             || !grant

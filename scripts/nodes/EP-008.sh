@@ -14,12 +14,14 @@ case "$mode" in
       && cargo test --locked -p nexus-policy \
       && cargo test --locked -p nexus-action-gateway \
       && uv run --frozen pytest tests/policy -q --tb=native -o python_functions="ep008_failure_*" \
+      && uv run --frozen pytest tests/policy -q --tb=native -o python_functions="ep008_livefire_*" \
       && sh scripts/test-unit.sh \
       && sh scripts/test-failure.sh \
       && sh scripts/test-integration.sh \
       && sh scripts/security-check.sh \
       && sh scripts/license-gate.sh \
-      && sh scripts/reality-gate.sh
+      && sh scripts/reality-gate.sh \
+      && sh scripts/ep008-orphan-audit.sh
       rc=$?
       ;;
   *) echo "EP-008: FAIL - unknown mode $mode" >&2; exit 2;;

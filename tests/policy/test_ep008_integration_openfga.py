@@ -104,9 +104,7 @@ def _http(method: str, url: str, body=None, timeout: float = 8.0):
 
 
 def _cleanup_container(name: str) -> None:
-    subprocess.run(
-        [DOCKER, "rm", "-f", name], capture_output=True, text=True, check=False
-    )
+    subprocess.run([DOCKER, "rm", "-f", name], capture_output=True, text=True, check=False)
 
 
 def _start_openfga() -> tuple[str, int]:
@@ -214,9 +212,7 @@ def _create_model(port: int, store_id: str) -> str:
                 "type": "device",
                 "relations": {"operator": {"this": {}}},
                 "metadata": {
-                    "relations": {
-                        "operator": {"directly_related_user_types": [{"type": "user"}]}
-                    }
+                    "relations": {"operator": {"directly_related_user_types": [{"type": "user"}]}}
                 },
             },
             {
@@ -248,18 +244,14 @@ def _create_model(port: int, store_id: str) -> str:
                 "type": "capability",
                 "relations": {"delegated": {"this": {}}},
                 "metadata": {
-                    "relations": {
-                        "delegated": {"directly_related_user_types": [{"type": "user"}]}
-                    }
+                    "relations": {"delegated": {"directly_related_user_types": [{"type": "user"}]}}
                 },
             },
             {
                 "type": "action",
                 "relations": {"actor": {"this": {}}},
                 "metadata": {
-                    "relations": {
-                        "actor": {"directly_related_user_types": [{"type": "user"}]}
-                    }
+                    "relations": {"actor": {"directly_related_user_types": [{"type": "user"}]}}
                 },
             },
         ],
@@ -304,9 +296,7 @@ def _check(
         "tuple_key": {"user": user, "relation": relation, "object": obj},
         "authorization_model_id": model_override or model_id,
     }
-    status, resp = _http(
-        "POST", f"http://127.0.0.1:{port}/stores/{store_id}/check", body
-    )
+    status, resp = _http("POST", f"http://127.0.0.1:{port}/stores/{store_id}/check", body)
     assert status == 200, f"check {user} {relation} {obj}: {status} {resp}"
     return bool(resp.get("allowed"))
 
@@ -368,7 +358,9 @@ def ep008_integration_owner_can_admin_household() -> None:
     ctx = _ctx()
     port, store, model = ctx["port"], ctx["store"], ctx["model"]
     _write_tuples(
-        port, store, [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|h1"}]
+        port,
+        store,
+        [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|h1"}],
     )
     assert _check(port, store, model, "user:alice", "owner", f"household:{TENANT_A}|h1")
     # owner -> admin is a computed userset (model-derived).
@@ -384,7 +376,9 @@ def ep008_integration_member_cannot_admin_household() -> None:
     ctx = _ctx()
     port, store, model = ctx["port"], ctx["store"], ctx["model"]
     _write_tuples(
-        port, store, [{"user": "user:bob", "relation": "member", "object": f"household:{TENANT_A}|h1"}]
+        port,
+        store,
+        [{"user": "user:bob", "relation": "member", "object": f"household:{TENANT_A}|h1"}],
     )
     assert _check(port, store, model, "user:bob", "member", f"household:{TENANT_A}|h1")
     assert not _check(port, store, model, "user:bob", "admin", f"household:{TENANT_A}|h1")
@@ -405,8 +399,16 @@ def ep008_integration_business_admin_can_manage_business_resource() -> None:
         [
             {"user": "user:ceo", "relation": "admin", "object": f"business:{TENANT_A}|b1"},
             # Model-derived: business admins are viewers/editors of the resource.
-            {"user": f"business:{TENANT_A}|b1#admin", "relation": "viewer", "object": f"resource:{TENANT_A}|r1"},
-            {"user": f"business:{TENANT_A}|b1#admin", "relation": "editor", "object": f"resource:{TENANT_A}|r1"},
+            {
+                "user": f"business:{TENANT_A}|b1#admin",
+                "relation": "viewer",
+                "object": f"resource:{TENANT_A}|r1",
+            },
+            {
+                "user": f"business:{TENANT_A}|b1#admin",
+                "relation": "editor",
+                "object": f"resource:{TENANT_A}|r1",
+            },
         ],
     )
     assert _check(port, store, model, "user:ceo", "viewer", f"resource:{TENANT_A}|r1")
@@ -422,7 +424,9 @@ def ep008_integration_unrelated_principal_denied() -> None:
     ctx = _ctx()
     port, store, model = ctx["port"], ctx["store"], ctx["model"]
     _write_tuples(
-        port, store, [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|h1"}]
+        port,
+        store,
+        [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|h1"}],
     )
     assert not _check(port, store, model, "user:mallory", "owner", f"household:{TENANT_A}|h1")
     assert not _check(port, store, model, "user:mallory", "admin", f"household:{TENANT_A}|h1")
@@ -437,7 +441,9 @@ def ep008_integration_device_operator_scope_is_bounded() -> None:
     ctx = _ctx()
     port, store, model = ctx["port"], ctx["store"], ctx["model"]
     _write_tuples(
-        port, store, [{"user": "user:tech", "relation": "operator", "object": f"device:{TENANT_A}|dA"}]
+        port,
+        store,
+        [{"user": "user:tech", "relation": "operator", "object": f"device:{TENANT_A}|dA"}],
     )
     assert _check(port, store, model, "user:tech", "operator", f"device:{TENANT_A}|dA")
     # Same operator, DIFFERENT device -> deny (target binding is exact).
@@ -453,7 +459,9 @@ def ep008_integration_delegation_is_exact() -> None:
     ctx = _ctx()
     port, store, model = ctx["port"], ctx["store"], ctx["model"]
     _write_tuples(
-        port, store, [{"user": "user:carol", "relation": "delegated", "object": f"capability:{TENANT_A}|cap1"}]
+        port,
+        store,
+        [{"user": "user:carol", "relation": "delegated", "object": f"capability:{TENANT_A}|cap1"}],
     )
     # Delegated actor may perform ONLY the modeled relationship.
     assert _check(port, store, model, "user:carol", "delegated", f"capability:{TENANT_A}|cap1")
@@ -488,7 +496,9 @@ def ep008_integration_wrong_store_or_model_fails_closed() -> None:
     ctx = _ctx()
     port, store, model = ctx["port"], ctx["store"], ctx["model"]
     _write_tuples(
-        port, store, [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|h1"}]
+        port,
+        store,
+        [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|h1"}],
     )
     # A model id that does not exist must NOT allow.
     status, resp = _http(
@@ -593,7 +603,9 @@ def ep008_integration_provider_unavailable_fails_closed() -> None:
         store = _create_store(port, "nexus-ep008-unavail")
         model = _create_model(port, store)
         _write_tuples(
-            port, store, [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|h1"}]
+            port,
+            store,
+            [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|h1"}],
         )
         # Prove the path ALLOWS while the provider is up.
         ctx = {"port": port, "store": store, "model": model}
@@ -636,7 +648,9 @@ def ep008_integration_tenant_isolation_no_cross_tenant_wildcarding() -> None:
     port, store, model = ctx["port"], ctx["store"], ctx["model"]
     # Tenant A: alice owns object with suffix ...0001.
     _write_tuples(
-        port, store, [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|0001"}]
+        port,
+        store,
+        [{"user": "user:alice", "relation": "owner", "object": f"household:{TENANT_A}|0001"}],
     )
     # Tenant A allow.
     assert _check(port, store, model, "user:alice", "owner", f"household:{TENANT_A}|0001")
@@ -644,7 +658,9 @@ def ep008_integration_tenant_isolation_no_cross_tenant_wildcarding() -> None:
     assert not _check(port, store, model, "user:alice", "owner", f"household:{TENANT_B}|0001")
     # Explicitly unrelated tenant B owner does not leak into tenant A.
     _write_tuples(
-        port, store, [{"user": "user:bob", "relation": "owner", "object": f"household:{TENANT_B}|0002"}]
+        port,
+        store,
+        [{"user": "user:bob", "relation": "owner", "object": f"household:{TENANT_B}|0002"}],
     )
     assert not _check(port, store, model, "user:bob", "owner", f"household:{TENANT_A}|0002")
 

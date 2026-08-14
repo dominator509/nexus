@@ -54,6 +54,27 @@ fn grant(actor: NexusId, target: NexusId, scope: &str, exp: i64) -> CapabilityGr
     .unwrap()
 }
 
+/// A grant bound to a DIFFERENT tenant (directive F.4: tenant binding).
+fn grant_in_other_tenant(
+    actor: NexusId,
+    target: NexusId,
+    scope: &str,
+    exp: i64,
+) -> CapabilityGrant {
+    let other = TenantId::new("018f0f6f-9c1e-7b6e-8000-000000000099").unwrap();
+    CapabilityGrant::new(
+        id(5),
+        other,
+        CapabilityClass::Command,
+        actor,
+        target,
+        scope,
+        90,
+        exp,
+    )
+    .unwrap()
+}
+
 fn approval(digest: &str, class: ApprovalClass, exp: i64) -> ApprovalAssertion {
     ApprovalAssertion::new(
         id(6),
@@ -300,6 +321,28 @@ fn ep008_unit_gateway_denies_target_mismatch() {
     let input = input_r2(req, Some(grant(id(2), id(11), "task:complete", 300)), None);
     let out = outcome_of(&input);
     assert!(!out.decision.is_allowed());
+}
+
+#[test]
+fn ep008_unit_gateway_denies_wrong_tenant_grant() {
+    // Directive F.4: a capability grant issued in ANOTHER tenant must
+    // fail at CAPABILITY even though actor/target/scope/expiry all
+    // match. Tenant binding is part of the grant scope.
+    let req = request("digest-abc", "task:complete", 10);
+    let input = input_r2(
+        req,
+        Some(grant_in_other_tenant(id(2), id(10), "task:complete", 300)),
+        None,
+    );
+    let out = outcome_of(&input);
+    assert!(!out.decision.is_allowed());
+    assert_eq!(
+        out.decision,
+        ActionDecision::Denied {
+            reason: DenialReason::NoCapability,
+            message: "capability grant does not cover the request".into(),
+        }
+    );
 }
 
 #[test]

@@ -18,3 +18,6 @@ ureq = { version = "2.12.1", default-features = false, features = ["json"] }
 
 [dev-dependencies]
 nexus-action-gateway = { path = "../../crates/nexus-action-gateway", version = "0.1.0" }
+# M5 live-fire combined probe: wires the REAL OpenFGA relationship
+# adapter and the REAL OPA policy adapter into one gateway evaluation.
+nexus-openfga = { path = "../openfga", version = "0.1.0" }

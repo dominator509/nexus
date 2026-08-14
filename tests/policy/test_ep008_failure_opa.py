@@ -60,7 +60,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-IMAGE = "openpolicyagent/opa@sha256:a915d8b59ddb09a9badecd8e061d43cf3111283494c4cf1d38a675bdb4e81a13"
+IMAGE = (
+    "openpolicyagent/opa@sha256:a915d8b59ddb09a9badecd8e061d43cf3111283494c4cf1d38a675bdb4e81a13"
+)
 IMAGE_TAG = "openpolicyagent/opa:1.16.2"
 ROOT = Path(__file__).resolve().parents[2]
 DOCKER = "/usr/bin/docker"
@@ -455,13 +457,11 @@ def _hang_peer(port: int, stop: threading.Event):
         try:
             conn, _ = srv.accept()
             conn.settimeout(60)
-            try:
+            with contextlib.suppress(OSError):
                 conn.recv(4096)
-            except OSError:
-                pass
             time.sleep(20)  # hold; never respond -> client read deadline
             conn.close()
-        except socket.timeout:
+        except TimeoutError:
             continue
         except OSError:
             time.sleep(0.2)
