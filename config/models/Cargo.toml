@@ -1,0 +1,18 @@
+[package]
+name = "nexus-model-transport"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-013 M3 real model transport: OpenAI-compatible HTTP provider adapter behind the ModelProvider port (SPEC-009). Bifrost is the preferred gateway; DeepSeek V4 Flash is the V1 primary ReflexProvider fallback. Real ureq HTTP calls, canonical NexusControlObject normalization, typed SPEC-006 errors, credentials by reference and never logged. Provider manifests under config/models/providers/."
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-model-gateway = { path = "../../crates/nexus-model-gateway", version = "0.1.0" }
+# Real HTTP transport (same pinned version as infra/opa, infra/openfga).
+ureq = { version = "2.12.1", default-features = false, features = ["json"] }
+
+[dev-dependencies]
+nexus-bifrost = { path = "../../infra/bifrost", version = "0.1.0" }

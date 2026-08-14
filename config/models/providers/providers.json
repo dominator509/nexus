@@ -1,0 +1,26 @@
+{
+  "providers": [
+    {
+      "provider_id": "bifrost",
+      "kind": "BIFROST",
+      "base_url": "http://127.0.0.1:8000/v1",
+      "version": "preferred-gateway",
+      "digest": "",
+      "license": "Apache-2.0",
+      "source": "COMPONENT_REGISTRY.yaml id=bifrost; SOURCE_REGISTRY.md (preferred, replaceable)",
+      "credential_ref": "secret/model/bifrost",
+      "replacement_contract": "ModelGateway contract; Bifrost preferred but replaceable (SOURCE_REGISTRY.md)"
+    },
+    {
+      "provider_id": "deepseek-v4-flash",
+      "kind": "DEEPSEEK",
+      "base_url": "https://api.deepseek.com/v1",
+      "version": "v4-flash",
+      "digest": "",
+      "license": "commercial API terms",
+      "source": "COMPONENT_REGISTRY.yaml id=deepseek-v4-flash (required-v1 ReflexProvider)",
+      "credential_ref": "secret/model/deepseek",
+      "replacement_contract": "ReflexProvider contract; OpenAI or Gemini fast provider fallback (PREFLIGHT optional table)"
+    }
+  ]
+}

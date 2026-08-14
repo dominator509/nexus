@@ -29,6 +29,7 @@ members = [
     "infra/pki",
     "infra/gateway",
     "infra/bifrost",
+    "config/models",
 ]
 
 [workspace.package]

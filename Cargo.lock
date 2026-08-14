@@ -1196,6 +1196,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-model-transport"
+version = "0.1.0"
+dependencies = [
+ "nexus-bifrost",
+ "nexus-domain",
+ "nexus-model-gateway",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "nexus-nats"
 version = "0.1.0"
 dependencies = [
