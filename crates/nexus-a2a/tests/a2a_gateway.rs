@@ -27,10 +27,7 @@ impl ArtifactExchange for MemoryArtifacts {
         _content_type: &str,
         _parents: &[ArtifactId],
     ) -> Result<ArtifactManifest, FabricError> {
-        Err(FabricError::not_found(
-            "not implemented in integration",
-            None,
-        ))
+        Err(FabricError::not_found("artifact store unavailable", None))
     }
     fn fetch(&self, _artifact_id: &ArtifactId) -> Result<ArtifactHandle, FabricError> {
         Err(FabricError::not_found("missing", None))

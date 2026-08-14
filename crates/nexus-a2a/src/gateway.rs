@@ -373,7 +373,7 @@ mod tests {
             _content_type: &str,
             _parents: &[ArtifactId],
         ) -> Result<nexus_fabric::artifacts::ArtifactManifest, FabricError> {
-            Err(FabricError::not_found("not implemented in test", None))
+            Err(FabricError::not_found("artifact store unavailable", None))
         }
         fn fetch(
             &self,
