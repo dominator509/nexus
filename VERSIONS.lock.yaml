@@ -95,6 +95,11 @@ locks:
   license: MPL-2.0
   class: secrets-bootstrap
   policy: pinned
+- component: age
+  version: 1.1.1
+  license: "BSD-3-Clause"
+  class: secrets-bootstrap
+  policy: pinned
 - component: headscale
   version: 0.28.0
   license: BSD-3-Clause

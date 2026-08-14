@@ -1,0 +1,19 @@
+[package]
+name = "nexus-openbao"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "OpenBao adapter implementing the nexus-trust SecretStore and BootstrapSecretStore contracts on OpenBao 2.5.4 (SPEC-005, SPEC-020, EP-009 M2). Least-privilege AppRole machine auth, KV-v2 semantics, one-time response wrapping, typed fail-closed errors, redacted telemetry. SOPS+age bootstrap lives beside it under config/sops (BootstrapSecretStore); OpenBao is the online secret authority, never a transparent fallback."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../../crates/nexus-identity", version = "0.1.0" }
+nexus-trust = { path = "../../crates/nexus-trust", version = "0.1.0" }
+# Minimal real HTTP/1.1 client for the OpenBao sidecar surface (local
+# container, plain HTTP in the integration surface; TLS termination is
+# the deployment boundary). MIT OR Apache-2.0. json feature only.
+ureq = { version = "2.12.1", default-features = false, features = ["json"] }
+
+[dev-dependencies]

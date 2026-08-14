@@ -9,7 +9,14 @@ export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
 case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-009 M1 ;;
-  M2) python3 scripts/node-artifact-check.py EP-009 M2; cargo test --locked -p nexus-trust ep009_unit ;;
+  M2)
+      python3 scripts/node-artifact-check.py EP-009 M2 \
+      && cargo test --locked -p nexus-trust ep009_unit \
+      && cargo test --locked -p nexus-openbao ep009_unit \
+      && uv run --frozen pytest tests/trust -q --tb=native -o python_functions="ep009_integration_*" \
+      && uv run --frozen pytest tests/trust -q --tb=native -o python_functions="ep009_failure_*" \
+      && sh scripts/ep009-orphan-audit.sh
+      ;;
   M3) python3 scripts/node-artifact-check.py EP-009 M3; cargo test --locked -p nexus-trust ep009_integration ;;
   M4) python3 scripts/node-artifact-check.py EP-009 M4; cargo test --locked -p nexus-trust ep009_failure ;;
   M5|verify)

@@ -1,0 +1,21 @@
+# SOPS+age bootstrap configuration (EP-009 M2 directive K, L, M).
+#
+# PURPOSE: bootstrap configuration, offline/local encrypted config, and
+# break-glass/bootstrap references where explicitly permitted. It is
+# NOT an automatic runtime fallback for the online secret authority
+# (OpenBao). OpenBao unavailable must NOT mean "decrypt every SOPS file
+# and continue as if authorization/lease state still exists."
+#
+# HARD INVARIANT (directive M): the age PRIVATE identity is never stored
+# next to the ciphertext and never committed to this repository. Only
+# RECIPIENT (public) information lives here. The private identity is
+# provisioned out-of-band (OS secure store / hardware-backed device
+# store / operator break-glass).
+#
+# The recipient below is a TEST recipient generated for the M2 proof.
+# The matching private identity exists ONLY in the ephemeral test
+# environment and is destroyed at teardown.
+
+creation_rules:
+  - path_regex: \.enc\.ya?ml$
+    age: age1qxy2eezdn5u4vhppl3w4w2xk4q2w9vf3xq2z9j5xz8g3n6m2s5qqexample

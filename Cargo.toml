@@ -16,6 +16,7 @@ members = [
     "infra/keycloak",
     "infra/openfga",
     "infra/opa",
+    "infra/openbao",
 ]
 
 [workspace.package]

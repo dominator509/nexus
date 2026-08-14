@@ -274,7 +274,14 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
+  - Gate: `sh scripts/nodes/EP-009.sh M2` → `EP-009 M2: ok` (17 unit +
+    19 integration + 13 failure + orphan audit ok)
+  - Live proof: `cargo run --locked -p nexus-openbao --example
+    sops_live_proof --offline` → `EP-009 M2 SOPS adapter live proof: ok`
+  - All gates: `scope audit EP-009: ok`, `security check: ok`,
+    `license gate: ok`, `reality gate: ok`, `format check: ok`,
+    `lint: ok`, `EP-009 orphan audit: ok`
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -290,6 +297,14 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-14 (M1): re-exporting a vocabulary enum through a submodule
   that only `use`d it privately triggers E0603; the lib root re-exports
   state enums from `vocabulary` directly.
+- 2026-08-14 (M2): sops 3.13.0 emits the SAME generic recovery footer
+  (`Recovery failed because no master key was able to decrypt the
+  file...`) for every decrypt failure, so stderr classification must
+  match specific markers, never the footer. Also: the old broad
+  `stderr.contains("failed to decrypt")` matcher silently misclassified
+  corrupted documents (whose real stderr says `failed to decrypt and
+  authenticate payload chunk`) as ProviderAuthorization — a latent
+  integrity-vs-authorization confusion fixed by the ordered classifier.
 
 # 13. Decision Log
 
@@ -322,6 +337,118 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   M2-M4. Reversal: none. Security: `SecretValue` never deserializes.
   License: none. Compatibility: workspace member registered in
   `Cargo.toml`.
+
+- 2026-08-14 | OpenBao image pin | OpenBao 2.5.4 pinned by digest
+  `sha256:436eaf9778cad75507ff70ea26ace30dcbe15606e619ac3823495663d7f7c115`
+  in `VERSIONS.lock.yaml` + `COMPONENT_REGISTRY.yaml`; sops 3.13.0 and
+  age 1.1.1 pinned as local toolchain binaries (`/usr/local/bin/sops`,
+  `/usr/bin/age`, `/usr/bin/age-keygen`). Evidence: real container
+  probe + M2 gate. Alternatives: none (EP-008 precedent). Reversal: pin
+  update with digest re-verification. Security: no credentials stored.
+  License: MPL-2.0 (OpenBao), MPL-2.0 (sops), Apache-2.0 (age).
+  Compatibility: none.
+- 2026-08-14 | AppRole least-privilege authentication | OpenBao
+  adapter authenticates via AppRole with per-tenant policies and a
+  bounded 15-minute token TTL; renewal is explicit only. No root token,
+  no wildcard super-policy. Evidence: live probe — tenant A allowed;
+  tenant B, sys/auth, policy-creation all denied (403); token TTL
+  bounded at 900s; wrong SecretID rejected (400). Alternatives: root
+  token (rejected: unbounded authority). Reversal: policy edit.
+  Security: client token never Debug-printed (redacted), never logged.
+  License: none. Compatibility: none.
+- 2026-08-14 | KV-v2 lifecycle mapping | Adapter maps the trust
+  contract onto OpenBao KV-v2 at `secret/`: typed create/read/update/
+  metadata/soft-delete/undelete/destroy; DELETE returns empty body;
+  soft-delete keeps versions until destroy. Evidence: live probe
+  (integration suite `ep009_integration_openbao_*`, 19 tests).
+  Alternatives: KV-v1 (no versioning). Reversal: none. Security:
+  `SecretValue` redacted; references carry fingerprints only.
+  License: none. Compatibility: none.
+- 2026-08-14 | Response wrapping one-time semantics | Secret handoff
+  uses OpenBao response wrapping: a wrapped READ carries no plaintext;
+  unwrap #1 returns the secret; unwrap #2 → 400 (`wrapping token is
+  not valid or does not exist`); expired wrap → 400. Wrapping token
+  never logged (redacted `Debug`). Evidence: live probe + failure
+  suite (13 tests). Alternatives: plaintext handoff (rejected:
+  reusable bearer). Reversal: none. Security: token single-use,
+  TTL-bounded, never serialized. License: none. Compatibility: none.
+- 2026-08-14 | OpenBao vs SOPS+age boundary | OpenBao is the online
+  authority for runtime secrets. SOPS+age is bootstrap/offline/
+  break-glass ONLY, reachable exclusively through explicit
+  `BootstrapSecretStore` operations; it is NEVER a silent runtime
+  fallback when OpenBao is unavailable (directive N). Evidence:
+  routing rule in `infra/openbao/src/sops.rs`; unit + integration
+  tests. Alternatives: automatic fallback (rejected: would continue
+  as if authorization existed). Reversal: contract change. Security:
+  fail closed. License: none. Compatibility: none.
+- 2026-08-14 | Age private identity never in repository | The age
+  PRIVATE identity is generated ephemerally outside the repo, held
+  in memory (zeroed on drop), written only to a 0600 temp file that
+  is removed immediately; never adjacent to ciphertext; never
+  committed. A stray untracked `secrets/age-key.txt` was removed;
+  repo scan green (detector + test files allowed). Evidence:
+  `ep009_integration_sops_no_private_identity_in_repository` +
+  security-check. Alternatives: none. Reversal: none. Security:
+  hard invariant (directive M). License: none. Compatibility: none.
+- 2026-08-14 | SOPS wrong-valid-identity → ProviderAuthorization |
+  Real sops 3.13.0 with a valid-but-wrong age identity exits 128 and
+  emits `Failed to get the data key required to decrypt the SOPS
+  file.` / `age: no identity matched any of the recipients.` The
+  previous naive matcher (`stderr.contains("failed to decrypt")`)
+  missed this shape and returned MalformedProviderResponse; it also
+  misclassified corrupted documents (whose stderr contains `failed to
+  decrypt and authenticate payload chunk`) as ProviderAuthorization.
+  Fixed with an ORDERED classifier `classify_sops_decrypt_failure`
+  that rules out structural/source failures first, then maps
+  valid-identity-but-no-key to ProviderAuthorization. Evidence:
+  `ep009_unit_sops_classifier_*` (9 tests) + live proof.
+  Alternatives: broadening the match to any `identity` substring
+  (rejected: directive B — too broad). Reversal: none. Security:
+  typed fail-closed distinction preserved. License: none.
+  Compatibility: none.
+- 2026-08-14 | SOPS classifier real failure shapes (captured) |
+  Exact non-secret stderr shapes from pinned sops 3.13.0 / age 1.1.1:
+  missing sealed document → exit 100 `cannot operate on non-existent
+  file` (NotFound); missing SOPS_AGE_KEY_FILE → exit 128 `failed to
+  open SOPS_AGE_KEY_FILE file: open <path>: no such file or
+  directory` (NotFound); malformed identity → exit 128 `failed to
+  parse 'SOPS_AGE_KEY_FILE' age identities: unknown identity type`
+  (MalformedProviderResponse); corrupted document → exit 128 `failed
+  to decrypt and authenticate payload chunk, file may be corrupted or
+  tampered with` (MalformedProviderResponse); valid-but-wrong
+  identity → exit 128 `age: no identity matched any of the
+  recipients` (ProviderAuthorization). The generic footer `Recovery
+  failed because no master key was able to decrypt the file...`
+  appears in EVERY failure and never drives classification. Evidence:
+  capture scripts at `/tmp/nexus-sops-shapes.py` (not committed) +
+  classifier unit tests. Reversal: none. Security: no secrets in
+  captured shapes; identity material redacted.
+- 2026-08-14 | Malformed identity material remains distinct | A
+  syntactically invalid age identity (unknown identity type) maps to
+  MalformedProviderResponse, never ProviderAuthorization, even when
+  the same generic recovery footer is present (directive E.7
+  regression test). Corrupted SOPS data remains MalformedProviderResponse
+  (integrity), distinct from authorization. Evidence:
+  `ep009_unit_sops_classifier_malformed_plus_same_footer_is_malformed`,
+  `ep009_unit_sops_classifier_corrupted_document_is_malformed`.
+  Reversal: none. Security: fail-closed typing preserved.
+- 2026-08-14 | Secret/canary log-redaction proof | Telemetry events
+  carry fingerprints only; `SecretValue`, wrapping tokens, client
+  tokens, and age identities redact in `Debug`; canary values never
+  appear in logs or evidence. Evidence:
+  `ep009_unit_telemetry_never_contains_secrets`,
+  `ep009_unit_secret_value_redaction_invariant`,
+  `ep009_unit_wrapped_handoff_debug_redacts_wrapping_token`,
+  canary scan in integration suite. Reversal: none. Security: core
+  invariant. License: none. Compatibility: none.
+- 2026-08-14 | Teardown/orphan behavior | The M2 gate runs
+  `scripts/ep009-orphan-audit.sh` (containers, networks, volumes,
+  temp identities, leftover processes) and requires its ok sentinel;
+  temp fixture dirs are removed after each suite; the live proof
+  removes its ephemeral dir. Evidence: `EP-009 orphan audit: ok` in
+  gate output. Alternatives: leaving containers (rejected: explicit
+  cleanup doctrine). Reversal: none. Security: no leftover identity
+  material. License: none. Compatibility: none.
 
 # 14. Outcomes & Retrospective
 

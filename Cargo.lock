@@ -712,6 +712,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-openbao"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-identity",
+ "nexus-trust",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "nexus-openfga"
 version = "0.1.0"
 dependencies = [
