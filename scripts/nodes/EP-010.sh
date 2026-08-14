@@ -11,7 +11,7 @@ case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-010 M1; cargo test --locked -p nexus-capabilities ep010_unit ;;
   M2) python3 scripts/node-artifact-check.py EP-010 M2; cargo test --locked -p nexus-connectors ep010_unit ;;
   M3) python3 scripts/node-artifact-check.py EP-010 M3; cargo test --locked -p nexus-connectors ep010_integration ;;
-  M4) python3 scripts/node-artifact-check.py EP-010 M4; cargo test --locked -p nexus-connectors ep010_failure ;;
+  M4) python3 scripts/node-artifact-check.py EP-010 M4; cargo test --locked -p nexus-connectors ep010_failure; sh scripts/security-check.sh; sh scripts/license-gate.sh ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-010 M5
       cargo test --locked -p nexus-capabilities

@@ -309,7 +309,20 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
     unknown class rejected by schema; missing required field rejected.
   - `EP-010 M3: ok`; license gate ok; cargo-deny licenses ok; format
     check ok; lint ok; fence amended (VERSIONS.lock.yaml).
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
+  - 12 `ep010_failure_*` tests through the real deterministic core and
+    the real `jsonschema` validator: missing capability (typed
+    NotFound with correlation/actor/resource), unavailable capability
+    (fail closed), provider error (typed, never allows), malformed
+    descriptor (validation), duplicate idempotency key across
+    capabilities (Conflict), cross-tenant invocation denied,
+    unregister-missing (NotFound), and schema-authority rejections
+    (duplicate secrets/events/network-origins, unknown class, missing
+    required) against the canonical schemas.
+  - Hardened `schemas/connector-manifest.schema.json` with
+    `uniqueItems` on events/secrets/network_origins (parity with the
+    descriptor schema).
+  - `EP-010 M4: ok`; security check ok; license gate ok; clippy clean.
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
@@ -411,6 +424,24 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   invariant "no infrastructure in production dependencies" stays
   enforced while integration tooling is permitted. Reversal: none.
   Security/license: none.
+- 2026-08-14 - Decision: M4 hardened `connector-manifest.schema.json`
+  with `uniqueItems` on `events`, `secrets`, and `network_origins`.
+  Evidence: the descriptor schema already enforced uniqueness on
+  `required_scopes`, `data_classes`, and `event_types`; the manifest
+  schema did not, so duplicate secret references or event types could
+  pass the wire contract. Consequence: cross-language clients and the
+  Rust contract now reject duplicate declarations identically;
+  failure tests prove the schema rejects them. Reversal: none.
+  Security/license: none.
+- 2026-08-14 - Decision: M4 failure tests exercise the real failure
+  mechanisms (missing/unavailable capability, typed provider error,
+  duplicate idempotency key, cross-tenant denial, schema rejections)
+  through the real deterministic core and the real `jsonschema`
+  validator; no component being proven is mocked. Evidence: milestone
+  M4 content item 2 ("do not mock the component being proven") and
+  item 3 (fail-closed behavior). Consequence: failures are proven at
+  the exact boundary where they occur. Reversal: none. Security/
+  license: none.
 
 # 14. Outcomes & Retrospective
 

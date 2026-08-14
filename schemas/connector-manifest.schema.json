@@ -27,7 +27,8 @@
       "items": {
         "type": "string"
       },
-      "type": "array"
+      "type": "array",
+      "uniqueItems": true
     },
     "health": {
       "format": "uri-reference",
@@ -44,7 +45,8 @@
       "items": {
         "type": "string"
       },
-      "type": "array"
+      "type": "array",
+      "uniqueItems": true
     },
     "runtime": {
       "enum": [
@@ -60,7 +62,8 @@
       "items": {
         "type": "string"
       },
-      "type": "array"
+      "type": "array",
+      "uniqueItems": true
     },
     "tier": {
       "enum": [
