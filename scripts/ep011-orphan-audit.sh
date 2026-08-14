@@ -41,6 +41,16 @@ if [ -n "$procs" ]; then
   fail=1
 fi
 
+# No sidecar binary processes may survive (M4 spawns the real
+# target/debug/nexus-sidecar binary on loopback). The bracket trick
+# avoids matching this script's own grep.
+sidecars=$(ps aux | grep -E '[n]exus-sidecar' | grep -v grep | sed '/^$/d')
+if [ -n "$sidecars" ]; then
+  echo "EP-011 orphan audit: FAIL - leftover sidecar processes:" >&2
+  echo "$sidecars" >&2
+  fail=1
+fi
+
 # No legacy-source or checkpoint temp files may survive. The suite
 # writes only under pytest's auto-managed tmp_path plus the explicit
 # nexus-ep011-* scratch namespace; any such file is an orphan.

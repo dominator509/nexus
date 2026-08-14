@@ -353,12 +353,46 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
     `scripts/ep011-vacuity.sh`, `scripts/ep011-orphan-audit.sh`.
   - Evidence: `.agent/state/evidence/ep011-m3/` (result codes,
     correlation IDs, fingerprints only - no credentials).
-- [ ] M4: Forced failures, abuse cases, and observability
+  - M4: `crates/nexus-sidecar/` real hardened boundary (hyper 1.11 on
+    127.0.0.1:0, PORT contract, strict envelope/version/tenant/
+    dispatch/credential checks, per-endpoint response-shape validation,
+    webhook HMAC + fingerprint + in-process replay dedupe, owned poller
+    with checkpoint integrity + path containment, concurrency semaphore,
+    redacted telemetry, controlled shutdown). Suites: 45 unit + 1
+    dependency-direction + 36 failure/abuse + 21 integration/lifecycle
+    (incl. new mid-request shutdown) all green under DEFAULT parallelism;
+    58 M3 Python tests green via fixed gate selector; M3 re-verify ok.
+    Parallel-hang root cause: leftover `probe_test.rs` diagnostic (always
+    panics, blocks on stdout EOF) - removed. Gate: `EP-011 M4: ok`;
+    scope audit ok; security/license/reality/format/lint/expected-files
+    ok; orphan audit ok (extended with `nexus-sidecar` process pattern).
+  - Evidence: `.agent/state/evidence/ep011-m4/` (result codes,
+    correlation IDs, fingerprints only - no credentials).
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
+
+- 2026-08-14 - M4: the "parallel test hang" was a leftover dev diagnostic,
+  not a harness collision or a sidecar lifecycle race. `tests/probe_test.rs`
+  (`probe_spawn`) unconditionally panicked and blocked forever on
+  `read_to_string` waiting for stdout EOF from the long-lived sidecar
+  binary. Under `--test-threads=1` it still blocked (60 s cargo warning);
+  removal fixed the full suite under default parallelism (45+1+36+21 all
+  green, zero leaks). CASE determination recorded in the Decision Log.
+- 2026-08-14 - M4: the M4 gate's `pytest tests/connectors -q` step had
+  ALWAYS collected zero tests: M3 Python functions are `ep011_integration_*`
+  /`ep011_failure_*` but `pyproject.toml` `python_functions` lists only
+  `test_*`, `ep001_*`, `ep002_*` (pyproject is outside the EP-011 fence).
+  The M3 gate never ran pytest (the 58 tests were run manually with a
+  selector). Fixed in-fence in `scripts/nodes/EP-011.sh` with
+  `-o python_functions=ep011_*`.
+- 2026-08-14 - M4: `REQUEST_ACCEPTED` telemetry is emitted immediately
+  before provider dispatch, which makes it a deterministic "request is
+  in-flight" signal for the mid-request shutdown proof (no artificial
+  sleeps needed).
 
 # 13. Decision Log
 
@@ -517,7 +551,111 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   (directive N/R). Evidence: EP-008/EP-009/EP-010 precedent.
   Consequence: evidence is independently verifiable and secret-free.
   Reversal: none. Security: none.
+- 2026-08-14 - Decision: parallel test hang = CASE 3-adjacent test
+  artifact, NOT CASE 1 (harness collision) and NOT CASE 2 (real sidecar
+  lifecycle race). Evidence: harness uses only ephemeral ports, per-test
+  tempdirs, per-test processes, no shared mutable env/files; the 36-test
+  failure suite ran in parallel in 3.54-4.13 s and the 21-test lifecycle
+  suite in 2.52-3.23 s; the only hang was `probe_test.rs`'s `probe_spawn`
+  blocking on stdout EOF from a long-lived process it wrongly expected to
+  exit. Alternatives: serialize with `--test-threads=1` (rejected: masks
+  nothing real but hides the diagnostic forever), keep the probe (rejected:
+  always panics, redundant with the provider-absent test). Consequence:
+  probe removed; full suite green under default parallelism; `--test-threads=1`
+  no longer needed. Reversal: none. Security: none.
+- 2026-08-14 - Decision: mid-request shutdown is bounded immediate exit
+  (signal -> SIDECAR_STOPPED -> exit 0), not graceful provider-work
+  completion; shutdown ownership is explicit (directive C/D). Evidence:
+  `ep011_integration_sidecar_mid_request_shutdown_bounded` arms a slow
+  provider, observes REQUEST_ACCEPTED, SIGTERMs, asserts exit < 10 s,
+  in-flight client never receives success, old port rebinds immediately,
+  zero orphans. Alternatives: graceful drain with a grace timer (rejected:
+  the M4 contract does not promise graceful completion of provider work;
+  immediate bounded exit is the deterministic contract). Consequence:
+  owned resources (listener, tasks, webhook state, poller state, telemetry
+  sink) terminate with the process; the provider is NOT owned and is not
+  terminated by the sidecar. Reversal: none. Security: none.
+- 2026-08-14 - Decision: M4 gate must actually select the Python tests:
+  `pytest tests/connectors -q -o python_functions=ep011_*` in
+  `scripts/nodes/EP-011.sh` (M4 and M5|verify). Evidence: bare
+  `pytest tests/connectors -q` collected 0 tests (M3 functions are
+  `ep011_integration_*`/`ep011_failure_*`; pyproject `python_functions`
+  lacks `ep011_*` and pyproject is outside the fence). Alternatives:
+  edit pyproject.toml (rejected: outside the machine fence), keep bare
+  pytest (rejected: vacuous gate). Consequence: gate now runs the real 58
+  M3 Python tests; vacuity impossible. Reversal: none. Security: none.
+- 2026-08-14 - Decision: orphan audit extended with the exact owned
+  `nexus-sidecar` process pattern (bracket-trick grep), in addition to
+  fixture processes, docker nexus-ep011 artifacts, and /tmp scratch.
+  Evidence: M4 spawns `target/debug/nexus-sidecar`; the audit previously
+  only covered `fixture_sidecar.py`. Alternatives: broad `pkill` (rejected:
+  can match the cargo test command itself), no audit (rejected: teardown
+  must be proven). Consequence: any leaked sidecar fails the gate.
+  Reversal: none. Security: none.
+- 2026-08-14 - Decision: credential canary proof covers the success body,
+  an HTTP error body, sidecar stdout, and sidecar stderr (directive L).
+  Evidence: `ep011_integration_sidecar_credential_canary_never_leaks`
+  asserts zero occurrences of the canary value in all four surfaces after
+  a permitted-reference command, an out-of-scope denial (403 AUTHORIZATION),
+  and a full post-SIGTERM stdout/stderr drain. Alternatives: body-only
+  (rejected: directive L demands stdout/stderr/logs/errors). Consequence:
+  redaction is proven across every observable surface. Reversal: none.
+  Security: the SECURITY.md boundary.
+- 2026-08-14 - Decision: the sidecar's webhook replay dedupe is shared
+  in-memory state (`Arc<Mutex<WebhookIngress>>`) across request tasks;
+  crash-durable replay defense is NOT ASSERTED. Evidence: the replay test
+  drives two separate HTTP requests with the same provider_event_id and
+  observes 200 then 401 VERIFICATION; process restart resets the set.
+  Alternatives: persisted replay set (rejected: EP-005 owns durable state;
+  would over-claim). Consequence: replay protection is process-lifetime,
+  documented in evidence. Reversal: none. Security: none.
+- 2026-08-14 - Decision: clippy debt paid at M4 closure (6 lib + 1 test
+  warnings) because `scripts/lint.sh` runs `cargo clippy --workspace
+  --all-targets --all-features --locked -- -D warnings`: manual_clamp,
+  redundant_closure, collapsible_match, collapsible_if (let-chain, edition
+  2024), manual_is_multiple_of, single_char_add_str. Evidence: `lint: ok`.
+  Alternatives: allowlist (rejected: broad allowlist prohibition).
+  Consequence: workspace clippy stays clean. Reversal: none. Security:
+  none.
 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## M4 closure (2026-08-14)
+
+Changed files versus the machine fence (all inside `crates/nexus-sidecar/`,
+`tests/connectors/`, `python/nexus_connector_sdk/`, `scripts/nodes/EP-011.sh`,
+`scripts/ep011-orphan-audit.sh`, `Cargo.toml`, `Cargo.lock`,
+`.agent/execplans/EP-011-...md`, `.agent/state/evidence/*`):
+- `crates/nexus-sidecar/` (new crate: lib + binary + 4 test targets)
+- `tests/connectors/fixture_sidecar.py` (arming controls)
+- `python/nexus_connector_sdk/sidecar.py` (M3 SyntaxError fix + format)
+- `scripts/nodes/EP-011.sh` (M4 gate wired to sidecar + pytest selector)
+- `scripts/ep011-orphan-audit.sh` (sidecar process pattern)
+- workspace `Cargo.toml`/`Cargo.lock` (nexus-sidecar member; dev-deps
+  reqwest blocking + tempfile only; no new production deps)
+
+Commands and observed sentinels:
+- `sh scripts/nodes/EP-011.sh M4` -> `EP-011 M4: ok`
+- `sh scripts/nodes/EP-011.sh M3` -> `EP-011 M3: ok` (re-verify)
+- `sh scripts/scope-audit.sh EP-011` -> `scope audit EP-011: ok`
+- `sh scripts/expected-files.sh EP-011` -> `expected files EP-011: ok`
+- `sh scripts/security-check.sh` -> `security check: ok`
+- `sh scripts/license-gate.sh` -> `license gate: ok`
+- `sh scripts/reality-gate.sh` -> `reality gate: ok`
+- `sh scripts/format-check.sh` -> `format check: ok`
+- `sh scripts/lint.sh` -> `lint: ok`
+- `sh scripts/ep011-orphan-audit.sh` -> `EP-011 orphan audit: ok`
+- `cargo test -p nexus-sidecar` -> 45 + 1 + 36 + 21 passed (default
+  parallelism, zero leaks)
+
+Test/proof evidence: `.agent/state/evidence/ep011-m4/EP-011-M4-failure-hardening.md`.
+
+Assumptions confirmed: sidecar owns the transport boundary only; EP-008
+authz / EP-009 secrets / EP-010 capability / EP-005 durability boundaries
+preserved (NOT ASSERTED claims explicit). Provider status: fixture provider
+is a test-zone provider; no third-party connector certified by this node.
+Remaining risks: webhook replay defense is process-lifetime only; crash-durable
+idempotency NOT ASSERTED; external provider certification NOT ASSERTED.
+Green tag: pending M5.

@@ -1,0 +1,35 @@
+[package]
+name = "nexus-sidecar"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-011 M4 hardened Connector Sidecar boundary: strict request envelope, bounded limits, protocol versioning, tenant binding, class dispatch, credential scope, webhook ingress, poller integrity, redacted observability, and controlled shutdown (SPEC-022, EP-011)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-capabilities = { path = "../nexus-capabilities", version = "0.1.0" }
+nexus-connector-sdk = { path = "../nexus-connector-sdk", version = "0.1.0" }
+# Real HTTP server/client stack for the sidecar boundary (directive B/D):
+# hyper serves the loopback listener; reqwest is the provider client;
+# tokio provides the runtime, timers, and signals. All versions are
+# already locked in the workspace tree (hyper 1.11, tokio 1.53).
+tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "io-util", "macros", "sync", "signal"] }
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio", "server"] }
+http-body-util = "0.1"
+bytes = "1"
+reqwest = { version = "0.13", default-features = false, features = ["json"] }
+# Vetted HMAC-SHA256 for webhook signature verification (directive P).
+sha2 = "0.11"
+hmac = "0.13"
+
+[dev-dependencies]
+# Temp dirs for poller checkpoint/path-safety tests (directive R/S).
+tempfile = "3"
+# Real blocking HTTP client for integration tests (directive B).
+reqwest = { version = "0.13", features = ["blocking", "json"] }
+# Webhook HMAC signing in integration tests (directive P).
+sha2 = "0.11"
+hmac = "0.13"

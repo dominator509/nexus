@@ -8,12 +8,12 @@ case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-011 M1 && cargo test --locked -p nexus-connector-sdk ep011_unit || rc=$? ;;
   M2) python3 scripts/node-artifact-check.py EP-011 M2 && cargo test --locked -p nexus-connector-sdk ep011_unit && pnpm --filter @nexus/connector-sdk test:unit || rc=$? ;;
   M3) python3 scripts/node-artifact-check.py EP-011 M3 && cargo test --locked -p nexus-connector-sdk ep011_unit && cargo test --locked -p nexus-connector-sdk ep011_integration && pnpm --filter @nexus/connector-sdk test:unit && sh scripts/ep011-vacuity.sh && sh scripts/ep011-orphan-audit.sh || rc=$? ;;
-  M4) python3 scripts/node-artifact-check.py EP-011 M4 && cargo test --locked -p nexus-connector-sdk ep011_unit && pnpm --filter @nexus/connector-sdk test:unit && uv run --frozen pytest tests/connectors -q || rc=$? ;;
+  M4) python3 scripts/node-artifact-check.py EP-011 M4 && cargo test --locked -p nexus-connector-sdk ep011_unit && pnpm --filter @nexus/connector-sdk test:unit && cargo test --locked -p nexus-sidecar && uv run --frozen pytest tests/connectors -q -o python_functions="ep011_*" && sh scripts/ep011-orphan-audit.sh || rc=$? ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-011 M5 \
       && cargo test --locked -p nexus-connector-sdk \
       && pnpm --filter @nexus/connector-sdk test:unit \
-      && uv run --frozen pytest tests/connectors -q \
+      && uv run --frozen pytest tests/connectors -q -o 'python_functions=ep011_*' \
       && sh scripts/live-fire/LF-023.sh
       rc=$?
       ;;

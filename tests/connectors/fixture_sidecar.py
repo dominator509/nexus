@@ -198,6 +198,24 @@ class FixtureProvider:
         self._source_path: Path | None = None
         self._checkpoint_path: Path | None = None
         self._cursor = 0
+        # M4 fixture arming (test zone): controls what the NEXT
+        # capability dispatch returns so the sidecar's provider-failure
+        # handling can be proven with a REAL process (directive J).
+        self._arm: dict[str, Any] = {}
+
+    # -- M4 arming controls (directive J) --------------------------------
+
+    def arm(self, kind: str, value: Any = None) -> None:
+        with self._lock:
+            self._arm[kind] = value if value is not None else True
+
+    def consume_arm(self, kind: str) -> Any:
+        with self._lock:
+            return self._arm.pop(kind, None)
+
+    def armed(self, kind: str) -> Any:
+        with self._lock:
+            return self._arm.get(kind)
 
     # -- fixture controls ---------------------------------------------------
 
@@ -546,6 +564,21 @@ class SidecarHandler(BaseHTTPRequestHandler):
                     tenant=tenant_id,
                     resource=capability_id,
                 )
+            # M4 provider-failure injection (directive J): the provider
+            # may be armed to fail this dispatch.
+            if PROVIDER.armed("query_schema_invalid"):
+                PROVIDER.consume_arm("query_schema_invalid")
+                return 200, {"unexpected": "shape"}
+            if PROVIDER.armed("query_malformed"):
+                PROVIDER.consume_arm("query_malformed")
+                return 200, {"__raw_bytes__": b"not-json{{{"}  # type: ignore[dict-item]
+            if PROVIDER.armed("query_oversized"):
+                PROVIDER.consume_arm("query_oversized")
+                blob = "x" * (70 * 1024)
+                return 200, {"__raw_bytes__": f'{{"blob":"{blob}"}}'.encode()}  # type: ignore[dict-item]
+            if PROVIDER.armed("query_slow"):
+                delay = float(PROVIDER.consume_arm("query_slow"))
+                time.sleep(delay)
             try:
                 result = PROVIDER.query(capability_id, tenant_id, body.get("input", {}))
             except SdkError as err:
@@ -578,6 +611,19 @@ class SidecarHandler(BaseHTTPRequestHandler):
                     tenant=tenant_id,
                     resource=capability_id,
                 )
+            # M4 provider-failure injection (directive J/K): the provider
+            # performs the mutation then exits before returning (real
+            # partial-side-effect ambiguity).
+            if PROVIDER.armed("command_crash_after_mutate"):
+                PROVIDER.consume_arm("command_crash_after_mutate")
+                PROVIDER.command(
+                    capability_id,
+                    tenant_id,
+                    body.get("input", {}),
+                    body.get("idempotency_key"),
+                    correlation_id,
+                )
+                os._exit(1)
             try:
                 result = PROVIDER.command(
                     capability_id,
@@ -767,6 +813,12 @@ class SidecarHandler(BaseHTTPRequestHandler):
             raise SdkError(NOT_FOUND, "sidecar action not found", resource=capability_id)
 
         # Fixture control surface (test zone; never exposes secrets).
+        if path == "/v1/fixture/arm":
+            kind = str(body.get("kind", ""))
+            value = body.get("value")
+            PROVIDER.arm(kind, value)
+            return 200, {"armed": kind}
+
         if path == "/v1/fixture/malformed":
             # Returns genuinely malformed JSON bytes so the client must
             # fail closed on parsing (directive O.4).
