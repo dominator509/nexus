@@ -12,6 +12,7 @@ case "$mode" in
   M5|verify)
       python3 scripts/node-artifact-check.py EP-011 M5 \
       && cargo test --locked -p nexus-connector-sdk \
+      && cargo test --locked -p nexus-sidecar \
       && pnpm --filter @nexus/connector-sdk test:unit \
       && uv run --frozen pytest tests/connectors -q -o 'python_functions=ep011_*' \
       && sh scripts/live-fire/LF-023.sh

@@ -181,7 +181,10 @@ class SidecarAdapter:
                     payload.get("tenant") or request.context.tenant_id,
                     payload.get("resource") or request.capability_id,
                 )
-        except json.JSONDecodeError, OSError:
+        except (
+            json.JSONDecodeError,
+            OSError,
+        ):
             pass
         return SdkError(
             code,

@@ -16,4 +16,8 @@ nexus-capabilities = { path = "../nexus-capabilities", version = "0.1.0" }
 # Real HTTP transport for the M3 live transport proof (directive C).
 # Dev-dependencies do not affect the production dependency tree; the
 # dependency-direction gate uses `--edges normal` (EP-010 precedent).
-reqwest = { version = "0.13", features = ["blocking", "json"] }
+# Loopback-only tests: TLS/rustls default features are NOT enabled
+# (keeps the workspace tree free of the unused HTTP/TLS license
+# surface; default features would pull webpki-root-certs +
+# rustls-platform-verifier + the core-foundation duplicate chain).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }

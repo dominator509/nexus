@@ -225,22 +225,15 @@ async fn main() {
         }
     };
 
-    // Bind a probe listener first to learn the ephemeral port, then
-    // hand the actual port to the server. Simpler: bind in the server
-    // and print after readiness via a channel is complex; instead we
-    // bind here and pass the bound address through config.
-    //
-    // The server binds again on the same address; to keep the PORT
-    // contract deterministic we pre-bind and release (TOCTOU is
-    // acceptable for a loopback test fixture; the real deployment
-    // binds a fixed port).
-    let probe = tokio::net::TcpListener::bind(server.config_bind())
+    // Bind the listener ONCE and keep it alive for the process
+    // lifetime. The PORT contract prints the port of the live socket;
+    // there is no probe-bind/drop/re-bind TOCTOU (an earlier design
+    // released the probe socket and re-bound in serve(), which could
+    // lose the ephemeral port to another process under load).
+    let listener = tokio::net::TcpListener::bind(server.config_bind())
         .await
-        .expect("probe bind failed");
-    let actual = probe.local_addr().expect("local addr");
-    drop(probe);
-
-    let server = server.with_bind(actual);
+        .expect("bind failed");
+    let actual = listener.local_addr().expect("local addr");
 
     println!("PORT {}", actual.port());
     // Ready telemetry.
@@ -329,7 +322,7 @@ async fn main() {
             // deterministic clean-shutdown contract (directive M/W).
             std::process::exit(0);
         }
-        result = server.serve() => {
+        result = server.serve(listener) => {
             if let Err(err) = result {
                 eprintln!("sidecar serve error: {}", err.message);
                 std::process::exit(2);

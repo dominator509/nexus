@@ -28,8 +28,12 @@ hmac = "0.13"
 [dev-dependencies]
 # Temp dirs for poller checkpoint/path-safety tests (directive R/S).
 tempfile = "3"
-# Real blocking HTTP client for integration tests (directive B).
-reqwest = { version = "0.13", features = ["blocking", "json"] }
+# Real blocking HTTP client for integration tests (directive B). Tests
+# only ever talk to http://127.0.0.1 on loopback, so the TLS/rustls
+# feature stack is intentionally NOT enabled (keeps the dependency
+# tree minimal and license-clean; default features would pull
+# webpki-root-certs + rustls-platform-verifier + core-foundation dupes).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }
 # Webhook HMAC signing in integration tests (directive P).
 sha2 = "0.11"
 hmac = "0.13"

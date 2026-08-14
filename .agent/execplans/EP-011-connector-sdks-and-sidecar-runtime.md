@@ -369,7 +369,21 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   - Evidence: `.agent/state/evidence/ep011-m4/` (result codes,
     correlation IDs, fingerprints only - no credentials).
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
+  - LF-023 real live-fire proof (tests/connectors/test_ep011_live_fire.py):
+    real fixture -> real nexus-sidecar wrapper; DISCOVER -> QUERY ->
+    idempotent COMMAND + replay -> CHANGEFEED event; `LF-023: ok`;
+    evidence `.agent/state/evidence/LF-023-ep011-m5.md`.
+  - Dependency cleanup: jsonschema 0.49.9 default-features=false +
+    resolve-file (hermetic schemas); reqwest dev-deps TLS-free in
+    sidecar + SDK crates; lock pruned of webpki-root-certs /
+    rustls-platform-verifier / core-foundation duplicate; ZERO deny.toml
+    changes; `dependency audit: ok`.
+  - Real defects fixed: sidecar probe-bind TOCTOU (bind-once listener);
+    sidecar.py cross-interpreter except form (multi-line tuple valid on
+    3.12 + 3.14, ruff-stable); M3 mypy no-any-return casts.
+  - Gate: `EP-011 M5: ok`; M3/M4 regressions green; EP-010 schema
+    compatibility green (18+1+12+6).
 
 # 12. Surprises & Discoveries
 
@@ -618,19 +632,71 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   Consequence: workspace clippy stays clean. Reversal: none. Security:
   none.
 
-- 2026-08-14 - Decision: `except json.JSONDecodeError, OSError:` in
-  `python/nexus_connector_sdk/sidecar.py` is VALID Python 3.14 (PEP 758
-  makes the comma form identical to the tuple form) and is the canonical
-  ruff-format fixed point for this file; the earlier M3 import failure was
-  a stale `__pycache__` artifact, not a syntax error. Evidence: with the
-  comma form and pycache cleared, the full 58-test suite passes on Python
-  3.14.6; `ruff format` (0.16.2) rewrites the parenthesized form back to
-  the comma form; `format check: ok`. Alternatives: parenthesized form
-  (rejected: ruff format reverts it on every run, producing perpetual
-  format-check failures), blaming the file (rejected: factually wrong).
-  Consequence: no sidecar.py change is committed; the real discipline is
-  clearing pycache when Python files change. Reversal: none. Security:
-  none.
+- 2026-08-14 - Decision: the correct cross-interpreter form of the
+  `sidecar.py` except clause is the MULTI-LINE parenthesized tuple:
+  `except (\n json.JSONDecodeError,\n OSError,\n):`. Evidence: the
+  comma form (`except A, B:`) is valid ONLY on Python >= 3.14 (PEP 758)
+  and is the ruff-format canonical form for `target-version = py314`,
+  but the Rust test harness spawns bare `python3` (3.12.3 in PATH),
+  where the comma form is a SyntaxError (fixture exits 1, no PORT line,
+  every Rust integration suite fails). The single-line parenthesized
+  form is valid on both interpreters but ruff format rewrites it back
+  to the comma form on every run. The multi-line parenthesized form is
+  valid on 3.12 AND 3.14, and ruff format leaves it unchanged
+  (`format check: ok`). Alternatives: pin the harness to the venv
+  python (rejected: fragile ambient-PATH dependency), type-ignore
+  (rejected: no lint exception for real syntax), comma form (rejected:
+  breaks 3.12 harness). Consequence: fixture imports under both
+  interpreters; all Rust integration suites green. Reversal: none.
+  Security: none.
+
+- 2026-08-14 - Decision: jsonschema stays pinned at 0.49.9 but with
+  HTTP/TLS resolution disabled at the source:
+  `jsonschema = { version = "0.49", default-features = false, features =
+  ["resolve-file"] }` in `crates/nexus-connectors/Cargo.toml`. Evidence:
+  EP-010 schema tests are hermetic (draft 2020-12, local $ref only, zero
+  network fetches); the default `resolve-http` + `tls-aws-lc-rs` features
+  pulled reqwest with the rustls TLS stack (webpki-root-certs/CDLA,
+  rustls-platform-verifier, core-foundation 0.9.4+0.10.1 duplicate) plus
+  h2 -> indexmap -> hashbrown 0.17 -> foldhash. After the feature change
+  and a lock prune (`cargo update --workspace --offline`): webpki-root-certs,
+  rustls-platform-verifier, and the core-foundation duplicate are REMOVED
+  from Cargo.lock; `dependency audit: ok` with ZERO deny.toml policy
+  changes (the remaining dev-only foldhash/Zlib transitive of
+  jsonschema's `referencing` crate is classified acceptable by the pinned
+  cargo-deny 0.20.2). `cargo tree` verified the TLS chain is unreachable.
+  Alternatives: deny.toml allowlist additions (rejected: policy exception
+  for a chain removed by feature selection), downgrade jsonschema
+  (rejected: EP-010 pinned 0.49.9), leave defaults (rejected: unnecessary
+  TLS surface + license denials). Consequence: EP-010 schema tests all
+  green (18 unit + 1 dep-direction + 12 failure + 6 schema-parity); no
+  network resolution is enabled. Reversal: none. Security: smaller
+  attack surface.
+- 2026-08-14 - Decision: the sidecar binary binds its listener ONCE in
+  main() and passes it into `serve(listener)`; the earlier
+  probe-bind/drop/re-bind design had a real TOCTOU (the ephemeral port
+  could be grabbed between the probe release and the serve() re-bind,
+  crashing the process under parallel load with "Connection refused" on
+  the printed PORT). Evidence: `cargo test -p nexus-sidecar` under
+  default parallelism showed 4 intermittent failure-suite failures
+  (duplicate_protocol_version, wrong_method, malformed_utf8,
+  old_version) with `tcp connect error ... Connection refused` on the
+  sidecar's own printed port; after the fix, the full suite is
+  deterministically green (45+1+36+21). Alternatives: keep TOCTOU
+  (rejected: real lifecycle defect), serialize tests (rejected: masks
+  the race, directive B forbids hiding lifecycle bugs). Consequence:
+  the PORT contract now reflects a live, continuously-held socket.
+  Reversal: none. Security: none.
+- 2026-08-14 - Decision: reqwest dev-dependencies in BOTH
+  `crates/nexus-sidecar/Cargo.toml` and `crates/nexus-connector-sdk/
+  Cargo.toml` are `default-features = false, features = ["blocking",
+  "json"]` (TLS disabled) because every test client speaks plain HTTP to
+  127.0.0.1 loopback only. Evidence: feature unification previously
+  pulled reqwest's default rustls stack into the workspace graph via the
+  SDK dev-dep; the tree now carries no TLS client at all. Alternatives:
+  keep default features + deny.toml exceptions (rejected: unused TLS
+  surface). Consequence: minimal dependency tree, license-clean. Reversal:
+  none. Security: reduced attack surface.
 
 # 14. Outcomes & Retrospective
 

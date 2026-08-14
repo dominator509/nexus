@@ -16,7 +16,7 @@ boundary. Discovery results are metadata only.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from .error import CONFLICT, NOT_FOUND, VALIDATION, SdkError
 from .vocabulary import SdkLanguage
@@ -155,7 +155,7 @@ class ConnectorSdk:
                 request.context.tenant_id,
                 request.capability_id,
             )
-        return port.query(request)
+        return cast(QueryResult, port.query(request))
 
     def command(self, request: CommandRequest) -> CommandResult:
         descriptor = self._descriptors.get(request.capability_id)
@@ -204,7 +204,7 @@ class ConnectorSdk:
                     capability_id=existing.capability_id,
                     output=dict(existing.result),
                 )
-        result = port.command(request)
+        result = cast(CommandResult, port.command(request))
         if key is not None:
             self._tracker.record(
                 IdempotencyRecord(
@@ -250,7 +250,7 @@ class ConnectorSdk:
                 request.context.tenant_id,
                 request.capability_id,
             )
-        return port.workflow(request)
+        return cast(WorkflowResult, port.workflow(request))
 
     def health(self, capability_id: str, context: InvocationContext) -> HealthReport:
         port = self._health_ports.get(capability_id)
@@ -263,7 +263,7 @@ class ConnectorSdk:
                 context.tenant_id,
                 capability_id,
             )
-        return port.health(context)
+        return cast(HealthReport, port.health(context))
 
     def changefeed(
         self,
@@ -281,7 +281,7 @@ class ConnectorSdk:
                 context.tenant_id,
                 capability_id,
             )
-        return port.changes_since(capability_id, cursor, context)
+        return cast(ChangeBatch, port.changes_since(capability_id, cursor, context))
 
 
 class PythonConnectorSdk(ConnectorSdk):

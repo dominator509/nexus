@@ -120,19 +120,11 @@ impl SidecarServer {
         self.shared.sink.clone()
     }
 
-    /// Start the loopback listener and serve until shutdown.
-    pub async fn serve(self) -> Result<(), SidecarError> {
-        let listener = tokio::net::TcpListener::bind(self.shared.config.bind)
-            .await
-            .map_err(|e| {
-                SidecarError::new(
-                    SidecarErrorKind::Internal,
-                    format!("bind failed: {e}"),
-                    None,
-                    None,
-                    None,
-                )
-            })?;
+    /// Serve requests on the already-bound listener until shutdown.
+    ///
+    /// The listener is bound once by the caller (the binary) and kept
+    /// alive for the process lifetime; there is no probe/re-bind race.
+    pub async fn serve(self, listener: tokio::net::TcpListener) -> Result<(), SidecarError> {
         let local = listener.local_addr().map_err(|e| {
             SidecarError::new(
                 SidecarErrorKind::Internal,
