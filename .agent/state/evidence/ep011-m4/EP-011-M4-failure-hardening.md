@@ -164,8 +164,10 @@ M3 Python suite functions are `ep011_integration_*`/`ep011_failure_*`, and
 - `crates/nexus-sidecar/` (lib, binary, tests) — the hardened boundary
 - `tests/connectors/fixture_sidecar.py` — arming controls (malformed,
   schema-invalid, oversized, slow, crash-after-mutate)
-- `python/nexus_connector_sdk/sidecar.py` — M3 SyntaxError fix
-  (`except (json.JSONDecodeError, OSError):`) + format normalization
+- `python/nexus_connector_sdk/sidecar.py` — no change committed; the M3
+  `except json.JSONDecodeError, OSError:` form is valid Python 3.14 (PEP
+  758) and ruff-format canonical; the earlier import failure was stale
+  pycache (cleared)
 - `scripts/nodes/EP-011.sh` — M4 gate wired to `nexus-sidecar` full suite +
   pytest selector + orphan audit
 - `scripts/ep011-orphan-audit.sh` — extended with the exact owned

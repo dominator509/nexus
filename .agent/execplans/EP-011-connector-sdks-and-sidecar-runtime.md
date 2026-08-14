@@ -618,6 +618,20 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   Consequence: workspace clippy stays clean. Reversal: none. Security:
   none.
 
+- 2026-08-14 - Decision: `except json.JSONDecodeError, OSError:` in
+  `python/nexus_connector_sdk/sidecar.py` is VALID Python 3.14 (PEP 758
+  makes the comma form identical to the tuple form) and is the canonical
+  ruff-format fixed point for this file; the earlier M3 import failure was
+  a stale `__pycache__` artifact, not a syntax error. Evidence: with the
+  comma form and pycache cleared, the full 58-test suite passes on Python
+  3.14.6; `ruff format` (0.16.2) rewrites the parenthesized form back to
+  the comma form; `format check: ok`. Alternatives: parenthesized form
+  (rejected: ruff format reverts it on every run, producing perpetual
+  format-check failures), blaming the file (rejected: factually wrong).
+  Consequence: no sidecar.py change is committed; the real discipline is
+  clearing pycache when Python files change. Reversal: none. Security:
+  none.
+
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
@@ -630,7 +644,9 @@ Changed files versus the machine fence (all inside `crates/nexus-sidecar/`,
 `.agent/execplans/EP-011-...md`, `.agent/state/evidence/*`):
 - `crates/nexus-sidecar/` (new crate: lib + binary + 4 test targets)
 - `tests/connectors/fixture_sidecar.py` (arming controls)
-- `python/nexus_connector_sdk/sidecar.py` (M3 SyntaxError fix + format)
+- `python/nexus_connector_sdk/sidecar.py` (no change committed: the M3
+  comma-except form is valid Python 3.14 per PEP 758; the earlier import
+  failure was stale pycache, resolved by clearing it)
 - `scripts/nodes/EP-011.sh` (M4 gate wired to sidecar + pytest selector)
 - `scripts/ep011-orphan-audit.sh` (sidecar process pattern)
 - workspace `Cargo.toml`/`Cargo.lock` (nexus-sidecar member; dev-deps
