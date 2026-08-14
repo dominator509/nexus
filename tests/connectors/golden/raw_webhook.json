@@ -1,0 +1,8 @@
+{
+  "provider_event_id": "prov-1",
+  "provider_event_type": "invoice.paid",
+  "raw_payload": {
+    "amount": 100
+  },
+  "signature": "sha256=fp-test:abc"
+}

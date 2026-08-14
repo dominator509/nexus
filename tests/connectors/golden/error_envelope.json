@@ -1,0 +1,8 @@
+{
+  "actor": "user:alice",
+  "code": "NOT_FOUND",
+  "correlation_id": "018f0f6f-9c1e-7b6e-8000-000000000002",
+  "message": "capability not found",
+  "resource": "fixture.missing",
+  "tenant": "018f0f6f-9c1e-7b6e-8000-000000000003"
+}

@@ -12,3 +12,6 @@ docs/vocabulary/README.md
 references/ADR-016-connector-sdk-and-sidecar-vocabulary.md
 Cargo.toml
 Cargo.lock
+pnpm-lock.yaml
+scripts/ep011-vacuity.sh
+scripts/ep011-orphan-audit.sh

@@ -1,0 +1,4 @@
+{
+  "capability_id": "fixture.audit.changefeed",
+  "cursor": "seq-3"
+}

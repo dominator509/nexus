@@ -1,0 +1,20 @@
+{
+  "capability_id": "fixture.reconcile.workflow",
+  "context": {
+    "causation_id": null,
+    "channel": "mcp",
+    "correlation_id": "018f0f6f-9c1e-7b6e-8000-000000000002",
+    "device_id": null,
+    "external_actor_id": "user:alice",
+    "external_actor_type": "HUMAN",
+    "objective_id": null,
+    "origin_system": "test",
+    "request_id": "018f0f6f-9c1e-7b6e-8000-000000000001",
+    "task_id": null,
+    "tenant_id": "018f0f6f-9c1e-7b6e-8000-000000000003"
+  },
+  "idempotency_key": null,
+  "input": {
+    "scope": "daily"
+  }
+}

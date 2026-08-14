@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type {
-  CapabilityDescriptor,
-  InvocationContext,
-} from "@nexus/contracts";
+import type { CapabilityDescriptor, InvocationContext } from "@nexus/contracts";
 
 import { sdkError, isTransient, type SdkError } from "../error.js";
 import { parseSdkLanguage, parseSidecarTransport } from "../vocabulary.js";
@@ -28,7 +25,11 @@ const ctx = (): InvocationContext => ({
 const descriptor = (
   id: string,
   cls: "QUERY" | "COMMAND" | "WORKFLOW" | "STREAM" | "ADMINISTRATIVE",
-  availability: "AVAILABLE" | "DEGRADED" | "UNAVAILABLE" | "UNCERTIFIED" = "AVAILABLE",
+  availability:
+    | "AVAILABLE"
+    | "DEGRADED"
+    | "UNAVAILABLE"
+    | "UNCERTIFIED" = "AVAILABLE",
 ): CapabilityDescriptor => ({
   id,
   version: "1.0.0",
@@ -62,7 +63,10 @@ function buildSdk() {
   const commandPort: CommandCapabilityPort = {
     async command(request: CommandRequest) {
       commandCalls += 1;
-      return { capability_id: request.capability_id, output: { applied: true } };
+      return {
+        capability_id: request.capability_id,
+        output: { applied: true },
+      };
     },
   };
   const healthPort: HealthCapabilityPort = {
@@ -96,7 +100,7 @@ describe("ep011_unit_sdk_error", () => {
 
   it("serializes without secrets", () => {
     const err = sdkError("EXTERNAL_PROVIDER", "provider refused", {
-      correlationId: "corr-1",
+      correlation_id: "corr-1",
       actor: "user:alice",
       resource: "cap:ledger",
     });
@@ -175,7 +179,10 @@ describe("ep011_unit_sdk_idempotency", () => {
     sdk.registerDescriptor(descriptor("test.other", "COMMAND"));
     const port: CommandCapabilityPort = {
       async command(request: CommandRequest) {
-        return { capability_id: request.capability_id, output: { applied: true } };
+        return {
+          capability_id: request.capability_id,
+          output: { applied: true },
+        };
       },
     };
     sdk.registerCommand("test.command", port);

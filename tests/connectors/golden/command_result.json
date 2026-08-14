@@ -1,0 +1,6 @@
+{
+  "capability_id": "fixture.contacts.command",
+  "output": {
+    "id": "c2"
+  }
+}

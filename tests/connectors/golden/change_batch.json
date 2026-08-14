@@ -1,0 +1,16 @@
+{
+  "capability_id": "fixture.audit.changefeed",
+  "events": [
+    {
+      "event_id": "evt-1",
+      "event_type": "fixture.contact.updated",
+      "payload": {
+        "id": "c1"
+      }
+    }
+  ],
+  "next_cursor": {
+    "capability_id": "fixture.audit.changefeed",
+    "cursor": "seq-4"
+  }
+}

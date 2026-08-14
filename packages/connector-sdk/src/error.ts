@@ -20,11 +20,13 @@ export type SdkErrorCode =
   | "COMPENSATION"
   | "INTERNAL";
 
-/** Typed SDK failure with SPEC-006 context. */
+/** Typed SDK failure with SPEC-006 context. Field names are the
+ * canonical snake_case wire names shared by the Rust, TypeScript, and
+ * Python bindings (directive D: no language-specific wire aliases). */
 export interface SdkError {
   readonly code: SdkErrorCode;
   readonly message: string;
-  readonly correlationId?: string;
+  readonly correlation_id?: string;
   readonly actor?: string;
   readonly tenant?: string;
   readonly resource?: string;
@@ -34,12 +36,19 @@ export interface SdkError {
 export function sdkError(
   code: SdkErrorCode,
   message: string,
-  context?: { correlationId?: string; actor?: string; tenant?: string; resource?: string },
+  context?: {
+    correlation_id?: string;
+    actor?: string;
+    tenant?: string;
+    resource?: string;
+  },
 ): SdkError {
   return {
     code,
     message,
-    ...(context?.correlationId !== undefined ? { correlationId: context.correlationId } : {}),
+    ...(context?.correlation_id !== undefined
+      ? { correlation_id: context.correlation_id }
+      : {}),
     ...(context?.actor !== undefined ? { actor: context.actor } : {}),
     ...(context?.tenant !== undefined ? { tenant: context.tenant } : {}),
     ...(context?.resource !== undefined ? { resource: context.resource } : {}),

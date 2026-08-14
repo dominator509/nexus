@@ -13,3 +13,7 @@ nexus-identity = { path = "../nexus-identity", version = "0.1.0" }
 nexus-capabilities = { path = "../nexus-capabilities", version = "0.1.0" }
 
 [dev-dependencies]
+# Real HTTP transport for the M3 live transport proof (directive C).
+# Dev-dependencies do not affect the production dependency tree; the
+# dependency-direction gate uses `--edges normal` (EP-010 precedent).
+reqwest = { version = "0.13", features = ["blocking", "json"] }

@@ -1,0 +1,33 @@
+{
+  "capabilities": [
+    {
+      "approval": "NONE",
+      "availability": "AVAILABLE",
+      "class": "QUERY",
+      "data_classes": ["PUBLIC"],
+      "description": "query contacts from the fixture connector",
+      "event_types": [],
+      "id": "fixture.contacts.query",
+      "idempotency": "NOT_APPLICABLE",
+      "input_schema": "https://schemas.nexus.local/query/v1",
+      "locality": "ANY",
+      "output_schema": "https://schemas.nexus.local/query-result/v1",
+      "provider_id": "fixture-provider",
+      "required_scopes": ["fixture.contacts:read"],
+      "reversal": "NONE",
+      "risk": "R1",
+      "version": "1.0.0"
+    }
+  ],
+  "certification": "LAB",
+  "data_classes": ["PUBLIC"],
+  "events": ["fixture.contact.updated"],
+  "health": "/v1/health",
+  "id": "fixture-connector",
+  "license": "Apache-2.0",
+  "network_origins": ["https://fixture.nexus.local"],
+  "runtime": "PYTHON",
+  "secrets": ["vault:fixture-token"],
+  "tier": "TIER2",
+  "version": "1.0.0"
+}

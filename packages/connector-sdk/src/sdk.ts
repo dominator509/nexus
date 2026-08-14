@@ -6,10 +6,7 @@
 // contract), so a request serialized by this SDK is byte-compatible
 // with the same request serialized by the Rust SDK.
 
-import type {
-  CapabilityDescriptor,
-  InvocationContext,
-} from "@nexus/contracts";
+import type { CapabilityDescriptor, InvocationContext } from "@nexus/contracts";
 
 // Re-export the canonical generated types so SDK consumers do not
 // need to depend on @nexus/contracts directly for the SDK surface.
@@ -111,7 +108,10 @@ export class IdempotencyTracker {
 
   record(record: IdempotencyRecord): SdkError | undefined {
     const existing = this.records.get(record.key);
-    if (existing !== undefined && existing.capability_id !== record.capability_id) {
+    if (
+      existing !== undefined &&
+      existing.capability_id !== record.capability_id
+    ) {
       return sdkError(
         "CONFLICT",
         "idempotency key reused for a different capability",
@@ -172,7 +172,10 @@ export class ConnectorSdk {
     this.healthPorts.set(capability_id, port);
   }
 
-  registerChangeFeed(capability_id: string, port: ChangeFeedCapabilityPort): void {
+  registerChangeFeed(
+    capability_id: string,
+    port: ChangeFeedCapabilityPort,
+  ): void {
     this.feedPorts.set(capability_id, port);
   }
 
@@ -188,20 +191,20 @@ export class ConnectorSdk {
     const descriptor = this.descriptors.get(request.capability_id);
     if (descriptor === undefined) {
       throw sdkError("NOT_FOUND", "capability not found", {
-        correlationId: request.context.correlation_id,
+        correlation_id: request.context.correlation_id,
         resource: request.capability_id,
       });
     }
     if (descriptor.class !== "QUERY") {
       throw sdkError("VALIDATION", "capability is not a QUERY class", {
-        correlationId: request.context.correlation_id,
+        correlation_id: request.context.correlation_id,
         resource: request.capability_id,
       });
     }
     const port = this.queryPorts.get(request.capability_id);
     if (port === undefined) {
       throw sdkError("UNAVAILABLE", "no query provider registered", {
-        correlationId: request.context.correlation_id,
+        correlation_id: request.context.correlation_id,
         resource: request.capability_id,
       });
     }
@@ -213,26 +216,29 @@ export class ConnectorSdk {
     const descriptor = this.descriptors.get(request.capability_id);
     if (descriptor === undefined) {
       throw sdkError("NOT_FOUND", "capability not found", {
-        correlationId: request.context.correlation_id,
+        correlation_id: request.context.correlation_id,
         resource: request.capability_id,
       });
     }
     if (descriptor.class !== "COMMAND") {
       throw sdkError("VALIDATION", "capability is not a COMMAND class", {
-        correlationId: request.context.correlation_id,
+        correlation_id: request.context.correlation_id,
         resource: request.capability_id,
       });
     }
     const port = this.commandPorts.get(request.capability_id);
     if (port === undefined) {
       throw sdkError("UNAVAILABLE", "no command provider registered", {
-        correlationId: request.context.correlation_id,
+        correlation_id: request.context.correlation_id,
         resource: request.capability_id,
       });
     }
     if (request.idempotency_key !== undefined) {
       const existing = this.tracker.get(request.idempotency_key);
-      if (existing !== undefined && existing.capability_id === request.capability_id) {
+      if (
+        existing !== undefined &&
+        existing.capability_id === request.capability_id
+      ) {
         // Replay the recorded result; the provider is not invoked again.
         return {
           capability_id: request.capability_id,
@@ -255,24 +261,27 @@ export class ConnectorSdk {
   }
 
   /** Read capability health (observation only). */
-  async health(capability_id: string, context: InvocationContext): Promise<HealthReport> {
+  async health(
+    capability_id: string,
+    context: InvocationContext,
+  ): Promise<HealthReport> {
     const descriptor = this.descriptors.get(capability_id);
     if (descriptor === undefined) {
       throw sdkError("NOT_FOUND", "capability not found", {
-        correlationId: context.correlation_id,
+        correlation_id: context.correlation_id,
         resource: capability_id,
       });
     }
     if (descriptor.availability !== "AVAILABLE") {
       throw sdkError("UNAVAILABLE", "capability is not available", {
-        correlationId: context.correlation_id,
+        correlation_id: context.correlation_id,
         resource: capability_id,
       });
     }
     const port = this.healthPorts.get(capability_id);
     if (port === undefined) {
       throw sdkError("UNAVAILABLE", "no health provider registered", {
-        correlationId: context.correlation_id,
+        correlation_id: context.correlation_id,
         resource: capability_id,
       });
     }
@@ -288,14 +297,14 @@ export class ConnectorSdk {
     const descriptor = this.descriptors.get(capability_id);
     if (descriptor === undefined) {
       throw sdkError("NOT_FOUND", "capability not found", {
-        correlationId: context.correlation_id,
+        correlation_id: context.correlation_id,
         resource: capability_id,
       });
     }
     const port = this.feedPorts.get(capability_id);
     if (port === undefined) {
       throw sdkError("UNAVAILABLE", "no change-feed provider registered", {
-        correlationId: context.correlation_id,
+        correlation_id: context.correlation_id,
         resource: capability_id,
       });
     }

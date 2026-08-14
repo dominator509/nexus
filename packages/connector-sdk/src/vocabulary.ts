@@ -32,7 +32,11 @@ export type LegacyTransport =
   | "BROWSER";
 
 /** Webhook delivery state (SPEC-022 behavior 2). */
-export type WebhookDeliveryState = "PENDING" | "DELIVERED" | "FAILED" | "REPLAY";
+export type WebhookDeliveryState =
+  | "PENDING"
+  | "DELIVERED"
+  | "FAILED"
+  | "REPLAY";
 
 /** Webhook verification result (SPEC-022 behavior 2). */
 export type WebhookVerification = "VALID" | "INVALID" | "REPLAY";

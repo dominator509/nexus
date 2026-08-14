@@ -1,0 +1,11 @@
+{
+  "capability_id": "fixture.contacts.query",
+  "output": {
+    "contacts": [
+      {
+        "id": "c1",
+        "name": "Alice"
+      }
+    ]
+  }
+}

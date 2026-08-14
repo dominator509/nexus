@@ -1,0 +1,8 @@
+{
+  "handle": {
+    "capability_id": "fixture.reconcile.workflow",
+    "workflow_id": "wf-1"
+  },
+  "output": null,
+  "status": "RUNNING"
+}

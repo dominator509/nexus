@@ -301,8 +301,58 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
     `Cargo.toml`, `Cargo.lock` (workspace member + lock entry).
   - `EP-011 M1: ok`; format check ok; lint ok; security check ok;
     license gate ok; reality gate ok; clippy clean (zero warnings).
-- [ ] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M2: Core behavior and deterministic invariants
+  - `packages/connector-sdk/` TypeScript binding: `ConnectorSdk` class
+    mirroring the Rust trait (discover/query/command/health/changefeed),
+    `IdempotencyTracker` (key bound to capability, replay, conflict),
+    typed `SdkError` with canonical SPEC-006 codes and snake_case wire
+    context, class-mismatch denial, availability-filtered discovery.
+    Field names are canonical snake_case (SPEC-022 behavior 4).
+  - 12 `ep011_unit_*` vitest tests; `tsc --noEmit` clean.
+  - `EP-011 M2: ok`; pnpm lockfile updated (`pnpm-lock.yaml` added to
+    the fence).
+- [x] M3: Real dependency and transport integration
+  - REAL process transport: `tests/connectors/fixture_sidecar.py` is a
+    real HTTP server on 127.0.0.1 with an ephemeral port implementing
+    the canonical sidecar REST protocol (SPEC-022 Tier 1 REST,
+    directive C). Every proof crosses a REAL process boundary; no
+    in-process mocks, no direct function calls.
+  - `python/nexus_connector_sdk/` package: canonical wire types
+    (InvocationContext, CapabilityDescriptor, ConnectorManifest,
+    Query/Command/Workflow/Health/Changefeed shapes, SidecarAdapter,
+    WebhookNormalizer, LegacyPoller, CredentialBroker) with Python
+    serializers emitting JSON `null` for absent Option fields to match
+    Rust serde byte-for-byte (directive D).
+  - Golden wire corpus: 19 canonical fixtures generated from the Rust
+    types (example `generate_golden`) committed under
+    `tests/connectors/golden/`; Rust/TS/Python all deserialize and
+    serialize against the SAME corpus (directives D/E).
+  - Rust: 10 `ep011_integration_golden_*` + 9 `ep011_integration_transport_*`
+    (live HTTP to the fixture sidecar: discover, query, idempotent
+    command replay + CONFLICT, class mismatch, not-found, workflow
+    dispatch NOT Temporal, health observation, cross-tenant denial,
+    protocol version 426, credential boundary, unavailable fail-closed).
+  - TS: 7 `ep011_integration_ts_golden_*` + 7 `ep011_integration_ts_live_*`
+    vitest tests against the same sidecar over real fetch.
+  - Python: 58 `ep011_integration_*`/`ep011_failure_*` pytest tests:
+    live transport, idempotency, class mismatch, cross-tenant,
+    webhook normalizer (two provider shapes -> one canonical event;
+    bad signature fail-closed), legacy poller (real JSONL source,
+    mutation observed, checkpoint restart resume), credential broker
+    (reference-only, broker-down fail-closed), transport security
+    (malformed JSON, bounded size, unknown path, no debug endpoint),
+    protocol versioning, error parity (NOT_FOUND/VALIDATION/CONFLICT/
+    UNAVAILABLE), observability (redacted telemetry, no secrets),
+    strict teardown (clean shutdown, port release, zero orphans).
+  - TS SDK error envelope corrected to canonical snake_case
+    (`correlation_id`, not `correlationId`) - directive D violation
+    found during parity build; 12 M2 tests still green.
+  - Gate: `EP-011 M3: ok` (artifact check, cargo ep011_unit +
+    ep011_integration, pnpm test:unit, `ep011-vacuity.sh` 58 tests,
+    `ep011-orphan-audit.sh` ok). Fence amended: `pnpm-lock.yaml`,
+    `scripts/ep011-vacuity.sh`, `scripts/ep011-orphan-audit.sh`.
+  - Evidence: `.agent/state/evidence/ep011-m3/` (result codes,
+    correlation IDs, fingerprints only - no credentials).
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -351,6 +401,122 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   dev-dependencies legitimately extend the test tree; the invariant is
   the production edge set. Consequence: no infrastructure/vendor crate
   in the SDK production tree. Reversal: none. Security/license: none.
+- 2026-08-14 - Decision: M3 sidecar transport is REST/JSON over real
+  HTTP on 127.0.0.1 with an ephemeral port (SPEC-022 Tier 1 permits
+  "authenticated MCP or REST"; directive C mandates a real localhost
+  TCP listener with ephemeral port assignment). Evidence: SPEC-022
+  required behavior 1; fixture_sidecar.py binds 127.0.0.1:0 and
+  prints `PORT n`. Alternatives: MCP transport (rejected: MCP is a
+  peer surface, not the sidecar wire), gRPC (rejected: not locked by
+  SPEC-022). Consequence: every M3 proof crosses a REAL process
+  boundary over real HTTP; the same wire is spoken by Rust, TS, and
+  Python clients. Reversal: ADR + schema update. Security: bind
+  127.0.0.1 only, ephemeral port, bounded request size (64 KiB),
+  bounded timeout, no file/debug endpoints.
+- 2026-08-14 - Decision: protocol/schema versioning is an explicit
+  `X-Nexus-Protocol-Version: 1` header required on every sidecar
+  request (directive Q). Evidence: fixture sidecar returns 426 with a
+  typed VALIDATION envelope for any other version; current version is
+  accepted. Alternatives: version in body (rejected: header is
+  inspectable before body parse), no versioning (rejected: silent
+  reinterpretation). Consequence: future incompatible payloads fail
+  closed. Reversal: none. Security: none.
+- 2026-08-14 - Decision: canonical snake_case wire policy for ALL
+  message shapes (directive D). Evidence: golden fixtures generated
+  from the Rust types use snake_case; the TS SDK error envelope was
+  corrected from `correlationId` to `correlation_id` in M3 to match
+  Rust/Python (directive D violation found during parity build);
+  Python serializers emit `null` for absent Option fields to match
+  Rust serde exactly. Alternatives: language-native casing (rejected:
+  violates directive D). Consequence: one byte-compatible wire across
+  Rust/TS/Python. Reversal: none. Security: none.
+- 2026-08-14 - Decision: cross-language parity strategy is a committed
+  golden fixture corpus generated from the authoritative Rust types
+  (example `generate_golden`, 19 files) plus LIVE cross-process
+  transport tests in all three languages against the SAME fixture
+  sidecar (directives C/D/E). Evidence: cargo test golden_parity (10),
+  transport_live (9); vitest golden_parity (7), transport_live (7);
+  pytest parity/live (58); all compare semantic structures, never raw
+  JSON strings. Alternatives: string-compare (rejected: map ordering
+  irrelevant), single-language golden (rejected: no cross-language
+  proof). Consequence: Rust serialize -> TS deserialize, TS -> Python,
+  Python -> Rust are proven transitively against one canonical corpus
+  plus live transport. Reversal: regenerate goldens only via the
+  example. Security: none.
+- 2026-08-14 - Decision: class-specific transport dispatch with NO
+  generic execute endpoint (directive F). Evidence: /v1/query,
+  /v1/command, /v1/workflow, /v1/changefeed are separate typed
+  endpoints; a query sent to a COMMAND capability returns a typed
+  VALIDATION "not a QUERY class" and the provider is NOT invoked.
+  Alternatives: POST /v1/execute with a class field (rejected: the
+  sidecar adapter surface /v1/execute is action-based and separate).
+  Consequence: class checking is at the transport boundary, mirroring
+  EP-010 dispatcher semantics. Reversal: none. Security: none.
+- 2026-08-14 - Decision: idempotency semantics preserved EXACTLY from
+  EP-010: a key is bound to its first capability; replay returns the
+  previous result without a second provider execution; the same key on
+  a different capability is a typed CONFLICT. Evidence: Rust/TS/Python
+  live tests all observe replay identity and CONFLICT on
+  capability/key mismatch. Alternatives: a second weaker algorithm
+  (rejected: directive G). Consequence: sidecar/SDK idempotency is the
+  EP-010 algorithm over the transport. Reversal: none. Security: none.
+- 2026-08-14 - Decision: SidecarAdapter process lifecycle is explicit:
+  start prints PORT, readiness via health endpoint, controlled
+  shutdown via SIGTERM, typed UNAVAILABLE when not listening, and
+  protocol-version mismatch fails closed (directive L). Evidence:
+  fixture sidecar main() handles SIGTERM/SIGINT and exits 0; conftest
+  asserts clean shutdown and port release; orphan audit proves zero
+  leftover processes/ports. Alternatives: none. Consequence: teardown
+  is strict; cleanup failure fails M3. Reversal: none. Security: none.
+- 2026-08-14 - Decision: LegacyPoller checkpoint semantics are
+  byte-offset cursors over a REAL local JSONL source with a persisted
+  checkpoint file; restart resumes from the checkpoint (directive K).
+  Evidence: poll returns exactly the new record after real file
+  mutation; unchanged poll returns zero events; a restarted sidecar
+  resumes at the persisted cursor without re-delivery. Alternatives:
+  in-memory cursor (rejected: not a real source), time-based (rejected:
+  not deterministic). Consequence: pollers never claim exactly-once
+  delivery; EP-005 owns durable event transport. Reversal: none.
+  Security: none.
+- 2026-08-14 - Decision: WebhookNormalizer boundary is fingerprint-
+  verified signature + canonical event shape; missing identity and bad
+  signatures fail closed; unknown event types are preserved as typed
+  metadata, never coerced to a generic event (directive J). Evidence:
+  two provider-shaped fixtures normalize to the same canonical event;
+  bad signature -> INVALID with no event; replay semantics owned by
+  the Rust contract are preserved. Alternatives: real provider HMAC
+  (rejected: no third-party provider is owned by EP-011 M3).
+  Consequence: provider crypto is certified with the provider.
+  Reversal: none. Security: no raw signatures in logs.
+- 2026-08-14 - Decision: CredentialBroker boundary is reference-only on
+  the wire: manifests/descriptors/discovery carry names, never
+  values; resolution happens inside the sandbox and only a fingerprint
+  crosses the transport; broker-unavailable fails closed (directive M).
+  Evidence: live tests assert the raw fixture secret never appears in
+  responses, discovery, or telemetry; broker-down command returns
+  typed UNAVAILABLE. Alternatives: value passthrough (rejected:
+  SPEC-020). Consequence: the broker is not a raw-secret vending
+  machine. Reversal: none. Security: this is the SECURITY.md boundary.
+- 2026-08-14 - Decision: no EP-008 authorization duplication, no
+  EP-005 event-transport duplication, no EP-006 Temporal claim
+  (directives A/H). Evidence: the sidecar dispatches typed
+  capabilities and fails closed on cross-tenant/unknown capability; it
+  does not authorize; changefeed is capability-level, not NATS;
+  workflow dispatch returns a RUNNING handle and never claims durable
+  Temporal execution. Consequence: ownership boundaries preserved.
+  Reversal: none. Security: none.
+- 2026-08-14 - Decision: external provider certification is NOT
+  ASSERTED by EP-011 M3. Evidence: the fixture sidecar is a
+  test/verification-zone provider; no third-party connector is owned
+  by this node. Consequence: certification language in the evidence
+  file is explicit. Reversal: future node. Security: none.
+- 2026-08-14 - Decision: M3 evidence is a governed evidence file under
+  `.agent/state/evidence/ep011-m3/` (scope audit exempts
+  `.agent/state/evidence/*`), with result codes, correlation IDs and
+  fingerprints only - never credentials or raw provider payloads
+  (directive N/R). Evidence: EP-008/EP-009/EP-010 precedent.
+  Consequence: evidence is independently verifiable and secret-free.
+  Reversal: none. Security: none.
 
 # 14. Outcomes & Retrospective
 
