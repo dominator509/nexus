@@ -9,3 +9,7 @@ infra/headscale/
 infra/pki/
 config/sops/
 tests/trust/
+docs/vocabulary/README.md
+references/ADR-013-trust-vocabulary.md
+Cargo.toml
+Cargo.lock

@@ -11,6 +11,7 @@ members = [
     "crates/nexus-auth",
     "crates/nexus-policy",
     "crates/nexus-action-gateway",
+    "crates/nexus-trust",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

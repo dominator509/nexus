@@ -1,0 +1,15 @@
+[package]
+name = "nexus-trust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Nexus trust domain: secret references, bootstrap and device secret stores, certificate authority, service identity, private mesh, and short-lived capability token issuer (SPEC-005, SPEC-020, EP-009)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../nexus-identity", version = "0.1.0" }
+nexus-auth = { path = "../nexus-auth", version = "0.1.0" }
+
+[dev-dependencies]

@@ -273,7 +273,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -281,11 +281,47 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-14 (M1): clippy runs with `-D warnings` in this workspace, so
+  the vocabulary macro's doc comments must be declared inside the macro
+  invocation (rustdoc emits "does not generate documentation for macro
+  invocations" otherwise) and the `CapabilityTokenIssuer::issue` port
+  (8 arguments) needs an explicit `#[allow(clippy::too_many_arguments)]`
+  matching the EP-008 `capability.rs` precedent.
+- 2026-08-14 (M1): re-exporting a vocabulary enum through a submodule
+  that only `use`d it privately triggers E0603; the lib root re-exports
+  state enums from `vocabulary` directly.
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-14 | ADR-013 trust vocabulary | Accepted
+  `TrustZone`, `TokenState`, `SecretState`, `CertificateState`,
+  `ServiceIdentityState`, `MeshNodeState` as vocabulary-locked classes
+  owned by `crates/nexus-trust`; `SecretReference` documented as a
+  canonical term (SPEC-005 behavior 6). Evidence: ADR-013 file +
+  `docs/vocabulary/README.md` trust section + `ep009_unit_vocabulary_*`
+  tests. Alternatives: reusing raw strings. Consequence: every enum
+  parses canonically and rejects unknown values; new synonyms require an
+  ADR. Reversal: ADR supersession. Security: values never enter model
+  context; `SecretValue`/`DeviceSecretValue` serialize as `<redacted>`
+  and fail closed on deserialize. License: none. Compatibility:
+  vocabulary update only, no wire change.
+- 2026-08-14 | Fence amendment | Added `docs/vocabulary/README.md`,
+  `references/ADR-013-trust-vocabulary.md`, `Cargo.toml`, `Cargo.lock`
+  to `.agent/expected-files/EP-009.txt` (EP-008 M1 precedent added the
+  same class of paths). Evidence: scope audit `scope audit EP-009: ok`.
+  Consequence: M1's workspace registration and ADR are inside the
+  machine fence. Reversal: fence edit. Security: none. License: none.
+  Compatibility: none.
+- 2026-08-14 | Contract surface shape | `nexus-trust` is a pure
+  provider-neutral contract crate mirroring `nexus-policy`: vocabulary +
+  ports + redaction wrappers; no I/O; forbidden dependency tree enforced
+  by `tests/dependency_direction.rs` (SPEC-001). Evidence:
+  `cargo test --locked -p nexus-trust` = 16 unit + 1 direction test
+  green. Alternatives: putting ports in infra crates. Consequence: real
+  adapters land in `infra/openbao`, `infra/pki`, `infra/headscale` in
+  M2-M4. Reversal: none. Security: `SecretValue` never deserializes.
+  License: none. Compatibility: workspace member registered in
+  `Cargo.toml`.
 
 # 14. Outcomes & Retrospective
 

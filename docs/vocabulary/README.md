@@ -326,3 +326,48 @@ compensation/verification records.
 `MISSING_APPROVAL`, `VERIFICATION_FAILED` (SPEC-006; ADR-012). Stable
 machine reasons for gateway denials; `RiskClass` is the existing `Risk`
 (R0..R4) ladder.
+
+## TrustZone
+
+`PUBLIC`, `GUEST`, `LOCAL`, `PRIVATE_MESH` (SPEC-020; SPEC-005 behavior
+7; ADR-013). Every service, device, and mesh node belongs to exactly one
+zone; zone boundaries determine mTLS policy, WireGuard segment
+membership, and secret exposure.
+
+## TokenState
+
+`ACTIVE`, `REVOKED`, `EXPIRED` (SPEC-005 behavior 5; ADR-013).
+Capability tokens are short-lived, audience/resource/action/tenant
+restricted, and non-transferable; `REVOKED` and `EXPIRED` are terminal.
+
+## SecretState
+
+`ACTIVE`, `ROTATING`, `REVOKED` (SPEC-005 behavior 6; ADR-013).
+`ROTATING` means a new version is being installed; `REVOKED` means the
+reference no longer resolves.
+
+## CertificateState
+
+`ACTIVE`, `EXPIRED`, `REVOKED` (SPEC-005 behavior 7; ADR-013).
+Certificates are short-lived; `EXPIRED` is terminal after `not_after`,
+`REVOKED` is terminal before `not_after`.
+
+## ServiceIdentityState
+
+`ACTIVE`, `SUSPENDED`, `REVOKED` (ADR-013). A service identity is the
+canonical service principal bound to an mTLS certificate; `SUSPENDED`
+stops new issuance without destroying the record, `REVOKED` terminates
+it.
+
+## MeshNodeState
+
+`PENDING`, `REGISTERED`, `ONLINE`, `OFFLINE`, `REVOKED` (ADR-013).
+`PENDING` means a node requested membership but is not yet registered;
+`REGISTERED` means it holds a WireGuard key pair and can connect;
+`ONLINE`/`OFFLINE` are operational observations; `REVOKED` is terminal.
+
+## Secret Reference
+
+A `store:key[@version]` reference to a secret by name (SPEC-005
+behavior 6; ADR-013). Values never enter domain records, logs, or model
+context; resolution happens in infrastructure.
