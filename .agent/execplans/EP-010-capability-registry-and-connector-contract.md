@@ -273,7 +273,19 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
+  - `crates/nexus-capabilities` workspace crate registered; 8 public
+    interfaces: `CapabilityRegistry`, `CapabilityDescriptor`,
+    `ConnectorManifest`, `QueryCapability`, `CommandCapability`,
+    `WorkflowCapability`, `HealthCapability`, `ChangeFeedCapability`.
+  - Vocabulary ADR-015 (`HealthState`, `Certification`, `SchemaRef`) +
+    `docs/vocabulary/README.md`; reused domain `CapabilityClass`,
+    `Idempotency`, `Availability`, `Locality`, `Tier`,
+    `ConnectorRuntime`, `Risk`, `ApprovalClass`, `Reversal`,
+    `Privacy`, `PrincipalType`, typed IDs.
+  - 37 `ep010_unit_*` lib tests + 1 dependency-direction test; clippy
+    clean; `EP-010 M1: ok`; format check ok; lint ok; fence amended
+    (vocabulary README, ADR-015, Cargo.toml, Cargo.lock).
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -285,7 +297,42 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-14 - Decision: reuse nexus-domain vocabulary for
+  `CapabilityClass`, `Idempotency`, `Availability`, `Locality`, `Tier`,
+  `ConnectorRuntime`, `Risk`, `ApprovalClass`, `Reversal`, `Privacy`,
+  `PrincipalType`, and typed IDs rather than redefining any class.
+  Evidence: `crates/nexus-domain/src/vocabulary.rs` already carries all
+  tables; canonical schemas (`capability-descriptor`,
+  `connector-manifest`, `invocation-context`) already exist from the
+  bootstrap pack and are the wire contract. Alternatives: duplicate
+  enums in the new crate (rejected: vocabulary lock + drift risk).
+  Consequence: single source of truth; the crate adds only the three
+  EP-010-owned classes. Reversal: ADR + vocabulary update.
+  Security/license/compatibility: none.
+- 2026-08-14 - Decision: capability ports return the shared
+  `CapabilityError` (SPEC-006) directly instead of per-port wrapper
+  error types. Evidence: `nexus-trust` precedent returns `TrustError`
+  from every port; wrapper types added ~64 bytes per error and tripped
+  `clippy::result_large_err`. Alternatives: `Box<CapabilityError>`
+  wrappers (rejected: unnecessary indirection for a value-type error).
+  Consequence: uniform typed errors with correlation/actor/tenant/
+  resource context; `CapabilityError` context fields are `Box<str>` to
+  keep the error value under the clippy size threshold. Reversal: ADR.
+  Security/license/compatibility: none.
+- 2026-08-14 - Decision: `CapabilityDescriptor` and `ConnectorManifest`
+  validation mirrors the canonical JSON Schemas exactly (id patterns,
+  description length, unique scopes, version form, required fields).
+  Evidence: `schemas/capability-descriptor.schema.json` and
+  `schemas/connector-manifest.schema.json` are bootstrap-owned and
+  immutable for this node; M3/M4 own any schema amendments. Consequence:
+  cross-language clients can rely on schema/type parity. Reversal:
+  schema update in M3/M4 milestone. Security/license: none.
+- 2026-08-14 - Decision: `ConnectorRuntime` referenced through
+  `nexus_domain::vocabulary::ConnectorRuntime` because the domain root
+  re-export list omits it (only `Tier` is root-reexported). Evidence:
+  `crates/nexus-domain/src/lib.rs` export list. Consequence: no fence
+  change to nexus-domain; full-path import is stable. Reversal: domain
+  root re-export later. Security/license: none.
 
 # 14. Outcomes & Retrospective
 

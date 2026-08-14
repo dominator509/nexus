@@ -380,3 +380,33 @@ the authoritative identity binding; the transport DNS SAN
 `<identity_id>.<tenant_id>.svc.nexus.internal` is derived from the same
 record for standard TLS hostname verification. One identity, two
 encodings; new namespaces require an ADR.
+
+## HealthState
+
+`HEALTHY`, `DEGRADED`, `UNAVAILABLE`, `UNKNOWN` (SPEC-022; ADR-015).
+Health state is an operational observation of a capability or
+connector, never a certification claim.
+
+## Certification
+
+`UNCERTIFIED`, `LAB`, `CERTIFIED`, `DEPRECATED` (SPEC-022
+`ProviderCertification`; ADR-015). A connector whose features are not
+certified must not advertise them as available; the capability registry
+omits uncertified or unavailable features from discovery.
+
+## SchemaRef
+
+A canonical JSON Schema 2020-12 reference restricted to `schemas/...`
+or `https://schemas.nexus.local/...` URIs (SPEC-003 behavior 1;
+ADR-015). Capabilities advertise `input_schema` and `output_schema` by
+`SchemaRef`; foreign URIs are rejected at construction.
+
+## Invocation Context
+
+The context carried by every capability and connector request:
+`request_id`, `correlation_id`, `causation_id`, `origin_system`,
+`external_actor_id`, `external_actor_type`, `tenant_id`, `channel`,
+`device_id`, `objective_id`, `task_id` (SPEC-003 canonical term;
+ADR-015). Connector tenant and account bindings resolve from
+authenticated identity and can never be selected by untrusted request
+metadata.

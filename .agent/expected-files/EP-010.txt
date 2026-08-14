@@ -8,3 +8,7 @@ crates/nexus-connectors/
 schemas/capability-descriptor.schema.json
 schemas/connector-manifest.schema.json
 tests/capabilities/
+docs/vocabulary/README.md
+references/ADR-015-capability-and-connector-vocabulary.md
+Cargo.toml
+Cargo.lock
