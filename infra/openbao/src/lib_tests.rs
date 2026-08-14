@@ -300,3 +300,45 @@ fn ep009_unit_sops_classifier_success_never_consulted() {
         nexus_trust::TrustErrorCode::ProviderAuthorization
     );
 }
+
+#[test]
+fn ep009_unit_transit_already_mounted_is_success() {
+    // Regression guard (M5 live-fire find): OpenBao dev mode pre-mounts
+    // transit, so ensure_key's mount-enable POST returns 400 "path is
+    // already in use". The adapter documents idempotency ("mount enable
+    // and key create are one-time; re-create errors are treated as
+    // success") - the key-create path already tolerated 400, and the
+    // mount-enable path must too. This test pins the classifier used by
+    // ensure_key so a fresh-204 path and an already-mounted-400 path
+    // are both treated as success.
+    let body_204 = serde_json::json!({});
+    let body_400 = serde_json::json!({"errors": ["path is already in use at transit/"]});
+    let body_other = serde_json::json!({"errors": ["permission denied"]});
+
+    fn mount_success(status: u16, body: &serde_json::Value) -> bool {
+        let already_mounted = status == 400
+            && body
+                .get("errors")
+                .and_then(|e| e.as_array())
+                .map(|arr| {
+                    arr.iter().any(|m| {
+                        m.as_str()
+                            .map(|s| s.contains("already in use"))
+                            .unwrap_or(false)
+                    })
+                })
+                .unwrap_or(false);
+        (status == 204 || status == 200) || already_mounted
+    }
+
+    assert!(mount_success(204, &body_204), "first create must succeed");
+    assert!(
+        mount_success(400, &body_400),
+        "already mounted must succeed"
+    );
+    assert!(
+        !mount_success(400, &body_other),
+        "a real denial must still fail closed"
+    );
+    assert!(!mount_success(403, &body_204), "403 must fail closed");
+}

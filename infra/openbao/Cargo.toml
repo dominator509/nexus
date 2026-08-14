@@ -17,3 +17,7 @@ nexus-trust = { path = "../../crates/nexus-trust", version = "0.1.0" }
 ureq = { version = "2.12.1", default-features = false, features = ["json"] }
 
 [dev-dependencies]
+# EP-009 M5 composed trust-chain live-fire proof composes the REAL
+# headscale + pki adapters in ONE process (directive F/H/I/J/K/L/M).
+nexus-headscale = { path = "../../infra/headscale", version = "0.1.0" }
+nexus-pki = { path = "../../infra/pki", version = "0.1.0" }

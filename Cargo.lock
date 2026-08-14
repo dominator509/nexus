@@ -807,7 +807,9 @@ name = "nexus-openbao"
 version = "0.1.0"
 dependencies = [
  "nexus-domain",
+ "nexus-headscale",
  "nexus-identity",
+ "nexus-pki",
  "nexus-trust",
  "serde",
  "serde_json",

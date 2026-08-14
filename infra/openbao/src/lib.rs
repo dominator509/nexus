@@ -18,10 +18,12 @@ pub mod error;
 pub mod sops;
 pub mod store;
 pub mod telemetry;
+pub mod token;
 
 pub use error::{OpenBaoError, OpenBaoErrorCode};
 pub use sops::SopsBootstrapStore;
 pub use store::{AppRoleLogin, OpenBaoStore, WrappedHandoff};
+pub use token::OpenBaoTokenIssuer;
 
 /// Re-export the canonical trust surface for adapter callers.
 pub use nexus_trust::{SecretReference, SecretStore, SecretValue, TrustError};

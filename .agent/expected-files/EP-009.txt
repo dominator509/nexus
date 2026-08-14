@@ -15,5 +15,6 @@ references/ADR-014-service-identity-san-namespace.md
 Cargo.toml
 Cargo.lock
 deny.toml
+.prettierignore
 VERSIONS.lock.yaml
 scripts/ep009-orphan-audit.sh

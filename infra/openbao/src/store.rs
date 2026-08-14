@@ -545,7 +545,9 @@ impl OpenBaoStore {
                     })?
                     .to_string();
                 // The wrapped response must NOT contain plaintext data.
-                let has_data = v.get("data").is_some();
+                // OpenBao emits `"data": null` in the wrapped envelope;
+                // only a NON-null data payload is plaintext.
+                let has_data = v.get("data").map(|d| !d.is_null()).unwrap_or(false);
                 if has_data {
                     return Err(OpenBaoError::new(
                         OpenBaoErrorCode::MalformedProviderResponse,

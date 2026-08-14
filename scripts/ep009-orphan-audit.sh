@@ -54,6 +54,16 @@ if [ -n "$hs_leftovers" ]; then
   fail=1
 fi
 
+# M5 live-fire temp dir (directive W): the full composed proof scratch
+# (age identity, SOPS fixture, CA PEM, headscale TLS/config/data, API key)
+# must be gone after teardown.
+m5_leftovers=$(find /tmp -maxdepth 1 -name 'nexus-ep009-m5-*' 2>/dev/null | sed '/^$/d')
+if [ -n "$m5_leftovers" ]; then
+  echo "EP-009 orphan audit: FAIL - leftover M5 live-fire temp files:" >&2
+  echo "$m5_leftovers" >&2
+  fail=1
+fi
+
 # PKI temp files (EP-009 M4): CA certs, leaf keys, CSRs, token files,
 # and the pki live-fire scratch dir must ALL be gone.
 pki_leftovers=$(find /tmp -maxdepth 1 \( -name 'nexus-pki-*' -o -name 'm4*.csr' -o -name 'm4*.key' -o -name 'm4ca*.pem' \) 2>/dev/null | sed '/^$/d')

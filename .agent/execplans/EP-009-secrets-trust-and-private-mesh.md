@@ -303,7 +303,26 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   - All gates: `scope audit EP-009: ok`, `security check: ok`,
     `license gate: ok`, `reality gate: ok`, `format check: ok`,
     `lint: ok`, `dependency audit: ok`, `EP-009 orphan audit: ok`
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
+  - Gate: `sh scripts/nodes/EP-009.sh M5` -> `EP-009 M5: ok` (nexus-trust
+    + nexus-openbao + nexus-pki + nexus-headscale suites, 6
+    ep009_livefire_* pytest driving the composed proof, orphan audit ok)
+  - Live proof: `trust_chain_live_proof` example (REAL OpenBao 2.5.4 KV +
+    AppRole least privilege + Transit capability tokens + PKI CA; REAL
+    headscale 0.23.0 control-plane enrollment; REAL sops 3.13.0 + age
+    1.1.1 encrypted bootstrap; REAL rustls 0.23.43 mTLS) ->
+    `EP-009 M5 trust chain live proof: ok`; evidence
+    `.agent/state/evidence/ep009-m5/ep009-m5-trust-chain.json`
+  - One composed chain: bootstrap -> machine auth -> secret authority ->
+    mesh enrollment -> PKI issuance -> mTLS -> capability -> cert
+    revocation -> rotation -> mesh revocation -> response wrapping ->
+    fail-closed -> state machine -> restart; kernel WireGuard dataplane
+    explicitly NOT ASSERTED
+  - All gates: `node verify EP-009: ok`, `scope audit EP-009: ok`,
+    `expected files EP-009: ok`, adapter parity: ok (1 unique PRIME-BLOCK
+    cksum), `security check: ok`, `license gate: ok`, `reality gate: ok`,
+    `format check: ok`, `lint: ok`, `dependency audit: ok`,
+    `EP-009 orphan audit: ok`, `verify: ok`
 
 # 12. Surprises & Discoveries
 
@@ -356,6 +375,41 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   The dependency-audit gate had never passed on this lock lineage
   before because the split predates EP-009 (present in EP-008's lock)
   and the gate was not previously part of closure chains.
+- 2026-08-14 (M5): OpenBao dev mode pre-mounts `transit/`; the concrete
+  issuer's `ensure_key` treated the 400 "path is already in use" on the
+  mount-enable POST as a hard failure even though its own doc comment
+  promises idempotency ("re-create errors are treated as success").
+  Fixed in `infra/openbao/src/token.rs` (only the "already in use"
+  400 body is tolerated; a real denial still fails closed) + regression
+  unit test `ep009_unit_transit_already_mounted_is_success`.
+- 2026-08-14 (M5): the SecretStore adapter stores JSON payloads in
+  OpenBao KV-v2 (`{"data": <json>}`); the composed proof initially
+  wrote raw bytes and OpenBao rejected them ("expected type
+  'map[string]interface {}'"). Proof fixed to store JSON objects.
+- 2026-08-14 (M5): OpenBao response wrapping returns `"data": null` in
+  the wrapped envelope; the adapter's plaintext-detection check used
+  `v.get("data").is_some()` which wrongly flagged the null key as
+  plaintext. Fixed to treat only NON-null data as plaintext.
+- 2026-08-14 (M5): a revoked client certificate makes rustls fail the
+  handshake with `Err(CertificateRevoked)` during the TLS read -- the
+  proof's revocation stage must accept that Err as the expected
+  fail-closed outcome (never Ok).
+- 2026-08-14 (M5): headscale node ids are provider-assigned NUMERIC ids;
+  the composed proof initially passed the logical name as `node_id`,
+  which `wireguard_config`/`node_state` reject. Resolved by listing
+  nodes and mapping names -> numeric ids (same pattern as the M3
+  `mesh_live_proof` example).
+- 2026-08-14 (M5): preflight requires `NEXUS_BOOTSTRAP_AGE_KEY_FILE`
+  (canonical `./secrets/age-key.txt`, gitignored). The M2 "age identity
+  never in repository" cleanup removed the stray file, which silently
+  broke preflight for M2/M3/M4 (node-verify was not part of those
+  closure chains). Regenerated the local bootstrap key at the canonical
+  path; it is gitignored and never enters the repository.
+- 2026-08-14 (M5): prettier wants to reformat `config/sops/*.enc.yaml`;
+  ciphertext must never be reformatted (any byte change breaks the SOPS
+  MAC). Added `config/sops/*.enc.yaml` to `.prettierignore` and amended
+  the EP-009 fence to include `.prettierignore` (control-plane config,
+  same class as deny.toml).
 
 # 13. Decision Log
 
@@ -612,7 +666,106 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   (impossible without breaking pins); ignore gate (rejected).
   Reversal: skip removal when pins unify. License: none.
   Compatibility: none.
+- 2026-08-14 | CapabilityTokenIssuer concrete ownership (M5) | Graph
+  inspection confirmed no later ExecPlan owns the concrete issuer;
+  M5 implements and proves it now. Implementation:
+  `infra/openbao/src/token.rs` -- REAL OpenBao Transit Ed25519
+  sign/verify (approved provider crypto; no custom primitives).
+  Binding: subject/audience/tenant/action scoped, issued-at +
+  expiration bounded, unique token id (fingerprint+timestamp), record
+  in KV-v2 for revocation, Debug/telemetry redacted. Not a universal
+  bearer super-token. Evidence: 20 nexus-openbao unit tests + M5
+  live-fire capability matrix. Reversal: none. Security: provider
+  crypto + fail-closed verify. License: none. Compatibility: none.
+- 2026-08-14 | SOPS bootstrap vs OpenBao runtime boundary (M5) |
+  SOPS+age is bootstrap/offline/break-glass ONLY through
+  `SopsBootstrapStore`; OpenBao is the online runtime authority.
+  OpenBao unavailable -> typed fail-closed error, NEVER a silent SOPS
+  fallback (the dead-store proof exercises this with a real
+  unreachable address). Evidence: M5 live-fire `fail_closed` stage +
+  M2 routing rule. Reversal: none. Security: fail closed. License:
+  none. Compatibility: none.
+- 2026-08-14 | Headscale control-plane certification (M5) | Real
+  enrollment + addressing + peer config proven; kernel WireGuard
+  dataplane explicitly NOT ASSERTED (control-plane proof only; the
+  kernel dataplane is a separate certification). Evidence: M5
+  live-fire mesh stages + evidence JSON dataplane marker. Reversal:
+  none. Security: no overclaim. License: none. Compatibility: none.
+- 2026-08-14 | Node-local leaf keys + CA custody (M5) | Leaf key +
+  CSR generated at the node (rcgen); the CA receives the CSR only;
+  OpenBao internal EC root never exports its private key. Evidence:
+  M5 live-fire PKI stage + `assert "private_key" not in body`.
+  Reversal: none. Security: CA key non-exportable. License: none.
+  Compatibility: none.
+- 2026-08-14 | Revocation/rotation/mesh boundaries (M5) | Cert
+  revocation through CRL: mesh membership intact, mTLS FAILS
+  (`Err(CertificateRevoked)`); rotation keeps the SAME logical
+  ServiceIdentity with a new key+serial; headscale revocation is a
+  separate membership control from PKI revocation. Permanent
+  hierarchy: NETWORK REACHABILITY != CRYPTOGRAPHIC IDENTITY !=
+  AUTHORIZATION. Evidence: M5 live-fire cert_revocation / cert_rotation
+  / mesh_revocation stages. Reversal: none. Security: hard boundaries.
+  License: none. Compatibility: none.
+- 2026-08-14 | Response wrapping one-time (M5) | Real OpenBao
+  response wrapping: secret response -> wrapping token -> one unwrap
+  succeeds -> second unwrap rejected; wrapping token never logged or
+  persisted. Evidence: M5 live-fire `response_wrapping` stage.
+  Reversal: none. Security: one-time handoff. License: none.
+  Compatibility: none.
+- 2026-08-14 | Teardown + private-material hygiene (M5) | Every M5
+  resource (OpenBao/Headscale containers, networks, temp dirs, age
+  identities, SOPS fixtures, CA PEM, API keys, leaf keys, capability
+  token files) is removed at teardown; `scripts/ep009-orphan-audit.sh`
+  extended with the M5 temp pattern; evidence carries fingerprints +
+  serials only, never secret material. Evidence: `EP-009 orphan audit:
+  ok` + M5 hygiene tests. Reversal: none. Security: zero residue.
+  License: none. Compatibility: none.
 
 # 14. Outcomes & Retrospective
 
-At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+CHANGED (within the EP-009 machine fence; see
+`.agent/expected-files/EP-009.txt`):
+- `infra/openbao/src/token.rs` (NEW): Transit-backed
+  CapabilityTokenIssuer; `ensure_key` idempotency fix (already-mounted
+  400 tolerated, real denial fails closed)
+- `infra/openbao/src/store.rs`: wrapped-response plaintext detection
+  treats `"data": null` as wrapped (M5 live-fire find)
+- `infra/openbao/src/lib_tests.rs`: +1 regression test (20 total)
+- `infra/openbao/examples/trust_chain_live_proof.rs` (NEW): composed
+  proof; JSON payloads; numeric headscale id resolution; revoked-cert
+  Err accepted as expected failure
+- `tests/trust/test_ep009_live_fire.py` (NEW): 6 ep009_livefire_* tests
+- `scripts/nodes/EP-009.sh`: M5|verify now runs the real live-fire
+  driver (vacuity-protected: `EP-009 M5: ok` only after real proof)
+- `scripts/ep009-orphan-audit.sh`: +M5 temp pattern
+- `config/sops/nexus-bootstrap.enc.yaml` (NEW): encrypted bootstrap
+  artifact (public recipients + ciphertext only, no private identity)
+- `.prettierignore`: `config/sops/*.enc.yaml` (ciphertext never
+  reformatted)
+- `.agent/expected-files/EP-009.txt`: +`.prettierignore`
+- `Cargo.lock`, `infra/openbao/Cargo.toml` (dev-deps), `infra/openbao/
+  src/lib.rs` (module registration)
+
+COMMANDS AND SENTINELS (all run now):
+- `sh scripts/nodes/EP-009.sh M5` -> `EP-009 M5: ok`
+- `sh scripts/node-verify.sh EP-009` -> `node verify EP-009: ok`
+- `sh scripts/scope-audit.sh EP-009` -> `scope audit EP-009: ok`
+- `sh scripts/expected-files.sh EP-009` -> `expected files EP-009: ok`
+- adapter parity -> `ok` (single unique PRIME-BLOCK cksum)
+- `security check: ok`, `license gate: ok`, `reality gate: ok`,
+  `format check: ok`, `lint: ok`, `dependency audit: ok`,
+  `EP-009 orphan audit: ok`, `verify: ok` (incl. live-fire: ok)
+
+EVIDENCE: `.agent/state/evidence/ep009-m5/ep009-m5-trust-chain.json`
+(correlation `nexus-ep009-m5-trust-chain-20260814`; stages all PASS;
+kernel WireGuard dataplane NOT ASSERTED; distinct serial fingerprints).
+
+PROVIDER/HARDWARE STATUS: OpenBao 2.5.4 + Headscale 0.23.0 + sops
+3.13.0 + age 1.1.1 proven live; kernel WireGuard dataplane NOT
+ASSERTED (separate certification).
+
+REMAINING RISKS: kernel WireGuard dataplane not certified (by design);
+`NEXUS_BOOTSTRAP_AGE_KEY_FILE` is a local gitignored bootstrap key
+(regenerated after M2 cleanup, never committed).
+
+GREEN TAG: `green/EP-009` created at the M5 verified commit.

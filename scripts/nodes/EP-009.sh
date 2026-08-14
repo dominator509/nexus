@@ -33,9 +33,14 @@ case "$mode" in
       && sh scripts/ep009-orphan-audit.sh
       ;;
   M5|verify)
-      python3 scripts/node-artifact-check.py EP-009 M5
-      cargo test --locked -p nexus-trust
-      :
+      python3 scripts/node-artifact-check.py EP-009 M5 \
+      && cargo test --locked -p nexus-trust \
+      && cargo test --locked -p nexus-openbao \
+      && cargo test --locked -p nexus-pki \
+      && cargo test --locked -p nexus-headscale \
+      && cargo build --locked -p nexus-openbao --example trust_chain_live_proof \
+      && uv run --frozen pytest tests/trust -q --tb=native -o python_functions="ep009_livefire_*" \
+      && sh scripts/ep009-orphan-audit.sh
       ;;
   *) echo "EP-009: FAIL - unknown mode $mode" >&2; exit 2;;
 esac

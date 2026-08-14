@@ -43,3 +43,7 @@ VERSIONS.lock.yaml
 
 # Package-manager-owned lockfile: rewritten by pnpm, not by Prettier.
 pnpm-lock.yaml
+
+# SOPS+age encrypted bootstrap artifacts (EP-009 M5): ciphertext must
+# never be reformatted - any byte change breaks the SOPS MAC.
+config/sops/*.enc.yaml
