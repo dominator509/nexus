@@ -8,3 +8,7 @@ packages/connector-sdk/
 python/nexus_connector_sdk/
 crates/nexus-sidecar/
 tests/connectors/
+docs/vocabulary/README.md
+references/ADR-016-connector-sdk-and-sidecar-vocabulary.md
+Cargo.toml
+Cargo.lock

@@ -271,7 +271,36 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
+  - `crates/nexus-connector-sdk/` workspace crate: the provider-neutral
+    connector SDK contract. Public surface per node contract: shared
+    `ConnectorSdk` trait (discover/query/command/health/changefeed over
+    the EP-010 capability ports) plus `RustConnectorSdk`,
+    `TypeScriptConnectorSdk`, `PythonConnectorSdk` bindings sharing
+    `CONTRACT_VERSION` (SPEC-022 behavior 4); `SidecarAdapter` port
+    wrapping one `SidecarTransport` family; `LegacyPoller` port with
+    stable cursors; `WebhookNormalizer` port (signed webhook
+    verification + replay rejection); `CredentialBroker` port with
+    namespaced `CredentialReference` (values never leave the broker).
+  - Vocabulary (ADR-016 + docs/vocabulary/README.md): `SdkLanguage`,
+    `SidecarTransport` (12 families), `LegacyTransport`,
+    `WebhookDeliveryState`, `WebhookVerification` - parse/reject
+    unknown, canonical SCREAMING_SNAKE wire values.
+  - Typed `SdkError` (SPEC-006 codes) with correlation/actor/tenant/
+    resource context boxed as `Box<str>` (clippy large-Err clean);
+    fails closed; transient classification.
+  - 19 `ep011_unit_*` tests (vocabulary round-trip/rejection, error
+    classification/serialization, SDK binding contract version,
+    empty-registry discovery, sidecar execute + typed fail-closed,
+    legacy poller normalization + cursor, webhook valid/invalid
+    signature + no-secret envelope, credential reference validation +
+    never-holds-value) + 1 dependency-direction test (production
+    `--edges normal` tree: no tokio/axum/reqwest/infra/vendor crates).
+  - Fence amended: `docs/vocabulary/README.md`,
+    `references/ADR-016-connector-sdk-and-sidecar-vocabulary.md`,
+    `Cargo.toml`, `Cargo.lock` (workspace member + lock entry).
+  - `EP-011 M1: ok`; format check ok; lint ok; security check ok;
+    license gate ok; reality gate ok; clippy clean (zero warnings).
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -284,6 +313,44 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-14 - Decision: the SDK crate is a provider-neutral contract
+  surface, not a transport implementation: the shared `ConnectorSdk`
+  trait routes through the EP-010 capability ports (registry,
+  dispatcher, idempotency tracker) and the SDK never grants authority.
+  Evidence: node contract public interfaces (RustConnectorSdk,
+  TypeScriptConnectorSdk, PythonConnectorSdk, SidecarAdapter,
+  LegacyPoller, WebhookNormalizer, CredentialBroker); SPEC-022 behavior
+  4 (one conformance suite) and behavior 5 (sidecar wraps transports).
+  Alternatives: a transport-owning SDK (rejected: would duplicate
+  EP-012/EP-013 infra), a per-language divergent surface (rejected:
+  violates shared corpus). Consequence: Rust/TypeScript/Python bindings
+  share one trait and one `CONTRACT_VERSION`; real transports and the
+  sandbox boundary are proven in later milestones. Reversal: ADR +
+  schema update. Security/license: none.
+- 2026-08-14 - Decision: SDK errors use `SdkError` (SPEC-006 codes)
+  with context boxed as `Option<Box<str>>`, mirroring EP-010's
+  `CapabilityError`. Evidence: clippy large-Err flagged the unboxed
+  variant; wire serialization of `Box<str>` is identical to `String`.
+  Alternatives: `Box<SdkError>` wrapper (rejected: extra indirection,
+  breaks value semantics), unboxed struct (rejected: 128+ byte Err).
+  Consequence: `Result<T, SdkError>` is compact, typed, and fails
+  closed; accessor methods (`correlation()`, `actor()`, `tenant()`,
+  `resource()`) keep ergonomics. Reversal: none. Security/license:
+  none.
+- 2026-08-14 - Decision: `AcceptingWebhookNormalizer` is a test/verification-zone
+  double implementing the real `WebhookNormalizer` trait; production
+  webhook providers implement real signature verification in later
+  milestones. Evidence: TESTING.md test zones; M1 owns the contract,
+  not a real provider. Consequence: the normalize contract (valid /
+  invalid / replay semantics, canonical event shape) is proven now;
+  provider-specific crypto is proven with the provider. Reversal: none.
+  Security/license: none.
+- 2026-08-14 - Decision: dependency-direction test uses `--edges
+  normal` (production tree only), the EP-010 M3 precedent. Evidence:
+  dev-dependencies legitimately extend the test tree; the invariant is
+  the production edge set. Consequence: no infrastructure/vendor crate
+  in the SDK production tree. Reversal: none. Security/license: none.
 
 # 14. Outcomes & Retrospective
 

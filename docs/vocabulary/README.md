@@ -410,3 +410,38 @@ The context carried by every capability and connector request:
 ADR-015). Connector tenant and account bindings resolve from
 authenticated identity and can never be selected by untrusted request
 metadata.
+
+## SdkLanguage
+
+`RUST`, `TYPESCRIPT`, `PYTHON` (SPEC-022 behavior 4; ADR-016). Marks
+which language surface a connector SDK binding exposes. All three
+bindings implement the same contract corpus
+(`CONTRACT_VERSION` in `nexus-connector-sdk`) and must pass the same
+conformance suite.
+
+## SidecarTransport
+
+`REST`, `SOAP`, `GRAPHQL`, `SQL`, `ODBC`, `JDBC`, `CLI`, `FILES`,
+`EMAIL`, `WEBHOOK`, `BROWSER`, `DESKTOP` (SPEC-022 behavior 5;
+ADR-016). The sandboxed Connector Sidecar wraps exactly one transport
+family; browser and desktop GUI are last resort and never hold direct
+authority.
+
+## LegacyTransport
+
+`REST`, `SOAP`, `SQL`, `CLI`, `FILES`, `EMAIL`, `BROWSER` (SPEC-022
+behavior 5; ADR-016). Legacy source families wrapped by the
+`LegacyPoller`, normalized into versioned, correlated events with
+stable cursors.
+
+## WebhookDeliveryState
+
+`PENDING`, `DELIVERED`, `FAILED`, `REPLAY` (SPEC-022 behavior 2;
+ADR-016). Signed webhook delivery states; replay detection is part of
+the delivery contract.
+
+## WebhookVerification
+
+`VALID`, `INVALID`, `REPLAY` (SPEC-022 behavior 2; ADR-016). Result of
+verifying a signed webhook delivery; an invalid or replayed delivery
+never becomes an event.

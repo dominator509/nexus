@@ -1105,6 +1105,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-connector-sdk"
+version = "0.1.0"
+dependencies = [
+ "nexus-capabilities",
+ "nexus-domain",
+ "nexus-identity",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-connectors"
 version = "0.1.0"
 dependencies = [

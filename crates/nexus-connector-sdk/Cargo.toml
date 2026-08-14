@@ -1,0 +1,15 @@
+[package]
+name = "nexus-connector-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Nexus connector SDK contract: Rust/TypeScript/Python SDK surface, sandboxed legacy Connector Sidecar ports, legacy poller, webhook normalizer, and credential broker references (SPEC-022, EP-011)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../nexus-identity", version = "0.1.0" }
+nexus-capabilities = { path = "../nexus-capabilities", version = "0.1.0" }
+
+[dev-dependencies]

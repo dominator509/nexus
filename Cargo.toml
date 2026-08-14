@@ -14,6 +14,7 @@ members = [
     "crates/nexus-trust",
     "crates/nexus-capabilities",
     "crates/nexus-connectors",
+    "crates/nexus-connector-sdk",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",
