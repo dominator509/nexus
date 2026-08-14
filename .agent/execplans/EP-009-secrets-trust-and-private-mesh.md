@@ -292,7 +292,17 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   - All gates: `scope audit EP-009: ok`, `security check: ok`,
     `license gate: ok`, `reality gate: ok`, `format check: ok`,
     `lint: ok`, `EP-009 orphan audit: ok`
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
+  - Gate: `sh scripts/nodes/EP-009.sh M4` -> `EP-009 M4: ok` (14
+    nexus-pki unit + 5 ep009_integration_pki_* + 6 ep009_failure_pki_*
+    pytest + orphan audit ok)
+  - Live proof: `pki_live_proof` example (REAL OpenBao 2.5.4 PKI
+    engine as CA, real CSR issuance, real rustls 0.23.43 mTLS,
+    revocation via CRL, rotation, capability boundary) ->
+    `EP-009 M4 pki live proof: ok`
+  - All gates: `scope audit EP-009: ok`, `security check: ok`,
+    `license gate: ok`, `reality gate: ok`, `format check: ok`,
+    `lint: ok`, `dependency audit: ok`, `EP-009 orphan audit: ok`
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
@@ -329,6 +339,23 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   omits the numeric `id` field (only register/list carry it). Node
   expiry (`nodes expire`) is observable as a non-negative `expiry`
   timestamp; `nodes delete --force` is terminal.
+- 2026-08-14 (M4): OpenBao PKI `enforce_hostnames: true` rejects CSRs
+  whose CN is not in `allowed_domains` -- the adapter sets CN to the
+  transport DNS name and binds identity through the URI SAN (ADR-014).
+- 2026-08-14 (M4): `ca/pem` returns RAW PEM, not JSON (the only
+  non-JSON endpoint in the PKI surface); role `max_ttl` is an int in
+  JSON; serial formats differ between sign response (lowercase,
+  colon-separated) and CRL (uppercase, no colons).
+- 2026-08-14 (M4): rustls 0.23 installs a CRL-carrying verifier via
+  `WebPkiServerVerifier::builder(...).with_crls(...)` through the
+  `.dangerous()` module -- standard API, verifier remains strict.
+- 2026-08-14 (M4): `cargo deny check` flagged windows-sys 0.52.0 vs
+  0.61.2 after `infra/pki` joined the workspace (rcgen -> ring made the
+  0.52.0 line reachable); Windows-only crate, so a documented targeted
+  skip was added (same class as untrusted/getrandom/thiserror skips).
+  The dependency-audit gate had never passed on this lock lineage
+  before because the split predates EP-009 (present in EP-008's lock)
+  and the gate was not previously part of closure chains.
 
 # 13. Decision Log
 
@@ -513,6 +540,78 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   `ep009_integration_headscale_teardown_leaves_no_orphans` +
   `EP-009 orphan audit: ok`. Reversal: none. Security: no leftover
   certs/keys/data. License: none. Compatibility: none.
+- 2026-08-14 | PKI responsibility split (M4) | OpenBao PKI engine is
+  the real CA (issuance, policy, serial, revocation, CRL); nexus-trust
+  holds provider-neutral contracts; `infra/pki` is the concrete
+  adapter (HTTP client mirroring the openbao adapter pattern, CSR/leaf
+  handling, rustls mTLS helpers, revocation verifier). Headscale stays
+  mesh-only: mesh membership is never service identity. Evidence:
+  `infra/pki/` crate + `pki_live_proof` example. Alternatives:
+  in-process CA (rejected: custom cryptography / no custody story).
+  Reversal: none. Security: CA key never leaves OpenBao; leaf keys
+  generated locally, only CSR crosses the CA boundary. License: none.
+  Compatibility: none.
+- 2026-08-14 | Canonical service identity SAN namespace (M4) | ADR-014
+  locks the URI SAN form `nexus://tenant/<tenant>/service/<identity>`
+  plus a deterministic transport DNS SAN for standard rustls hostname
+  verification. CN is set to the transport DNS name only to satisfy
+  OpenBao `enforce_hostnames`. Logical identity != certificate
+  instance (rotation keeps the same URI SAN, new serial/key).
+  Evidence: `infra/pki/src/identity.rs` + ADR-014 +
+  `ep009_unit_pki_identity_*` tests. Alternatives: CN-based identity
+  (rejected: ambiguous). Reversal: ADR change. Security: identity
+  binding is SAN-based, never CN alone. License: none. Compatibility:
+  none.
+- 2026-08-14 | OpenBao PKI wire facts (M4) | Internal EC root
+  generated (`serial_number` + issuing CA confirmed); `enforce_hostnames:
+  true` requires CN in `allowed_domains`; `ca/pem` returns RAW PEM not
+  JSON; role `max_ttl` is int in JSON; serial formats differ between
+  sign response (lowercase, colon-separated) and CRL (uppercase, no
+  colons); revoke returns `revocation_time`; CRL DER via
+  `Accept: application/pkix-crl`. Evidence: live probe + integration
+  suite. Reversal: none. Security: no secrets captured. License: none.
+  Compatibility: none.
+- 2026-08-14 | rustls 0.23.43 mTLS + CRL (M4) | Real rustls server
+  (requires client cert) + client (verifies chain/SAN/CRL);
+  `RevocationVerifier` caches CRLs (30s TTL, fail-closed fetch);
+  verifier built via `WebPkiServerVerifier::builder(...).with_crls(...)`
+  installed through `.dangerous()` (standard 0.23 API; verifier stays
+  strict, never permissive). Evidence: `ep009_unit_pki_revocation_verifier_*`
+  + live proof negative matrix (missing client cert, wrong CA, wrong
+  SAN, expired, not-yet-valid, wrong EKU, malformed all rejected).
+  Alternatives: permissive verifier (rejected). Reversal: none.
+  Security: strict chain + SAN + CRL verification. License: none.
+  Compatibility: rustls pinned 0.23.43 (ring).
+- 2026-08-14 | Capability boundary (M4) | Certificate identity does
+  not grant authorization: the live proof asserts
+  `CAPABILITY-BOUNDARY-PASS` (mTLS identity proven, capability token
+  absent -> action denied). Application authority is never encoded in
+  SANs. Evidence: `pki_live_proof` capability-boundary stage.
+  Reversal: none. Security: hard boundary. License: none.
+  Compatibility: none.
+- 2026-08-14 | M3 debt: headscale crate license + path deps (M4) |
+  `nexus-headscale` is Nexus-authored code, so its package license is
+  the workspace license `Apache-2.0 OR MIT` (not MPL-2.0, which is the
+  upstream Headscale component's license); wildcard path deps replaced
+  with exact `version = "0.1.0"` path deps. Upstream component metadata
+  (VERSIONS.lock: headscale BSD-3-Clause, deny.toml allowlist,
+  COMPONENT_REGISTRY) was NOT relabeled. Evidence: `cargo deny check`
+  -> `bans ok, licenses ok, sources ok`. Alternatives: relabeling
+  upstream (rejected: dishonest). Reversal: none. License: workspace
+  license on the adapter, upstream license preserved.
+  Compatibility: none.
+- 2026-08-14 | windows-sys duplicate skip (M4) | `cargo deny check`
+  surfaced a two-version split for windows-sys (0.52.0 via ring
+  0.17.14 pulled by rcgen/rustls/rustls-webpki in the nexus-pki +
+  async-nats chains; 0.61.2 via mio/socket2/tokio). Windows-only
+  target crate, never linked on Linux; cannot be unified without
+  breaking pinned transitive pins. Added the documented targeted skip
+  (same class as untrusted/getrandom/thiserror skips) and amended the
+  EP-009 fence to include deny.toml (EP-005/EP-007/EP-008 precedent).
+  Evidence: `dependency audit: ok`. Alternatives: unify versions
+  (impossible without breaking pins); ignore gate (rejected).
+  Reversal: skip removal when pins unify. License: none.
+  Compatibility: none.
 
 # 14. Outcomes & Retrospective
 

@@ -60,5 +60,13 @@ skip = [
   # (async-nats/rustls chain, pinned). Two independent ring-compat
   # lines; cannot be unified.
   { name = "untrusted", version = "0.7.1" },
+  # windows-sys 0.52 vs 0.61: Windows-only target crate. 0.52.0 is
+  # required by ring 0.17.14 (build-time, pulled by rcgen 0.14.9 /
+  # rustls 0.23.43 / rustls-webpki 0.103 in the nexus-pki + async-nats
+  # chains, all pinned); 0.61.2 is required by mio 1.2.2 / socket2
+  # 0.6.5 / tokio 1.53.1 (async-nats + postgres chains, pinned).
+  # Never linked on Linux; the two lines cannot be unified without
+  # breaking pinned transitive pins.
+  { name = "windows-sys", version = "0.52.0" },
 ]
 skip-tree = []

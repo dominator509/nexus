@@ -371,3 +371,12 @@ it.
 A `store:key[@version]` reference to a secret by name (SPEC-005
 behavior 6; ADR-013). Values never enter domain records, logs, or model
 context; resolution happens in infrastructure.
+
+## Service Identity SAN (canonical certificate binding)
+
+`nexus://tenant/<tenant_id>/service/<identity_id>` (ADR-014). Every
+certificate issued by the Nexus CA carries this deterministic URI SAN as
+the authoritative identity binding; the transport DNS SAN
+`<identity_id>.<tenant_id>.svc.nexus.internal` is derived from the same
+record for standard TLS hostname verification. One identity, two
+encodings; new namespaces require an ADR.

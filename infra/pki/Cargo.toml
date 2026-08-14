@@ -1,0 +1,30 @@
+[package]
+name = "nexus-pki"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "EP-009 M4 certificate authority + service identity + real mTLS adapter (SPEC-005 behavior 7). Real OpenBao PKI engine over HTTP; rcgen leaf key/CSR generation at the node; x509-parser certificate validation; rustls 0.23 mTLS server/client with CRL revocation. Implements the nexus-trust CertificateAuthority and ServiceIdentityRegistry contracts with typed fail-closed errors and redacted telemetry."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../../crates/nexus-identity", version = "0.1.0" }
+nexus-trust = { path = "../../crates/nexus-trust", version = "0.1.0" }
+# Real HTTP/1.1 client for the OpenBao PKI surface (local container,
+# plain HTTP in the integration surface; TLS termination is the
+# deployment boundary). MIT OR Apache-2.0. json feature only.
+ureq = { version = "2.12.1", default-features = false, features = ["json"] }
+# Leaf key + CSR generation at the consuming node (directive E: private
+# key never crosses the CA boundary). Apache-2.0 OR MIT.
+rcgen = "0.14.9"
+# Certificate parsing/validation glue (directive T: no custom crypto).
+# MIT OR Apache-2.0.
+x509-parser = "0.18.1"
+# mTLS server/client. Already in the workspace lock graph at 0.23.43
+# (ring provider, matched to the pinned rustls-webpki/ring chain).
+# Apache-2.0 OR ISC OR MIT.
+rustls = { version = "0.23.43", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rustls-pki-types = "1.15.1"
+
+[dev-dependencies]

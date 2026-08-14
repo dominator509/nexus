@@ -54,11 +54,20 @@ if [ -n "$hs_leftovers" ]; then
   fail=1
 fi
 
+# PKI temp files (EP-009 M4): CA certs, leaf keys, CSRs, token files,
+# and the pki live-fire scratch dir must ALL be gone.
+pki_leftovers=$(find /tmp -maxdepth 1 \( -name 'nexus-pki-*' -o -name 'm4*.csr' -o -name 'm4*.key' -o -name 'm4ca*.pem' \) 2>/dev/null | sed '/^$/d')
+if [ -n "$pki_leftovers" ]; then
+  echo "EP-009 orphan audit: FAIL - leftover PKI temp files:" >&2
+  echo "$pki_leftovers" >&2
+  fail=1
+fi
+
 # helper processes (directive Q): zero may survive. The bracket trick
 # avoids matching this script's own grep; the pattern targets actual
 # daemon/helper binaries, not shell wrappers whose command line merely
 # mentions the node name.
-procs=$(ps aux | grep -E '[o]penbao server -dev|[b]ao server -dev|[s]ops --decrypt|[a]ge-keygen|[h]eadscale serve' | grep -v grep | sed '/^$/d')
+procs=$(ps aux | grep -E '[o]penbao server -dev|[b]ao server -dev|[s]ops --decrypt|[a]ge-keygen|[h]eadscale serve|[p]ki_live_proof|[p]ki_failure_probe' | grep -v grep | sed '/^$/d')
 if [ -n "$procs" ]; then
   echo "EP-009 orphan audit: FAIL - leftover helper processes:" >&2
   echo "$procs" >&2

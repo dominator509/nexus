@@ -11,7 +11,9 @@ config/sops/
 tests/trust/
 docs/vocabulary/README.md
 references/ADR-013-trust-vocabulary.md
+references/ADR-014-service-identity-san-namespace.md
 Cargo.toml
 Cargo.lock
+deny.toml
 VERSIONS.lock.yaml
 scripts/ep009-orphan-audit.sh

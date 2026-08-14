@@ -106,6 +106,21 @@ locks:
   license: BSD-3-Clause
   class: private-mesh
   policy: pinned
+- component: rustls
+  version: 0.23.43
+  license: Apache-2.0 OR ISC OR MIT
+  class: mtls
+  policy: pinned
+- component: rcgen
+  version: 0.14.9
+  license: Apache-2.0 OR MIT
+  class: pki-csr
+  policy: pinned
+- component: x509-parser
+  version: 0.18.1
+  license: MIT OR Apache-2.0
+  class: pki-parse
+  policy: pinned
 - component: caddy
   version: 2.11.4
   license: Apache-2.0

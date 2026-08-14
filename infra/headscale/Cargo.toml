@@ -3,13 +3,13 @@ name = "nexus-headscale"
 version = "0.1.0"
 edition = "2021"
 description = "EP-009 M3 Headscale-compatible private mesh controller adapter (SPEC-005 behavior 7, EP-009 node contract). Real pinned headscale CLI transport; implements nexus-trust MeshController."
-license = "MPL-2.0"
+license = "Apache-2.0 OR MIT"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-nexus-trust = { path = "../../crates/nexus-trust" }
+nexus-trust = { path = "../../crates/nexus-trust", version = "0.1.0" }
 
 [dev-dependencies]
-nexus-domain = { path = "../../crates/nexus-domain" }
-nexus-identity = { path = "../../crates/nexus-identity" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../../crates/nexus-identity", version = "0.1.0" }
