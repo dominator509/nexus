@@ -306,7 +306,18 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
     reality/format/lint/dependency audit ok; latent M3 reality-gate and
     rustfmt debt surfaced by the M4 side gates and fixed (reword-only,
     gate rules untouched).
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
+  - `infra/gateway/` `nexus-gateway` composition crate: owns the REAL
+    MCP engine + REAL A2A gateway + a shared real hash-bound artifact
+    store; crown-jewel proof drives authenticated principal/tenant ->
+    MCP session -> exact-name tool discovery/call -> schema validation
+    -> idempotent replay -> cancellation terminality -> A2A task
+    creation -> streamed SUBMITTED/WORKING/COMPLETED -> hash-bound
+    artifact attach -> completion; evidence written deterministically
+    to `.agent/state/evidence/ep012-m5/` (identical md5 on rerun);
+    gate `EP-012 M5: ok`; expected-files/scope/security/license/
+    reality/format/lint/dependency audit all ok; adapter parity 8x
+    PRIME-BLOCK; M4 debt (reality-gate strings, rustfmt) paid in M4.
 
 # 12. Surprises & Discoveries
 
@@ -468,6 +479,46 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   outbound transport exists), adding a push provider (rejected: outside
   EP-012 scope). Consequence: honest certification boundary. Reversal:
   none. Security: none.
+- 2026-08-14 - Decision (EP-012 M5): the composition crate owns a
+  SHARED artifact store (`SharedArtifactStore`, `Rc<RefCell<>>`
+  newtype implementing `ArtifactExchange`) rather than a cloned copy.
+  The first crown-jewel run FAILED at artifact attach with NOT_FOUND:
+  the gateway published into its own `MemoryArtifactStore` copy while
+  the A2A engine held a clone taken at construction, so the engine
+  never saw the manifest. This was a real composition defect exposed
+  by the live-fire proof, not a test bug. Evidence:
+  `ep012_gateway_crown_jewel_full_chain` passes only after the shared
+  store fix; `ep012_gateway_artifact_missing_attach_fails_closed`
+  still proves missing artifacts fail closed. Alternatives: pass the
+  store into the A2A engine by mutable reference (rejected: the engine
+  owns its `Box<dyn ArtifactExchange>`), global store (rejected:
+  hidden state). Consequence: publish/attach see one consistent store.
+  Reversal: none. Security: none.
+- 2026-08-14 - Decision (EP-012 M5): the crown-jewel proof accepts a
+  `model_recommendation` and a `presented_receipt` in its input but
+  NEVER consults either; the outcome records
+  `model_recommendation_never_consulted: true` and
+  `receipt_never_reusable: true`. The composed gateway has no policy
+  engine and no capability grants; MCP acceptance, A2A task identity,
+  and artifact integrity are explicitly NOT execution authority
+  (EP-008 owns authorization). Evidence:
+  `ep012_gateway_receipt_never_grants_authority` (a forged receipt
+  cannot create a session; a session still requires the real
+  authenticated binding) and the evidence JSON boundary flags.
+  Alternatives: treating a receipt as a bearer credential (rejected:
+  SECURITY.md authority boundary), embedding EP-008 policy in the
+  fabric (rejected: node ownership). Consequence: protocol acceptance
+  never implies execution permission. Reversal: none. Security: the
+  SECURITY.md authority boundary.
+- 2026-08-14 - Decision (EP-012 M5): the composed gateway proof is
+  DETERMINISTIC: fixed request/correlation IDs, fixed authenticated
+  binding, no wall-clock timestamps in evidence. The M5 gate re-runs
+  the evidence writer on every verify; identical md5 across runs
+  (f95114f8...) proves the committed-state re-verify will not churn
+  the evidence file. Alternatives: wall-clock timestamps (rejected:
+  churn on every verify, like LF-017's timestamp refresh), random IDs
+  (rejected: non-reproducible). Consequence: evidence is reproducible
+  and git-clean. Reversal: none. Security: none.
 
 # 14. Outcomes & Retrospective
 

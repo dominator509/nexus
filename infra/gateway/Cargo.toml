@@ -1,0 +1,17 @@
+[package]
+name = "nexus-gateway"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-012 M5 composed fabric gateway: wires the REAL MCP Streamable HTTP engine, the REAL A2A gateway, and a hash-bound artifact store into one authenticated composition surface (SPEC-003, EP-012). Composition only - never an authorization oracle; MCP acceptance, A2A task identity, and artifact integrity never grant execution authority."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-auth = { path = "../../crates/nexus-auth", version = "0.1.0" }
+nexus-fabric = { path = "../../crates/nexus-fabric", version = "0.1.0" }
+nexus-mcp = { path = "../../crates/nexus-mcp", version = "0.1.0" }
+nexus-a2a = { path = "../../crates/nexus-a2a", version = "0.1.0" }
+# Real SHA-256 for hash-bound artifact manifests (SPEC-003 behavior 6).
+sha2 = "0.11"

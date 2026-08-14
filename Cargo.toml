@@ -26,6 +26,7 @@ members = [
     "infra/openbao",
     "infra/headscale",
     "infra/pki",
+    "infra/gateway",
 ]
 
 [workspace.package]

@@ -1105,6 +1105,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-gateway"
+version = "0.1.0"
+dependencies = [
+ "nexus-a2a",
+ "nexus-auth",
+ "nexus-domain",
+ "nexus-fabric",
+ "nexus-mcp",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "nexus-headscale"
 version = "0.1.0"
 dependencies = [

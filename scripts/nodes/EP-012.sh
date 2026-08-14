@@ -14,6 +14,9 @@ case "$mode" in
       && cargo test --locked -p nexus-fabric \
       && cargo test --locked -p nexus-mcp \
       && cargo test --locked -p nexus-a2a \
+      && cargo test --locked -p nexus-gateway \
+      && cargo run --locked -p nexus-gateway --example composed_gateway_evidence \
+      && test -s .agent/state/evidence/ep012-m5/ep012-m5-composed-gateway.json \
       && :
       rc=$?
       ;;
