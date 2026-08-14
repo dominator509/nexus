@@ -122,6 +122,19 @@ impl ContextPolicyEngine for DenyPolicy {
     }
 }
 
+#[derive(Clone)]
+struct FailPolicy;
+
+impl ContextPolicyEngine for FailPolicy {
+    fn evaluate(&self, _input: &PolicyInput) -> Result<PolicyDecision, PolicyError> {
+        Err(PolicyError::new(
+            PolicyErrorCode::ExternalProvider,
+            "policy provider unavailable",
+            None,
+        ))
+    }
+}
+
 // ---- helpers ----
 
 fn gateway_with(
@@ -402,4 +415,135 @@ fn ep008_unit_gateway_uses_risk_floor_ordering() {
     assert!(risk_at_least(Risk::R4, Risk::R3));
     assert!(risk_at_least(Risk::R3, Risk::R3));
     assert!(!risk_at_least(Risk::R2, Risk::R3));
+}
+
+// ---- EP-008 M4 forced-failure / ordering tests ---------------------------
+//
+// These prove the directive G ordering and directive L no-override
+// invariants at the engine level with test-double providers (TESTING.md
+// test zone). The REAL OPA provider proofs live in
+// tests/policy/test_ep008_failure_opa.py (real pinned container).
+
+#[test]
+fn ep008_failure_policy_deny_stops_gateway_before_risk_floor() {
+    // Relationship ALLOW + policy DENY -> STOP at POLICY. Risk stays
+    // R0 (the risk floor is never reached); no grant/approval can
+    // manufacture ALLOW.
+    let req = request("digest-abc", "task:complete", 10);
+    let input = input_r2(req, Some(grant(id(2), id(10), "task:complete", 300)), None);
+    let gw = gateway_with(AllowRelationships, DenyPolicy);
+    let out = gw.evaluate_input(&input).unwrap();
+    assert_eq!(
+        out.decision,
+        ActionDecision::Denied {
+            reason: DenialReason::Policy,
+            message: "policy denied: no read permission".into(),
+        }
+    );
+    assert_eq!(out.risk, Risk::R0);
+}
+
+#[test]
+fn ep008_failure_approval_cannot_override_policy_denial() {
+    // Directive L: a VALID approval does not erase an earlier
+    // contextual-policy denial.
+    let req = request("digest-abc", "task:complete", 10);
+    let input = input_r4(
+        req,
+        Some(grant(id(2), id(10), "task:complete", 300)),
+        Some(approval("digest-abc", ApprovalClass::Human, 300)),
+    );
+    let gw = gateway_with(AllowRelationships, DenyPolicy);
+    let out = gw.evaluate_input(&input).unwrap();
+    assert_eq!(
+        out.decision,
+        ActionDecision::Denied {
+            reason: DenialReason::Policy,
+            message: "policy denied: no read permission".into(),
+        }
+    );
+}
+
+#[test]
+fn ep008_failure_capability_grant_cannot_override_policy_denial() {
+    // Directive L: a VALID capability grant does not erase an earlier
+    // contextual-policy denial.
+    let req = request("digest-abc", "task:complete", 10);
+    let input = input_r2(req, Some(grant(id(2), id(10), "task:complete", 300)), None);
+    let gw = gateway_with(AllowRelationships, DenyPolicy);
+    let out = gw.evaluate_input(&input).unwrap();
+    assert_eq!(
+        out.decision,
+        ActionDecision::Denied {
+            reason: DenialReason::Policy,
+            message: "policy denied: no read permission".into(),
+        }
+    );
+}
+
+#[test]
+fn ep008_failure_model_output_cannot_override_policy_denial() {
+    // Directive L: model output (relationship ALLOW + risk floor) does
+    // not override a contextual-policy denial. An R4 input that WOULD
+    // pass approval + capability is still stopped at POLICY.
+    let req = request("digest-abc", "task:complete", 10);
+    let input = input_r4(
+        req,
+        Some(grant(id(2), id(10), "task:complete", 300)),
+        Some(approval("digest-abc", ApprovalClass::StrongHuman, 300)),
+    );
+    let gw = gateway_with(AllowRelationships, DenyPolicy);
+    let out = gw.evaluate_input(&input).unwrap();
+    assert_eq!(
+        out.decision,
+        ActionDecision::Denied {
+            reason: DenialReason::Policy,
+            message: "policy denied: no read permission".into(),
+        }
+    );
+}
+
+#[test]
+fn ep008_failure_policy_provider_error_fails_closed() {
+    // Relationship ALLOW + policy provider ERROR -> the gateway returns
+    // a policy error (never ALLOW). No risk/approval/capability stage
+    // can manufacture ALLOW after the provider failure.
+    let req = request("digest-abc", "task:complete", 10);
+    let input = input_r2(req, Some(grant(id(2), id(10), "task:complete", 300)), None);
+    let gw = gateway_with(AllowRelationships, FailPolicy);
+    let res = gw.evaluate_input(&input);
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    assert_eq!(err.code, PolicyErrorCode::ExternalProvider);
+}
+
+#[test]
+fn ep008_failure_relationship_allow_policy_allow_continues_to_risk_floor() {
+    // Directive G: relationship ALLOW + policy ALLOW -> continue to the
+    // risk floor (R2 for COMMAND) -> grant covers -> ALLOW.
+    let req = request("digest-abc", "task:complete", 10);
+    let input = input_r2(req, Some(grant(id(2), id(10), "task:complete", 300)), None);
+    let gw = gateway_with(AllowRelationships, AllowPolicy);
+    let out = gw.evaluate_input(&input).unwrap();
+    assert!(out.decision.is_allowed());
+    assert_eq!(out.risk, Risk::R2);
+}
+
+#[test]
+fn ep008_failure_ordering_relationship_deny_stops_first() {
+    // Ordering: relationship check runs BEFORE policy. A relationship
+    // deny stops the gateway with RELATIONSHIP even when the policy
+    // would deny too - the FIRST failing stage owns the decision.
+    let req = request("digest-abc", "task:complete", 10);
+    let input = input_r2(req, Some(grant(id(2), id(10), "task:complete", 300)), None);
+    let gw = gateway_with(DenyRelationships, DenyPolicy);
+    let out = gw.evaluate_input(&input).unwrap();
+    assert_eq!(
+        out.decision,
+        ActionDecision::Denied {
+            reason: DenialReason::Relationship,
+            message: "no tuple".into(),
+        }
+    );
+    assert_eq!(out.risk, Risk::R0);
 }

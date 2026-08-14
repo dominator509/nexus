@@ -1,0 +1,20 @@
+[package]
+name = "nexus-opa"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "OPA adapter implementing the nexus-policy ContextPolicyEngine contract on OPA 1.16.2 (SPEC-005, EP-008 M4). OPA evaluates contextual policy only; Nexus owns relationships (OpenFGA), risk, approval, and capability issuance."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../../crates/nexus-identity", version = "0.1.0" }
+nexus-auth = { path = "../../crates/nexus-auth", version = "0.1.0" }
+nexus-policy = { path = "../../crates/nexus-policy", version = "0.1.0" }
+# Minimal real HTTP/1.1 client for the OPA sidecar surface (local
+# container). MIT OR Apache-2.0. json feature only.
+ureq = { version = "2.12.1", default-features = false, features = ["json"] }
+
+[dev-dependencies]
+nexus-action-gateway = { path = "../../crates/nexus-action-gateway", version = "0.1.0" }

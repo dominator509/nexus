@@ -697,6 +697,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-opa"
+version = "0.1.0"
+dependencies = [
+ "nexus-action-gateway",
+ "nexus-auth",
+ "nexus-domain",
+ "nexus-identity",
+ "nexus-policy",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "nexus-openfga"
 version = "0.1.0"
 dependencies = [

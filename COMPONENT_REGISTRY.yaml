@@ -109,13 +109,13 @@ components:
     rationale: "Relationship authorization (EP-008 M3); canonical Nexus-to-OpenFGA mapping and tenant isolation recorded in the EP-008 Decision Log"
   - id: opa
     capability: authz.context
-    implementation: "OPA"
+    implementation: "OPA 1.16.2 (openpolicyagent/opa@sha256:a915d8b59ddb09a9badecd8e061d43cf3111283494c4cf1d38a675bdb4e81a13)"
     license: "Apache-2.0"
     integration_mode: sidecar
     replacement_contract: "Contextual policy engine; OPA owns compiled policy, Nexus audit stores receipts"
     commercial_review: "Apache-2.0; commercial use permitted"
     status: required
-    rationale: "Contextual policy decisions"
+    rationale: "Contextual policy decisions (EP-008 M4); default-deny bundle policies/nexus.rego; ContextPolicyEngine-to-OPA mapping and typed failures recorded in the EP-008 Decision Log"
   - id: openbao
     capability: secrets.central
     implementation: "OpenBao"
