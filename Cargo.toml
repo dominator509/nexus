@@ -28,6 +28,7 @@ members = [
     "infra/headscale",
     "infra/pki",
     "infra/gateway",
+    "infra/bifrost",
 ]
 
 [workspace.package]

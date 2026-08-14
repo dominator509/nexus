@@ -1,0 +1,13 @@
+[package]
+name = "nexus-bifrost"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-013 M2 Bifrost-preferred model gateway adapter: deterministic routing, budgets, retries, rate limits, fallbacks, and usage accounting behind the ModelGateway contract (SPEC-009). Bifrost is preferred but hidden behind ModelGateway; direct providers remain available for replacement and diagnostics. Provider credentials never leave the gateway; models never grant authority."
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-model-gateway = { path = "../../crates/nexus-model-gateway", version = "0.1.0" }

@@ -272,7 +272,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -285,11 +285,15 @@ M1 detail (2026-08-14): built `crates/nexus-model-gateway/` contract crate (mani
 - 2026-08-14: `BudgetDecision` needed `#[serde(rename_all = "SCREAMING_SNAKE_CASE")]` to match the wire form of every other vocabulary enum; a unit test caught `"Denied"` vs `"DENIED"`.
 - 2026-08-14: `provider_mut` on ProviderRegistry requires an explicit `'static` trait-object lifetime bound (`&mut (dyn ModelProvider + 'static)`) to compile against the stored `Box<dyn ModelProvider + Send + Sync + 'static>`.
 - 2026-08-14: Root Cargo.toml workspace member addition is a cross-node file; scope audit flags it. Fence amendment is the established remedy (EP-011 Cargo.toml, EP-012 ExecPlan precedents), recorded here before commit.
+- 2026-08-14: `BifrostError`/`ModelGatewayErrorCode` serialize with declared variant names (`"ExternalProvider"`), not the canonical SCREAMING_SNAKE_CASE string; `as_str()` remains the canonical form. Test asserts both surfaces.
+- 2026-08-14: The budget-denied proof needed an exact allowed-count assertion (66 calls allowed before denial, no Allowed event after), not a blanket "no Allowed ever" check that the pre-denial successes would violate.
+- 2026-08-14: `f64` backoff factor makes `RetryPolicy` non-`Eq` (same class of issue as M1 `cache_hit_ratio`).
 
 # 13. Decision Log
 
 - 2026-08-14 | Decision: Add `crates/nexus-model-gateway/` as the EP-013 contract crate; keep it provider-neutral with real adapters deferred to M2/M3 (`infra/bifrost/`, `config/models/`). Evidence: `EP-013 M1: ok` (31 tests), crate compiles with `--locked`. Alternatives: adapters in the same crate now (rejected: mixes provider specifics into ports, violates SPEC-009 layering). Consequence: M1 is pure contract, later milestones prove real behavior. Reversal: revert M1 commit. Security: no secrets in contracts; credentials stay in gateway config behind typed refs. License: no new dependencies beyond serde/serde_json. Compatibility: crate is additive; no existing surface changed.
 - 2026-08-14 | Decision: Amend `.agent/expected-files/EP-013.txt` to add root `Cargo.toml`, `Cargo.lock`, `docs/vocabulary/README.md`, `references/ADR-018-model-gateway-and-provider-registry-vocabulary.md` because the workspace member registration and same-milestone vocabulary obligations touch cross-node paths. Evidence: `scope audit EP-013: ok` after amendment. Alternatives: reject the workspace member (breaks repo build); duplicate vocabulary docs (breaks same-milestone rule). Consequence: fence now matches reality; node-end full-fence audit still gates `infra/bifrost/` at M2. Reversal: revert fence file. Security: none. License: none. Compatibility: none.
+- 2026-08-14 | Decision: Build `infra/bifrost/` as the `nexus-bifrost` adapter crate implementing the real `ModelGateway` contract: deterministic router (Bifrost preferred when healthy AND certified; deterministic fallback to direct providers; budget exhaustion and certification failures fail closed), retry policy with deterministic backoff, fixed-window rate limiting, fallback chain, and usage accounting after success. I/O sits behind the `ModelProvider`/`ModelBudget` ports; real HTTP transports land in M3 `config/models/`. Evidence: `EP-013 M2: ok` (30 model-gateway unit + 1 dep-dir + 26 bifrost unit = 57 tests), all side gates green. Alternatives: put transports in M2 now (rejected: M3 owns transport/config per milestone manifest); implement router as provider-specific (rejected: violates SPEC-009 provider neutrality). Consequence: gateway behavior is real and deterministic in M2; transport wiring is M3. Reversal: revert M2 commit. Security: credentials referenced by id only, never serialized (proven by `ep013_unit_config_credential_ref_never_value`); telemetry redacted. License: no new dependencies beyond serde/serde_json/nexus-domain/nexus-model-gateway. Compatibility: additive; gateway implements the existing M1 contract unchanged.
 
 # 14. Outcomes & Retrospective
 
