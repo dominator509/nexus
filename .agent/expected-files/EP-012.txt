@@ -8,3 +8,7 @@ crates/nexus-mcp/
 crates/nexus-a2a/
 tests/fabric/
 infra/gateway/
+docs/vocabulary/README.md
+references/ADR-017-api-mcp-a2a-artifacts-and-capsule-vocabulary.md
+Cargo.toml
+Cargo.lock

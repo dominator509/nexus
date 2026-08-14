@@ -1,0 +1,13 @@
+[package]
+name = "nexus-fabric"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-012 contract crate: versioned REST, WebSocket, MCP Streamable HTTP, A2A, agent card registry, artifact exchange, and scoped context capsule ports (SPEC-003, EP-012)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../nexus-identity", version = "0.1.0" }
+nexus-auth = { path = "../nexus-auth", version = "0.1.0" }

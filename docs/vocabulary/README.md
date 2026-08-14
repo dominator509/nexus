@@ -445,3 +445,60 @@ the delivery contract.
 `VALID`, `INVALID`, `REPLAY` (SPEC-022 behavior 2; ADR-016). Result of
 verifying a signed webhook delivery; an invalid or replayed delivery
 never becomes an event.
+
+## ApiTransport
+
+`REST`, `WEBSOCKET`, `MCP_STREAMABLE_HTTP`, `A2A` (SPEC-003; ADR-017).
+The fabric transport families. The MCP family is Streamable HTTP per
+specification 2025-11-25; A2A is protocol 1.0.1.
+
+## McpProtocolVersion
+
+`2025-11-25` (SPEC-003 required behavior 2; ADR-017). The locked MCP
+Streamable HTTP specification target; unknown versions fail closed.
+
+## A2AProtocolVersion
+
+`1.0.1` (SPEC-003 required behavior 3; ADR-017). The locked A2A protocol
+target.
+
+## StreamState
+
+`PENDING`, `RUNNING`, `COMPLETED`, `CANCELLED`, `FAILED` (SPEC-003
+canonical term `Stream`; ADR-017). A2A task stream lifecycle; a
+cancelled or failed stream never becomes a completed task.
+
+## WebSocketState
+
+`CONNECTING`, `OPEN`, `CLOSING`, `CLOSED` (SPEC-003; ADR-017). WebSocket
+session lifecycle states.
+
+## McpContentKind
+
+`TEXT`, `IMAGE`, `AUDIO`, `RESOURCE`, `EMBEDDED` (SPEC-003 required
+behavior 2; ADR-017). MCP structured content kinds.
+
+## A2ATaskState
+
+`SUBMITTED`, `WORKING`, `INPUT_REQUIRED`, `COMPLETED`, `CANCELLED`,
+`FAILED` (SPEC-003 required behavior 3; ADR-017). A2A task lifecycle
+states; A2A is for opaque agent tasks, never ordinary data reads.
+
+## AgentCardState
+
+`REGISTERED`, `SUSPENDED`, `REVOKED` (SPEC-003 canonical term `Agent
+Card`; ADR-017). Agent card lifecycle; a revoked card is removed from
+discovery.
+
+## ArtifactState
+
+`SEALED`, `SUPERSEDED`, `REVOKED` (SPEC-003 canonical term `Artifact
+Manifest`; ADR-017). Artifacts are immutable by hash; a new version
+creates a new manifest and preserves lineage.
+
+## CapsuleState
+
+`ACTIVE`, `EXPIRED`, `REVOKED` (SPEC-003 canonical term `Context
+Capsule`; ADR-017). Context capsules contain only authorized,
+task-relevant, cited data and expire after the task or declared
+retention.

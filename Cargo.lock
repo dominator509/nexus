@@ -1083,6 +1083,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-fabric"
+version = "0.1.0"
+dependencies = [
+ "nexus-auth",
+ "nexus-domain",
+ "nexus-identity",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-headscale"
 version = "0.1.0"
 dependencies = [
