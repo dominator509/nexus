@@ -323,7 +323,53 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
     `uniqueItems` on events/secrets/network_origins (parity with the
     descriptor schema).
   - `EP-010 M4: ok`; security check ok; license gate ok; clippy clean.
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
+  - Composed EP-010 subsystem proof via the single probe binary
+    `crates/nexus-connectors/examples/livefire_probe.rs` (orchestration
+    only) driving the REAL production implementations: real
+    `InMemoryCapabilityRegistry`, real `CapabilityDispatcher`, real
+    `IdempotencyTracker`, real `CapabilityDescriptor`/manifest
+    contracts, real typed `CapabilityError`, real canonical schemas
+    through the real `jsonschema` 0.49.9 validator (draft 2020-12,
+    hermetic local `$ref`). Deterministic providers in the probe are
+    test-zone doubles implementing the real capability port traits.
+  - Exactly the 13 canonical stages, each with observed results:
+    REGISTER_DISCOVER (tenant-scoped, BTreeMap-sorted deterministic
+    order, idempotent re-registration, len stable),
+    UNAVAILABLE_NOT_ADVERTISED, QUERY_DISPATCH,
+    COMMAND_IDEMPOTENT (provider executed once, replay, records=1),
+    WORKFLOW_DISPATCH, HEALTH, CHANGEFEED (event + cursor +
+    tenant binding), CLASS_MISMATCH_DENIED (VALIDATION),
+    CROSS_TENANT_DENIED (NOT_FOUND), PROVIDER_ERROR_FAIL_CLOSED
+    (query + command typed UNAVAILABLE, cached_success=false),
+    IDEMPOTENCY_CONFLICT (CONFLICT), SCHEMA_VALIDATION (zero errors),
+    SCHEMA_REJECTION (unknown class, missing required, duplicate
+    events/secrets/network_origins all rejected).
+  - Authority boundaries proven from observed data: descriptor carries
+    no grant/token/credential/authorization material; TIER3/CERTIFIED
+    manifest validates but tier/certification never enter the
+    descriptor or dispatch; HealthReport is observation only.
+    EP-008 owns authorization, EP-005 owns event transport, EP-006
+    owns durable workflow execution; external connector/provider
+    certification explicitly NOT OWNED BY EP-010.
+  - `tests/capabilities/` package: README + 7 `ep010_livefire_*`
+    pytest tests that build/run the real probe, require exactly the 13
+    stages with no duplicates, independently verify stage detail
+    fields, check authority boundaries, schema versions
+    (current-version parity PASS; future-version migration NOT
+    ASSERTED), and write governed evidence from observed output.
+  - Evidence: `.agent/state/evidence/ep010-m5/ep010-m5-composed-proof.json`
+    + `EP-010-M5-composed-proof.md` (correlation/tenant fixture IDs
+    only; no credentials or tokens).
+  - M5 gate hardened with `scripts/ep010-vacuity.sh` (pytest filter
+    must produce a real non-zero test count) and
+    `scripts/ep010-orphan-audit.sh` (zero containers/networks/volumes,
+    zero /tmp scratch, zero stray probe processes, exact evidence
+    files). Fence amended for both scripts.
+  - `EP-010 M5: ok`; `node verify EP-010: ok`; `scope audit EP-010:
+    ok`; expected-files ok; adapter parity (1 unique PRIME-BLOCK
+    cksum); security/license/reality/format/lint/dependency audit ok;
+    smoke test ok; live-fire ok; orphan audit ok.
 
 # 12. Surprises & Discoveries
 
@@ -443,6 +489,93 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   the exact boundary where they occur. Reversal: none. Security/
   license: none.
 
+- 2026-08-14 - Decision: M5 proves the EP-010 contracts as ONE
+  composed subsystem through a single probe binary
+  (`crates/nexus-connectors/examples/livefire_probe.rs`) rather than
+  separate per-crate proofs. Evidence: EP-010 owns no standalone
+  external provider, so the M5 proof must compose the real registry,
+  dispatcher, idempotency tracker, contract types, and canonical
+  schema authority as one system (directive B: the example is
+  orchestration only). Alternatives: separate M3/M4-style probes
+  (rejected: would not prove composition), a fake external connector
+  (rejected: would claim external certification EP-010 does not own).
+  Consequence: 13 stages with observed results, authority-boundary
+  assertions computed from real data, and explicit certification
+  boundaries (external connector/provider certification: NOT OWNED BY
+  EP-010). Reversal: none. Security/license: none.
+- 2026-08-14 - Decision: probe fixes conformed the PROBE to the locked
+  M1/M2 contracts, never the reverse. Evidence: (1) `locality` was
+  passed as `None` but the canonical descriptor schema requires a
+  non-null `Locality` enum - fixed to `Some(Locality::Any)`; (2) the
+  initial REGISTER_DISCOVER assertion expected insertion order, but
+  the real registry iterates a `BTreeMap<(TenantId, String)>`, so the
+  deterministic order is sorted by capability id - assertion fixed to
+  match observed behavior. No production contract was changed to
+  satisfy the probe. Reversal: none. Security/license: none.
+- 2026-08-14 - Decision: M5 gate uses a vacuity guard
+  (`scripts/ep010-vacuity.sh`) because `pytest -o
+  python_functions="ep010_livefire_*"` exits 0 even when zero tests
+  match ("no tests ran"), which would let a broken filter print green.
+  Evidence: observed "no tests ran in 0.06s" with exit 0 before the
+  function rename; EP-009's gate had the same latent risk. The guard
+  captures the pytest log and requires a real `[1-9]+ passed` line.
+  Consequence: a zero-match filter now fails the M5 gate. Reversal:
+  none. Security/license: none.
+- 2026-08-14 - Decision: `scripts/ep010-orphan-audit.sh` fenced and
+  wired into the M5 gate (EP-009 precedent). EP-010 owns no containers
+  or daemons, so the audit is defensive (zero nexus-ep010-*
+  containers/networks/volumes if docker exists), plus zero /tmp
+  scratch, zero stray `livefire_probe` processes, and exactly the two
+  canonical evidence files under `.agent/state/evidence/ep010-m5/`.
+  Evidence: `scripts/ep009-orphan-audit.sh` is fenced in EP-009's
+  expected-files; the EP-010 fence was amended for both new scripts.
+  Reversal: none. Security/license: none.
+
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## EP-010 M5 closure
+
+- Changed files (within fence): `tests/capabilities/` (README +
+  `test_ep010_live_fire.py`), `crates/nexus-connectors/examples/
+  livefire_probe.rs`, `scripts/nodes/EP-010.sh` (M5 gate),
+  `scripts/ep010-vacuity.sh`, `scripts/ep010-orphan-audit.sh`,
+  `.agent/expected-files/EP-010.txt` (fence amendment),
+  `.agent/state/evidence/ep010-m5/` (governed evidence), ExecPlan
+  progress/decision-log/outcomes. No file outside the machine fence
+  was modified.
+- Exact commands and observed sentinels:
+  - `cargo build --locked -p nexus-connectors --example livefire_probe`
+    - zero errors, zero warnings
+  - `sh scripts/format-check.sh` - `format check: ok`
+  - `cargo clippy --locked -p nexus-connectors --example livefire_probe
+    -- -D warnings` - clean
+  - `uv run --frozen pytest tests/capabilities -q --tb=native -o
+    python_functions="ep010_livefire_*"` - `7 passed`
+  - `sh scripts/nodes/EP-010.sh M5` - `EP-010 M5: ok`
+  - `sh scripts/node-verify.sh EP-010` - `node verify EP-010: ok`
+  - `sh scripts/scope-audit.sh EP-010` - `scope audit EP-010: ok`
+  - `sh scripts/expected-files.sh EP-010` - `expected files EP-010: ok`
+  - adapter parity - 1 unique PRIME-BLOCK cksum across all 8 agent
+    instruction files
+  - `sh scripts/security-check.sh`, `sh scripts/license-gate.sh`,
+    `sh scripts/reality-gate.sh`, `sh scripts/dependency-audit.sh`,
+    `sh scripts/smoke-test.sh`, `sh scripts/live-fire.sh` - all ok
+- Test/proof evidence: 13-stage composed subsystem proof with all
+  stages PASS (see `.agent/state/evidence/ep010-m5/
+  ep010-m5-composed-proof.json`); independent stage-field checks;
+  authority-boundary assertions; schema versions recorded
+  (current-version parity PASS; future-version migration NOT
+  ASSERTED); certification boundaries explicit.
+- Assumptions confirmed: EP-010 owns no external provider; the
+  deterministic core is the real production surface; BTreeMap order is
+  the deterministic discovery order; tier/certification are manifest
+  metadata only.
+- Provider/hardware status: none owned by EP-010. External connector/
+  provider certification: NOT OWNED BY EP-010.
+- Remaining risks: none for EP-010 closure. The graph-level
+  `nexus-cli`-stub live-fire defect for future DONE nodes (LF-001/
+  LF-002/LF-004+) remains out of EP-010 scope.
+- Green tag: `green/EP-010` (created after committed-state
+  verification).

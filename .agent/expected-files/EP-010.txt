@@ -13,3 +13,5 @@ references/ADR-015-capability-and-connector-vocabulary.md
 Cargo.toml
 Cargo.lock
 VERSIONS.lock.yaml
+scripts/ep010-orphan-audit.sh
+scripts/ep010-vacuity.sh
