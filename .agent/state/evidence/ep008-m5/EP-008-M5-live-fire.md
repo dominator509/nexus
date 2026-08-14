@@ -68,12 +68,12 @@
 ### openfga_unavailable
 - decision: `ERROR`
 - never_allow: `True`
-- typed_cause: `OPENFGA: unavailable: cannot reach OpenFGA at http://127.0.0.1:35491/stores/01KZZ30ZKR9W1WJMGT8VF3EF0N/check: Connect error`
+- typed_cause: `OPENFGA: unavailable: cannot reach OpenFGA at http://127.0.0.1:35735/stores/01KZZ420FV5W8P623TEE3NKC08/check: Connect error`
 
 ### opa_unavailable
 - decision: `ERROR`
 - never_allow: `True`
-- typed_cause: `OPA: unavailable: opa unavailable: cannot reach OPA at http://127.0.0.1:35494/v1/data/nexus/policy_version: Connect error`
+- typed_cause: `OPA: unavailable: opa unavailable: cannot reach OPA at http://127.0.0.1:35738/v1/data/nexus/policy_version: Connect error`
 
 ### verification_plan
 - deterministic_receipt: `True`
