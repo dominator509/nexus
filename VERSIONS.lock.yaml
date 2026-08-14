@@ -291,3 +291,9 @@ locks:
   license: MIT OR Apache-2.0
   class: database-client
   policy: pinned
+- component: jsonschema
+  version: 0.49.9
+  license: MIT OR Apache-2.0
+  class: schema-validation
+  policy: pinned
+  note: "dev-dependency of nexus-connectors; real JSON Schema 2020-12 validator used by EP-010 M3 schema-parity integration tests; test-only, never linked into production binaries"

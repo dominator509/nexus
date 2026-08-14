@@ -13,3 +13,4 @@ nexus-identity = { path = "../nexus-identity", version = "0.1.0" }
 nexus-capabilities = { path = "../nexus-capabilities", version = "0.1.0" }
 
 [dev-dependencies]
+jsonschema = "0.49"

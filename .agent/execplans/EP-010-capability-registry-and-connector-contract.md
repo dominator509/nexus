@@ -296,7 +296,19 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   - 18 `ep010_unit_*` tests + 1 dependency-direction test; clippy
     clean; `EP-010 M2: ok`; format check ok; lint ok; gate script
     wired to `nexus-connectors`.
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
+  - Real cross-language schema parity: `nexus-connectors` integration
+    tests serialize the real Rust contract types and validate the
+    JSON against the canonical `schemas/*.schema.json` documents with
+    the real `jsonschema` 0.49.9 validator (dev-dependency; recorded
+    in VERSIONS.lock.yaml). Canonical `$ref` resolution is served
+    from the repo `schemas/` tree, never the network.
+  - 6 `ep010_integration_*` tests: descriptor validates against
+    canonical schema; all five capability classes validate; manifest
+    (with embedded descriptor ref) validates; binding shape;
+    unknown class rejected by schema; missing required field rejected.
+  - `EP-010 M3: ok`; license gate ok; cargo-deny licenses ok; format
+    check ok; lint ok; fence amended (VERSIONS.lock.yaml).
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -366,6 +378,38 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   `nexus-capabilities` for every milestone). Evidence: M2 CHANGE block
   owns `crates/nexus-connectors/`. Consequence: milestone gates
   exercise the milestone's actual artifact. Reversal: none.
+  Security/license: none.
+- 2026-08-14 - Decision: M3 uses the real `jsonschema` crate (0.49.9,
+  MIT OR Apache-2.0) as a dev-dependency of `nexus-connectors` to
+  prove cross-language schema parity: Rust contract types serialize to
+  JSON that validates against the canonical schemas. Evidence: the
+  canonical schemas are the single cross-language contract source
+  (SPEC-003 behavior 1; SPEC-022 behavior 4); a hand-written
+  conformance stub would violate the no-stub rule. Alternatives:
+  Python `jsonschema` under `uv run` (rejected: not in the locked
+  environment), a from-scratch validator (rejected: real validator
+  required). Consequence: any drift between the Rust type surface and
+  the canonical schema fails the M3 gate; version/class enum rejection
+  is proven against the schema authority. Reversal: remove the
+  dev-dependency and record in VERSIONS.lock.yaml. Security/license:
+  MIT OR Apache-2.0, test-only, recorded in VERSIONS.lock.yaml,
+  cargo-deny licenses ok. Compatibility: dev-only, no production
+  binary impact.
+- 2026-08-14 - Decision: canonical `$ref` resolution in integration
+  tests is served from the repository `schemas/` tree via a
+  `LocalSchemasRetriever` rather than the network. Evidence: the
+  manifest schema references `capability-descriptor.schema.json`;
+  resolving against the real network namespace would fail in offline
+  CI and leak nothing useful. Consequence: tests are hermetic and
+  deterministic. Reversal: none. Security/license: none.
+- 2026-08-14 - Decision: the dependency-direction test checks the
+  production edge set (`--edges normal`) so test-only dev-dependencies
+  (the JSON Schema validator) do not violate the infrastructure-free
+  production boundary. Evidence: `jsonschema` legitimately pulls HTTP
+  crates into the dev tree only; the production tree of
+  `nexus-connectors` remains domain + serde only. Consequence: the
+  invariant "no infrastructure in production dependencies" stays
+  enforced while integration tooling is permitted. Reversal: none.
   Security/license: none.
 
 # 14. Outcomes & Retrospective

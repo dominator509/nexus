@@ -12,3 +12,4 @@ docs/vocabulary/README.md
 references/ADR-015-capability-and-connector-vocabulary.md
 Cargo.toml
 Cargo.lock
+VERSIONS.lock.yaml

@@ -3,15 +3,24 @@
 //! The connector core crate may import `nexus-domain`,
 //! `nexus-identity`, `nexus-capabilities`, and serde only. No
 //! infrastructure, database, network, or vendor crate may appear in
-//! its resolved dependency tree. This test fails the build on any
-//! violation.
+//! its *production* dependency tree (`--edges normal` excludes
+//! test-only dev-dependencies, e.g. the JSON Schema validator used by
+//! integration tests). This test fails the build on any violation.
 
 use std::process::Command;
 
 #[test]
 fn ep010_unit_connectors_crate_has_no_infrastructure_dependencies() {
     let output = Command::new("cargo")
-        .args(["tree", "-p", "nexus-connectors", "--prefix", "none"])
+        .args([
+            "tree",
+            "-p",
+            "nexus-connectors",
+            "--edges",
+            "normal",
+            "--prefix",
+            "none",
+        ])
         .env("CARGO_TERM_COLOR", "never")
         .output()
         .expect("cargo tree must run");
