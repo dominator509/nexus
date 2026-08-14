@@ -7,3 +7,7 @@ crates/nexus-model-gateway/
 infra/bifrost/
 config/models/
 tests/models/gateway/
+docs/vocabulary/README.md
+references/ADR-018-model-gateway-and-provider-registry-vocabulary.md
+Cargo.toml
+Cargo.lock

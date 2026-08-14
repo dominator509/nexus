@@ -1175,6 +1175,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-model-gateway"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-identity",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-nats"
 version = "0.1.0"
 dependencies = [

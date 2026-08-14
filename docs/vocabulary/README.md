@@ -502,3 +502,63 @@ creates a new manifest and preserves lineage.
 Capsule`; ADR-017). Context capsules contain only authorized,
 task-relevant, cited data and expire after the task or declared
 retention.
+
+## EffortTier
+
+`DETERMINISTIC`, `NON_THINKING`, `HIGH`, `MAX`, `SPECIALIST` (SPEC-009
+required behavior 2; ADR-018). Ordered effort tiers; MAX is never the
+default for trivial work.
+
+## ProviderKind
+
+`BIFROST`, `DEEPSEEK`, `OPENAI_COMPATIBLE`, `VENICE`, `XAI` (SPEC-009;
+ADR-018). The model adapter families; Bifrost is preferred but
+replaceable behind the ModelGateway contract.
+
+## ProviderHealthState
+
+`HEALTHY`, `DEGRADED`, `UNHEALTHY`, `UNKNOWN` (SPEC-009 canonical term
+`ProviderHealth`; ADR-018). Observed provider health; unknown fails
+closed.
+
+## Escalation
+
+`NONE`, `RETRY`, `FAILOVER`, `HUMAN`, `DISABLE` (SPEC-009 canonical
+term `Escalation`; ADR-018). Deterministic escalation on provider
+failure or policy denial.
+
+## Microbrain
+
+`SHADOW`, `FROZEN`, `CANARY`, `ACTIVE` (SPEC-009 canonical term
+`Microbrain`; ADR-018). The microbrain lifecycle: shadow, frozen and
+adversarial evals, then canary with DeepSeek fallback.
+
+## ModelRouteClass
+
+`DIRECT`, `CACHED`, `FALLBACK`, `ESCALATED` (SPEC-009 canonical term
+`ModelRoute`; ADR-018). The resolved model route decision class.
+
+## ModelGatewayClass
+
+`REFLEX`, `BIFROST`, `DIRECT` (SPEC-009 canonical term `ModelGateway`;
+ADR-018). Gateway implementation class.
+
+## ReflexProviderClass
+
+`DEEPSEEK_V4_FLASH`, `BIFROST`, `CUSTOM` (SPEC-009 canonical term
+`ReflexProvider`; ADR-018). Primary reflex provider class; DeepSeek V4
+Flash is V1 primary.
+
+## CacheHitRatio
+
+Hit prompt tokens divided by total prompt tokens (SPEC-009 canonical
+term `CacheHitRatio`; ADR-018). The cacheable reflex traffic target is
+at least 0.97.
+
+## PromptSegment
+
+`CONSTITUTION`, `SCHEMAS`, `CAPABILITY_TAXONOMY`, `RISK_POLICY`,
+`EXAMPLES`, `TENANT_CONTEXT`, `SESSION_CONTEXT`, `DYNAMIC_REQUEST`
+(SPEC-009 required behavior 4; ADR-018). Ordered from immutable
+constitution through dynamic request; volatile IDs and timestamps stay
+in the tail.

@@ -271,19 +271,25 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
+M1 detail (2026-08-14): built `crates/nexus-model-gateway/` contract crate (manifest, lib, vocabulary, error, registry, budget, gateway modules). All 8 public interfaces from the node contract (ModelProvider, ModelGateway, ProviderRegistry, ProviderHealth, ModelBudget, ModelRequest, ModelResponse, ToolCallEnvelope) defined with typed IDs, authenticated tenant/principal context, canonical errors, correlation, and idempotency. Vocabulary enums parse canonical strings and reject unknowns (SPEC-009). ADR-018 written and docs/vocabulary/README.md updated in the same milestone. Dependency direction enforced by `ep013_unit_dependency_direction` (only serde, serde_json, nexus-domain, nexus-identity, nexus-auth allowed). M1 gate wired in scripts/nodes/EP-013.sh (set -e style, no rc masking). Fence amended to add root Cargo.toml, Cargo.lock, docs/vocabulary/README.md, references/ADR-018 (cross-node workspace member change, precedent chain EP-011/EP-012). Observed sentinels: `EP-013 M1: ok`, `scope audit EP-013: ok`, `security check: ok`, `license gate: ok`, `reality gate: ok`, `format check: ok`, `lint: ok`. Expected-files full-fence red is structural: `infra/bifrost/` is M2-manifest-owned, completes at node end (EP-012 `infra/gateway/` precedent). 31 tests green (30 ep013_unit + 1 dependency direction).
+
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-14: `f64` fields in ModelRoute/ModelRouteDecision (`cache_hit_ratio`) make the structs non-`Eq`; derived `Eq` must be dropped (compile error).
+- 2026-08-14: `BudgetDecision` needed `#[serde(rename_all = "SCREAMING_SNAKE_CASE")]` to match the wire form of every other vocabulary enum; a unit test caught `"Denied"` vs `"DENIED"`.
+- 2026-08-14: `provider_mut` on ProviderRegistry requires an explicit `'static` trait-object lifetime bound (`&mut (dyn ModelProvider + 'static)`) to compile against the stored `Box<dyn ModelProvider + Send + Sync + 'static>`.
+- 2026-08-14: Root Cargo.toml workspace member addition is a cross-node file; scope audit flags it. Fence amendment is the established remedy (EP-011 Cargo.toml, EP-012 ExecPlan precedents), recorded here before commit.
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-14 | Decision: Add `crates/nexus-model-gateway/` as the EP-013 contract crate; keep it provider-neutral with real adapters deferred to M2/M3 (`infra/bifrost/`, `config/models/`). Evidence: `EP-013 M1: ok` (31 tests), crate compiles with `--locked`. Alternatives: adapters in the same crate now (rejected: mixes provider specifics into ports, violates SPEC-009 layering). Consequence: M1 is pure contract, later milestones prove real behavior. Reversal: revert M1 commit. Security: no secrets in contracts; credentials stay in gateway config behind typed refs. License: no new dependencies beyond serde/serde_json. Compatibility: crate is additive; no existing surface changed.
+- 2026-08-14 | Decision: Amend `.agent/expected-files/EP-013.txt` to add root `Cargo.toml`, `Cargo.lock`, `docs/vocabulary/README.md`, `references/ADR-018-model-gateway-and-provider-registry-vocabulary.md` because the workspace member registration and same-milestone vocabulary obligations touch cross-node paths. Evidence: `scope audit EP-013: ok` after amendment. Alternatives: reject the workspace member (breaks repo build); duplicate vocabulary docs (breaks same-milestone rule). Consequence: fence now matches reality; node-end full-fence audit still gates `infra/bifrost/` at M2. Reversal: revert fence file. Security: none. License: none. Compatibility: none.
 
 # 14. Outcomes & Retrospective
 

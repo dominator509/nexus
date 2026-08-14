@@ -19,6 +19,7 @@ members = [
     "crates/nexus-fabric",
     "crates/nexus-mcp",
     "crates/nexus-a2a",
+    "crates/nexus-model-gateway",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",
