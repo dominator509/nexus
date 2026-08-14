@@ -1,11 +1,11 @@
 {
   "correlation_id": "nexus-ep009-m5-trust-chain-20260814",
   "kernel_wireguard_dataplane": "NOT ASSERTED (control-plane + mTLS proof only)",
-  "node_a": "svc-node-a-1470181",
-  "node_b": "svc-node-b-1470181",
-  "serial_a": "pki:06:8e:1a:79:e5:5e:e5:5b:bb:a0:0c:7c:10:f0:61:0a:85:08:81:dd",
-  "serial_a_v2": "pki:4d:bd:74:e8:40:6c:d7:43:84:54:6b:dd:13:d9:de:06:e8:38:b8:42",
-  "serial_b": "pki:1b:ae:1b:23:69:bf:6d:40:58:73:29:2e:c6:36:26:64:99:e7:fb:ae",
+  "node_a": "svc-node-a-1545925",
+  "node_b": "svc-node-b-1545925",
+  "serial_a": "pki:28:d9:2b:03:0a:da:49:f0:cd:84:16:3d:90:49:99:c3:a7:ae:b8:99",
+  "serial_a_v2": "pki:12:63:1e:be:3c:06:a7:76:90:f5:50:f0:ef:d6:4e:ac:29:76:26:9c",
+  "serial_b": "pki:44:6e:e1:ac:2e:6f:df:aa:01:c2:e3:7c:07:00:90:9a:0b:e0:1d:8f",
   "stages": {
     "bootstrap": "PASS",
     "capability": "PASS",
@@ -22,5 +22,5 @@
     "secret_authority": "PASS",
     "state_machine": "PASS"
   },
-  "tenant": "tenant-m5-1470181"
+  "tenant": "tenant-m5-1545925"
 }
