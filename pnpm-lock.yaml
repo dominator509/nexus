@@ -45,6 +45,19 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(supports-color@8.1.1)(terser@5.50.0)
 
+  packages/connector-sdk:
+    dependencies:
+      '@nexus/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      typescript:
+        specifier: ~5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@26.2.0)(supports-color@8.1.1)(terser@5.50.0)
+
   packages/contracts:
     devDependencies:
       '@types/pg':

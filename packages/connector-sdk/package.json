@@ -1,0 +1,23 @@
+{
+  "name": "@nexus/connector-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus TypeScript connector SDK: the SPEC-022 shared contract corpus (discover/query/command/health/changefeed) over the generated canonical bindings, plus typed SPEC-006 errors",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0"
+  }
+}
