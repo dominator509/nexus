@@ -315,7 +315,7 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - 2026-08-14 - M4 side gates surfaced TWO pieces of latent M3 debt that
   the M3 gate chain had never exercised: (1) the reality gate matched
   "not implemented" strings in a `MemoryArtifacts` test double used by
-  `nexus-a2a` (`src/gateway.rs` cfg(test) module and both test files) —
+  `nexus-a2a` (`src/gateway.rs` cfg(test) module and both test files) -
   the M3 gate ran only `cargo test` selectors, so `reality-gate.sh` had
   never been run against the committed M3 tree; (2) the same double's
   `Err(FabricError::not_found(...))` multi-line form was not rustfmt-clean
@@ -334,9 +334,9 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   to the authoritative file.
 - 2026-08-14 - `expected-files.sh EP-012` reports FAIL until M5 because
   the full fence includes `infra/gateway/`, which is owned by the M5
-  manifest (`EP-012-M5.txt`). M1–M4 manifests are satisfied
+  manifest (`EP-012-M5.txt`). M1-M4 manifests are satisfied
   (`node-artifact-check.py` passes each milestone); the full-fence gate
-  is a node-end gate by design, matching the M1–M3 ledger pattern.
+  is a node-end gate by design, matching the M1-M3 ledger pattern.
 
 # 13. Decision Log
 
@@ -420,18 +420,18 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   tests passing; no `ep012_failure` selector matches zero tests (checked
   by name count). Alternatives: fold failures into the unit suites
   (rejected: M4 exists to separate forced-failure evidence), leave a
-  broad `ep012_*` gate selector (rejected: the M3 gate vacuity lesson —
+  broad `ep012_*` gate selector (rejected: the M3 gate vacuity lesson -
   selectors must match real tests). Consequence: fail-closed behavior is
   independently provable per crate. Reversal: none. Security: none.
 - 2026-08-14 - Decision (EP-012 M4): reality-gate hits in test doubles
   are fixed by REWORDING the double's error message to
-  "artifact store unavailable" — behavior (`FabricError::not_found`)
-  unchanged — rather than adding an allow-list entry or weakening
+  "artifact store unavailable" - behavior (`FabricError::not_found`)
+  unchanged - rather than adding an allow-list entry or weakening
   `.agent/reality-patterns`. The matched strings were test-fixture
   terminology describing a deliberately-failing `MemoryArtifacts::publish`
   (CASE 2 classification), not real stubs: the production gateway
   implementation is complete and the double exists only to prove
-  fail-closed artifact paths. Evidence: `sh scripts/reality-gate.sh` →
+  fail-closed artifact paths. Evidence: `sh scripts/reality-gate.sh` ->
   `reality gate: ok` after the reword; all 13 a2a unit + 6 integration +
   9 failure tests still pass. Alternatives: `.agent/reality-allow`
   entry (rejected: masks the pattern), deleting the double (rejected:
@@ -458,7 +458,7 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   modeled (tenant-scoped subscription via `task_for`, `push_url`
   validated as a non-empty string, notification failure never mutates
   task success state) but REAL outbound push transport is not owned by
-  EP-012 — recorded as `push contract behavior: PASS`, `external push
+  EP-012 - recorded as `push contract behavior: PASS`, `external push
   delivery certification: NOT ASSERTED`. Stream durability is
   in-process only: `StreamCursor` replay is deterministic within the
   gateway's lifetime; no cross-process stream persistence is claimed.
