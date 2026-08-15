@@ -818,3 +818,35 @@ context relevance.
 
 `KEEP`, `DELETE`, `LEGAL_HOLD` (SPEC-002 requirement 8; ADR-023,
 EP-016 M3). Disposition decided by a retention sweep.
+
+## AgentTaskState
+
+`REQUESTED`, `ASSIGNED`, `RUNNING`, `PAUSED`, `WAITING_INPUT`,
+`REVIEWING`, `CANCELLED`, `SUCCEEDED`, `FAILED` (SPEC-010; ADR-024,
+EP-017). Agent task lifecycle; terminal outcomes mirror SPEC-006
+ActionLifecycle and are final.
+
+## AgentAdapterKind
+
+`CODEX`, `CLAUDE_CODE`, `HERMES`, `OPENCLAW` (SPEC-010; ADR-024,
+EP-017). Vocabulary-locked harness adapter identity; concrete adapter
+implementations live in the EP-017 M2 crate boundary.
+
+## AgentCapability
+
+`ORCHESTRATE`, `IMPLEMENT`, `REVIEW`, `TEST`, `EXECUTE`, `SUMMARIZE`,
+`ARTIFACT` (SPEC-010 behavior 2; ADR-024, EP-017). Agents request
+capabilities rather than named peers; Nexus selects on quality, cost,
+trust, availability, and historical success.
+
+## DelegationState
+
+`PROPOSED`, `ACCEPTED`, `ACTIVE`, `COMPLETED`, `REVOKED`, `FAILED`
+(SPEC-010 canonical term `Delegation`; ADR-024, EP-017). Delegation is
+recorded by Nexus; direct agent-to-agent authority is forbidden.
+
+## AgentBudgetClass
+
+`TOTAL_TOKENS`, `TOTAL_COST`, `MAX_CONCURRENT`, `MAX_DURATION_SECS`
+(SPEC-010; ADR-024, EP-017). Fixed declared limits Nexus owns and
+enforces fail-closed.

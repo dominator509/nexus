@@ -1,0 +1,14 @@
+[package]
+name = "nexus-agents"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-017 agent orchestrator crate (SPEC-010): AgentRegistry (capability-based selection), AgentAdapter canonical task contract, AgentTask, CapabilityRequest, AgentArtifact, AgentBudget, Delegation, and the AgentTaskState/AgentAdapterKind/AgentCapability/DelegationState/AgentBudgetClass vocabulary. Re-exports the canonical objective/task/artifact/agent vocabulary from nexus-domain and nexus-fabric so callers have a single import surface."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-fabric = { path = "../nexus-fabric", version = "0.1.0" }
+
+[dev-dependencies]

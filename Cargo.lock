@@ -1078,6 +1078,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-agents"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-fabric",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-auth"
 version = "0.1.0"
 dependencies = [
