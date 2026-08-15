@@ -103,10 +103,11 @@ impl RoutePolicy {
         }
 
         // 4. Specialist capability -> specialist agent.
-        if let Some(cap) = &features.capability {
-            if cap.starts_with(&self.config.routes.specialist_prefix) {
+        match &features.capability {
+            Some(cap) if cap.starts_with(&self.config.routes.specialist_prefix) => {
                 return Ok(Route::SpecialistAgent);
             }
+            _ => {}
         }
 
         // 5. SECRET privacy or R3 risk -> frontier, never cheap.

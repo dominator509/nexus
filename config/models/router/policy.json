@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "description": "Canonical Nexus model router policy table (SPEC-009 required test: router policy table; EP-015 M2). The policy engine is the deterministic authority for route selection; learned scorers and the Microbrain are advisory only.",
+  "description": "Canonical Nexus model router policy table (SPEC-009 required test: router policy table; EP-015 M2). The policy engine is the deterministic authority for route selection; learned scorers and the Microbrain are advisory only. The failover section (EP-015 M5; ADR-022; LF-021) bounds provider failover: max provider attempts, per-attempt cost budget consumed, and per-attempt latency budget consumed.",
   "routes": {
     "deterministic_route": "DETERMINISTIC",
     "local_route": "REFLEX",
@@ -20,5 +20,10 @@
     "ambiguity_threshold": 0.6,
     "certification_min_success": 0.8,
     "ambiguity_min_success": 0.5
+  },
+  "failover": {
+    "max_provider_attempts": 2,
+    "attempt_cost": 0.1,
+    "attempt_latency_ms": 100
   }
 }

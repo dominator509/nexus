@@ -39,6 +39,7 @@ pub struct RoutingFeatures {
 }
 
 impl RoutingFeatures {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         domain: impl Into<String>,
         complexity: f64,

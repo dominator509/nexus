@@ -16,17 +16,19 @@ use crate::learned::LearnedRouterAdapter;
 use crate::microbrain::MicrobrainProvider;
 use crate::policy::RoutePolicy;
 use crate::vocabulary::{
-    EscalationReason, MicrobrainState, RouterStrategyClass, RoutingDecisionClass,
+    EscalationReason, FailoverStage, MicrobrainState, ProviderFailureClass, RouterStrategyClass,
+    RoutingDecisionClass,
 };
 use nexus_domain::vocabulary::Route;
 use serde::{Deserialize, Serialize};
 
 /// Redacted audit record for a routing decision (SPEC-006 audit;
-/// EP-015 M3).
+/// EP-015 M3; EP-015 M5 failover chain).
 ///
 /// Carries only routing metadata: ids, class, route, strategy,
-/// escalation reason, and provider id. NEVER carries features, prompts,
-/// credentials, or private content.
+/// escalation reason, provider id, and (for failover-routed requests)
+/// the provider-attempt stage and typed failure class. NEVER carries
+/// features, prompts, credentials, or private content.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RouteAuditRecord {
     pub request_id: String,
@@ -36,6 +38,11 @@ pub struct RouteAuditRecord {
     pub strategy: RouterStrategyClass,
     pub escalation_reason: Option<EscalationReason>,
     pub provider_id: Option<String>,
+    /// Failover chain stage (None for a plain routing decision).
+    pub stage: Option<FailoverStage>,
+    /// Typed provider failure class on PRIMARY_FAILED/FAILED_CLOSED
+    /// records (None otherwise).
+    pub failure_class: Option<ProviderFailureClass>,
 }
 
 /// Audit sink port (EP-015 M3). Implementations persist or forward
@@ -117,6 +124,16 @@ impl DeterministicModelRouter {
         self
     }
 
+    /// Crate-visible policy access for the failover plane (EP-015 M5).
+    pub(crate) fn policy(&self) -> &RoutePolicy {
+        &self.policy
+    }
+
+    /// Crate-visible escalation access for the failover plane (EP-015 M5).
+    pub(crate) fn escalation(&self) -> &EscalationPolicy {
+        &self.escalation
+    }
+
     fn emit_audit(&mut self, decision: &RoutingDecision) {
         if let Some(sink) = self.audit.as_mut() {
             sink.record(&RouteAuditRecord {
@@ -127,6 +144,35 @@ impl DeterministicModelRouter {
                 strategy: decision.strategy,
                 escalation_reason: decision.escalation_reason,
                 provider_id: decision.provider_id.clone(),
+                stage: None,
+                failure_class: None,
+            });
+        }
+    }
+
+    /// Emit a failover-chain audit stage (EP-015 M5; ADR-022; LF-021).
+    /// The record carries the decision's class/route/strategy context
+    /// plus the stage, the attempted provider, and (when the stage is a
+    /// typed failure) the failure class. Redacted: never features,
+    /// prompts, credentials, or endpoint details.
+    pub(crate) fn emit_failover_stage(
+        &mut self,
+        decision: &RoutingDecision,
+        stage: FailoverStage,
+        provider_id: Option<String>,
+        failure_class: Option<ProviderFailureClass>,
+    ) {
+        if let Some(sink) = self.audit.as_mut() {
+            sink.record(&RouteAuditRecord {
+                request_id: decision.request_id.clone(),
+                correlation_id: decision.correlation_id.clone(),
+                class: decision.class,
+                route: decision.route,
+                strategy: decision.strategy,
+                escalation_reason: decision.escalation_reason,
+                provider_id,
+                stage: Some(stage),
+                failure_class,
             });
         }
     }
@@ -227,41 +273,53 @@ impl DeterministicModelRouter {
                 ));
             }
             if let Some(best) = scores.best() {
-                if let Ok(proposed) = best.route.parse::<Route>() {
-                    let final_route = self.policy.override_security(features, proposed)?;
-                    if final_route != proposed {
-                        return Ok(RoutingDecision::new(
-                            request_id,
-                            correlation_id,
-                            RoutingDecisionClass::Routed,
-                            final_route,
-                            RouterStrategyClass::Policy,
-                            None,
-                            Some(EscalationReason::Security),
-                            0.6,
-                            "learned proposal overridden by security policy",
-                        ));
-                    }
+                let Ok(proposed) = best.route.parse::<Route>() else {
+                    // Unparseable learned proposal: policy route stands.
+                    return Ok(RoutingDecision::new(
+                        request_id,
+                        correlation_id,
+                        RoutingDecisionClass::Routed,
+                        policy_route,
+                        RouterStrategyClass::Policy,
+                        None,
+                        None,
+                        0.8,
+                        "deterministic policy routing",
+                    ));
+                };
+                let final_route = self.policy.override_security(features, proposed)?;
+                if final_route != proposed {
                     return Ok(RoutingDecision::new(
                         request_id,
                         correlation_id,
                         RoutingDecisionClass::Routed,
                         final_route,
-                        learned.strategy(),
+                        RouterStrategyClass::Policy,
                         None,
-                        None,
-                        scores.best().map(|s| s.score as f64 / 100.0).unwrap_or(0.5),
-                        "learned routing accepted",
+                        Some(EscalationReason::Security),
+                        0.6,
+                        "learned proposal overridden by security policy",
                     ));
                 }
+                return Ok(RoutingDecision::new(
+                    request_id,
+                    correlation_id,
+                    RoutingDecisionClass::Routed,
+                    final_route,
+                    learned.strategy(),
+                    None,
+                    None,
+                    scores.best().map(|s| s.score as f64 / 100.0).unwrap_or(0.5),
+                    "learned routing accepted",
+                ));
             }
         }
 
         // 5. Microbrain shadow is advisory and only affects decisions
         //    after promotion gates (never in the V1 default). The
         //    disabled default returns None and never changes routing.
-        if let Some(microbrain) = self.microbrain.as_mut() {
-            if microbrain.state() == MicrobrainState::Active {
+        match self.microbrain.as_mut() {
+            Some(microbrain) if microbrain.state() == MicrobrainState::Active => {
                 return Ok(RoutingDecision::new(
                     request_id,
                     correlation_id,
@@ -274,6 +332,7 @@ impl DeterministicModelRouter {
                     "microbrain active; shadow decision recorded",
                 ));
             }
+            _ => {}
         }
 
         // 6. Default: policy route stands.

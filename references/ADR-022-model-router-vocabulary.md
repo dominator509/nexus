@@ -74,3 +74,72 @@ ReflexProvider contract (SPEC-009 behavior 9).
   workspace-pinned; nexus-domain/nexus-model-gateway/nexus-reflex are
   workspace members).
 - Compatibility: additive workspace member; no existing surface changed.
+
+---
+
+## EP-015 M5: Provider failover plane (LF-021)
+
+### Decision
+
+Add a production provider-failover surface to `crates/nexus-model-router`
+so the LF-021 model-provider-failover live-fire proof exercises the real
+router instead of a proof harness that calls providers directly:
+
+- `ProviderFailoverPolicy` (`crates/nexus-model-router/src/failover.rs`),
+  config-driven from the canonical `config/models/router/policy.json`
+  `failover` section (`max_provider_attempts`, `attempt_cost`,
+  `attempt_latency_ms`). Only `UNAVAILABLE` and `TIMEOUT` typed failures
+  are failover-eligible; contract, rate, policy, budget, and security
+  failures never cause provider hopping.
+- `DeterministicModelRouter::route_with_failover`: the deterministic
+  router selects the primary route, the primary `ReflexProvider` is
+  attempted through its real transport, a typed failover-eligible
+  failure selects the configured secondary provider, which is attempted
+  with the remaining budgets (never a fresh cap), the same Nexus
+  trace/correlation id, and the same canonical `NexusControlObject`
+  validation contract. Security policy dominates availability (the
+  secondary tier must pass the same `RoutePolicy::override_security` and
+  `EscalationPolicy` surfaces); every path fails closed with bounded
+  attempts; no provider cycling, no fabricated control object.
+- Vocabulary: `ProviderFailureClass`, `FailoverStage` (spec-006 audit
+  chain). `RouteAuditRecord` gains `stage` and `failure_class` fields
+  (additive; plain routing decisions emit `None`).
+- `scripts/live-fire/LF-021.sh` was rewritten from a stub that delegated
+  to a nonexistent `nexus-cli` proof runner (the workspace has no CLI;
+  EP-006/EP-008 precedent: LF-017.sh/LF-003.sh) to directly run the
+  committed live-fire suite `crates/nexus-model-router/tests/lf021.rs`
+  (8 tests) with a vacuity guard and governed evidence.
+
+### Ownership resolution (LF-021)
+
+EP-015 owns NO CLI. `scripts/proof-runner.sh` delegates to
+`nexusctl`/`nexus-cli proof run`, but no `nexus-cli` crate exists in the
+workspace and `apps/` contains only the control plane. The established
+precedent for stubbed live-fire scripts (LF-003 by EP-008, LF-017 by
+EP-006) is a direct invocation of an EP-015-owned real proof harness.
+No global proof-runner change was made.
+
+### Configured providers
+
+Canonical registry `config/models/providers/providers.json`:
+`deepseek-v4-flash` (DEEPSEEK; ReflexProvider primary) and `bifrost`
+(BIFROST preferred gateway, not implemented). The primary proof uses
+the production `DeepSeekFlashProvider` + `DeepSeekReflexTransport`; the
+secondary is a production `DeepSeekFlashProvider` adapter instance at a
+real isolated HTTP endpoint (instance label `deepseek-v4-flash-secondary`).
+External DeepSeek/secondary vendor certification: NOT ASSERTED.
+
+### Consequences
+
+- Failover is deterministic, config-driven, bounded, and auditable; a
+  failed primary attempt consumes the configured per-attempt cost and
+  latency budgets.
+- Security policy outranks availability; a prohibited secondary is never
+  used.
+- Budgets carry forward; failover never resets the request caps.
+- Reversal: revert the EP-015 M5 commit.
+- Security: audit records remain redacted (metadata only); no
+  credential, prompt, or feature domain is emitted.
+- License: no new dependency classes (workspace members only).
+- Compatibility: additive module + fields; existing routing and audit
+  behavior unchanged (decision records emit `stage: None`).

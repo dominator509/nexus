@@ -17,6 +17,7 @@ pub struct RouterPolicyConfig {
     pub schema_version: String,
     pub routes: RouterRouteTable,
     pub thresholds: RouterThresholds,
+    pub failover: RouterFailoverConfig,
 }
 
 /// Canonical route assignments in the policy table.
@@ -45,9 +46,24 @@ pub struct RouterThresholds {
     pub ambiguity_min_success: f64,
 }
 
-impl RouterPolicyConfig {
+/// Canonical provider failover bounds in the policy table (EP-015 M5;
+/// ADR-022; LF-021). The failed primary attempt consumes the configured
+/// per-attempt cost and latency budgets; the secondary attempt receives
+/// the remaining budgets (never a fresh cap) and the total provider
+/// attempts stay within `max_provider_attempts`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RouterFailoverConfig {
+    /// Maximum provider attempts per request (primary + failover).
+    pub max_provider_attempts: usize,
+    /// Cost-budget units (0..=1) consumed by each provider attempt.
+    pub attempt_cost: f64,
+    /// Latency-budget milliseconds consumed by each provider attempt.
+    pub attempt_latency_ms: u64,
+}
+
+impl Default for RouterPolicyConfig {
     /// The canonical defaults (code side). Must equal policy.json.
-    pub fn default() -> Self {
+    fn default() -> Self {
         Self {
             schema_version: "1.0.0".into(),
             routes: RouterRouteTable {
@@ -70,9 +86,16 @@ impl RouterPolicyConfig {
                 certification_min_success: 0.8,
                 ambiguity_min_success: 0.5,
             },
+            failover: RouterFailoverConfig {
+                max_provider_attempts: 2,
+                attempt_cost: 0.1,
+                attempt_latency_ms: 100,
+            },
         }
     }
+}
 
+impl RouterPolicyConfig {
     /// Load the canonical policy table from the repository artifact.
     pub fn from_canonical_file() -> Result<Self, RouterError> {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -146,13 +169,25 @@ impl RouterPolicyConfig {
                 ));
             }
         }
+        if self.failover.max_provider_attempts == 0 {
+            return Err(RouterError::validation(
+                "router policy failover max_provider_attempts must be >= 1",
+                Some("router-policy".into()),
+            ));
+        }
+        if !(0.0..=1.0).contains(&self.failover.attempt_cost) {
+            return Err(RouterError::validation(
+                "router policy failover attempt_cost out of range",
+                Some("router-policy".into()),
+            ));
+        }
+        if self.failover.attempt_latency_ms == 0 {
+            return Err(RouterError::validation(
+                "router policy failover attempt_latency_ms must be >= 1",
+                Some("router-policy".into()),
+            ));
+        }
         Ok(())
-    }
-}
-
-impl Default for RouterPolicyConfig {
-    fn default() -> Self {
-        Self::default()
     }
 }
 
@@ -180,14 +215,14 @@ mod tests {
 
     #[test]
     fn ep015_unit_canonical_policy_config_rejects_unknown_route() {
-        let bad = r#"{"schema_version":"1.0.0","routes":{"deterministic_route":"AUTOPILOT","local_route":"REFLEX","default_route":"REFLEX","r3_route":"FRONTIER_API","secret_route":"FRONTIER_API","r4_route":"REJECT","specialist_prefix":"specialist."},"thresholds":{"cheap_max_risk":"R1","cheap_max_complexity":0.4,"cheap_max_cost":0.5,"frontier_min_complexity":0.7,"frontier_min_availability":0.95,"availability_floor":0.5,"ambiguity_threshold":0.6,"certification_min_success":0.8,"ambiguity_min_success":0.5}}"#;
+        let bad = r#"{"schema_version":"1.0.0","routes":{"deterministic_route":"AUTOPILOT","local_route":"REFLEX","default_route":"REFLEX","r3_route":"FRONTIER_API","secret_route":"FRONTIER_API","r4_route":"REJECT","specialist_prefix":"specialist."},"thresholds":{"cheap_max_risk":"R1","cheap_max_complexity":0.4,"cheap_max_cost":0.5,"frontier_min_complexity":0.7,"frontier_min_availability":0.95,"availability_floor":0.5,"ambiguity_threshold":0.6,"certification_min_success":0.8,"ambiguity_min_success":0.5,"failover":{"max_provider_attempts":2,"attempt_cost":0.1,"attempt_latency_ms":100}}"#;
         let err = RouterPolicyConfig::from_json(bad).unwrap_err();
         assert_eq!(err.code, RouterErrorCode::Validation);
     }
 
     #[test]
     fn ep015_unit_canonical_policy_config_rejects_out_of_range_threshold() {
-        let bad = r#"{"schema_version":"1.0.0","routes":{"deterministic_route":"DETERMINISTIC","local_route":"REFLEX","default_route":"REFLEX","r3_route":"FRONTIER_API","secret_route":"FRONTIER_API","r4_route":"REJECT","specialist_prefix":"specialist."},"thresholds":{"cheap_max_risk":"R1","cheap_max_complexity":1.7,"cheap_max_cost":0.5,"frontier_min_complexity":0.7,"frontier_min_availability":0.95,"availability_floor":0.5,"ambiguity_threshold":0.6,"certification_min_success":0.8,"ambiguity_min_success":0.5}}"#;
+        let bad = r#"{"schema_version":"1.0.0","routes":{"deterministic_route":"DETERMINISTIC","local_route":"REFLEX","default_route":"REFLEX","r3_route":"FRONTIER_API","secret_route":"FRONTIER_API","r4_route":"REJECT","specialist_prefix":"specialist."},"thresholds":{"cheap_max_risk":"R1","cheap_max_complexity":1.7,"cheap_max_cost":0.5,"frontier_min_complexity":0.7,"frontier_min_availability":0.95,"availability_floor":0.5,"ambiguity_threshold":0.6,"certification_min_success":0.8,"ambiguity_min_success":0.5,"failover":{"max_provider_attempts":2,"attempt_cost":0.1,"attempt_latency_ms":100}}"#;
         assert!(RouterPolicyConfig::from_json(bad).is_err());
     }
 
@@ -197,5 +232,31 @@ mod tests {
         let v = serde_json::to_value(&config).unwrap();
         let back: RouterPolicyConfig = serde_json::from_value(v).unwrap();
         assert_eq!(back, config);
+    }
+
+    #[test]
+    fn ep015_unit_failover_config_defaults_match_artifact() {
+        // EP-015 M5: the failover bounds come from the canonical policy
+        // artifact (config-as-source-of-truth), exactly like the route
+        // and threshold tables.
+        let file = RouterPolicyConfig::from_canonical_file().unwrap();
+        assert_eq!(file.failover, RouterPolicyConfig::default().failover);
+        assert_eq!(file.failover.max_provider_attempts, 2);
+        assert!((file.failover.attempt_cost - 0.1).abs() < 1e-9);
+        assert_eq!(file.failover.attempt_latency_ms, 100);
+    }
+
+    #[test]
+    fn ep015_unit_failover_config_rejects_zero_attempts() {
+        let mut config = RouterPolicyConfig::default();
+        config.failover.max_provider_attempts = 0;
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn ep015_unit_failover_config_rejects_out_of_range_cost() {
+        let mut config = RouterPolicyConfig::default();
+        config.failover.attempt_cost = 1.5;
+        assert!(config.validate().is_err());
     }
 }

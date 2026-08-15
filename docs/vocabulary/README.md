@@ -683,6 +683,24 @@ pipeline in later nodes.
 ADR-022, EP-015). A shadow comparison outcome. A failed shadow is never
 trusted.
 
+## ProviderFailureClass
+
+`UNAVAILABLE`, `TIMEOUT`, `RATE_LIMITED`, `CONTRACT`, `EXTERNAL`,
+`REJECTED`, `BUDGET_EXHAUSTED`, `SECURITY_DENIED` (SPEC-006; ADR-022,
+EP-015 M5, LF-021). Typed classification of a provider attempt failure.
+Only `UNAVAILABLE` and `TIMEOUT` are failover-eligible; contract, rate,
+policy, budget, and security failures never cause provider hopping.
+
+## FailoverStage
+
+`PRIMARY_SELECTED`, `PRIMARY_ATTEMPTED`, `PRIMARY_FAILED`,
+`FAILOVER_ELIGIBLE`, `SECONDARY_SELECTED`, `SECONDARY_ATTEMPTED`,
+`SECONDARY_VALIDATED`, `ROUTE_COMPLETED`, `FAILED_CLOSED` (SPEC-006
+audit; ADR-022, EP-015 M5, LF-021). Ordered provider-attempt audit
+stages on `RouteAuditRecord` for a failover-routed request; the routing
+decision record itself is the `route_requested`/`primary_selected`
+event.
+
 ## NexusModelRouter
 
 The provider-neutral model router port (SPEC-009; ADR-022, EP-015).

@@ -22,11 +22,19 @@
 //! they never mint routes, grant scopes, or override security policy.
 
 #![forbid(unsafe_code)]
+// RouterError deliberately carries the full redacted SPEC-006 context
+// set (code, message, correlation/actor/tenant/resource) by value for
+// deterministic audit and serialization. The result_large_err heuristic
+// (~128-byte Err) would demand boxing every error path in the hot
+// routing loop for a bounded, deterministic type; the lint is
+// documented and allowed rather than silently worked around.
+#![allow(clippy::result_large_err)]
 
 pub mod config;
 pub mod decision;
 pub mod error;
 pub mod escalation;
+pub mod failover;
 pub mod features;
 pub mod learned;
 pub mod microbrain;
@@ -38,14 +46,15 @@ pub use config::RouterPolicyConfig;
 pub use decision::RoutingDecision;
 pub use error::{RouterError, RouterErrorCode};
 pub use escalation::{EscalationOutcome, EscalationPolicy};
+pub use failover::{FailoverFailure, FailoverOutcome, ProviderFailoverPolicy};
 pub use features::RoutingFeatures;
 pub use learned::{LearnedRouterAdapter, LearnedScores};
 pub use microbrain::{MicrobrainProvider, ShadowDecision};
 pub use policy::RoutePolicy;
 pub use router::{AuditSink, DeterministicModelRouter, NexusModelRouter, RouteAuditRecord};
 pub use vocabulary::{
-    EscalationReason, MicrobrainState, RouterStrategyClass, RouterVocabularyError,
-    RoutingDecisionClass, ShadowDecisionClass,
+    EscalationReason, FailoverStage, MicrobrainState, ProviderFailureClass, RouterStrategyClass,
+    RouterVocabularyError, RoutingDecisionClass, ShadowDecisionClass,
 };
 
 // Re-export the canonical routing vocabulary from lower layers so router

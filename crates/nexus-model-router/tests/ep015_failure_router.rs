@@ -126,19 +126,6 @@ fn handle_connection(mut stream: TcpStream, response: SandboxResponse) -> std::i
     Ok(())
 }
 
-fn ok_response(content: &str) -> SandboxResponse {
-    let body = serde_json::json!({
-        "id": "chatcmpl-1",
-        "model": "deepseek-v4-flash",
-        "usage": {"prompt_tokens": 100, "completion_tokens": 20, "prompt_cache_hit_tokens": 98},
-        "choices": [{"message": {"role": "assistant", "content": content}}],
-    });
-    SandboxResponse {
-        status: 200,
-        body: body.to_string(),
-    }
-}
-
 fn malformed_response() -> SandboxResponse {
     SandboxResponse {
         status: 200,

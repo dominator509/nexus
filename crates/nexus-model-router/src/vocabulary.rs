@@ -223,6 +223,113 @@ impl std::str::FromStr for ShadowDecisionClass {
     }
 }
 
+/// Provider failure class (EP-015 M5 failover plane; ADR-022; LF-021).
+///
+/// Typed classification of a provider attempt failure. Only
+/// `Unavailable` and `Timeout` are failover-eligible; contract, rate,
+/// policy, budget, and security failures never cause provider hopping.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ProviderFailureClass {
+    Unavailable,
+    Timeout,
+    RateLimited,
+    Contract,
+    External,
+    Rejected,
+    BudgetExhausted,
+    SecurityDenied,
+}
+
+impl ProviderFailureClass {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Unavailable => "UNAVAILABLE",
+            Self::Timeout => "TIMEOUT",
+            Self::RateLimited => "RATE_LIMITED",
+            Self::Contract => "CONTRACT",
+            Self::External => "EXTERNAL",
+            Self::Rejected => "REJECTED",
+            Self::BudgetExhausted => "BUDGET_EXHAUSTED",
+            Self::SecurityDenied => "SECURITY_DENIED",
+        }
+    }
+}
+
+impl std::str::FromStr for ProviderFailureClass {
+    type Err = RouterVocabularyError;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "UNAVAILABLE" => Ok(Self::Unavailable),
+            "TIMEOUT" => Ok(Self::Timeout),
+            "RATE_LIMITED" => Ok(Self::RateLimited),
+            "CONTRACT" => Ok(Self::Contract),
+            "EXTERNAL" => Ok(Self::External),
+            "REJECTED" => Ok(Self::Rejected),
+            "BUDGET_EXHAUSTED" => Ok(Self::BudgetExhausted),
+            "SECURITY_DENIED" => Ok(Self::SecurityDenied),
+            other => Err(RouterVocabularyError::unknown(
+                "ProviderFailureClass",
+                other,
+            )),
+        }
+    }
+}
+
+/// Failover audit stage (EP-015 M5; ADR-022; LF-021).
+///
+/// Ordered provider-attempt stages recorded on `RouteAuditRecord` for a
+/// failover-routed request. The routing decision record itself is the
+/// `route_requested`/`primary_selected` event (class + route tier); the
+/// stages below track the provider attempts under that decision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FailoverStage {
+    PrimarySelected,
+    PrimaryAttempted,
+    PrimaryFailed,
+    FailoverEligible,
+    SecondarySelected,
+    SecondaryAttempted,
+    SecondaryValidated,
+    RouteCompleted,
+    FailedClosed,
+}
+
+impl FailoverStage {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::PrimarySelected => "PRIMARY_SELECTED",
+            Self::PrimaryAttempted => "PRIMARY_ATTEMPTED",
+            Self::PrimaryFailed => "PRIMARY_FAILED",
+            Self::FailoverEligible => "FAILOVER_ELIGIBLE",
+            Self::SecondarySelected => "SECONDARY_SELECTED",
+            Self::SecondaryAttempted => "SECONDARY_ATTEMPTED",
+            Self::SecondaryValidated => "SECONDARY_VALIDATED",
+            Self::RouteCompleted => "ROUTE_COMPLETED",
+            Self::FailedClosed => "FAILED_CLOSED",
+        }
+    }
+}
+
+impl std::str::FromStr for FailoverStage {
+    type Err = RouterVocabularyError;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "PRIMARY_SELECTED" => Ok(Self::PrimarySelected),
+            "PRIMARY_ATTEMPTED" => Ok(Self::PrimaryAttempted),
+            "PRIMARY_FAILED" => Ok(Self::PrimaryFailed),
+            "FAILOVER_ELIGIBLE" => Ok(Self::FailoverEligible),
+            "SECONDARY_SELECTED" => Ok(Self::SecondarySelected),
+            "SECONDARY_ATTEMPTED" => Ok(Self::SecondaryAttempted),
+            "SECONDARY_VALIDATED" => Ok(Self::SecondaryValidated),
+            "ROUTE_COMPLETED" => Ok(Self::RouteCompleted),
+            "FAILED_CLOSED" => Ok(Self::FailedClosed),
+            other => Err(RouterVocabularyError::unknown("FailoverStage", other)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -309,5 +416,49 @@ mod tests {
             );
         }
         assert!("MAYBE".parse::<ShadowDecisionClass>().is_err());
+    }
+
+    #[test]
+    fn ep015_unit_provider_failure_class_round_trip() {
+        for value in [
+            ProviderFailureClass::Unavailable,
+            ProviderFailureClass::Timeout,
+            ProviderFailureClass::RateLimited,
+            ProviderFailureClass::Contract,
+            ProviderFailureClass::External,
+            ProviderFailureClass::Rejected,
+            ProviderFailureClass::BudgetExhausted,
+            ProviderFailureClass::SecurityDenied,
+        ] {
+            assert_eq!(
+                value.as_str().parse::<ProviderFailureClass>().unwrap(),
+                value
+            );
+            let v = serde_json::to_value(value).unwrap();
+            let back: ProviderFailureClass = serde_json::from_value(v).unwrap();
+            assert_eq!(back, value);
+        }
+        assert!("ON_FIRE".parse::<ProviderFailureClass>().is_err());
+    }
+
+    #[test]
+    fn ep015_unit_failover_stage_round_trip() {
+        for value in [
+            FailoverStage::PrimarySelected,
+            FailoverStage::PrimaryAttempted,
+            FailoverStage::PrimaryFailed,
+            FailoverStage::FailoverEligible,
+            FailoverStage::SecondarySelected,
+            FailoverStage::SecondaryAttempted,
+            FailoverStage::SecondaryValidated,
+            FailoverStage::RouteCompleted,
+            FailoverStage::FailedClosed,
+        ] {
+            assert_eq!(value.as_str().parse::<FailoverStage>().unwrap(), value);
+            let v = serde_json::to_value(value).unwrap();
+            let back: FailoverStage = serde_json::from_value(v).unwrap();
+            assert_eq!(back, value);
+        }
+        assert!("NOPE".parse::<FailoverStage>().is_err());
     }
 }

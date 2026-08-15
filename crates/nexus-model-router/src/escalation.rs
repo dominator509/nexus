@@ -39,6 +39,12 @@ pub struct EscalationPolicy {
     pub ambiguity_min_success: f64,
 }
 
+impl Default for EscalationPolicy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EscalationPolicy {
     pub fn new() -> Self {
         Self::from_config(&RouterPolicyConfig::default())
@@ -81,10 +87,11 @@ impl EscalationPolicy {
         }
 
         // Budget cap: a cost-heavy route over the cap escalates.
-        if let Some(budget) = features.budget {
-            if features.cost * 1000.0 > budget as f64 {
+        match features.budget {
+            Some(budget) if features.cost * 1000.0 > budget as f64 => {
                 return EscalationOutcome::Escalate(EscalationReason::Budget);
             }
+            _ => {}
         }
 
         // Certification requirement with no certified provider is a
