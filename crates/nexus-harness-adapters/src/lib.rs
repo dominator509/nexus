@@ -24,6 +24,7 @@
 
 pub mod adapter;
 pub mod orchestrator;
+pub mod process;
 pub mod registry;
 
 pub use adapter::{
@@ -31,4 +32,5 @@ pub use adapter::{
     HarnessOutput, ScriptedRunner, capabilities_for,
 };
 pub use orchestrator::TaskOrchestrator;
+pub use process::ProcessRunner;
 pub use registry::{AgentSelector, CardSignals, DeterministicAgentRegistry};

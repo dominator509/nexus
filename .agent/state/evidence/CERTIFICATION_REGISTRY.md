@@ -89,6 +89,18 @@ certification_owner: EP-043 (production readiness and ship); real Temporal execu
 blocking_for_ship: false
 evidence_reference: packages/workflows/src/agents/; EP-017 M3 gate (10 ep017_integration tests via real vitest + vacuity guard + tsc --noEmit clean); TypeScript workflow/state logic executed under real Vitest, NOT against a real Temporal server (no fake Temporal client; real engine integration deferred per EP-006 ownership)
 
+## Component: agent-harness-adapters
+component_id: agent-harness-adapters
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (real process boundary: production ProcessRunner spawns real subprocesses; deterministic registry + orchestrator + CliHarnessAdapter proven by 20 ep017_unit + 35 ep017_failure + 5 lf016 tests)
+provider: codex, claude-code, hermes, openclaw (external coding-agent CLIs)
+provider_certification: DEFERRED (real Codex/Claude Code/Hermes/OpenClaw CLIs NOT installed in this environment; no provider credential present; LF-016 proves the real process boundary through a CONTROLLED_TEST_FIXTURE only)
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship; external coding-agent provider certification owner to be confirmed at ship-gate review per directive section 6)
+blocking_for_ship: false
+evidence_reference: crates/nexus-harness-adapters; tests/agents/fixtures/coding-agent-fixture.sh (CONTROLLED_TEST_FIXTURE); LF-016-ep017-m5.md (real subprocess spawn, exit-status mapping, cancellation, fail-closed nonzero exit); EP-017 M2/M4 gates
+
 ## Component: control-plane-runtime
 component_id: control-plane-runtime
 implementation_status: IMPLEMENTED

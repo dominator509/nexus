@@ -42,6 +42,22 @@ pub enum HarnessCommandKind {
     Review,
 }
 
+impl HarnessCommandKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Start => "START",
+            Self::Message => "MESSAGE",
+            Self::Pause => "PAUSE",
+            Self::Cancel => "CANCEL",
+            Self::Resume => "RESUME",
+            Self::InputRequest => "INPUT_REQUEST",
+            Self::Artifacts => "ARTIFACTS",
+            Self::Tests => "TESTS",
+            Self::Review => "REVIEW",
+        }
+    }
+}
+
 /// Normalized transport exit status (SPEC-006 mapping).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
