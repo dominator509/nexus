@@ -328,4 +328,56 @@ mod tests {
         assert_eq!(v["route"], "CHEAP_API");
         assert_eq!(v["class"], "ROUTED");
     }
+
+    #[test]
+    fn ep015_unit_router_is_idempotent() {
+        // Identical features -> byte-identical decision (deterministic
+        // routing, no clock/random/state dependence).
+        let mut router = DeterministicModelRouter::new();
+        let a = router.route("r-1", "c-1", &features()).unwrap();
+        let b = router.route("r-1", "c-1", &features()).unwrap();
+        assert_eq!(
+            serde_json::to_vec(&a).unwrap(),
+            serde_json::to_vec(&b).unwrap()
+        );
+    }
+
+    #[test]
+    fn ep015_unit_routing_decision_has_no_authority() {
+        // A routing decision is advisory control-routing input: it never
+        // carries authorization, scopes, grants, or approval fields.
+        let mut router = DeterministicModelRouter::new();
+        let d = router.route("r-1", "c-1", &features()).unwrap();
+        let s = serde_json::to_string(&d).unwrap();
+        assert!(!s.contains("authorization"));
+        assert!(!s.contains("grant"));
+        assert!(!s.contains("scope"));
+        assert!(!s.contains("ALLOW"));
+    }
+
+    #[test]
+    fn ep015_unit_policy_from_canonical_config_matches_defaults() {
+        // Config-as-source-of-truth: a policy built from the real
+        // config/models/router/policy.json artifact selects exactly the
+        // same routes as the code defaults.
+        let config = crate::config::RouterPolicyConfig::from_canonical_file().unwrap();
+        let file_policy = RoutePolicy::from_config(&config);
+        let default_policy = RoutePolicy::new();
+        let mut probe = features();
+        assert_eq!(
+            file_policy.select(&probe).unwrap(),
+            default_policy.select(&probe).unwrap()
+        );
+        probe.risk = Risk::R4;
+        assert_eq!(
+            file_policy.select(&probe).unwrap(),
+            default_policy.select(&probe).unwrap()
+        );
+        probe = features();
+        probe.privacy = Privacy::Secret;
+        assert_eq!(
+            file_policy.select(&probe).unwrap(),
+            default_policy.select(&probe).unwrap()
+        );
+    }
 }

@@ -5,6 +5,7 @@
 //! features and the selected route. It never fabricates a route and it
 //! fails closed (REJECT/CLARIFY rather than an unsafe route).
 
+use crate::config::RouterPolicyConfig;
 use crate::features::RoutingFeatures;
 use crate::policy::risk_rank;
 use crate::vocabulary::EscalationReason;
@@ -22,29 +23,39 @@ pub enum EscalationOutcome {
 }
 
 /// Deterministic escalation policy.
+///
+/// Thresholds come from the canonical `RouterPolicyConfig`
+/// (`config/models/router/policy.json`; `new()` uses the code defaults
+/// that M2 proves equal the artifact).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EscalationPolicy {
     /// Ambiguity threshold above which CLARIFY escalation fires (0..=1).
     pub ambiguity_threshold: f64,
-}
-
-impl Default for EscalationPolicy {
-    fn default() -> Self {
-        Self {
-            ambiguity_threshold: 0.6,
-        }
-    }
+    /// Certification floor: below this historical success, a certified
+    /// requirement escalates (0..=1).
+    pub certification_min_success: f64,
+    /// Ambiguity floor: below this historical success, escalation fires
+    /// (0..=1).
+    pub ambiguity_min_success: f64,
 }
 
 impl EscalationPolicy {
     pub fn new() -> Self {
-        Self::default()
+        Self::from_config(&RouterPolicyConfig::default())
+    }
+
+    pub fn from_config(config: &RouterPolicyConfig) -> Self {
+        Self {
+            ambiguity_threshold: config.thresholds.ambiguity_threshold,
+            certification_min_success: config.thresholds.certification_min_success,
+            ambiguity_min_success: config.thresholds.ambiguity_min_success,
+        }
     }
 
     pub fn with_ambiguity_threshold(threshold: f64) -> Self {
-        Self {
-            ambiguity_threshold: threshold,
-        }
+        let mut policy = Self::new();
+        policy.ambiguity_threshold = threshold;
+        policy
     }
 
     /// Deterministic escalation decision for the selected route.
@@ -78,13 +89,15 @@ impl EscalationPolicy {
 
         // Certification requirement with no certified provider is a
         // hard unavailable/certification escalation.
-        if features.requires_certified && features.historical_success < 0.8 {
+        if features.requires_certified
+            && features.historical_success < self.certification_min_success
+        {
             return EscalationOutcome::Escalate(EscalationReason::Certification);
         }
 
         // Low historical success on the selected route escalates
         // (ambiguity/verification signal).
-        if features.historical_success < 0.5 {
+        if features.historical_success < self.ambiguity_min_success {
             return EscalationOutcome::Escalate(EscalationReason::Ambiguity);
         }
 

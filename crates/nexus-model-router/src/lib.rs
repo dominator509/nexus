@@ -23,6 +23,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod config;
 pub mod decision;
 pub mod error;
 pub mod escalation;
@@ -33,6 +34,7 @@ pub mod policy;
 pub mod router;
 pub mod vocabulary;
 
+pub use config::RouterPolicyConfig;
 pub use decision::RoutingDecision;
 pub use error::{RouterError, RouterErrorCode};
 pub use escalation::{EscalationOutcome, EscalationPolicy};

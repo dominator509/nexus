@@ -6,13 +6,20 @@
 //! acceptance obligation 3). The policy is pure: no clock, no random,
 //! no network.
 
+use crate::config::RouterPolicyConfig;
 use crate::error::RouterError;
 use crate::features::RoutingFeatures;
 use nexus_domain::vocabulary::{Privacy, Risk, Route};
 
 /// Deterministic route selection policy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct RoutePolicy;
+///
+/// The policy table comes from `RouterPolicyConfig` (canonical artifact
+/// `config/models/router/policy.json`; `new()` uses the code defaults
+/// that M2 proves equal the artifact).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RoutePolicy {
+    config: RouterPolicyConfig,
+}
 
 /// Risk rank helper (nexus-domain Risk lacks PartialOrd; EP-008
 /// precedent). R0=0 .. R4=4.
@@ -28,7 +35,17 @@ pub fn risk_rank(risk: Risk) -> u8 {
 
 impl RoutePolicy {
     pub fn new() -> Self {
-        Self
+        Self::from_config(&RouterPolicyConfig::default())
+    }
+
+    pub fn from_config(config: &RouterPolicyConfig) -> Self {
+        Self {
+            config: config.clone(),
+        }
+    }
+
+    pub fn config(&self) -> &RouterPolicyConfig {
+        &self.config
     }
 
     /// Select the canonical route for the features.
@@ -49,49 +66,89 @@ impl RoutePolicy {
 
         // 1. R4 never routes to a model.
         if features.risk == Risk::R4 {
-            return Ok(Route::Reject);
+            return self.config.routes.r4_route.parse().map_err(|_| {
+                RouterError::validation(
+                    "policy table r4_route invalid",
+                    Some("router-policy".into()),
+                )
+            });
         }
 
         // 2. Local-only work stays in the local plane.
         if features.local_only {
             if features.complexity == 0.0 {
-                return Ok(Route::Deterministic);
+                return self.config.routes.deterministic_route.parse().map_err(|_| {
+                    RouterError::validation(
+                        "policy table deterministic_route invalid",
+                        Some("router-policy".into()),
+                    )
+                });
             }
-            return Ok(Route::Reflex);
+            return self.config.routes.local_route.parse().map_err(|_| {
+                RouterError::validation(
+                    "policy table local_route invalid",
+                    Some("router-policy".into()),
+                )
+            });
         }
 
         // 3. Deterministic tasks bypass the model entirely.
         if features.complexity == 0.0 {
-            return Ok(Route::Deterministic);
+            return self.config.routes.deterministic_route.parse().map_err(|_| {
+                RouterError::validation(
+                    "policy table deterministic_route invalid",
+                    Some("router-policy".into()),
+                )
+            });
         }
 
         // 4. Specialist capability -> specialist agent.
         if let Some(cap) = &features.capability {
-            if cap.starts_with("specialist.") {
+            if cap.starts_with(&self.config.routes.specialist_prefix) {
                 return Ok(Route::SpecialistAgent);
             }
         }
 
         // 5. SECRET privacy or R3 risk -> frontier, never cheap.
         if features.privacy == Privacy::Secret || features.risk == Risk::R3 {
-            return Ok(Route::FrontierApi);
+            return self.config.routes.secret_route.parse().map_err(|_| {
+                RouterError::validation(
+                    "policy table secret_route invalid",
+                    Some("router-policy".into()),
+                )
+            });
         }
 
         // 6. Low risk + low complexity + non-sensitive -> cheap API.
-        if risk_rank(features.risk) <= 1 && features.complexity <= 0.4 && features.cost < 0.5 {
+        if risk_rank(features.risk)
+            <= risk_rank(
+                self.config
+                    .thresholds
+                    .cheap_max_risk
+                    .parse()
+                    .unwrap_or(Risk::R1),
+            )
+            && features.complexity <= self.config.thresholds.cheap_max_complexity
+            && features.cost < self.config.thresholds.cheap_max_cost
+        {
             return Ok(Route::CheapApi);
         }
 
         // 7. High complexity or strong availability/certification needs.
-        if features.complexity >= 0.7
-            || features.availability >= 0.95
+        if features.complexity >= self.config.thresholds.frontier_min_complexity
+            || features.availability >= self.config.thresholds.frontier_min_availability
             || features.requires_certified
         {
             return Ok(Route::FrontierApi);
         }
 
         // 8. Default reflex plane.
-        Ok(Route::Reflex)
+        self.config.routes.default_route.parse().map_err(|_| {
+            RouterError::validation(
+                "policy table default_route invalid",
+                Some("router-policy".into()),
+            )
+        })
     }
 
     /// Security override: given a route proposed by a learned scorer or
@@ -132,6 +189,12 @@ impl RoutePolicy {
         }
 
         Ok(proposed)
+    }
+}
+
+impl Default for RoutePolicy {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

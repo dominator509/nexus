@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Canonical Nexus model router policy table (SPEC-009 required test: router policy table; EP-015 M2). The policy engine is the deterministic authority for route selection; learned scorers and the Microbrain are advisory only.",
+  "routes": {
+    "deterministic_route": "DETERMINISTIC",
+    "local_route": "REFLEX",
+    "default_route": "REFLEX",
+    "r3_route": "FRONTIER_API",
+    "secret_route": "FRONTIER_API",
+    "r4_route": "REJECT",
+    "specialist_prefix": "specialist."
+  },
+  "thresholds": {
+    "cheap_max_risk": "R1",
+    "cheap_max_complexity": 0.4,
+    "cheap_max_cost": 0.5,
+    "frontier_min_complexity": 0.7,
+    "frontier_min_availability": 0.95,
+    "availability_floor": 0.5,
+    "ambiguity_threshold": 0.6,
+    "certification_min_success": 0.8,
+    "ambiguity_min_success": 0.5
+  }
+}
