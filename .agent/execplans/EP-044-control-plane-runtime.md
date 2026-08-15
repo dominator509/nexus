@@ -292,7 +292,7 @@ Milestone gates are idempotent: rerunning `sh scripts/nodes/EP-044.sh Mk` after 
 - [x] M2: Core behavior and deterministic invariants (2026-08-14)
 - [x] M3: Real dependency and transport integration (2026-08-14)
 - [x] M4: Forced failures, abuse cases, and observability (2026-08-14)
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure (2026-08-14)
 
 Graph amendment detail (2026-08-14, commits `37e8908` + `9f018fc`): owner
 GraphLock amendment created EP-044 as the Control Plane Runtime node between
@@ -379,11 +379,58 @@ sentinels: `EP-044 M4: ok`, full suite 34 tests (19 lib + 1 dep + 5 core +
 - 2026-08-14 | Decision: Add the runnable binary (`apps/control-plane/src/main.rs`) and canonical runtime config (`config/runtime/core.json`) in M2, plus the core-behavior integration test file. The binary is the source of truth for the runtime smoke: it reads the canonical env surface (`NEXUS_BASE_DOMAIN`, `NEXUS_SMOKE_URL`, `NEXUS_CONTROL_PLANE_BIND`, `NEXUS_TENANT_ID`, `NEXUS_CAPABILITY_SOURCE`), composes real capability source + lifecycle, serves until ctrl-c, and prints lifecycle state on stop. Evidence: `EP-044 M2: ok` (25 unit tests: 19 lib + 5 core-behavior + 1 dep-direction), `format check: ok`, `lint: ok`, `license gate: ok`, `reality gate: ok`, `dependency audit: ok`. Alternatives: config in env only (rejected: node contract requires canonical runtime configuration artifact); keep binary for M3 only (rejected: M2 owns core behavior including the composition root). Consequence: the real runtime is runnable and deterministic; M3 proves it over real sockets; M4 proves failure modes; M5 live-fire drives the real smoke. Reversal: revert M2 commit. Security: config carries no secrets; env surface is documented; responses are typed and redacted. License: none new. Compatibility: additive.
 - 2026-08-14 | Decision: Prove the real server over real HTTP by spawning the ACTUAL production binary as a child process in integration tests (not an in-process router double). The test uses `CARGO_BIN_EXE_nexus-control-plane`, real `TcpStream` HTTP/1.1, and asserts the canonical shapes plus 404 for unknown routes. Local deterministic bring-up: `infra/compose/core.yaml` + `apps/control-plane/Dockerfile` (rust:1.97.1-bookworm builder, debian:bookworm-slim runtime, ENTRYPOINT is the real binary). Evidence: `EP-044 M3: ok` (4 integration tests), `docker compose config --quiet` ok. Alternatives: in-process router test (rejected: does not prove the real binary path, env surface, or bind/serve lifecycle); docker-based integration (rejected: slower and less deterministic in CI; the binary is the source of truth per the node contract fallback). Consequence: the runtime is proven over real sockets; compose provides the local profile bring-up for LF-029; M4 proves failure modes; M5 drives the real smoke. Reversal: revert M3 commit. Security: no secrets in the test; child process is the production binary. License: rust/debian base images recorded; binary licenses unchanged. Compatibility: additive.
 - 2026-08-14 | Decision: Add the M4 failure/abuse suite (`apps/control-plane/tests/ep044_failure_modes.rs`): 5 ep044_failure_* tests against the REAL binary covering port conflict, invalid config, runtime-absent smoke fail-closed, graceful shutdown/no-leak, and telemetry redaction. Evidence: `EP-044 M4: ok`, full suite 34 tests. Alternatives: in-process failure injection (rejected: M4 CONTENT item 1 requires real failure mechanisms; the binary is the unit under proof); skip observability (rejected: node contract requires observability bootstrap). Consequence: every runtime failure mode is proven fail-closed; M5 drives the real smoke live-fire. Reversal: revert M4 commit. Security: redaction proven; stderr asserted redacted. License: none new. Compatibility: additive tests only.
+- 2026-08-14 | Decision: Complete M5 live-fire and operations. The real docker image `nexus-control-plane:local` (130MB) built from `apps/control-plane/Dockerfile`; `docker compose -f infra/compose/core.yaml config --quiet` ok; `NEXUS_SMOKE_URL=http://127.0.0.1:8443 sh scripts/local-start.sh core` -> `local start core: ok`; the canonical runtime smoke passes against the running container (`runtime smoke: ok`); LF-029 (EP-044 runtime smoke live-fire) passes; `sh tests/runtime/smoke-gate-regression.sh` -> ok; before EP-044 DONE `sh scripts/smoke-test.sh` prints `runtime smoke: not-applicable-before EP-044` (never a false PASS). Deterministic M5 evidence at `.agent/state/evidence/ep044-m5/EP-044-M5-live-fire.md`. Evidence: `EP-044 M5: ok`, `LF-029: ok`, `smoke gate regression: ok`, full suite 34 tests. Alternatives: in-process live-fire (rejected: LF must prove the real binary + compose bring-up); skip evidence (rejected: node contract requires independently verifiable evidence). Consequence: the runtime smoke gate is now satisfiable by a real runtime; EP-013 closure proven; later nodes verify against the real runtime. Reversal: revert M5 commit and stop the container. Security: evidence carries endpoint shapes and image ids only; no credentials. License: none new. Compatibility: additive.
 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
 
-## EP-044 outcomes (pending)
+## EP-044 outcomes
 
-Changed files versus the machine fence: exactly the fence entries. Exact commands and observed sentinels, test and proof evidence, assumptions, provider and hardware status, remaining risks, and green tag to be recorded at node closure.
+Changed files versus the machine fence: exactly the fence entries
+(`.agent/execplans/EP-044-control-plane-runtime.md`,
+`.agent/state/LEDGER.md`, `.agent/expected-files/EP-044.txt`,
+`.agent/node-contracts/EP-044.md`, `.agent/milestone-files/EP-044-M*.txt`,
+`scripts/nodes/EP-044.sh`, `apps/control-plane/`, `infra/compose/`,
+`config/runtime/`, `tests/runtime/`, `scripts/smoke-test.sh`,
+`scripts/smoke/runtime.sh`, `scripts/local-start.sh`,
+`scripts/local-stop.sh`, `live-fire/REGISTRY.tsv`,
+`scripts/live-fire/LF-029.sh`, `.agent/GRAPH.md`, `.agent/MANIFEST.md`,
+`AGENTS.md`, `README_FIRST.md`, `NEXUS_GRAPHLOCK_INPUTS.md`,
+`Cargo.toml`, `Cargo.lock`, `docs/vocabulary/README.md`,
+`references/ADR-019-control-plane-runtime-vocabulary.md`,
+`references/ADR-020-runtime-smoke-ownership.md`).
+
+Exact commands and observed sentinels:
+
+- `sh scripts/nodes/EP-044.sh M1` -> `EP-044 M1: ok` (19 unit + 1 dep-direction)
+- `sh scripts/nodes/EP-044.sh M2` -> `EP-044 M2: ok` (25 unit)
+- `sh scripts/nodes/EP-044.sh M3` -> `EP-044 M3: ok` (4 integration, real binary)
+- `sh scripts/nodes/EP-044.sh M4` -> `EP-044 M4: ok` (5 failure, real binary)
+- `sh scripts/nodes/EP-044.sh M5` -> `EP-044 M5: ok` (34 tests + LF-029 + gate regression)
+- `docker compose -f infra/compose/core.yaml config --quiet` -> ok
+- `docker build -f apps/control-plane/Dockerfile -t nexus-control-plane:local .` -> success (image 975918c35e4c, 130MB)
+- `NEXUS_SMOKE_URL=http://127.0.0.1:8443 sh scripts/local-start.sh core` -> `local start core: ok`
+- `NEXUS_SMOKE_URL=http://127.0.0.1:8443 sh scripts/smoke/runtime.sh` -> `runtime smoke: ok`
+- `sh scripts/smoke-test.sh` (before EP-044 DONE) -> `runtime smoke: not-applicable-before EP-044` + `smoke test: ok`
+- `sh tests/runtime/smoke-gate-regression.sh` -> `smoke gate regression: ok`
+- `sh scripts/live-fire/LF-029.sh` -> `LF-029: ok`
+- side gates: `security check: ok`, `license gate: ok`, `reality gate: ok`,
+  `format check: ok`, `lint: ok`, `dependency audit: ok`,
+  `blueprint validation: ok`, adapter parity 8x3505091078 1453.
+
+Test and proof evidence: `.agent/state/evidence/ep044-m5/EP-044-M5-live-fire.md`;
+full crate suite 34 tests.
+
+Assumptions confirmed: the runtime smoke gate was a graph-ownership defect,
+not an implementation defect; the real binary + compose bring-up satisfy the
+canonical smoke; axum/tokio/hyper/tower are green-class and cache-resident.
+
+Provider and hardware status: no external providers or hardware are owned by
+this node; the runtime is local-first and provider-neutral.
+
+Remaining risks: later nodes that assume a runnable runtime now have the
+smoke mandatory (by design); the local profile requires the control-plane
+container or binary to be running during verify.
+
+Green tag: `green/EP-044` after NODE_DONE.

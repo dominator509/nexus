@@ -8,7 +8,14 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
+
+/// Serializes port-using tests (bind-once doctrine; see failure suite).
+fn port_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
 
 fn pick_port() -> u16 {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
@@ -62,6 +69,7 @@ fn http_get(port: u16, path: &str) -> (u16, String) {
 
 #[test]
 fn ep044_integration_healthz_returns_healthy() {
+    let _guard = port_lock().lock().unwrap();
     let (mut child, port) = start_server();
     let (status, body) = http_get(port, "/healthz");
     assert_eq!(status, 200);
@@ -72,6 +80,7 @@ fn ep044_integration_healthz_returns_healthy() {
 
 #[test]
 fn ep044_integration_readyz_returns_ready() {
+    let _guard = port_lock().lock().unwrap();
     let (mut child, port) = start_server();
     let (status, body) = http_get(port, "/readyz");
     assert_eq!(status, 200);
@@ -82,6 +91,7 @@ fn ep044_integration_readyz_returns_ready() {
 
 #[test]
 fn ep044_integration_capabilities_non_empty() {
+    let _guard = port_lock().lock().unwrap();
     let (mut child, port) = start_server();
     let (status, body) = http_get(port, "/v1/capabilities");
     assert_eq!(status, 200);
@@ -95,6 +105,7 @@ fn ep044_integration_capabilities_non_empty() {
 
 #[test]
 fn ep044_integration_unknown_route_not_found() {
+    let _guard = port_lock().lock().unwrap();
     let (mut child, port) = start_server();
     let (status, _body) = http_get(port, "/v1/nope");
     assert_eq!(status, 404);

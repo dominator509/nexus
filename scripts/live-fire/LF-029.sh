@@ -12,10 +12,13 @@ export CARGO_TERM_COLOR=never
 log=/tmp/lf029-runtime-smoke.log
 : > "$log"
 
-# Determine the runtime base URL. The canonical convention is NEXUS_SMOKE_URL
-# or https://${NEXUS_BASE_DOMAIN}. The runtime node owns base domain
-# resolution; when a live server is present the smoke must pass.
-base="${NEXUS_SMOKE_URL:-https://${NEXUS_BASE_DOMAIN}}"
+# Deterministic base URL for the local profile: the control-plane binds
+# 0.0.0.0:8443 in the compose stack and is mapped to host 127.0.0.1:8443.
+# NEXUS_SMOKE_URL wins when the operator supplies it; otherwise the
+# canonical local mapping is used (nginx owns host :443 with an unrelated
+# API, so https://nexus.test is NOT the local control-plane).
+export NEXUS_SMOKE_URL="${NEXUS_SMOKE_URL:-http://127.0.0.1:8443}"
+base="$NEXUS_SMOKE_URL"
 
 # Bring up the runtime deterministically (compose core profile when
 # available, else the real binary via local-start's readiness loop).

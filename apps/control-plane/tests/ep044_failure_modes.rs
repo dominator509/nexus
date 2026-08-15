@@ -7,7 +7,16 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
+
+/// Serializes port-using tests: probe-bind/drop/re-bind is inherently
+/// TOCTOU across parallel test threads, so the bind+spawn+probe phase of
+/// every port-using test runs under one lock (bind-once doctrine).
+fn port_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
 
 fn pick_port() -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -59,19 +68,23 @@ fn http_get(port: u16, path: &str) -> (u16, String) {
 
 #[test]
 fn ep044_failure_port_conflict_exits_nonzero() {
-    // Hold a listener on the port, then try to start the runtime there.
-    let port = pick_port();
-    let _holder = TcpListener::bind(("127.0.0.1", port)).unwrap();
+    let _guard = port_lock().lock().unwrap();
+    // Hold a listener on a real port and pass THAT live port to the
+    // binary (bind-once doctrine: never probe-bind/drop/re-bind).
+    let holder = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = holder.local_addr().unwrap().port();
     let child = spawn_binary(port);
     let output = child.wait_with_output().expect("wait");
     assert!(
         !output.status.success(),
         "runtime must fail on port conflict"
     );
+    drop(holder);
 }
 
 #[test]
 fn ep044_failure_invalid_config_exits_nonzero() {
+    let _guard = port_lock().lock().unwrap();
     let port = pick_port();
     let child = Command::new(env!("CARGO_BIN_EXE_nexus-control-plane"))
         .env("NEXUS_CONTROL_PLANE_BIND", "nohostport")
@@ -97,6 +110,7 @@ fn ep044_failure_invalid_config_exits_nonzero() {
 
 #[test]
 fn ep044_failure_runtime_absent_smoke_fails_closed() {
+    let _guard = port_lock().lock().unwrap();
     // No server: the canonical smoke probes must fail (never ALLOW).
     // Probe a dead port with the same assertions runtime.sh uses.
     let port = pick_port();
@@ -111,6 +125,7 @@ fn ep044_failure_runtime_absent_smoke_fails_closed() {
 
 #[test]
 fn ep044_failure_graceful_shutdown_no_leak() {
+    let _guard = port_lock().lock().unwrap();
     let port = pick_port();
     let mut child = spawn_binary(port);
     wait_listening(port);
@@ -130,6 +145,7 @@ fn ep044_failure_graceful_shutdown_no_leak() {
 
 #[test]
 fn ep044_failure_telemetry_redacts_config() {
+    let _guard = port_lock().lock().unwrap();
     // Config and responses must never carry secrets: verify the binary
     // startup output contains no credential-like content when started
     // with a token-like value in the env surface. The binary does not
