@@ -317,3 +317,61 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## EP-015 complete
+
+Changed files versus the machine fence: `crates/nexus-model-router/` (new
+`src/failover.rs`, new `tests/lf021.rs`, extended `config.rs`, `router.rs`
+(additive audit fields), `vocabulary.rs`, `lib.rs`, `features.rs`,
+`escalation.rs`, `policy.rs`, `error` clippy fixes, `ep015_failure_router.rs`
+dead-code removal), `config/models/router/policy.json` (failover section),
+`scripts/live-fire/LF-021.sh` (stub rewritten to direct real proof),
+`references/ADR-022-model-router-vocabulary.md` (M5 section),
+`docs/vocabulary/README.md` (ProviderFailureClass + FailoverStage),
+`.agent/expected-files/EP-015.txt` (LF-021.sh ownership), ExecPlan,
+ledger, evidence.
+
+Exact commands and observed sentinels:
+
+- `sh scripts/nodes/EP-015.sh M5` -> `EP-015 M5: ok`
+- `sh scripts/live-fire/LF-021.sh` -> `LF-021: ok` (vacuity guard:
+  test result: ok. 8 passed; evidence written)
+- `cargo test --locked -p nexus-model-router` -> 84 passed (6 suites,
+  105.28s)
+- `sh scripts/node-verify.sh EP-015` -> `node verify EP-015: ok`
+  (mandatory `runtime smoke: ok` against the real EP-044 control plane;
+  verify: ok; live-fire: ok)
+- `sh scripts/scope-audit.sh EP-015` -> `scope audit EP-015: ok`
+- `sh scripts/expected-files.sh EP-015` -> `expected files EP-015: ok`
+- adapter parity -> 8x `3505091078 1453` (8/8 PRIME-BLOCK checksums)
+- `python3 scripts/blueprint_validate.py` -> `blueprint validation: ok`
+- `sh scripts/security-check.sh` -> `security check: ok`
+- `sh scripts/license-gate.sh` -> `license gate: ok`
+- `sh scripts/reality-gate.sh` -> `reality gate: ok`
+- `sh scripts/format-check.sh` -> `format check: ok`
+- `cargo clippy --locked -p nexus-model-router --all-targets -- -D warnings`
+  -> `cargo clippy: No issues found`
+- `sh scripts/dependency-audit.sh` -> `dependency audit: ok`
+- `sh benchmarks/router/frozen-benchmark.sh` -> `frozen routing benchmark: ok`
+- committed-state runtime re-proof: `runtime smoke: ok`, `local stop: ok`,
+  zero control-plane containers, worktree clean
+
+Test and proof evidence: `crates/nexus-model-router/tests/lf021.rs` (8
+live-fire tests), `.agent/state/evidence/LF-021-ep015-m5.md`, full crate
+suite 84 tests, frozen routing benchmark.
+
+Assumptions confirmed or changed: the real transport types a raw
+malformed provider envelope as EXTERNAL_PROVIDER (not VALIDATION); the
+committed M1-M4 tree was never actually clippy-gated (fixed in M5).
+
+Provider and hardware status: external DeepSeek provider NOT ASSERTED
+(no credential in environment); external secondary vendor NOT ASSERTED
+(bifrost gateway not implemented; production adapter at a real isolated
+HTTP endpoint); no hardware certification applies.
+
+Remaining risks: the registry preferred secondary (bifrost gateway) is
+not implemented; when it lands, the failover policy should be pointed at
+it via the canonical provider registry and re-proven. The Microbrain
+remains DISABLED until SPEC-025 promotion gates pass.
+
+Green tag: `green/EP-015` at the verified commit.
