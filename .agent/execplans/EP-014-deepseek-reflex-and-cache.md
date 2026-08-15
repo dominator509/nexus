@@ -271,7 +271,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -284,6 +284,8 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-15 | Decision: Build `crates/nexus-reflex` as the EP-014 reflex plane crate. It re-exports the canonical model-plane vocabulary (`EffortTier`, `PromptSegment`, `CacheHitRatio`, `NexusControlObject`, `ProviderHealth`, `PromptSegmentPart`, `UsageReport`) from `nexus-model-gateway` instead of redefining it (ADR-018 owns those names), and adds the reflex-specific vocabulary (`ReflexDecisionClass`, `EffortSelectionClass`) plus provider-neutral ports/types (`ReflexProvider`, `ReflexTransport`, `ReflexRequest`, `ReflexDecision`, `DeepSeekFlashProvider`, `EffortPolicy`, `EffortInput`, `CacheLedger`, `PromptSegmentCatalog`, `NexusControlObjectValidator`) recorded in ADR-021. Evidence: `EP-014 M1: ok` (40 unit tests + 1 dependency-direction), `format check: ok`, `lint: ok` (clippy clean). Alternatives: redefine PromptSegment/EffortTier in the reflex crate (rejected: vocabulary-locked names must not be duplicated; ADR-018 owns them); couple the provider to a vendor SDK directly (rejected: transport is injected behind `ReflexTransport` so no vendor SDK enters the production tree). Consequence: deterministic tasks bypass the model (EffortTier::Deterministic resolves without a transport); non-deterministic tasks fail closed with UNAVAILABLE until a real transport is injected in M3; control-object validation is deterministic and rejects extra/invalid fields. Reversal: revert M1 commit. Security: credentials never enter requests or telemetry; errors are typed and redacted. License: no new dependency classes (serde/serde_json already workspace-pinned). Compatibility: additive workspace member; no existing surface changed.
 
 # 14. Outcomes & Retrospective
 

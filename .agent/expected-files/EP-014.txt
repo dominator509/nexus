@@ -7,3 +7,7 @@ crates/nexus-reflex/
 config/prompts/reflex/
 tests/models/reflex/
 benchmarks/reflex/
+docs/vocabulary/README.md
+references/ADR-021-reflex-provider-vocabulary.md
+Cargo.toml
+Cargo.lock

@@ -605,3 +605,47 @@ smoke gate activates only at `at-least EP-044`; before the owner is DONE
 the stage is `not-applicable-before EP-044`; after the owner is DONE the
 smoke is mandatory and fails closed when the runtime is absent or
 unhealthy. The smoke assertions themselves are never weakened.
+
+## ReflexDecisionClass
+
+`DETERMINISTIC`, `MODEL` (SPEC-009; ADR-021, EP-014). How a reflex
+decision was produced. `DETERMINISTIC` means the model was bypassed;
+`MODEL` means the decision came from a real provider and passed
+validation.
+
+## EffortSelectionClass
+
+`POLICY_SELECTED`, `EXPLICIT` (SPEC-009 required behavior 2; ADR-021,
+EP-014). How an effort tier was chosen. MAX is never the default for
+trivial work.
+
+## ReflexProvider
+
+The provider-neutral reflex port (SPEC-009 canonical term
+`ReflexProvider`; ADR-021, EP-014). Resolves a `ReflexRequest` to a
+validated `ReflexDecision`. Deterministic tasks bypass the model.
+
+## DeepSeekFlashProvider
+
+V1 primary ReflexProvider implementation (SPEC-009; ADR-021, EP-014).
+Provider id `deepseek-v4-flash`; deterministic bypass, effort policy,
+validation, and cache accounting; transport injected behind the
+`ReflexTransport` port so no vendor SDK enters the production tree.
+
+## EffortPolicy
+
+Deterministic effort-tier selection (SPEC-009 required behavior 2;
+ADR-021, EP-014). Trivial work is never MAX; default is HIGH;
+deterministic tasks resolve to DETERMINISTIC.
+
+## CacheLedger
+
+Rolling token cache accounting (SPEC-009 canonical term `CacheLedger`;
+ADR-021, EP-014). Cache-hit ratio is hit prompt tokens divided by total
+prompt tokens; cacheable reflex traffic targets at least 0.97.
+
+## NexusControlObjectValidator
+
+Deterministic control-object validation (SPEC-009 behavior 3/10;
+ADR-021, EP-014). Rejects extra or invalid fields; only validated
+`NexusControlObject` output continues.

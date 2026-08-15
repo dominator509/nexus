@@ -1380,6 +1380,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-reflex"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-model-gateway",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-sidecar"
 version = "0.1.0"
 dependencies = [
