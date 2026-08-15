@@ -1,1 +1,11 @@
 schemas/skills/
+scripts/ep018-m3-tests.sh
+crates/nexus-skills/tests/ep018_integration_schema.rs
+crates/nexus-skills/Cargo.toml
+Cargo.lock
+.agent/execplans/EP-018-skill-registry-and-skill-factory.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-018.txt
+.agent/milestone-files/EP-018-M3.txt
+.agent/node-contracts/EP-018.md
+scripts/nodes/EP-018.sh

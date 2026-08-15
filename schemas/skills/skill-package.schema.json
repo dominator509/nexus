@@ -1,0 +1,22 @@
+{
+  "$id": "https://schemas.nexus.local/skills/skill-package/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillPackage",
+  "description": "Immutable, signed, versioned skill package (ADR-025). content_hash is the real SHA-256 of the payload (scan-before-install).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifest", "content_hash", "created_at_epoch_ms"],
+  "properties": {
+    "manifest": {
+      "$ref": "https://schemas.nexus.local/skills/skill-manifest.schema.json"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "created_at_epoch_ms": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

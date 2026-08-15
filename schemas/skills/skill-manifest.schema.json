@@ -1,0 +1,97 @@
+{
+  "$id": "https://schemas.nexus.local/skills/skill-manifest/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillManifest",
+  "description": "Canonical Nexus Agent Skills manifest (SPEC-010 behavior 6; ADR-025). Declared permissions are REQUESTS, never grants.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "skill_id",
+    "tenant_id",
+    "name",
+    "version",
+    "description",
+    "permissions",
+    "dependencies",
+    "network_rules",
+    "license",
+    "provenance",
+    "trust_level",
+    "signature"
+  ],
+  "properties": {
+    "skill_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "tenant_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+/[a-z0-9_-]+$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "enum": ["NONE", "READ", "WRITE", "EXECUTE", "NETWORK", "SECRETS"]
+      },
+      "uniqueItems": true
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]+/[a-z0-9_-]+$"
+      },
+      "uniqueItems": true
+    },
+    "network_rules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provenance": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "trust_level": {
+      "enum": ["INSPECT_ONLY", "SANDBOXED", "TRUSTED", "SYSTEM"]
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "public_key_hex", "signature_hex"],
+      "properties": {
+        "algorithm": {
+          "enum": ["ED25519", "ECDSA_P256"]
+        },
+        "public_key_hex": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$|^[0-9a-f]{66}$"
+        },
+        "signature_hex": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{128}$"
+        },
+        "signer": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

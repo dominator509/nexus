@@ -1471,6 +1471,7 @@ dependencies = [
 name = "nexus-skills"
 version = "0.1.0"
 dependencies = [
+ "jsonschema",
  "nexus-domain",
  "nexus-fabric",
  "serde",

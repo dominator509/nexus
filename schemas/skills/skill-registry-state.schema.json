@@ -1,0 +1,45 @@
+{
+  "$id": "https://schemas.nexus.local/skills/skill-registry-state/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillRegistryState",
+  "description": "Persisted skill registry state (ADR-025). Entries only; authority is enforced on mutation, never reconstructed from state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entries"],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "version",
+          "package",
+          "installed_at_epoch_ms",
+          "revoked"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]+/[a-z0-9_-]+$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+          },
+          "package": {
+            "$ref": "https://schemas.nexus.local/skills/skill-package.schema.json"
+          },
+          "installed_at_epoch_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revoked": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}
