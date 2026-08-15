@@ -782,3 +782,39 @@ The bounded graph expansion port (SPEC-002 behavior 7; ADR-023,
 EP-016). Expands context from a seed node within the declared hop mode
 and node budget; never crosses a tenant, namespace, or security
 boundary.
+
+## MemoryWorkflowKind
+
+`MEMORY_CONSOLIDATION`, `MEMORY_RETENTION`, `MEMORY_LEGAL_HOLD`,
+`MEMORY_EXPORT`, `MEMORY_DELETION`, `MEMORY_REEMBED` (SPEC-002
+requirement 8; ADR-023, EP-016 M3). Durable, audited workflow kinds
+over the memory plane; distinct from EP-006 workflow kinds and never
+mixed with them at the registry boundary.
+
+## MemoryOperationKind
+
+`PROPOSE`, `EVALUATE_PROPOSAL`, `ACTIVATE_CANONICAL`, `SUPERSEDE`,
+`RETENTION_SWEEP`, `LEGAL_HOLD_APPLY`, `LEGAL_HOLD_RELEASE`,
+`EXPORT_SNAPSHOT`, `DELETE_RECORD`, `REEMBED` (SPEC-002 requirement 8;
+ADR-023, EP-016 M3). Durable activity-level operations the memory
+workflows schedule; each maps to a bounded, idempotent,
+error-classified activity (SPEC-006 behavior 7).
+
+## MemoryWorkflowState
+
+`REQUESTED`, `EVALUATING`, `AWAITING_APPROVAL`, `EXECUTING`,
+`VERIFYING`, `SUCCEEDED`, `FAILED`, `CANCELLED`, `TIMED_OUT`
+(SPEC-002 requirement 8; ADR-023, EP-016 M3). Durable memory workflow
+lifecycle; terminal outcomes mirror SPEC-006 ActionLifecycle.
+
+## LegalHoldDecision
+
+`APPLY`, `RELEASE` (SPEC-002 requirement 8; ADR-023, EP-016 M3).
+APPLY freezes a record against retention deletion; RELEASE restores
+normal retention. A legal hold preserves storage; it never implies
+context relevance.
+
+## RetentionDisposition
+
+`KEEP`, `DELETE`, `LEGAL_HOLD` (SPEC-002 requirement 8; ADR-023,
+EP-016 M3). Disposition decided by a retention sweep.

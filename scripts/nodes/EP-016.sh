@@ -10,7 +10,7 @@ mode="${1:-verify}"
 case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-016 M1 && cargo test --locked -p nexus-context ep016_unit ;;
   M2) python3 scripts/node-artifact-check.py EP-016 M2 && cargo test --locked -p nexus-memory-workers && cargo test --locked -p nexus-context ep016_unit ;;
-  M3) python3 scripts/node-artifact-check.py EP-016 M3; cargo test --locked -p nexus-context ep016_integration ;;
+  M3) python3 scripts/node-artifact-check.py EP-016 M3 && sh scripts/ep016-m3-tests.sh ;;
   M4) python3 scripts/node-artifact-check.py EP-016 M4; cargo test --locked -p nexus-context ep016_failure ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-016 M5

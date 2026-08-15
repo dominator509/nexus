@@ -11,3 +11,4 @@ docs/vocabulary/README.md
 crates/nexus-memory-workers/
 packages/workflows/src/memory/
 tests/context/
+scripts/ep016-m3-tests.sh
