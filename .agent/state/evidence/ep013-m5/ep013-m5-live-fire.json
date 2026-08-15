@@ -1,0 +1,61 @@
+{
+  "allow_path": {
+    "cache_hit_prompt_tokens": 10,
+    "completion_tokens": 6,
+    "decision": "ALLOWED",
+    "model": "bifrost",
+    "prompt_tokens": 12,
+    "provider": "bifrost",
+    "schema_version": "1.0"
+  },
+  "authority_boundary": "model output is advisory only; models never grant authority (SPEC-009 behavior 10)",
+  "components": {
+    "contract": "nexus-model-gateway ModelGateway/ModelProvider/ModelBudget (SPEC-009)",
+    "nexus-bifrost": {
+      "budget": "BudgetLedger check-before-route",
+      "gateway": "BifrostGateway",
+      "rate_limit": "fixed window",
+      "retry": "deterministic backoff",
+      "router": "BifrostRouter (Bifrost preferred when healthy+certified)",
+      "usage_accounting": "record after success"
+    },
+    "nexus-model-transport": {
+      "fallback": "deepseek-v4-flash",
+      "http_client": "ureq 2.12.1 (default-features=false, json)",
+      "preferred": "bifrost",
+      "protocol": "OpenAI-compatible chat completions",
+      "provider_manifest": "config/models/providers/providers.json",
+      "transport": "OpenAiCompatibleTransport"
+    }
+  },
+  "correlation_id": "ep013-m5-0001",
+  "denied_budget_exhausted": {
+    "code": "CONFLICT",
+    "decision": "DENIED",
+    "message": "budget exhausted"
+  },
+  "denied_rate_limited": {
+    "code": "RATE_LIMITED",
+    "decision": "DENIED",
+    "message": "rate limit exceeded"
+  },
+  "evidence_file": ".agent/state/evidence/ep013-m5/ep013-m5-live-fire.json",
+  "milestone": "M5",
+  "node": "EP-013",
+  "telemetry": {
+    "classes": [
+      "ROUTE_SELECTED",
+      "BUDGET_DENIED",
+      "RATE_LIMITED",
+      "PROVIDER_UNAVAILABLE",
+      "PROVIDER_TIMEOUT",
+      "PROVIDER_ERROR",
+      "FALLBACK",
+      "RETRY",
+      "ALLOWED",
+      "DENIED"
+    ],
+    "redacted": true
+  },
+  "title": "model gateway live-fire composed proof"
+}

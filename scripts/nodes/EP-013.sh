@@ -15,6 +15,8 @@ case "$mode" in
   M5|verify)
       python3 scripts/node-artifact-check.py EP-013 M5
       cargo test --locked -p nexus-model-gateway
+      cargo test --locked -p nexus-bifrost
+      cargo test --locked -p nexus-model-transport
       :
       ;;
   *) echo "EP-013: FAIL - unknown mode $mode" >&2; exit 2;;
