@@ -10,5 +10,9 @@ serde.workspace = true
 serde_json.workspace = true
 nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
 nexus-model-gateway = { path = "../nexus-model-gateway", version = "0.1.0" }
+# Real OpenAI-compatible HTTP transport (EP-013 M3), pinned ureq. The
+# DeepSeek adapter wraps this real transport; no vendor SDK enters this
+# crate's tree.
+nexus-model-transport = { path = "../../config/models", version = "0.1.0" }
 
 [dev-dependencies]

@@ -32,6 +32,7 @@ pub mod effort;
 pub mod error;
 pub mod provider;
 pub mod segments;
+pub mod transport;
 pub mod validator;
 pub mod vocabulary;
 
@@ -40,6 +41,7 @@ pub use decision::{ReflexDecision, ReflexDecisionClass};
 pub use effort::{EffortInput, EffortPolicy};
 pub use error::{ReflexError, ReflexErrorCode};
 pub use provider::{DeepSeekFlashProvider, ReflexProvider, ReflexRequest};
+pub use transport::DeepSeekReflexTransport;
 pub use segments::{
     PromptSegmentCatalog, PromptSegmentVersion, StablePrefix,
 };

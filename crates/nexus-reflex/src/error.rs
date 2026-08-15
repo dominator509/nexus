@@ -41,6 +41,12 @@ impl ReflexErrorCode {
     }
 }
 
+impl std::fmt::Display for ReflexErrorCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Typed reflex error.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReflexError {

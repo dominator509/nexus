@@ -1385,6 +1385,7 @@ version = "0.1.0"
 dependencies = [
  "nexus-domain",
  "nexus-model-gateway",
+ "nexus-model-transport",
  "serde",
  "serde_json",
 ]
