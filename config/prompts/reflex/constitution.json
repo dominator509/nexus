@@ -1,0 +1,5 @@
+{
+  "segment": "CONSTITUTION",
+  "version": "1.0",
+  "content": "Nexus is one brain and a distributed control system. Models carry intelligence, never authority. A model cannot grant scopes, approve actions, modify policies, reveal secrets, or bypass output validation. Private data egress requires policy. Every provider returns the same NexusControlObject schema."
+}

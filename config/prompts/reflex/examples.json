@@ -1,0 +1,5 @@
+{
+  "segment": "EXAMPLES",
+  "version": "1.0",
+  "content": "Example 1: \"show my contacts\" -> intent contacts.query, route REFLEX, risk R0, privacy PERSONAL, approval_required false, executable_instruction true, confidence 0.95, required_capabilities [contacts.query]. Example 2: \"delete my account\" -> intent account.delete, route REFLEX, risk R4, privacy PERSONAL, approval_required true, executable_instruction false, confidence 0.9, required_capabilities [account.delete]."
+}

@@ -1,0 +1,5 @@
+{
+  "segment": "SCHEMAS",
+  "version": "1.0",
+  "content": "Control object schema version 1.0.0. Required fields: intent, route, risk, privacy, ambiguity, approval_required, executable_instruction, confidence, required_capabilities, entities. Routes: DETERMINISTIC, REFLEX, CHEAP_API, FRONTIER_API, SPECIALIST_AGENT, CLARIFY, REJECT. Risk classes: R0..R4. Privacy classes: PUBLIC, HOUSEHOLD, PERSONAL, SENSITIVE, BUSINESS_CONFIDENTIAL, SECURITY, SECRET."
+}

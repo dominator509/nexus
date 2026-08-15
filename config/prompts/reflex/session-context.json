@@ -1,0 +1,5 @@
+{
+  "segment": "SESSION_CONTEXT",
+  "version": "1.0",
+  "content": "Session context is volatile: conversation state, current task references, and short-lived context. Session ids and timestamps stay in this tail segment and are never part of the cacheable prefix."
+}

@@ -94,6 +94,130 @@ impl PromptSegmentCatalog {
         }
     }
 
+    /// Load the canonical catalog from a directory of versioned segment
+    /// JSON files (config/prompts/reflex/). Reads `catalog.json` for the
+    /// declared order, then each segment file, validating that the
+    /// stable prefix covers exactly constitution..tenant-context and
+    /// that every segment is versioned and canonical.
+    pub fn from_canonical_dir(dir: &std::path::Path) -> Result<Self, ReflexError> {
+        use std::fs;
+
+        let catalog_path = dir.join("catalog.json");
+        let catalog_value: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(&catalog_path).map_err(|e| {
+                ReflexError::validation(
+                    format!("cannot read catalog.json: {e}"),
+                    Some("prompt-segments".into()),
+                )
+            })?,
+        )
+        .map_err(|e| {
+            ReflexError::validation(
+                format!("catalog.json invalid JSON: {e}"),
+                Some("prompt-segments".into()),
+            )
+        })?;
+
+        let stable_names: Vec<String> = catalog_value
+            .get("stable_prefix")
+            .and_then(serde_json::Value::as_array)
+            .ok_or_else(|| {
+                ReflexError::validation(
+                    "catalog.json missing stable_prefix array",
+                    Some("prompt-segments".into()),
+                )
+            })?
+            .iter()
+            .map(|v| {
+                v.as_str()
+                    .map(str::to_string)
+                    .ok_or_else(|| {
+                        ReflexError::validation(
+                            "catalog.json stable_prefix entries must be strings",
+                            Some("prompt-segments".into()),
+                        )
+                    })
+            })
+            .collect::<Result<_, _>>()?;
+
+        let volatile_names: Vec<String> = catalog_value
+            .get("volatile_tail")
+            .and_then(serde_json::Value::as_array)
+            .ok_or_else(|| {
+                ReflexError::validation(
+                    "catalog.json missing volatile_tail array",
+                    Some("prompt-segments".into()),
+                )
+            })?
+            .iter()
+            .map(|v| {
+                v.as_str()
+                    .map(str::to_string)
+                    .ok_or_else(|| {
+                        ReflexError::validation(
+                            "catalog.json volatile_tail entries must be strings",
+                            Some("prompt-segments".into()),
+                        )
+                    })
+            })
+            .collect::<Result<_, _>>()?;
+
+        let mut prefix_segments = Vec::new();
+        let mut session_context = None;
+        let mut dynamic_request = None;
+
+        for name in stable_names.iter().chain(volatile_names.iter()) {
+            let segment: PromptSegment = name.parse().map_err(|_| {
+                ReflexError::validation(
+                    format!("catalog.json references unknown segment: {name}"),
+                    Some("prompt-segments".into()),
+                )
+            })?;
+            let file_name = format!("{}.json", name.to_ascii_lowercase().replace('_', "-"));
+            let path = dir.join(&file_name);
+            let version: PromptSegmentVersion = serde_json::from_str(
+                &fs::read_to_string(&path).map_err(|e| {
+                    ReflexError::validation(
+                        format!("cannot read segment file {file_name}: {e}"),
+                        Some("prompt-segments".into()),
+                    )
+                })?,
+            )
+            .map_err(|e| {
+                ReflexError::validation(
+                    format!("segment file {file_name} invalid JSON: {e}"),
+                    Some("prompt-segments".into()),
+                )
+            })?;
+
+            if version.segment != segment {
+                return Err(ReflexError::validation(
+                    format!(
+                        "segment file {file_name} declares {} but catalog expects {}",
+                        version.segment.as_str(),
+                        segment.as_str()
+                    ),
+                    Some("prompt-segments".into()),
+                ));
+            }
+            if version.version.is_empty() || version.content.is_empty() {
+                return Err(ReflexError::validation(
+                    format!("segment file {file_name} must be versioned and non-empty"),
+                    Some("prompt-segments".into()),
+                ));
+            }
+
+            match segment {
+                PromptSegment::SessionContext => session_context = Some(version),
+                PromptSegment::DynamicRequest => dynamic_request = Some(version),
+                _ => prefix_segments.push(version),
+            }
+        }
+
+        let prefix = StablePrefix::new(prefix_segments)?;
+        Ok(Self::new(prefix, session_context, dynamic_request))
+    }
+
     /// Ordered full catalog: prefix, then session, then dynamic.
     pub fn ordered(&self) -> Vec<PromptSegmentVersion> {
         let mut out = self.prefix.segments.clone();
@@ -252,5 +376,102 @@ mod tests {
         assert_eq!(parts.len(), 6);
         assert_eq!(parts[0].segment, PromptSegment::Constitution);
         assert_eq!(parts[5].segment, PromptSegment::TenantContext);
+    }
+
+    // ---- M2: real canonical config directory invariants ----
+
+    fn canonical_dir() -> std::path::PathBuf {
+        // crates/nexus-reflex -> repo root -> config/prompts/reflex
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../config/prompts/reflex")
+    }
+
+    #[test]
+    fn ep014_unit_canonical_config_loads() {
+        let catalog = PromptSegmentCatalog::from_canonical_dir(&canonical_dir()).unwrap();
+        assert_eq!(catalog.prefix.len(), 6);
+        assert!(catalog.session_context.is_some());
+        assert!(catalog.dynamic_request.is_some());
+        let parts = to_prompt_parts(&catalog);
+        assert_eq!(parts.len(), 8);
+        // Canonical order: constitution first, dynamic request last.
+        assert_eq!(parts[0].segment, PromptSegment::Constitution);
+        assert_eq!(parts[7].segment, PromptSegment::DynamicRequest);
+    }
+
+    #[test]
+    fn ep014_unit_canonical_config_byte_stable() {
+        let a = PromptSegmentCatalog::from_canonical_dir(&canonical_dir()).unwrap();
+        let b = PromptSegmentCatalog::from_canonical_dir(&canonical_dir()).unwrap();
+        let ca = a.canonical();
+        let cb = b.canonical();
+        assert_eq!(ca, cb);
+        // Re-serialization is deterministic: same bytes every load.
+        assert_eq!(ca.len(), cb.len());
+        assert!(ca.starts_with("CONSTITUTION:"));
+    }
+
+    #[test]
+    fn ep014_unit_canonical_config_prefix_is_cacheable_corpus() {
+        let catalog = PromptSegmentCatalog::from_canonical_dir(&canonical_dir()).unwrap();
+        let prefix = catalog.prefix.canonical();
+        // The volatile tail is never part of the cacheable prefix.
+        assert!(!prefix.contains("SESSION_CONTEXT"));
+        assert!(!prefix.contains("DYNAMIC_REQUEST"));
+        // Every prefix segment is versioned.
+        assert!(prefix.contains("CONSTITUTION:1.0:"));
+        assert!(prefix.contains("TENANT_CONTEXT:1.0:"));
+    }
+
+    #[test]
+    fn ep014_unit_canonical_config_rejects_missing_segment() {
+        let tmp = std::env::temp_dir().join(format!("ep014-bad-catalog-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        std::fs::write(
+            tmp.join("catalog.json"),
+            r#"{"stable_prefix":["CONSTITUTION"],"volatile_tail":[]}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.join("constitution.json"),
+            r#"{"segment":"CONSTITUTION","version":"1.0","content":"x"}"#,
+        )
+        .unwrap();
+        // Missing SCHEMAS..TENANT_CONTEXT -> StablePrefix::new fails.
+        let err = PromptSegmentCatalog::from_canonical_dir(&tmp).unwrap_err();
+        assert_eq!(err.code, crate::error::ReflexErrorCode::Validation);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn ep014_unit_canonical_config_rejects_unversioned_segment() {
+        let tmp = std::env::temp_dir().join(format!("ep014-bad-ver-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        std::fs::write(
+            tmp.join("catalog.json"),
+            r#"{"stable_prefix":["CONSTITUTION","SCHEMAS","CAPABILITY_TAXONOMY","RISK_POLICY","EXAMPLES","TENANT_CONTEXT"],"volatile_tail":[]}"#,
+        )
+        .unwrap();
+        let segments = [
+            ("constitution.json", "CONSTITUTION"),
+            ("schemas.json", "SCHEMAS"),
+            ("capability-taxonomy.json", "CAPABILITY_TAXONOMY"),
+            ("risk-policy.json", "RISK_POLICY"),
+            ("examples.json", "EXAMPLES"),
+            ("tenant-context.json", "TENANT_CONTEXT"),
+        ];
+        for (i, (file, name)) in segments.iter().enumerate() {
+            let version = if *name == "CONSTITUTION" { "" } else { "1.0" };
+            std::fs::write(
+                tmp.join(file),
+                format!(r#"{{"segment":"{name}","version":"{version}","content":"c{i}"}}"#),
+            )
+            .unwrap();
+        }
+        let err = PromptSegmentCatalog::from_canonical_dir(&tmp).unwrap_err();
+        assert_eq!(err.code, crate::error::ReflexErrorCode::Validation);
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 }

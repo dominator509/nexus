@@ -1,0 +1,5 @@
+{
+  "segment": "CAPABILITY_TAXONOMY",
+  "version": "1.0",
+  "content": "Capabilities are discovered through the registry. Query capabilities read; command capabilities write. Workflow capabilities orchestrate. Invocation requires the canonical authorization path. Capability names use lowercase dotted identifiers, for example contacts.query."
+}

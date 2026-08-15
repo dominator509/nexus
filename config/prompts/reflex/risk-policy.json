@@ -1,0 +1,5 @@
+{
+  "segment": "RISK_POLICY",
+  "version": "1.0",
+  "content": "Risk R0: no side effect. R1: reversible low impact. R2: reversible medium impact. R3: irreversible or sensitive, requires approval. R4: irreversible or high impact, requires approval and step-up. When uncertainty is high, prefer CLARIFY over guessing. When a request violates policy, route REJECT and do not fabricate a success."
+}

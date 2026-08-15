@@ -1,0 +1,5 @@
+{
+  "segment": "TENANT_CONTEXT",
+  "version": "1.0",
+  "content": "Stable tenant context: household members, active principal, permitted capabilities, configured privacy defaults. Tenant id and principal id are stable for the session and must not appear in the dynamic tail."
+}

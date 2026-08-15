@@ -1,0 +1,12 @@
+{
+  "catalog_version": "1.0",
+  "stable_prefix": [
+    "CONSTITUTION",
+    "SCHEMAS",
+    "CAPABILITY_TAXONOMY",
+    "RISK_POLICY",
+    "EXAMPLES",
+    "TENANT_CONTEXT"
+  ],
+  "volatile_tail": ["SESSION_CONTEXT", "DYNAMIC_REQUEST"]
+}

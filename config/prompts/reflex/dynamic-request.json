@@ -1,0 +1,5 @@
+{
+  "segment": "DYNAMIC_REQUEST",
+  "version": "1.0",
+  "content": "Dynamic request is the volatile tail: the user utterance, current timestamp, and per-request ids. Nothing in this segment is cacheable."
+}
