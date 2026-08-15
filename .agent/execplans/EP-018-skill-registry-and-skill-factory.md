@@ -271,7 +271,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -281,9 +281,17 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-15 (M1): `cargo fmt` rewrote the hand-formatted lib.rs exports; re-read before further patches (fmt + patch tool ordering).
+- 2026-08-15 (M1): clippy `-D warnings` requires `len().is_multiple_of(2)` and `std::slice::from_ref` for single-element slices from references; both applied.
+- 2026-08-15 (M1): `SkillId` is Rust-only (typed UUIDv7 in nexus-domain); no generated wire binding ripple (no SkillId in schemas/), recorded per directive J.
+- 2026-08-15 (M1): the scope audit treats `.agent/milestone-files/EP-018-M1.txt` as a changed path; the machine fence must list it explicitly (self-reference) or the audit fails.
+- 2026-08-15 (M1): rtk-tee masks cargo output into a compact summary; gate vacuity guards must parse the tee-written full log (`test result: ok. N passed`), which the ep018-m1-tests.sh guard does.
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-15 (M1): ADR-025 accepted - skill package identity is immutable by version (`name@version:content_hash`); integrity (valid signature) is distinct from trust, authorized installation, and execution permission; manifest permissions are declared requirements, never grants; effective authority = declared-requirements INTERSECT caller grants INTERSECT policy allowance INTERSECT trust ceiling; community skills are sandboxed by ceiling; deterministic composition with cycle rejection and bounded depth (16); SkillProposal lifecycle is canonical and fail-closed with no terminal resurrection; a model/agent may propose but never self-approve (distinct human approver required); network rules are requested constraints, not firewall authority. Evidence: references/ADR-025-skill-registry-vocabulary.md, 58 ep018_unit tests, clippy clean, all side gates ok. Alternatives rejected: raw union of effective permissions (would self-grant authority), mutable versions (breaks scan-before-install), free proposal transitions (resurrection). Consequence: later implementation cannot confuse skill existence/integrity/trust/authorization/execution/result verification. Reversal: new ADR with an equivalent or stronger authority model. Security: fail-closed by construction; license: MIT (crate), Apache-2.0 OR MIT (workspace); compatibility: additive Rust-only contracts, no wire binding change.
 
 # 14. Outcomes & Retrospective
 

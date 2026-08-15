@@ -1,0 +1,14 @@
+[package]
+name = "nexus-skills"
+version = "0.1.0"
+edition = "2021"
+description = "EP-018 signed Agent Skills packages, trust, permissions, evals, promotion, composition, versioning (SPEC-010)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-fabric = { path = "../nexus-fabric", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]

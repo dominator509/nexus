@@ -8,7 +8,7 @@ export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
 case "$mode" in
-  M1) python3 scripts/node-artifact-check.py EP-018 M1 ;;
+  M1) python3 scripts/node-artifact-check.py EP-018 M1 && test -s crates/nexus-skills/tests/ep018_unit_contract.rs && sh scripts/ep018-m1-tests.sh ;;
   M2) python3 scripts/node-artifact-check.py EP-018 M2; cargo test --locked -p nexus-skills ep018_unit ;;
   M3) python3 scripts/node-artifact-check.py EP-018 M3; cargo test --locked -p nexus-skills ep018_integration ;;
   M4) python3 scripts/node-artifact-check.py EP-018 M4; cargo test --locked -p nexus-skills ep018_failure ;;

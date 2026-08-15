@@ -27,6 +27,7 @@ at compile time.
 | `ArtifactId`    | Immutable artifact           | SPEC-003     |
 | `EventId`       | Event                        | SPEC-022     |
 | `CorrelationId` | Correlation                  | SPEC-003     |
+| `SkillId`       | Skill package                | SPEC-010     |
 
 ## Risk
 
@@ -850,3 +851,39 @@ recorded by Nexus; direct agent-to-agent authority is forbidden.
 `TOTAL_TOKENS`, `TOTAL_COST`, `MAX_CONCURRENT`, `MAX_DURATION_SECS`
 (SPEC-010; ADR-024, EP-017). Fixed declared limits Nexus owns and
 enforces fail-closed.
+
+## SkillTrustLevel
+
+`INSPECT_ONLY`, `SANDBOXED`, `TRUSTED`, `SYSTEM` (SPEC-010 canonical
+term `Skill Trust`; ADR-025, EP-018). Community skills begin
+inspect-only or sandboxed; higher tiers are earned through evals and
+human promotion. The tier ceiling (`permission_ceiling`) bounds the
+maximum permission a skill may request: `INSPECT_ONLY` -> `NONE`,
+`SANDBOXED` -> `READ`, `TRUSTED` -> `EXECUTE`, `SYSTEM` -> `SECRETS`.
+A request is never a grant; trust is one input to authorization, never
+authorization itself.
+
+## SkillPermission
+
+`NONE`, `READ`, `WRITE`, `EXECUTE`, `NETWORK`, `SECRETS` (SPEC-010
+behavior 7; ADR-025, EP-018). Declared REQUIRED permissions a skill
+requests. Effective authority is the intersection of the closure's
+declared requirements, the caller's grants, the tenant policy
+allowance, and the trust ceiling; composition never widens authority.
+
+## SignatureAlgorithm
+
+`ED25519`, `ECDSA_P256` (SPEC-010; ADR-025, EP-018). Vocabulary-locked
+signature algorithms for signed skill packages. Unknown algorithms are
+rejected at parse time; structural validation (hex encoding, key and
+signature lengths) is contract-level, cryptographic verification is
+owned by the M2/M3 behavior boundary.
+
+## SkillProposalState
+
+`PROPOSED`, `EVAL_PENDING`, `EVAL_PASSED`, `EVAL_FAILED`,
+`AWAITING_PROMOTION`, `PROMOTED`, `REJECTED`, `ROLLED_BACK`
+(SPEC-010 behavior 8 `Skill Factory`; ADR-025, EP-018). Canonical
+lifecycle transitions only, fail closed, no terminal resurrection.
+A model/agent may PROPOSE a skill; it may not self-approve installation
+(promotion requires a distinct human approver).

@@ -14,7 +14,7 @@ pub mod vocabulary;
 
 pub use id::{
     ArtifactId, BusinessId, CapabilityId, CorrelationId, DeviceId, EventId, HouseholdId, IdError,
-    NexusId, ObjectiveId, PersonId, TaskId, TenantId,
+    NexusId, ObjectiveId, PersonId, SkillId, TaskId, TenantId,
 };
 pub use vocabulary::{
     ApprovalClass, Availability, CapabilityClass, Idempotency, Locality, MemoryType,

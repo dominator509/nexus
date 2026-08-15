@@ -185,6 +185,10 @@ typed_id!(
     /// Correlation identifier (SPEC-003).
     CorrelationId
 );
+typed_id!(
+    /// Skill package identifier (SPEC-010; ADR-025).
+    SkillId
+);
 
 #[cfg(test)]
 mod tests {
