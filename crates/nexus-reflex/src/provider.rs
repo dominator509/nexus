@@ -65,6 +65,7 @@ pub trait ReflexProvider {
 ///
 /// Provider credentials never leave the adapter: the transport is
 /// configured with a credential reference, never a value.
+#[derive(Debug)]
 pub struct DeepSeekFlashProvider {
     provider_id: String,
     effort_policy: EffortPolicy,
@@ -79,7 +80,7 @@ pub struct DeepSeekFlashProvider {
 /// The transport is the only component that talks to a provider
 /// endpoint. It is injected so tests and M3 integration can use the
 /// real HTTP path without coupling the provider logic to a vendor SDK.
-pub trait ReflexTransport {
+pub trait ReflexTransport: std::fmt::Debug {
     fn generate(&mut self, request: &ReflexRequest) -> Result<NexusControlObject, ReflexError>;
 
     fn provider_id(&self) -> &str;
