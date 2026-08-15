@@ -21,6 +21,7 @@ members = [
     "crates/nexus-a2a",
     "crates/nexus-model-gateway",
     "crates/nexus-reflex",
+    "crates/nexus-model-router",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

@@ -1,0 +1,18 @@
+[package]
+name = "nexus-model-router"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-015 model router crate (SPEC-009, SPEC-025): NexusModelRouter contract, deterministic RoutePolicy, RouteLLM-compatible LearnedRouterAdapter, EscalationPolicy, and MicrobrainProvider seam. RouteLLM/LLMRouter are replaceable strategies; the policy engine can override learned routing for security; Microbrain uses the same ReflexProvider contract and can remain disabled."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-model-gateway = { path = "../nexus-model-gateway", version = "0.1.0" }
+# EP-014 reflex plane: MicrobrainProvider uses the SAME ReflexProvider
+# contract (SPEC-009 behavior 9). The router depends on the reflex
+# provider-neutral port, never on a vendor SDK.
+nexus-reflex = { path = "../nexus-reflex", version = "0.1.0" }
+
+[dev-dependencies]

@@ -649,3 +649,61 @@ prompt tokens; cacheable reflex traffic targets at least 0.97.
 Deterministic control-object validation (SPEC-009 behavior 3/10;
 ADR-021, EP-014). Rejects extra or invalid fields; only validated
 `NexusControlObject` output continues.
+
+## RoutingDecisionClass
+
+`ROUTED`, `FALLBACK`, `ESCALATED`, `REJECTED`, `SHADOW` (SPEC-009
+canonical term ModelRoute; ADR-022, EP-015). How a routing decision was
+produced. `REJECTED` never routes to a model.
+
+## RouterStrategyClass
+
+`POLICY`, `ROUTE_LLM`, `LLM_ROUTER`, `MICROBRAIN` (SPEC-009; ADR-022,
+EP-015). The strategy that produced a routing decision. RouteLLM and
+LLMRouter are replaceable strategies; the policy engine can override
+learned routing for security.
+
+## EscalationReason
+
+`AMBIGUITY`, `RISK`, `PRIVACY`, `BUDGET`, `UNAVAILABLE`, `COST`,
+`LATENCY`, `SECURITY`, `CERTIFICATION`, `OUT_OF_DISTRIBUTION` (SPEC-009
+canonical term Escalation; ADR-022, EP-015). Deterministic escalation
+causes.
+
+## MicrobrainState
+
+`DISABLED`, `SHADOW`, `CANARY`, `ACTIVE`, `PROMOTION_GATED` (SPEC-025;
+ADR-022, EP-015). The Microbrain promotion lifecycle; the safe default
+is `DISABLED`. Promotion is gated by the SPEC-025 training/evaluation
+pipeline in later nodes.
+
+## ShadowDecisionClass
+
+`MATCH`, `DIVERGE`, `FAILED` (SPEC-025 canonical term ShadowDecision;
+ADR-022, EP-015). A shadow comparison outcome. A failed shadow is never
+trusted.
+
+## NexusModelRouter
+
+The provider-neutral model router port (SPEC-009; ADR-022, EP-015).
+Resolves `RoutingFeatures` to a validated `RoutingDecision`.
+Deterministic policy routing is the V1 default.
+
+## RoutePolicy
+
+Deterministic route selection (SPEC-009 required behavior 7; ADR-022,
+EP-015). Safety floors: R4 never routes to a model; SECRET privacy and
+R3 risk never route to CHEAP_API; local-only work stays local;
+deterministic tasks bypass the model. Can override learned routing for
+security.
+
+## EscalationPolicy
+
+Deterministic escalation (SPEC-009 canonical term Escalation; ADR-022,
+EP-015). Fails closed (REJECT/CLARIFY) rather than routing unsafely.
+
+## MicrobrainProvider
+
+The Microbrain seam (SPEC-009 behavior 9; SPEC-025; ADR-022, EP-015).
+Uses the SAME `ReflexProvider` contract as DeepSeek and can remain
+disabled. Begins in shadow; promotion is gated.

@@ -1274,6 +1274,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-model-router"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-model-gateway",
+ "nexus-reflex",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-model-transport"
 version = "0.1.0"
 dependencies = [

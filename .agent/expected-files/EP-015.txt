@@ -7,3 +7,7 @@ crates/nexus-model-router/
 config/models/router/
 benchmarks/router/
 tests/models/router/
+Cargo.toml
+Cargo.lock
+references/ADR-022-model-router-vocabulary.md
+docs/vocabulary/README.md

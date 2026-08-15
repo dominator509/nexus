@@ -271,7 +271,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -284,6 +284,9 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-15 | Decision: Build `crates/nexus-model-router` as the EP-015 model router plane crate. It re-exports the canonical routing vocabulary from lower layers (`Route`/`Risk`/`Privacy` from `nexus-domain`, `EffortTier`/`ProviderHealth`/`CacheHitRatio` from `nexus-model-gateway`, `ReflexProvider`/`ReflexRequest` from `nexus-reflex` so the Microbrain seam uses the SAME ReflexProvider contract per SPEC-009 behavior 9) and adds the router-specific vocabulary (`RoutingDecisionClass`, `RouterStrategyClass`, `EscalationReason`, `MicrobrainState`, `ShadowDecisionClass`) plus provider-neutral ports/types (`NexusModelRouter`, `RoutingFeatures`, `RoutingDecision`, `RoutePolicy`, `LearnedRouterAdapter`, `LearnedScores`, `MicrobrainProvider`, `DisabledMicrobrain`, `EscalationPolicy`, `EscalationOutcome`) recorded in ADR-022. Evidence: `EP-015 M1: ok` (41 unit tests + 1 dependency-direction), clippy clean (0 warnings), format check ok. Alternatives: redefine Route/Risk/Privacy in the router crate (rejected: vocabulary-locked names must not be duplicated); couple routing to a learned-router SDK (rejected: `LearnedRouterAdapter` is injected behind a port so RouteLLM/LLMRouter stay replaceable); make the Microbrain a runtime dependency (rejected: SPEC-025 keeps the training factory out of the V1 runtime; `DisabledMicrobrain` is the safe default). Consequence: deterministic policy routing is the V1 default; R4 never routes to a model; SECRET privacy and R3 risk never route to CHEAP_API; the policy engine can override learned routing for security; the Microbrain can remain disabled. Reversal: revert M1 commit. Security: routing is a deterministic control-plane decision; no model output can mint a route or override policy; errors are typed SPEC-006 codes with redacted messages. License: no new dependency classes (workspace members only). Compatibility: additive workspace member; no existing surface changed.
+- 2026-08-15 | Decision: Fix the pre-created M1 gate vacuity gap. `scripts/nodes/EP-015.sh` M1 previously ran ONLY the artifact check (no test execution), unlike the EP-014 M1 gate which ran `ep015_unit`-equivalent tests. Amended M1 to run `cargo test --locked -p nexus-model-router ep015_unit` so the gate is vacuity-safe and executes the real M1 proof. Evidence: `EP-015 M1: ok` (42 tests: 41 unit + 1 dependency-direction). Alternatives: leave the gate as artifact-only (rejected: AGENTS.md forbids weakening gates and requires milestones to execute their real proofs). Consequence: the M1 gate now proves the contract tests; later milestone gates keep their selectors. Reversal: revert the one-line change. Security: none. License: none. Compatibility: gate-only change.
 
 # 14. Outcomes & Retrospective
 
