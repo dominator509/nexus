@@ -132,10 +132,12 @@ impl ControlPlaneServer {
 
     /// Graceful startup: bind once and serve until shutdown signal.
     ///
-    /// Returns the serve error or Ok after graceful shutdown. The
-    /// listener is bound once (no probe-bind/drop/re-bind TOCTOU).
+    /// Consumes the server so the future is `'static` (usable with
+    /// tokio spawn). Returns the serve error or Ok after graceful
+    /// shutdown. The listener is bound once (no probe-bind/drop/re-bind
+    /// TOCTOU).
     pub async fn serve(
-        &self,
+        self,
         shutdown: impl std::future::Future<Output = ()> + Send + 'static,
     ) -> Result<(), ControlPlaneServerError> {
         let listener = tokio::net::TcpListener::bind(&self.config.bind_address)

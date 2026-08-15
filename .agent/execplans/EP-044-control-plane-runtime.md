@@ -290,7 +290,7 @@ Milestone gates are idempotent: rerunning `sh scripts/nodes/EP-044.sh Mk` after 
 
 - [x] M1: Contract, vocabulary, and package boundary (graph amendment + crate, 2026-08-14)
 - [x] M2: Core behavior and deterministic invariants (2026-08-14)
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration (2026-08-14)
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -346,6 +346,18 @@ requires all probes, lifecycle cannot return to Ready. Observed sentinels:
 `EP-044 M2: ok` (25 unit tests), `security check: ok`, `license gate: ok`,
 `reality gate: ok`, `format check: ok`, `lint: ok`, `dependency audit: ok`.
 
+M3 real-dependency detail (2026-08-14): proved the real server over real
+HTTP. Integration suite `apps/control-plane/tests/ep044_integration_http.rs`
+spawns the ACTUAL production binary (`CARGO_BIN_EXE_nexus-control-plane`) as
+a child process on a real loopback socket and drives real HTTP/1.1 over
+`TcpStream`: `/healthz` -> 200 `{"status":"healthy"}`, `/readyz` -> 200
+`{"ready":true}`, `/v1/capabilities` -> 200 non-empty, unknown route -> 404.
+Local deterministic bring-up: `infra/compose/core.yaml` (control-plane
+service, build from `apps/control-plane/Dockerfile`, port 8443, canonical
+env) + `.dockerignore`. Compose config validated (`docker compose config
+--quiet` exit 0). Observed sentinels: `EP-044 M3: ok` (4 integration tests
+against the real binary), side gates ok.
+
 # 12. Surprises & Discoveries
 
 - 2026-08-14: The original graph had 44 nodes and no runtime owner; `scripts/smoke-test.sh` activated the runtime smoke at `at-least EP-012`, which outran its dependency owner. EP-044 is the owner amendment.
@@ -355,6 +367,7 @@ requires all probes, lifecycle cannot return to Ready. Observed sentinels:
 - 2026-08-14 | Decision: Create EP-044 as a dedicated GraphLock node for the Nexus Control Plane Runtime, per the owner GraphLock amendment decision of 2026-08-14 (resolution of `NODE_BLOCKED EP-013 GLOBAL_GATE_PREREQUISITE_UNOWNED`). Evidence: exhaustive graph read showed `apps/control-plane`, `apps/edge`, `apps/cli`, `infra/compose/` in ARCHITECTURE.md + COMPONENT_REGISTRY but in NO node fence/ExecPlan/contract; zero `main.rs`; the apps/README "control-plane node (graph EP-007+)" is a phantom. Alternatives: hard-code the smoke to EP-035/036/042/043 (rejected: those nodes do not build the runtime; the owner directive forbids mapping smoke to a node that does not actually build it); leave EP-013 blocked forever (rejected: owner resolution). Consequence: the graph is now 45 nodes; EP-014's DEPS rewired from EP-013 to EP-044; the runtime smoke activates at `at-least EP-044`; before EP-044 is DONE the stage is `not-applicable-before EP-044`; at/after EP-044 it is mandatory and fail-closed. Reversal: revert the graph amendment commit and restore smoke activation. Security: the runtime is the composition root; secrets travel as references; the smoke carries no credentials. License: axum/tokio additions are MIT/Apache-2.0 (green class); recorded in ADR-019/ADR-020. Compatibility: additive node; prior green tags and ledger history preserved.
 - 2026-08-14 | Decision: Build `apps/control-plane/` as the `nexus-control-plane` crate with the real axum 0.8.9 HTTP server chain (tokio 1.53.1, hyper 1.11.0, tower 0.5.3 - all already present in the offline registry cache, all MIT/Apache-2.0 green class; no new license class). The server owns the canonical `/healthz`, `/readyz`, `/v1/capabilities` routes with real handlers; readiness is driven by the real RuntimeLifecycle; capabilities come from a real CapabilityListSource (never fabricated at request time); graceful shutdown binds once and stops on signal (no TOCTOU). Evidence: `EP-044 M1: ok` (19 unit + 1 dep-direction), `format check: ok`, `lint: ok`, `license gate: ok`, `reality gate: ok`. Alternatives: std-only HTTP server (rejected: ARCHITECTURE.md names Axum for apps/control-plane; hand-rolling HTTP is not a selected component); hyper directly (rejected: axum is the declared app framework and composes hyper/tower). Consequence: the real runtime binary exists at the crate boundary; M3 will prove it over real sockets; M5 live-fire will drive the real smoke. Reversal: revert the crate and workspace member. Security: config and responses never carry secrets; errors are typed and redacted. License: axum 0.8.9 MIT; tokio MIT; hyper MIT; tower MIT. Compatibility: additive workspace member; no existing surface changed.
 - 2026-08-14 | Decision: Add the runnable binary (`apps/control-plane/src/main.rs`) and canonical runtime config (`config/runtime/core.json`) in M2, plus the core-behavior integration test file. The binary is the source of truth for the runtime smoke: it reads the canonical env surface (`NEXUS_BASE_DOMAIN`, `NEXUS_SMOKE_URL`, `NEXUS_CONTROL_PLANE_BIND`, `NEXUS_TENANT_ID`, `NEXUS_CAPABILITY_SOURCE`), composes real capability source + lifecycle, serves until ctrl-c, and prints lifecycle state on stop. Evidence: `EP-044 M2: ok` (25 unit tests: 19 lib + 5 core-behavior + 1 dep-direction), `format check: ok`, `lint: ok`, `license gate: ok`, `reality gate: ok`, `dependency audit: ok`. Alternatives: config in env only (rejected: node contract requires canonical runtime configuration artifact); keep binary for M3 only (rejected: M2 owns core behavior including the composition root). Consequence: the real runtime is runnable and deterministic; M3 proves it over real sockets; M4 proves failure modes; M5 live-fire drives the real smoke. Reversal: revert M2 commit. Security: config carries no secrets; env surface is documented; responses are typed and redacted. License: none new. Compatibility: additive.
+- 2026-08-14 | Decision: Prove the real server over real HTTP by spawning the ACTUAL production binary as a child process in integration tests (not an in-process router double). The test uses `CARGO_BIN_EXE_nexus-control-plane`, real `TcpStream` HTTP/1.1, and asserts the canonical shapes plus 404 for unknown routes. Local deterministic bring-up: `infra/compose/core.yaml` + `apps/control-plane/Dockerfile` (rust:1.97.1-bookworm builder, debian:bookworm-slim runtime, ENTRYPOINT is the real binary). Evidence: `EP-044 M3: ok` (4 integration tests), `docker compose config --quiet` ok. Alternatives: in-process router test (rejected: does not prove the real binary path, env surface, or bind/serve lifecycle); docker-based integration (rejected: slower and less deterministic in CI; the binary is the source of truth per the node contract fallback). Consequence: the runtime is proven over real sockets; compose provides the local profile bring-up for LF-029; M4 proves failure modes; M5 drives the real smoke. Reversal: revert M3 commit. Security: no secrets in the test; child process is the production binary. License: rust/debian base images recorded; binary licenses unchanged. Compatibility: additive.
 
 # 14. Outcomes & Retrospective
 
