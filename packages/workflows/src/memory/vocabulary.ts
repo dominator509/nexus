@@ -58,8 +58,7 @@ export const memoryWorkflowKind = defineMemoryVocabulary("MemoryWorkflowKind", [
   "MEMORY_DELETION",
   "MEMORY_REEMBED",
 ] as const);
-export type MemoryWorkflowKind =
-  (typeof memoryWorkflowKind.values)[number];
+export type MemoryWorkflowKind = (typeof memoryWorkflowKind.values)[number];
 
 /**
  * Memory operation kinds: the durable activity-level operations the
@@ -67,39 +66,43 @@ export type MemoryWorkflowKind =
  * error-classified activity (SPEC-006 behavior 7). Kinds are
  * EP-016-owned.
  */
-export const memoryOperationKind = defineMemoryVocabulary("MemoryOperationKind", [
-  "PROPOSE",
-  "EVALUATE_PROPOSAL",
-  "ACTIVATE_CANONICAL",
-  "SUPERSEDE",
-  "RETENTION_SWEEP",
-  "LEGAL_HOLD_APPLY",
-  "LEGAL_HOLD_RELEASE",
-  "EXPORT_SNAPSHOT",
-  "DELETE_RECORD",
-  "REEMBED",
-] as const);
-export type MemoryOperationKind =
-  (typeof memoryOperationKind.values)[number];
+export const memoryOperationKind = defineMemoryVocabulary(
+  "MemoryOperationKind",
+  [
+    "PROPOSE",
+    "EVALUATE_PROPOSAL",
+    "ACTIVATE_CANONICAL",
+    "SUPERSEDE",
+    "RETENTION_SWEEP",
+    "LEGAL_HOLD_APPLY",
+    "LEGAL_HOLD_RELEASE",
+    "EXPORT_SNAPSHOT",
+    "DELETE_RECORD",
+    "REEMBED",
+  ] as const,
+);
+export type MemoryOperationKind = (typeof memoryOperationKind.values)[number];
 
 /**
  * Memory workflow lifecycle states. Terminal outcomes mirror SPEC-006
  * ActionLifecycle; durable engine states CANCELLED and TIMED_OUT are
  * explicit (SPEC-023 behavior 5).
  */
-export const memoryWorkflowState = defineMemoryVocabulary("MemoryWorkflowState", [
-  "REQUESTED",
-  "EVALUATING",
-  "AWAITING_APPROVAL",
-  "EXECUTING",
-  "VERIFYING",
-  "SUCCEEDED",
-  "FAILED",
-  "CANCELLED",
-  "TIMED_OUT",
-] as const);
-export type MemoryWorkflowState =
-  (typeof memoryWorkflowState.values)[number];
+export const memoryWorkflowState = defineMemoryVocabulary(
+  "MemoryWorkflowState",
+  [
+    "REQUESTED",
+    "EVALUATING",
+    "AWAITING_APPROVAL",
+    "EXECUTING",
+    "VERIFYING",
+    "SUCCEEDED",
+    "FAILED",
+    "CANCELLED",
+    "TIMED_OUT",
+  ] as const,
+);
+export type MemoryWorkflowState = (typeof memoryWorkflowState.values)[number];
 
 /**
  * Legal hold decision (SPEC-002 requirement 8). APPLY freezes a record
@@ -113,12 +116,10 @@ export const legalHoldDecision = defineMemoryVocabulary("LegalHoldDecision", [
 export type LegalHoldDecision = (typeof legalHoldDecision.values)[number];
 
 /** Retention disposition decided by a sweep (SPEC-002 requirement 8). */
-export const retentionDisposition = defineMemoryVocabulary("RetentionDisposition", [
-  "KEEP",
-  "DELETE",
-  "LEGAL_HOLD",
-] as const);
-export type RetentionDisposition =
-  (typeof retentionDisposition.values)[number];
+export const retentionDisposition = defineMemoryVocabulary(
+  "RetentionDisposition",
+  ["KEEP", "DELETE", "LEGAL_HOLD"] as const,
+);
+export type RetentionDisposition = (typeof retentionDisposition.values)[number];
 
 export const MEMORY_WORKFLOW_VOCABULARY_VERSION = "1.0.0";

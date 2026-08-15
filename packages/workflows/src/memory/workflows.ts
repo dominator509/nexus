@@ -137,9 +137,11 @@ export interface MemoryWorkflowSpec<I = unknown, O = unknown> {
   readonly execute?: (
     ctx: import("../workflows.js").WorkflowContext,
     input: I,
-  ) => Promise<{ state: WorkflowState; outcome?: WorkflowOutcome } & {
-    output?: O;
-  }>;
+  ) => Promise<
+    { state: WorkflowState; outcome?: WorkflowOutcome } & {
+      output?: O;
+    }
+  >;
 }
 
 // ---------------------------------------------------------------------------

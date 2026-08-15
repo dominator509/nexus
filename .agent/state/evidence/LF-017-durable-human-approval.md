@@ -1,6 +1,6 @@
 # LF-017 Durable Human Approval (EP-006 M5)
 
-Generated: 2026-08-15T01:56:20Z
+Generated: 2026-08-15T17:27:16Z
 Node: EP-006
 Command: sh scripts/live-fire/LF-017.sh
 
