@@ -288,11 +288,25 @@ Milestone gates are idempotent: rerunning `sh scripts/nodes/EP-044.sh Mk` after 
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary (graph amendment, 2026-08-14)
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+Graph amendment detail (2026-08-14, commits `37e8908` + `9f018fc`): owner
+GraphLock amendment created EP-044 as the Control Plane Runtime node between
+EP-013 and EP-014. GRAPH.md now 45 nodes; EP-014 DEPS rewired EP-013 ->
+EP-044. `scripts/smoke-test.sh` activates the runtime smoke at
+`at-least EP-044`; before EP-044 is DONE it prints
+`runtime smoke: not-applicable-before EP-044` (never a false PASS). Gate
+regression `tests/runtime/smoke-gate-regression.sh` proves: not-invoked
+before owner, wiring at EP-044, fail-closed when absent. LF-029 registered.
+EP-013 fence amended for the graph-amendment paths. Validations observed:
+`blueprint validation: ok`, `scope audit EP-013: ok`, `smoke gate regression:
+ok`, `node verify EP-013: ok` (runtime smoke not-applicable-before EP-044),
+`EP-013 M5: ok`, expected-files/security/license/reality/format/lint/
+dependency ok, adapter parity 8x3505091078 1453.
 
 # 12. Surprises & Discoveries
 
