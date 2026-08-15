@@ -154,11 +154,7 @@ mod tests {
             private_allowed: true,
         };
         let candidates = vec![
-            record(
-                tenant_id("1").as_str(),
-                "household",
-                Sensitivity::Household,
-            ),
+            record(tenant_id("1").as_str(), "household", Sensitivity::Household),
             record(tenant_id("1").as_str(), "personal", Sensitivity::Personal),
         ];
         let out = PermissionFilter.filter(&profile, candidates).unwrap();
@@ -231,17 +227,9 @@ mod tests {
             max_sensitivity: Sensitivity::Personal,
             private_allowed: true,
         };
-        let mut hot = record(
-            tenant_id("1").as_str(),
-            "household",
-            Sensitivity::Household,
-        );
+        let mut hot = record(tenant_id("1").as_str(), "household", Sensitivity::Household);
         hot.score = 1.0;
-        let mut other_tenant = record(
-            tenant_id("2").as_str(),
-            "household",
-            Sensitivity::Household,
-        );
+        let mut other_tenant = record(tenant_id("2").as_str(), "household", Sensitivity::Household);
         other_tenant.score = 1.0;
         let out = PermissionFilter
             .filter(&profile, vec![hot, other_tenant])
