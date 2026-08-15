@@ -26,3 +26,4 @@ LF-025|EP-028|scripts/live-fire/LF-025.sh|ceo-business-brief|Combine Hydra, soci
 LF-026|EP-022|scripts/live-fire/LF-026.sh|voice-endpoint-transfer|Start a conversation on a room satellite, move it to a Bluetooth headset or mobile endpoint, and maintain user, task, and privacy context.
 LF-027|EP-029|scripts/live-fire/LF-027.sh|social-lead-to-crm|Classify a real certified social inquiry, create or link the canonical Hydra person and lead, draft a response, and record attribution.
 LF-028|EP-021|scripts/live-fire/LF-028.sh|shared-room-private-response|Ask for sensitive personal information in an occupied room and prove Nexus routes the response privately rather than speaking it aloud.
+LF-029|EP-044|scripts/live-fire/LF-029.sh|runtime-smoke|Start the real Nexus Control Plane Runtime, assert /healthz /readyz /v1/capabilities over real HTTP, and shut down gracefully.

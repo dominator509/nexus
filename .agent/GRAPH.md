@@ -19,7 +19,8 @@ NODE EP-010 DEPS EP-009
 NODE EP-011 DEPS EP-010
 NODE EP-012 DEPS EP-011
 NODE EP-013 DEPS EP-012
-NODE EP-014 DEPS EP-013
+NODE EP-044 DEPS EP-013
+NODE EP-014 DEPS EP-044
 NODE EP-015 DEPS EP-014
 NODE EP-016 DEPS EP-015
 NODE EP-017 DEPS EP-016
@@ -87,7 +88,8 @@ The graph first establishes truthful toolchain, domain, data, eventing, workflow
 | EP-011 | EP-010 | Build Rust, Python, and TypeScript connector SDKs plus a sandboxed legacy Connector Sidecar | SPEC-022 | .agent/execplans/EP-011-connector-sdks-and-sidecar-runtime.md |
 | EP-012 | EP-011 | Implement REST, WebSocket, MCP Streamable HTTP, A2A, artifact exchange, and scoped context capsules | SPEC-003 | .agent/execplans/EP-012-api-mcp-and-a2a-fabric.md |
 | EP-013 | EP-012 | Implement the model provider registry, Bifrost-preferred gateway adapter, budgets, fallbacks, and provider health | SPEC-009 | .agent/execplans/EP-013-model-gateway-and-provider-registry.md |
-| EP-014 | EP-013 | Implement DeepSeek V4 Flash ReflexProvider, effort tiers, deterministic prompt segments, cache accounting, and schema validation | SPEC-009 | .agent/execplans/EP-014-deepseek-reflex-and-cache.md |
+| EP-044 | EP-013 | Implement the Control Plane Runtime: apps/control-plane, runnable server binary, composition root, infra/compose/core.yaml, canonical runtime config, base URL/domain resolution, /healthz, /readyz, /v1/capabilities, graceful startup/shutdown, runtime smoke ownership, local deterministic bring-up, observability bootstrap | SPEC-003, SPEC-006, SPEC-007 | .agent/execplans/EP-044-control-plane-runtime.md |
+| EP-014 | EP-044 | Implement DeepSeek V4 Flash ReflexProvider, effort tiers, deterministic prompt segments, cache accounting, and schema validation | SPEC-009 | .agent/execplans/EP-014-deepseek-reflex-and-cache.md |
 | EP-015 | EP-014 | Implement the Nexus Model Router Contract, policy routing, RouteLLM-compatible scoring, escalation, and Microbrain interface | SPEC-009, SPEC-025 | .agent/execplans/EP-015-model-router-and-microbrain-seam.md |
 | EP-016 | EP-015 | Implement hybrid retrieval, context capsules, memory consolidation, retention, privacy, and graph-aware context construction | SPEC-002 | .agent/execplans/EP-016-context-engine-and-memory-consolidation.md |
 | EP-017 | EP-016 | Implement objectives, task graph, agent registry, A2A adapters, Codex, Claude Code, Hermes, OpenClaw, budgets, and artifacts | SPEC-010 | .agent/execplans/EP-017-agent-orchestrator-and-harness-adapters.md |

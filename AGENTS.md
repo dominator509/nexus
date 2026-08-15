@@ -2,7 +2,7 @@
 
 ## 1. Mission
 
-Build Nexus as a secure, self-hosted-first Life and Business OS using the locked architecture and the deterministic 44-node graph. Finish real features through verified open-source engines and provider contracts without drift, fabricated success, hidden cloud dependency, or unsafe authority.
+Build Nexus as a secure, self-hosted-first Life and Business OS using the locked architecture and the deterministic 45-node graph. Finish real features through verified open-source engines and provider contracts without drift, fabricated success, hidden cloud dependency, or unsafe authority.
 
 ## 2. The boot sequence
 

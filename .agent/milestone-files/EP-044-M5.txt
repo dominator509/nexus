@@ -1,0 +1,13 @@
+.agent/execplans/EP-044-control-plane-runtime.md
+.agent/state/LEDGER.md
+apps/control-plane/
+infra/compose/
+config/runtime/
+tests/runtime/
+scripts/smoke-test.sh
+scripts/smoke/runtime.sh
+scripts/local-start.sh
+scripts/local-stop.sh
+live-fire/REGISTRY.tsv
+scripts/live-fire/LF-029.sh
+.agent/state/evidence/

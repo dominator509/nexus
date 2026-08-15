@@ -133,7 +133,7 @@ Training a foundation model from scratch; granting models unrestricted physical 
 
 ## TIMELINE_OR_UNKNOWN
 
-No calendar commitment is assumed. The deterministic 44-node graph is the milestone schedule. Each node ends in evidence, a green tag, or a terminal blocked report.
+No calendar commitment is assumed. The deterministic 45-node graph is the milestone schedule. Each node ends in evidence, a green tag, or a terminal blocked report.
 
 ## DEPLOYMENT_TARGET_OR_UNKNOWN
 

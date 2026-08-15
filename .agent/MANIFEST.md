@@ -31,6 +31,7 @@ Every listed file is part of the Nexus 6LAYER pack. Layer is the GraphLock autho
 - `.agent/execplans/EP-011-connector-sdks-and-sidecar-runtime.md` - L4 - Self-contained graph node execution plan.
 - `.agent/execplans/EP-012-api-mcp-and-a2a-fabric.md` - L4 - Self-contained graph node execution plan.
 - `.agent/execplans/EP-013-model-gateway-and-provider-registry.md` - L4 - Self-contained graph node execution plan.
+- `.agent/execplans/EP-044-control-plane-runtime.md` - L4 - Self-contained graph node execution plan.
 - `.agent/execplans/EP-014-deepseek-reflex-and-cache.md` - L4 - Self-contained graph node execution plan.
 - `.agent/execplans/EP-015-model-router-and-microbrain-seam.md` - L4 - Self-contained graph node execution plan.
 - `.agent/execplans/EP-016-context-engine-and-memory-consolidation.md` - L4 - Self-contained graph node execution plan.
@@ -75,6 +76,7 @@ Every listed file is part of the Nexus 6LAYER pack. Layer is the GraphLock autho
 - `.agent/expected-files/EP-011.txt` - L2 - Machine scope and final-file fence for one node.
 - `.agent/expected-files/EP-012.txt` - L2 - Machine scope and final-file fence for one node.
 - `.agent/expected-files/EP-013.txt` - L2 - Machine scope and final-file fence for one node.
+- `.agent/expected-files/EP-044.txt` - L2 - Machine scope and final-file fence for one node.
 - `.agent/expected-files/EP-014.txt` - L2 - Machine scope and final-file fence for one node.
 - `.agent/expected-files/EP-015.txt` - L2 - Machine scope and final-file fence for one node.
 - `.agent/expected-files/EP-016.txt` - L2 - Machine scope and final-file fence for one node.
@@ -175,6 +177,11 @@ Every listed file is part of the Nexus 6LAYER pack. Layer is the GraphLock autho
 - `.agent/milestone-files/EP-013-M3.txt` - L2 - Machine file-existence fence for one milestone.
 - `.agent/milestone-files/EP-013-M4.txt` - L2 - Machine file-existence fence for one milestone.
 - `.agent/milestone-files/EP-013-M5.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-044-M1.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-044-M2.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-044-M3.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-044-M4.txt` - L2 - Machine file-existence fence for one milestone.
+- `.agent/milestone-files/EP-044-M5.txt` - L2 - Machine file-existence fence for one milestone.
 - `.agent/milestone-files/EP-014-M1.txt` - L2 - Machine file-existence fence for one milestone.
 - `.agent/milestone-files/EP-014-M2.txt` - L2 - Machine file-existence fence for one milestone.
 - `.agent/milestone-files/EP-014-M3.txt` - L2 - Machine file-existence fence for one milestone.
@@ -339,6 +346,7 @@ Every listed file is part of the Nexus 6LAYER pack. Layer is the GraphLock autho
 - `.agent/node-contracts/EP-011.md` - L2 - Node-specific public interface and acceptance contract.
 - `.agent/node-contracts/EP-012.md` - L2 - Node-specific public interface and acceptance contract.
 - `.agent/node-contracts/EP-013.md` - L2 - Node-specific public interface and acceptance contract.
+- `.agent/node-contracts/EP-044.md` - L2 - Node-specific public interface and acceptance contract.
 - `.agent/node-contracts/EP-014.md` - L2 - Node-specific public interface and acceptance contract.
 - `.agent/node-contracts/EP-015.md` - L2 - Node-specific public interface and acceptance contract.
 - `.agent/node-contracts/EP-016.md` - L2 - Node-specific public interface and acceptance contract.
@@ -510,6 +518,7 @@ Every listed file is part of the Nexus 6LAYER pack. Layer is the GraphLock autho
 - `scripts/live-fire/LF-026.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/live-fire/LF-027.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/live-fire/LF-028.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/live-fire/LF-029.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/local-start.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/local-stop.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/migrate.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
@@ -529,6 +538,7 @@ Every listed file is part of the Nexus 6LAYER pack. Layer is the GraphLock autho
 - `scripts/nodes/EP-011.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/nodes/EP-012.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/nodes/EP-013.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
+- `scripts/nodes/EP-044.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/nodes/EP-014.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/nodes/EP-015.sh` - L5 - Executable validation, lifecycle, probe, or proof script.
 - `scripts/nodes/EP-016.sh` - L5 - Executable validation, lifecycle, probe, or proof script.

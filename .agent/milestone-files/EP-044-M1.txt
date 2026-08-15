@@ -1,0 +1,17 @@
+.agent/execplans/EP-044-control-plane-runtime.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-044.txt
+.agent/node-contracts/EP-044.md
+.agent/milestone-files/EP-044-M1.txt
+scripts/nodes/EP-044.sh
+apps/control-plane/
+docs/vocabulary/README.md
+references/ADR-019-control-plane-runtime-vocabulary.md
+references/ADR-020-runtime-smoke-ownership.md
+.agent/GRAPH.md
+.agent/MANIFEST.md
+AGENTS.md
+README_FIRST.md
+NEXUS_GRAPHLOCK_INPUTS.md
+Cargo.toml
+Cargo.lock

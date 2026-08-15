@@ -562,3 +562,46 @@ at least 0.97.
 (SPEC-009 required behavior 4; ADR-018). Ordered from immutable
 constitution through dynamic request; volatile IDs and timestamps stay
 in the tail.
+
+## ControlPlaneConfig
+
+Canonical runtime configuration for the Nexus Control Plane Runtime
+(SPEC-003/SPEC-006; ADR-019, EP-044): base domain/URL, bind address,
+tenant, and capability list source. Provider-neutral; never carries
+secrets.
+
+## RuntimeHealth
+
+Canonical `/healthz` response shape (SPEC-006 health contract; ADR-019,
+EP-044). Must serialize as `{"status":"healthy"}` with HTTP 200 when the
+runtime is healthy.
+
+## RuntimeReadiness
+
+Canonical `/readyz` response shape (SPEC-006; ADR-019, EP-044). Must
+serialize as `{"ready":true}` with HTTP 200 when the runtime is ready.
+
+## CapabilityList
+
+Canonical `/v1/capabilities` response shape (SPEC-003; ADR-019, EP-044).
+Must serialize as `{"capabilities":[...]}` with a non-empty list when the
+runtime is ready.
+
+## ControlPlaneServer
+
+The runnable control-plane server boundary (ADR-019, EP-044): bind,
+routes, serve, graceful shutdown. The composition root of the Nexus
+runtime.
+
+## RuntimeLifecycle
+
+Graceful startup/shutdown contract for the runtime (ADR-019, EP-044):
+bind once, serve, stop on signal, never leak processes.
+
+## RuntimeSmoke
+
+Canonical runtime smoke contract, owned by EP-044 (ADR-020): the runtime
+smoke gate activates only at `at-least EP-044`; before the owner is DONE
+the stage is `not-applicable-before EP-044`; after the owner is DONE the
+smoke is mandatory and fails closed when the runtime is absent or
+unhealthy. The smoke assertions themselves are never weakened.

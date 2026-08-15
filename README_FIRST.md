@@ -1,6 +1,6 @@
 # Nexus 6LAYER Blueprint Pack
 
-This repository is a materialized architecture and execution pack for Nexus. It is not a lightweight product brief. It defines a deterministic 44-node implementation graph, locked names and contracts, required components, self-hosted defaults, provider fallbacks, verification gates, live-fire outcomes, deployment profiles, and operating rules for coding agents.
+This repository is a materialized architecture and execution pack for Nexus. It is not a lightweight product brief. It defines a deterministic 45-node implementation graph, locked names and contracts, required components, self-hosted defaults, provider fallbacks, verification gates, live-fire outcomes, deployment profiles, and operating rules for coding agents.
 
 Read in this order:
 
