@@ -1276,6 +1276,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-memory-workers"
+version = "0.1.0"
+dependencies = [
+ "nexus-context",
+ "nexus-data",
+ "nexus-domain",
+ "nexus-fabric",
+ "nexus-memory",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-model-gateway"
 version = "0.1.0"
 dependencies = [

@@ -1,0 +1,17 @@
+[package]
+name = "nexus-memory-workers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-016 memory workers crate (SPEC-002; ADR-023): pure deterministic domain workers implementing ContextEngine, HybridRetriever, MemoryConsolidator, PrivacyFilter, and GraphExpansionPolicy. Permission filtering precedes scoring; purpose limitation is a hard constraint; proposals are never canonical facts; graph expansion is bounded and purpose-aware; telemetry and errors are redacted."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-data = { path = "../nexus-data", version = "0.1.0" }
+nexus-memory = { path = "../nexus-memory", version = "0.1.0" }
+nexus-fabric = { path = "../nexus-fabric", version = "0.1.0" }
+nexus-context = { path = "../nexus-context", version = "0.1.0" }
+
+[dev-dependencies]

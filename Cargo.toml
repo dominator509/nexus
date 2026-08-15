@@ -23,6 +23,7 @@ members = [
     "crates/nexus-reflex",
     "crates/nexus-model-router",
     "crates/nexus-context",
+    "crates/nexus-memory-workers",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",
