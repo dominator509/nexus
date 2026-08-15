@@ -42,7 +42,7 @@ pub use features::RoutingFeatures;
 pub use learned::{LearnedRouterAdapter, LearnedScores};
 pub use microbrain::{MicrobrainProvider, ShadowDecision};
 pub use policy::RoutePolicy;
-pub use router::{DeterministicModelRouter, NexusModelRouter};
+pub use router::{AuditSink, DeterministicModelRouter, NexusModelRouter, RouteAuditRecord};
 pub use vocabulary::{
     EscalationReason, MicrobrainState, RouterStrategyClass, RouterVocabularyError,
     RoutingDecisionClass, ShadowDecisionClass,

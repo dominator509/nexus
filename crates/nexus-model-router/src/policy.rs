@@ -296,4 +296,148 @@ mod tests {
         f.complexity = 2.0;
         assert!(RoutePolicy::new().select(&f).is_err());
     }
+
+    // ---- M3: frozen routing corpus (SPEC-009 required test "Router
+    // policy table"; the acceptance criterion for learned routing) ----
+
+    fn corpus_case(
+        complexity: f64,
+        risk: Risk,
+        privacy: Privacy,
+        local_only: bool,
+        capability: Option<&str>,
+        expected: Route,
+    ) -> (RoutingFeatures, Route) {
+        (
+            RoutingFeatures::new(
+                "frozen.corpus",
+                complexity,
+                privacy,
+                risk,
+                capability.map(str::to_string),
+                0.3,
+                500,
+                local_only,
+                0.99,
+                0.95,
+                true,
+                Some(1000),
+            ),
+            expected,
+        )
+    }
+
+    #[test]
+    fn ep015_unit_frozen_corpus_routes_match() {
+        let corpus = [
+            // Deterministic task bypasses the model.
+            corpus_case(
+                0.0,
+                Risk::R0,
+                Privacy::Public,
+                false,
+                None,
+                Route::Deterministic,
+            ),
+            // R4 never routes to a model.
+            corpus_case(0.2, Risk::R4, Privacy::Personal, false, None, Route::Reject),
+            // SECRET privacy -> frontier, never cheap.
+            corpus_case(
+                0.2,
+                Risk::R1,
+                Privacy::Secret,
+                false,
+                None,
+                Route::FrontierApi,
+            ),
+            // R3 risk -> frontier, never cheap.
+            corpus_case(
+                0.2,
+                Risk::R3,
+                Privacy::Personal,
+                false,
+                None,
+                Route::FrontierApi,
+            ),
+            // Local-only -> local reflex plane.
+            corpus_case(0.5, Risk::R1, Privacy::Personal, true, None, Route::Reflex),
+            // Specialist capability -> specialist agent.
+            corpus_case(
+                0.6,
+                Risk::R2,
+                Privacy::Personal,
+                false,
+                Some("specialist.legal"),
+                Route::SpecialistAgent,
+            ),
+            // Low risk + low complexity + non-sensitive -> cheap API.
+            corpus_case(
+                0.2,
+                Risk::R1,
+                Privacy::Personal,
+                false,
+                None,
+                Route::CheapApi,
+            ),
+            // High complexity -> frontier.
+            corpus_case(
+                0.8,
+                Risk::R2,
+                Privacy::Personal,
+                false,
+                None,
+                Route::FrontierApi,
+            ),
+        ];
+        let policy = RoutePolicy::new();
+        for (features, expected) in corpus {
+            assert_eq!(
+                policy.select(&features).unwrap(),
+                expected,
+                "frozen corpus mismatch for {features:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn ep015_unit_frozen_corpus_security_override() {
+        // A learned proposal violating a safety floor is overridden by
+        // the policy engine (acceptance obligation 3). This is the
+        // security-override acceptance test for learned routing.
+        let policy = RoutePolicy::new();
+
+        // SECRET privacy: learned CHEAP_API -> policy frontier.
+        let mut secret = features();
+        secret.privacy = Privacy::Secret;
+        assert_eq!(
+            policy.override_security(&secret, Route::CheapApi).unwrap(),
+            Route::FrontierApi
+        );
+
+        // R4: learned frontier -> policy reject (never a model route).
+        let mut r4 = features();
+        r4.risk = Risk::R4;
+        assert_eq!(
+            policy.override_security(&r4, Route::FrontierApi).unwrap(),
+            Route::Reject
+        );
+
+        // Local-only: learned remote -> policy local.
+        let mut local = features();
+        local.local_only = true;
+        assert_eq!(
+            policy
+                .override_security(&local, Route::FrontierApi)
+                .unwrap(),
+            Route::Reflex
+        );
+
+        // Deterministic task: learned model route -> deterministic.
+        let mut det = features();
+        det.complexity = 0.0;
+        assert_eq!(
+            policy.override_security(&det, Route::CheapApi).unwrap(),
+            Route::Deterministic
+        );
+    }
 }

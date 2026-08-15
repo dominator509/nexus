@@ -19,6 +19,30 @@ use crate::vocabulary::{
     EscalationReason, MicrobrainState, RouterStrategyClass, RoutingDecisionClass,
 };
 use nexus_domain::vocabulary::Route;
+use serde::{Deserialize, Serialize};
+
+/// Redacted audit record for a routing decision (SPEC-006 audit;
+/// EP-015 M3).
+///
+/// Carries only routing metadata: ids, class, route, strategy,
+/// escalation reason, and provider id. NEVER carries features, prompts,
+/// credentials, or private content.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RouteAuditRecord {
+    pub request_id: String,
+    pub correlation_id: String,
+    pub class: RoutingDecisionClass,
+    pub route: Route,
+    pub strategy: RouterStrategyClass,
+    pub escalation_reason: Option<EscalationReason>,
+    pub provider_id: Option<String>,
+}
+
+/// Audit sink port (EP-015 M3). Implementations persist or forward
+/// redacted routing audit records.
+pub trait AuditSink: std::fmt::Debug + Send {
+    fn record(&mut self, record: &RouteAuditRecord);
+}
 
 /// Provider-neutral model router port.
 pub trait NexusModelRouter {
@@ -47,6 +71,8 @@ pub struct DeterministicModelRouter {
     microbrain: Option<Box<dyn MicrobrainProvider>>,
     /// provider_id -> availability (0..=1); empty registry = policy only.
     provider_availability: std::collections::HashMap<String, f64>,
+    /// Redacted audit sink (optional; default none).
+    audit: Option<Box<dyn AuditSink>>,
 }
 
 impl DeterministicModelRouter {
@@ -57,6 +83,7 @@ impl DeterministicModelRouter {
             learned: None,
             microbrain: None,
             provider_availability: std::collections::HashMap::new(),
+            audit: None,
         }
     }
 
@@ -75,6 +102,11 @@ impl DeterministicModelRouter {
         self
     }
 
+    pub fn with_audit_sink(mut self, audit: Box<dyn AuditSink>) -> Self {
+        self.audit = Some(audit);
+        self
+    }
+
     pub fn with_provider_availability(
         mut self,
         provider_id: impl Into<String>,
@@ -83,6 +115,20 @@ impl DeterministicModelRouter {
         self.provider_availability
             .insert(provider_id.into(), availability);
         self
+    }
+
+    fn emit_audit(&mut self, decision: &RoutingDecision) {
+        if let Some(sink) = self.audit.as_mut() {
+            sink.record(&RouteAuditRecord {
+                request_id: decision.request_id.clone(),
+                correlation_id: decision.correlation_id.clone(),
+                class: decision.class,
+                route: decision.route,
+                strategy: decision.strategy,
+                escalation_reason: decision.escalation_reason,
+                provider_id: decision.provider_id.clone(),
+            });
+        }
     }
 }
 
@@ -94,6 +140,19 @@ impl Default for DeterministicModelRouter {
 
 impl NexusModelRouter for DeterministicModelRouter {
     fn route(
+        &mut self,
+        request_id: &str,
+        correlation_id: &str,
+        features: &RoutingFeatures,
+    ) -> Result<RoutingDecision, RouterError> {
+        let decision = self.route_inner(request_id, correlation_id, features)?;
+        self.emit_audit(&decision);
+        Ok(decision)
+    }
+}
+
+impl DeterministicModelRouter {
+    fn route_inner(
         &mut self,
         request_id: &str,
         correlation_id: &str,
@@ -353,6 +412,32 @@ mod tests {
         assert!(!s.contains("grant"));
         assert!(!s.contains("scope"));
         assert!(!s.contains("ALLOW"));
+    }
+
+    #[test]
+    fn ep015_unit_router_emits_redacted_audit_record() {
+        #[derive(Debug)]
+        struct CaptureSink(std::sync::Arc<std::sync::Mutex<Vec<RouteAuditRecord>>>);
+        impl AuditSink for CaptureSink {
+            fn record(&mut self, record: &RouteAuditRecord) {
+                self.0.lock().unwrap().push(record.clone());
+            }
+        }
+        let shared = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let sink = CaptureSink(shared.clone());
+        let mut router = DeterministicModelRouter::new().with_audit_sink(Box::new(sink));
+        let _ = router.route("r-1", "c-1", &features()).unwrap();
+        let records = shared.lock().unwrap();
+        assert_eq!(records.len(), 1);
+        let rec = &records[0];
+        assert_eq!(rec.request_id, "r-1");
+        assert_eq!(rec.correlation_id, "c-1");
+        assert_eq!(rec.route, Route::CheapApi);
+        // The audit record serializes WITHOUT features/prompts/secrets.
+        let s = serde_json::to_string(rec).unwrap();
+        assert!(!s.contains("contacts.query"));
+        assert!(!s.contains("complexity"));
+        assert!(!s.contains("authorization"));
     }
 
     #[test]
