@@ -1,0 +1,16 @@
+[package]
+name = "nexus-control-plane"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-044 Control Plane Runtime: real runnable control-plane server (apps/control-plane), canonical /healthz /readyz /v1/capabilities endpoints, graceful startup/shutdown, canonical runtime config, base URL/domain resolution, runtime smoke ownership, local deterministic bring-up, observability bootstrap (SPEC-003, SPEC-006, SPEC-007)."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../../crates/nexus-identity", version = "0.1.0" }
+nexus-capabilities = { path = "../../crates/nexus-capabilities", version = "0.1.0" }
+nexus-fabric = { path = "../../crates/nexus-fabric", version = "0.1.0" }
+axum = "0.8.9"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "signal", "net"] }

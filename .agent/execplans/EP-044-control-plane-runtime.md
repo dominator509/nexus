@@ -288,7 +288,7 @@ Milestone gates are idempotent: rerunning `sh scripts/nodes/EP-044.sh Mk` after 
 
 # 11. Progress
 
-- [x] M1: Contract, vocabulary, and package boundary (graph amendment, 2026-08-14)
+- [x] M1: Contract, vocabulary, and package boundary (graph amendment + crate, 2026-08-14)
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -306,7 +306,31 @@ EP-013 fence amended for the graph-amendment paths. Validations observed:
 `blueprint validation: ok`, `scope audit EP-013: ok`, `smoke gate regression:
 ok`, `node verify EP-013: ok` (runtime smoke not-applicable-before EP-044),
 `EP-013 M5: ok`, expected-files/security/license/reality/format/lint/
-dependency ok, adapter parity 8x3505091078 1453.
+dependency ok, adapter parity 8x3505091078 1453. EP-013 closed green
+(NODE_DONE 2026-08-15, tag green/EP-013 at `71607cc`).
+
+M1 crate detail (2026-08-14): built `apps/control-plane/` as the
+`nexus-control-plane` crate - the real runnable control-plane server.
+Modules: `vocabulary` (RuntimeState + ADR-019 locked names), `config`
+(ControlPlaneConfig: base domain, bind address, tenant, capability source;
+validates host:port, rejects empties), `error` (typed RuntimeErrorCode),
+`health` (RuntimeHealth `{"status":"healthy"}`), `readiness`
+(RuntimeReadiness `{"ready":true}`), `capabilities` (CapabilityList +
+CapabilityListSource port + ConfiguredCapabilityList real adapter),
+`lifecycle` (RuntimeLifecycle state machine Starting->Ready->Stopping->
+Stopped, fail-closed transitions), `server` (ControlPlaneServer: real axum
+0.8.9 router over /healthz /readyz /v1/capabilities, composed ServerState,
+bind-once serve with graceful shutdown), `smoke` (RuntimeSmoke contract:
+fail closed on any failed probe). Workspace member registered in root
+Cargo.toml; Cargo.lock regenerated offline. Real HTTP chain: axum 0.8.9,
+tokio 1.53.1, hyper 1.11.0, tower 0.5.3 (all in the offline registry cache,
+green license class). 19 ep044_unit tests + ep044_unit_dependency_direction
+(forbidden: reqwest/ureq/openbao/headscale/openfga/opa/jsonschema/rusqlite/
+sqlx/nats/tonic/prost/clap/keycloak/temporal/postgres; HTTP server chain
+allowed per ARCHITECTURE app layer). Observed sentinels: `EP-044 M1: ok`,
+`security check: ok`, `license gate: ok`, `reality gate: ok`,
+`format check: ok`, `lint: ok`, `dependency audit: ok`,
+`blueprint validation: ok`.
 
 # 12. Surprises & Discoveries
 
@@ -315,6 +339,7 @@ dependency ok, adapter parity 8x3505091078 1453.
 # 13. Decision Log
 
 - 2026-08-14 | Decision: Create EP-044 as a dedicated GraphLock node for the Nexus Control Plane Runtime, per the owner GraphLock amendment decision of 2026-08-14 (resolution of `NODE_BLOCKED EP-013 GLOBAL_GATE_PREREQUISITE_UNOWNED`). Evidence: exhaustive graph read showed `apps/control-plane`, `apps/edge`, `apps/cli`, `infra/compose/` in ARCHITECTURE.md + COMPONENT_REGISTRY but in NO node fence/ExecPlan/contract; zero `main.rs`; the apps/README "control-plane node (graph EP-007+)" is a phantom. Alternatives: hard-code the smoke to EP-035/036/042/043 (rejected: those nodes do not build the runtime; the owner directive forbids mapping smoke to a node that does not actually build it); leave EP-013 blocked forever (rejected: owner resolution). Consequence: the graph is now 45 nodes; EP-014's DEPS rewired from EP-013 to EP-044; the runtime smoke activates at `at-least EP-044`; before EP-044 is DONE the stage is `not-applicable-before EP-044`; at/after EP-044 it is mandatory and fail-closed. Reversal: revert the graph amendment commit and restore smoke activation. Security: the runtime is the composition root; secrets travel as references; the smoke carries no credentials. License: axum/tokio additions are MIT/Apache-2.0 (green class); recorded in ADR-019/ADR-020. Compatibility: additive node; prior green tags and ledger history preserved.
+- 2026-08-14 | Decision: Build `apps/control-plane/` as the `nexus-control-plane` crate with the real axum 0.8.9 HTTP server chain (tokio 1.53.1, hyper 1.11.0, tower 0.5.3 - all already present in the offline registry cache, all MIT/Apache-2.0 green class; no new license class). The server owns the canonical `/healthz`, `/readyz`, `/v1/capabilities` routes with real handlers; readiness is driven by the real RuntimeLifecycle; capabilities come from a real CapabilityListSource (never fabricated at request time); graceful shutdown binds once and stops on signal (no TOCTOU). Evidence: `EP-044 M1: ok` (19 unit + 1 dep-direction), `format check: ok`, `lint: ok`, `license gate: ok`, `reality gate: ok`. Alternatives: std-only HTTP server (rejected: ARCHITECTURE.md names Axum for apps/control-plane; hand-rolling HTTP is not a selected component); hyper directly (rejected: axum is the declared app framework and composes hyper/tower). Consequence: the real runtime binary exists at the crate boundary; M3 will prove it over real sockets; M5 live-fire will drive the real smoke. Reversal: revert the crate and workspace member. Security: config and responses never carry secrets; errors are typed and redacted. License: axum 0.8.9 MIT; tokio MIT; hyper MIT; tower MIT. Compatibility: additive workspace member; no existing surface changed.
 
 # 14. Outcomes & Retrospective
 

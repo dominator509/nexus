@@ -30,6 +30,7 @@ members = [
     "infra/gateway",
     "infra/bifrost",
     "config/models",
+    "apps/control-plane",
 ]
 
 [workspace.package]
