@@ -10,6 +10,7 @@
 //! deterministic registry/evaluator/composer behavior is owned by the
 //! EP-018 M2 crate boundary.
 
+pub mod bundle;
 pub mod composer;
 pub mod evaluator;
 pub mod manifest;
@@ -17,8 +18,10 @@ pub mod package;
 pub mod proposal;
 pub mod registry;
 pub mod signature;
+pub mod store;
 pub mod vocabulary;
 
+pub use bundle::{sha256_hex, SkillBundle, SkillBundleLoader};
 pub use composer::{
     DeterministicSkillComposer, DeterministicSkillEvaluator, PermissionAuthority, SkillComposer,
     SkillComposition, SkillCompositionError, SkillCompositionErrorCode, MAX_COMPOSITION_DEPTH,
@@ -31,8 +34,9 @@ pub use manifest::{
 };
 pub use package::SkillPackage;
 pub use proposal::SkillProposal;
-pub use registry::SkillRegistry;
+pub use registry::{SkillRegistry, SkillRegistryEntry};
 pub use signature::SkillSignature;
+pub use store::{JsonFileSkillRegistryStore, SkillRegistryState, SkillRegistryStore};
 pub use vocabulary::{SignatureAlgorithm, SkillPermission, SkillProposalState, SkillTrustLevel};
 
 // Re-export canonical ids from nexus-domain / nexus-fabric so callers

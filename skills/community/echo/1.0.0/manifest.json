@@ -1,0 +1,19 @@
+{
+  "skill_id": "992baaf4-0181-745a-8958-6af5e0f9b310",
+  "tenant_id": "e45507de-0345-77f1-8e28-cb90e2998ff7",
+  "name": "community/echo",
+  "version": "1.0.0",
+  "description": "Community echo skill; sandboxed by construction.",
+  "permissions": ["NONE"],
+  "dependencies": [],
+  "network_rules": [],
+  "license": "MIT",
+  "provenance": "a420c1d8-c5cc-755b-8b71-72e251ce2d8b",
+  "trust_level": "SANDBOXED",
+  "signature": {
+    "algorithm": "ED25519",
+    "public_key_hex": "abababababababababababababababababababababababababababababababab",
+    "signature_hex": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "signer": "nexus-builtin"
+  }
+}

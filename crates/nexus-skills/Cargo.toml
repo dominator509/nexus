@@ -10,5 +10,8 @@ nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
 nexus-fabric = { path = "../nexus-fabric", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
+# Real SHA-256 content hashing for scan-before-install (EP-018 M2).
+# Reuses the already-locked workspace dependency class (nexus-sidecar).
+sha2 = "0.11"
 
 [dev-dependencies]

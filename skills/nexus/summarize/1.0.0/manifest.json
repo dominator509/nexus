@@ -1,0 +1,19 @@
+{
+  "skill_id": "0cb7d278-1ed7-7da3-867e-99cbef7f8f0c",
+  "tenant_id": "d76fc5d3-9eab-75e4-8b89-94a3cb8c9ad2",
+  "name": "nexus/summarize",
+  "version": "1.0.0",
+  "description": "Read-only summarization skill (SPEC-010 behavior 6).",
+  "permissions": ["READ"],
+  "dependencies": [],
+  "network_rules": [],
+  "license": "MIT",
+  "provenance": "567c3a2e-7be9-77c4-87f6-883ddcc7fd86",
+  "trust_level": "SANDBOXED",
+  "signature": {
+    "algorithm": "ED25519",
+    "public_key_hex": "abababababababababababababababababababababababababababababababab",
+    "signature_hex": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "signer": "nexus-builtin"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "skill_id": "3c6cfa87-7157-7ff0-83f0-7cd280b263fc",
+  "tenant_id": "3c4fc609-3353-7348-8100-2c208b4adf18",
+  "name": "nexus/notify",
+  "version": "1.0.0",
+  "description": "Notification delivery skill; WRITE requires TRUSTED+ installer.",
+  "permissions": ["READ", "WRITE"],
+  "dependencies": [],
+  "network_rules": [],
+  "license": "MIT",
+  "provenance": "2de781e3-58a3-7331-81c6-85cf11460613",
+  "trust_level": "SANDBOXED",
+  "signature": {
+    "algorithm": "ED25519",
+    "public_key_hex": "abababababababababababababababababababababababababababababababab",
+    "signature_hex": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "signer": "nexus-builtin"
+  }
+}

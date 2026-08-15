@@ -272,7 +272,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -286,12 +286,17 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - 2026-08-15 (M1): `SkillId` is Rust-only (typed UUIDv7 in nexus-domain); no generated wire binding ripple (no SkillId in schemas/), recorded per directive J.
 - 2026-08-15 (M1): the scope audit treats `.agent/milestone-files/EP-018-M1.txt` as a changed path; the machine fence must list it explicitly (self-reference) or the audit fails.
 - 2026-08-15 (M1): rtk-tee masks cargo output into a compact summary; gate vacuity guards must parse the tee-written full log (`test result: ok. N passed`), which the ep018-m1-tests.sh guard does.
+- 2026-08-15 (M2): sha2 0.11 is already a locked workspace dependency (nexus-sidecar); reusing it in nexus-skills adds no new dependency class and passes the dependency audit unchanged.
+- 2026-08-15 (M2): Prettier reformats the skills/ JSON manifests (trailing newline normalization); bundles still load and validate after formatting (verified by re-running the M2 gate).
+- 2026-08-15 (M2): the scope audit requires every changed milestone-files fence (EP-018-M2.txt) to be listed in the node expected-files fence; self-referenced explicitly like M1.
+- 2026-08-15 (M2): SkillRegistryEntry gained a `revoked` terminal flag; existing M1 registry tests remain green (register default false), revocation survives persistence reload.
 
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
 
 - 2026-08-15 (M1): ADR-025 accepted - skill package identity is immutable by version (`name@version:content_hash`); integrity (valid signature) is distinct from trust, authorized installation, and execution permission; manifest permissions are declared requirements, never grants; effective authority = declared-requirements INTERSECT caller grants INTERSECT policy allowance INTERSECT trust ceiling; community skills are sandboxed by ceiling; deterministic composition with cycle rejection and bounded depth (16); SkillProposal lifecycle is canonical and fail-closed with no terminal resurrection; a model/agent may propose but never self-approve (distinct human approver required); network rules are requested constraints, not firewall authority. Evidence: references/ADR-025-skill-registry-vocabulary.md, 58 ep018_unit tests, clippy clean, all side gates ok. Alternatives rejected: raw union of effective permissions (would self-grant authority), mutable versions (breaks scan-before-install), free proposal transitions (resurrection). Consequence: later implementation cannot confuse skill existence/integrity/trust/authorization/execution/result verification. Reversal: new ADR with an equivalent or stronger authority model. Security: fail-closed by construction; license: MIT (crate), Apache-2.0 OR MIT (workspace); compatibility: additive Rust-only contracts, no wire binding change.
+- 2026-08-15 (M2): functional skill system built - real portable skill bundles under `skills/` (nexus/summarize SANDBOXED READ, nexus/notify SANDBOXED READ+WRITE requiring TRUSTED+ installer, community/echo SANDBOXED NONE) in the SPEC-010 behavior 6 open format (manifest.json + SKILL.md payload); `SkillBundleLoader` performs real filesystem I/O with real SHA-256 scan-before-install content hashing and path/contract spoofing rejection; `SkillRegistryStore` port + `JsonFileSkillRegistryStore` (temp-write + rename) for real registry persistence; registry lifecycle install_bundle/remove/revoke with a terminal `revoked` flag; state never reconstructs authority (enforced on mutation). Evidence: 75 ep018_unit tests (58 M1 + 9 bundle + 8 store), clippy clean, M1 regression green, all side gates ok, scope audit ok. Alternatives rejected: in-memory-only registry (no durability), trusting manifest-declared content without hashing (scan-before-install is the node contract). Consequence: the node now has a real skill loading/install/remove/revoke pipeline with real hashing; crypto signature verification remains owned by M3. Reversal: none this milestone. Security: sha2 is a vetted locked workspace dep; licenses pass the gate; fail-closed loading. Compatibility: additive to the M1 contract crate; SkillRegistryEntry serialization gained `revoked` (default false).
 
 # 14. Outcomes & Retrospective
 

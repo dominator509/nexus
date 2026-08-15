@@ -124,6 +124,10 @@ impl SkillPackageError {
         Self::new(SkillPackageErrorCode::Verification, message, resource)
     }
 
+    pub fn unavailable(message: impl Into<String>, resource: Option<String>) -> Self {
+        Self::new(SkillPackageErrorCode::Unavailable, message, resource)
+    }
+
     pub fn vocabulary(kind: &str, value: &str) -> Self {
         Self::new(
             SkillPackageErrorCode::Vocabulary,

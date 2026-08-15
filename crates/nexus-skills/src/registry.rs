@@ -7,6 +7,7 @@
 //! within the caller's authority; community skills begin inspect-only
 //! or sandboxed.
 
+use crate::bundle::SkillBundle;
 use crate::manifest::{version_key, SkillPackage, SkillPackageError};
 use crate::vocabulary::SkillTrustLevel;
 use nexus_domain::TenantId;
@@ -20,6 +21,9 @@ pub struct SkillRegistryEntry {
     pub version: String,
     pub package: SkillPackage,
     pub installed_at_epoch_ms: u64,
+    /// Revoked entries are terminal: they remain visible in state but
+    /// can never be resolved for execution (ADR-025).
+    pub revoked: bool,
 }
 
 /// The canonical skill registry.
@@ -88,9 +92,85 @@ impl SkillRegistry {
             version: package.manifest.version.clone(),
             package: package.clone(),
             installed_at_epoch_ms: now_epoch_ms,
+            revoked: false,
         };
         self.entries.insert(key, entry.clone());
         Ok(entry)
+    }
+
+    /// Install a scanned bundle: register the package (authority checks
+    /// apply unchanged) and persist through the store.
+    pub fn install_bundle<S: crate::store::SkillRegistryStore>(
+        &mut self,
+        bundle: SkillBundle,
+        caller_trust: SkillTrustLevel,
+        now_epoch_ms: u64,
+        store: &S,
+    ) -> Result<SkillRegistryEntry, SkillPackageError> {
+        let entry = self.register(bundle.package, caller_trust, now_epoch_ms)?;
+        store.save(&self.to_state())?;
+        Ok(entry)
+    }
+
+    /// Remove an installed version. Revoked or missing entries cannot
+    /// be removed silently; removal is explicit and persists.
+    pub fn remove<S: crate::store::SkillRegistryStore>(
+        &mut self,
+        name: &str,
+        version: &str,
+        store: &S,
+    ) -> Result<(), SkillPackageError> {
+        let key = version_key(name, version);
+        if self.entries.remove(&key).is_none() {
+            return Err(SkillPackageError::not_found(
+                "skill version not installed",
+                Some(key),
+            ));
+        }
+        store.save(&self.to_state())
+    }
+
+    /// Revoke an installed version (ADR-025). A revoked entry remains
+    /// in state for audit but can never be resolved for execution.
+    pub fn revoke<S: crate::store::SkillRegistryStore>(
+        &mut self,
+        name: &str,
+        version: &str,
+        store: &S,
+    ) -> Result<(), SkillPackageError> {
+        let key = version_key(name, version);
+        let entry = self.entries.get_mut(&key).ok_or_else(|| {
+            SkillPackageError::not_found("skill version not installed", Some(key.clone()))
+        })?;
+        entry.revoked = true;
+        store.save(&self.to_state())
+    }
+
+    /// Whether the installed version is revoked (not installed -> not
+    /// revoked; uninstalled skills cannot be executed).
+    pub fn is_revoked(&self, name: &str, version: &str) -> bool {
+        self.entries
+            .get(&version_key(name, version))
+            .map(|e| e.revoked)
+            .unwrap_or(false)
+    }
+
+    /// Build a registry from persisted state. Authority is enforced on
+    /// mutation, never reconstructed from state.
+    pub fn from_state(state: crate::store::SkillRegistryState) -> Self {
+        let mut entries = HashMap::new();
+        for entry in state.entries {
+            let key = version_key(&entry.name, &entry.version);
+            entries.insert(key, entry);
+        }
+        Self { entries }
+    }
+
+    /// Snapshot the registry for persistence.
+    pub fn to_state(&self) -> crate::store::SkillRegistryState {
+        let mut entries: Vec<SkillRegistryEntry> = self.entries.values().cloned().collect();
+        entries.sort_by(|a, b| a.name.cmp(&b.name).then_with(|| a.version.cmp(&b.version)));
+        crate::store::SkillRegistryState { entries }
     }
 
     pub fn get(&self, name: &str, version: &str) -> Option<&SkillRegistryEntry> {
