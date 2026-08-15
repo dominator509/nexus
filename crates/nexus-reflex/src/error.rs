@@ -211,15 +211,21 @@ mod tests {
         assert_eq!(ReflexErrorCode::Timeout.as_str(), "TIMEOUT");
         assert_eq!(ReflexErrorCode::Conflict.as_str(), "CONFLICT");
         assert_eq!(ReflexErrorCode::RateLimited.as_str(), "RATE_LIMITED");
-        assert_eq!(ReflexErrorCode::ExternalProvider.as_str(), "EXTERNAL_PROVIDER");
+        assert_eq!(
+            ReflexErrorCode::ExternalProvider.as_str(),
+            "EXTERNAL_PROVIDER"
+        );
         assert_eq!(ReflexErrorCode::Verification.as_str(), "VERIFICATION");
         assert_eq!(ReflexErrorCode::Internal.as_str(), "INTERNAL");
     }
 
     #[test]
     fn ep014_unit_error_preserves_context() {
-        let err = ReflexError::validation("bad input", Some("reflex".into()))
-            .with_context(Some("corr-1".into()), Some("actor-1".into()), Some("t-1".into()));
+        let err = ReflexError::validation("bad input", Some("reflex".into())).with_context(
+            Some("corr-1".into()),
+            Some("actor-1".into()),
+            Some("t-1".into()),
+        );
         assert_eq!(err.code, ReflexErrorCode::Validation);
         assert_eq!(err.correlation_id.as_deref(), Some("corr-1"));
         assert_eq!(err.actor.as_deref(), Some("actor-1"));

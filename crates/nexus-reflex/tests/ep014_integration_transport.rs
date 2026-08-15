@@ -203,9 +203,14 @@ fn provider_with_sandbox(sandbox: &ProviderSandbox) -> DeepSeekFlashProvider {
 fn ep014_integration_real_transport_normalizes_control_object() {
     // Full allow path: DeepSeekFlashProvider -> real HTTP sandbox ->
     // canonical NexusControlObject -> validated and returned.
-    let sandbox = ProviderSandbox::spawn(vec![ok_response(r#"{"intent":"contacts.query","route":"REFLEX","risk":"R1","privacy":"PERSONAL","ambiguity":0.2,"approval_required":false,"executable_instruction":true,"confidence":0.9,"required_capabilities":["contacts.query"],"entities":{}}"#, 95)]);
+    let sandbox = ProviderSandbox::spawn(vec![ok_response(
+        r#"{"intent":"contacts.query","route":"REFLEX","risk":"R1","privacy":"PERSONAL","ambiguity":0.2,"approval_required":false,"executable_instruction":true,"confidence":0.9,"required_capabilities":["contacts.query"],"entities":{}}"#,
+        95,
+    )]);
     let mut provider = provider_with_sandbox(&sandbox);
-    let decision = provider.reflex(&reflex_request(EffortTier::High, true)).unwrap();
+    let decision = provider
+        .reflex(&reflex_request(EffortTier::High, true))
+        .unwrap();
     assert_eq!(decision.class.to_string(), "MODEL");
     assert_eq!(decision.control_object.provider, "deepseek-v4-flash");
     assert_eq!(decision.control_object.control["intent"], "contacts.query");
@@ -219,7 +224,9 @@ fn ep014_integration_real_transport_rejects_malformed_provider_response() {
     // typed VALIDATION error; no control object continues.
     let sandbox = ProviderSandbox::spawn(vec![malformed_response()]);
     let mut provider = provider_with_sandbox(&sandbox);
-    let err = provider.reflex(&reflex_request(EffortTier::High, true)).unwrap_err();
+    let err = provider
+        .reflex(&reflex_request(EffortTier::High, true))
+        .unwrap_err();
     assert_eq!(err.code.to_string(), "VALIDATION");
 }
 
@@ -228,7 +235,9 @@ fn ep014_integration_real_transport_classifies_provider_error() {
     // HTTP 500 from the provider surfaces as EXTERNAL_PROVIDER.
     let sandbox = ProviderSandbox::spawn(vec![error_response()]);
     let mut provider = provider_with_sandbox(&sandbox);
-    let err = provider.reflex(&reflex_request(EffortTier::High, true)).unwrap_err();
+    let err = provider
+        .reflex(&reflex_request(EffortTier::High, true))
+        .unwrap_err();
     assert_eq!(err.code.to_string(), "EXTERNAL_PROVIDER");
 }
 
@@ -262,7 +271,9 @@ fn ep014_integration_deterministic_task_bypasses_real_transport() {
     // never touches the network: the model is bypassed.
     let sandbox = ProviderSandbox::spawn(vec![]);
     let mut provider = provider_with_sandbox(&sandbox);
-    let decision = provider.reflex(&reflex_request(EffortTier::Deterministic, true)).unwrap();
+    let decision = provider
+        .reflex(&reflex_request(EffortTier::Deterministic, true))
+        .unwrap();
     assert_eq!(decision.class.to_string(), "DETERMINISTIC");
     assert_eq!(decision.control_object.usage.prompt_tokens, 0);
 }
@@ -270,13 +281,21 @@ fn ep014_integration_deterministic_task_bypasses_real_transport() {
 #[test]
 fn ep014_integration_cache_ledger_records_real_usage() {
     let sandbox = ProviderSandbox::spawn(vec![
-        ok_response(r#"{"intent":"contacts.query","route":"REFLEX","risk":"R1","privacy":"PERSONAL","ambiguity":0.2,"approval_required":false,"executable_instruction":true,"confidence":0.9,"required_capabilities":["contacts.query"],"entities":{}}"#, 98),
-        ok_response(r#"{"intent":"contacts.query","route":"REFLEX","risk":"R1","privacy":"PERSONAL","ambiguity":0.2,"approval_required":false,"executable_instruction":true,"confidence":0.9,"required_capabilities":["contacts.query"],"entities":{}}"#, 98),
+        ok_response(
+            r#"{"intent":"contacts.query","route":"REFLEX","risk":"R1","privacy":"PERSONAL","ambiguity":0.2,"approval_required":false,"executable_instruction":true,"confidence":0.9,"required_capabilities":["contacts.query"],"entities":{}}"#,
+            98,
+        ),
+        ok_response(
+            r#"{"intent":"contacts.query","route":"REFLEX","risk":"R1","privacy":"PERSONAL","ambiguity":0.2,"approval_required":false,"executable_instruction":true,"confidence":0.9,"required_capabilities":["contacts.query"],"entities":{}}"#,
+            98,
+        ),
     ]);
     let mut provider = provider_with_sandbox(&sandbox);
     let mut ledger = CacheLedger::new(8);
     for _ in 0..2 {
-        let decision = provider.reflex(&reflex_request(EffortTier::High, true)).unwrap();
+        let decision = provider
+            .reflex(&reflex_request(EffortTier::High, true))
+            .unwrap();
         ledger.record(
             decision.control_object.usage.prompt_tokens,
             decision.control_object.usage.cache_hit_prompt_tokens,

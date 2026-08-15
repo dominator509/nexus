@@ -135,13 +135,19 @@ mod tests {
 
     #[test]
     fn ep014_unit_deterministic_tasks_resolve_to_deterministic() {
-        assert_eq!(EffortPolicy::select(&EffortInput::deterministic()), EffortTier::Deterministic);
+        assert_eq!(
+            EffortPolicy::select(&EffortInput::deterministic()),
+            EffortTier::Deterministic
+        );
     }
 
     #[test]
     fn ep014_unit_trivial_work_is_never_max() {
         // Trivial work with NO explicit tier -> NonThinking.
-        assert_eq!(EffortPolicy::select(&EffortInput::trivial()), EffortTier::NonThinking);
+        assert_eq!(
+            EffortPolicy::select(&EffortInput::trivial()),
+            EffortTier::NonThinking
+        );
         // Even an explicit Max on trivial work is rejected by validate.
         let mut input = EffortInput::trivial();
         input.explicit_tier = Some(EffortTier::Max);
@@ -158,7 +164,10 @@ mod tests {
             explicit_tier: None,
         };
         assert_eq!(EffortPolicy::select(&input), EffortTier::High);
-        assert_eq!(EffortPolicy::selection_class(&input), EffortSelectionClass::PolicySelected);
+        assert_eq!(
+            EffortPolicy::selection_class(&input),
+            EffortSelectionClass::PolicySelected
+        );
     }
 
     #[test]
@@ -171,7 +180,10 @@ mod tests {
         ] {
             let input = EffortInput::new(tier);
             assert_eq!(EffortPolicy::select(&input), tier);
-            assert_eq!(EffortPolicy::selection_class(&input), EffortSelectionClass::Explicit);
+            assert_eq!(
+                EffortPolicy::selection_class(&input),
+                EffortSelectionClass::Explicit
+            );
         }
     }
 

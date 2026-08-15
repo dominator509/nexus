@@ -103,20 +103,19 @@ impl PromptSegmentCatalog {
         use std::fs;
 
         let catalog_path = dir.join("catalog.json");
-        let catalog_value: serde_json::Value = serde_json::from_str(
-            &fs::read_to_string(&catalog_path).map_err(|e| {
+        let catalog_value: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&catalog_path).map_err(|e| {
                 ReflexError::validation(
                     format!("cannot read catalog.json: {e}"),
                     Some("prompt-segments".into()),
                 )
-            })?,
-        )
-        .map_err(|e| {
-            ReflexError::validation(
-                format!("catalog.json invalid JSON: {e}"),
-                Some("prompt-segments".into()),
-            )
-        })?;
+            })?)
+            .map_err(|e| {
+                ReflexError::validation(
+                    format!("catalog.json invalid JSON: {e}"),
+                    Some("prompt-segments".into()),
+                )
+            })?;
 
         let stable_names: Vec<String> = catalog_value
             .get("stable_prefix")
@@ -129,14 +128,12 @@ impl PromptSegmentCatalog {
             })?
             .iter()
             .map(|v| {
-                v.as_str()
-                    .map(str::to_string)
-                    .ok_or_else(|| {
-                        ReflexError::validation(
-                            "catalog.json stable_prefix entries must be strings",
-                            Some("prompt-segments".into()),
-                        )
-                    })
+                v.as_str().map(str::to_string).ok_or_else(|| {
+                    ReflexError::validation(
+                        "catalog.json stable_prefix entries must be strings",
+                        Some("prompt-segments".into()),
+                    )
+                })
             })
             .collect::<Result<_, _>>()?;
 
@@ -151,14 +148,12 @@ impl PromptSegmentCatalog {
             })?
             .iter()
             .map(|v| {
-                v.as_str()
-                    .map(str::to_string)
-                    .ok_or_else(|| {
-                        ReflexError::validation(
-                            "catalog.json volatile_tail entries must be strings",
-                            Some("prompt-segments".into()),
-                        )
-                    })
+                v.as_str().map(str::to_string).ok_or_else(|| {
+                    ReflexError::validation(
+                        "catalog.json volatile_tail entries must be strings",
+                        Some("prompt-segments".into()),
+                    )
+                })
             })
             .collect::<Result<_, _>>()?;
 
@@ -175,20 +170,19 @@ impl PromptSegmentCatalog {
             })?;
             let file_name = format!("{}.json", name.to_ascii_lowercase().replace('_', "-"));
             let path = dir.join(&file_name);
-            let version: PromptSegmentVersion = serde_json::from_str(
-                &fs::read_to_string(&path).map_err(|e| {
+            let version: PromptSegmentVersion =
+                serde_json::from_str(&fs::read_to_string(&path).map_err(|e| {
                     ReflexError::validation(
                         format!("cannot read segment file {file_name}: {e}"),
                         Some("prompt-segments".into()),
                     )
-                })?,
-            )
-            .map_err(|e| {
-                ReflexError::validation(
-                    format!("segment file {file_name} invalid JSON: {e}"),
-                    Some("prompt-segments".into()),
-                )
-            })?;
+                })?)
+                .map_err(|e| {
+                    ReflexError::validation(
+                        format!("segment file {file_name} invalid JSON: {e}"),
+                        Some("prompt-segments".into()),
+                    )
+                })?;
 
             if version.segment != segment {
                 return Err(ReflexError::validation(
@@ -362,6 +356,67 @@ mod tests {
     }
 
     #[test]
+    fn ep014_unit_stable_prefix_identical_when_tail_changes() {
+        // Same logical stable context, different request-specific tails:
+        // the stable prefix bytes stay identical; only the tail changes.
+        // This is the core cacheability invariant (SPEC-009 behavior 4).
+        let catalog_a = PromptSegmentCatalog::new(
+            stable(),
+            Some(PromptSegmentVersion {
+                segment: PromptSegment::SessionContext,
+                version: "1.0".into(),
+                content: "session-1".into(),
+            }),
+            Some(PromptSegmentVersion {
+                segment: PromptSegment::DynamicRequest,
+                version: "1.0".into(),
+                content: "request-1".into(),
+            }),
+        );
+        let catalog_b = PromptSegmentCatalog::new(
+            stable(),
+            Some(PromptSegmentVersion {
+                segment: PromptSegment::SessionContext,
+                version: "1.0".into(),
+                content: "session-2".into(),
+            }),
+            Some(PromptSegmentVersion {
+                segment: PromptSegment::DynamicRequest,
+                version: "1.0".into(),
+                content: "request-2".into(),
+            }),
+        );
+        // Stable prefix: byte identical across the differing tails.
+        assert_eq!(catalog_a.prefix.canonical(), catalog_b.prefix.canonical());
+        // Full catalog: the dynamic request portion changed.
+        assert_ne!(catalog_a.canonical(), catalog_b.canonical());
+        assert!(
+            catalog_b
+                .canonical()
+                .ends_with("DYNAMIC_REQUEST:1.0:request-2\n")
+        );
+    }
+
+    #[test]
+    fn ep014_unit_stable_prefix_fingerprint_changes_on_version_bump() {
+        // Intentional invalidation (cache identity): a legitimate
+        // stable-prefix input change must change the cacheable prefix
+        // bytes, so Nexus never reuses cache identity after a
+        // meaningful stable-context change.
+        let base = stable();
+        // Segment version bump invalidates the prefix fingerprint.
+        let mut version_bump = stable();
+        version_bump.segments[0].version = "1.1".into();
+        assert_ne!(base.canonical(), version_bump.canonical());
+        // Stable content change invalidates the prefix fingerprint.
+        let mut content_bump = stable();
+        content_bump.segments[5].content = "tenant v2".into();
+        assert_ne!(base.canonical(), content_bump.canonical());
+        // Unchanged inputs remain byte identical (control).
+        assert_eq!(base.canonical(), stable().canonical());
+    }
+
+    #[test]
     fn ep014_unit_catalog_serde_round_trip() {
         let catalog = PromptSegmentCatalog::new(stable(), None, None);
         let v = serde_json::to_value(&catalog).unwrap();
@@ -382,8 +437,7 @@ mod tests {
 
     fn canonical_dir() -> std::path::PathBuf {
         // crates/nexus-reflex -> repo root -> config/prompts/reflex
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../config/prompts/reflex")
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../config/prompts/reflex")
     }
 
     #[test]

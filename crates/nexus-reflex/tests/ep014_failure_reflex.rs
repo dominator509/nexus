@@ -192,7 +192,9 @@ fn ep014_failure_provider_unreachable_fails_closed() {
     let sandbox = ProviderSandbox::spawn(vec![]);
     let mut provider = provider_with_sandbox(&sandbox);
     drop(sandbox);
-    let err = provider.reflex(&reflex_request(EffortTier::High, "r-fail-1")).unwrap_err();
+    let err = provider
+        .reflex(&reflex_request(EffortTier::High, "r-fail-1"))
+        .unwrap_err();
     assert_eq!(err.code.to_string(), "UNAVAILABLE");
     assert!(err.correlation_id.is_some());
 }
@@ -203,7 +205,9 @@ fn ep014_failure_malformed_provider_payload_fails_closed() {
     // rejects it as VALIDATION. No control object continues.
     let sandbox = ProviderSandbox::spawn(vec![malformed_response()]);
     let mut provider = provider_with_sandbox(&sandbox);
-    let err = provider.reflex(&reflex_request(EffortTier::High, "r-fail-2")).unwrap_err();
+    let err = provider
+        .reflex(&reflex_request(EffortTier::High, "r-fail-2"))
+        .unwrap_err();
     assert_eq!(err.code.to_string(), "VALIDATION");
 }
 
@@ -213,9 +217,42 @@ fn ep014_failure_authority_bypass_attempt_rejected() {
     // field) must be rejected by the validator (SPEC-009 behavior 10).
     let sandbox = ProviderSandbox::spawn(vec![authority_bypass_response()]);
     let mut provider = provider_with_sandbox(&sandbox);
-    let err = provider.reflex(&reflex_request(EffortTier::High, "r-fail-3")).unwrap_err();
+    let err = provider
+        .reflex(&reflex_request(EffortTier::High, "r-fail-3"))
+        .unwrap_err();
     assert_eq!(err.code.to_string(), "VALIDATION");
     assert!(err.message.contains("unknown field"));
+}
+
+#[test]
+fn ep014_failure_model_allow_string_grants_no_authority() {
+    // A model-emitted "ALLOW" directive is model text, not authority.
+    // The canonical control schema has no authorization field; a model
+    // attempting to attach one is rejected by the validator, and a
+    // valid model decision never serializes an authorization result.
+    // Models carry intelligence, never authority (SPEC-009 behavior 10).
+    let sandbox = ProviderSandbox::spawn(vec![ok_response(
+        r#"{"intent":"contacts.query","route":"REFLEX","risk":"R1","privacy":"PERSONAL","ambiguity":0.2,"approval_required":false,"executable_instruction":true,"confidence":0.9,"required_capabilities":["contacts.query"],"entities":{},"authorization":"ALLOW"}"#,
+    )]);
+    let mut provider = provider_with_sandbox(&sandbox);
+    let err = provider
+        .reflex(&reflex_request(EffortTier::High, "r-allow-1"))
+        .unwrap_err();
+    assert_eq!(err.code.to_string(), "VALIDATION");
+    assert!(err.message.contains("unknown field"));
+
+    // A valid model decision carries no authorization field at all.
+    let sandbox2 = ProviderSandbox::spawn(vec![ok_response(
+        r#"{"intent":"contacts.query","route":"REFLEX","risk":"R1","privacy":"PERSONAL","ambiguity":0.2,"approval_required":false,"executable_instruction":true,"confidence":0.9,"required_capabilities":["contacts.query"],"entities":{}}"#,
+    )]);
+    let mut provider2 = provider_with_sandbox(&sandbox2);
+    let decision = provider2
+        .reflex(&reflex_request(EffortTier::High, "r-allow-2"))
+        .unwrap();
+    let serialized = serde_json::to_string(&decision).unwrap();
+    assert!(!serialized.contains("\"authorization\""));
+    assert!(!serialized.contains("ALLOW"));
+    assert_eq!(decision.class.to_string(), "MODEL");
 }
 
 #[test]
@@ -224,8 +261,12 @@ fn ep014_failure_duplicate_deterministic_request_is_stable() {
     // produce byte-identical decisions (idempotent by construction).
     let sandbox = ProviderSandbox::spawn(vec![]);
     let mut provider = provider_with_sandbox(&sandbox);
-    let a = provider.reflex(&reflex_request(EffortTier::Deterministic, "r-fail-4")).unwrap();
-    let b = provider.reflex(&reflex_request(EffortTier::Deterministic, "r-fail-4")).unwrap();
+    let a = provider
+        .reflex(&reflex_request(EffortTier::Deterministic, "r-fail-4"))
+        .unwrap();
+    let b = provider
+        .reflex(&reflex_request(EffortTier::Deterministic, "r-fail-4"))
+        .unwrap();
     assert_eq!(a, b);
     assert_eq!(a.class.to_string(), "DETERMINISTIC");
 }
@@ -238,9 +279,13 @@ fn ep014_failure_failed_model_call_leaves_no_partial_state() {
     // failed model path.
     let sandbox = ProviderSandbox::spawn(vec![malformed_response()]);
     let mut provider = provider_with_sandbox(&sandbox);
-    let err = provider.reflex(&reflex_request(EffortTier::High, "r-fail-5")).unwrap_err();
+    let err = provider
+        .reflex(&reflex_request(EffortTier::High, "r-fail-5"))
+        .unwrap_err();
     assert_eq!(err.code.to_string(), "VALIDATION");
-    let decision = provider.reflex(&reflex_request(EffortTier::Deterministic, "r-fail-5")).unwrap();
+    let decision = provider
+        .reflex(&reflex_request(EffortTier::Deterministic, "r-fail-5"))
+        .unwrap();
     assert_eq!(decision.class.to_string(), "DETERMINISTIC");
 }
 

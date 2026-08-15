@@ -105,9 +105,15 @@ impl NexusControlObjectValidator {
         }
 
         // 5. Required fields present and typed.
-        let intent = control.get("intent").and_then(Value::as_str).ok_or_else(|| {
-            ReflexError::validation("control.intent must be a string", Some("nexus-control-object".into()))
-        })?;
+        let intent = control
+            .get("intent")
+            .and_then(Value::as_str)
+            .ok_or_else(|| {
+                ReflexError::validation(
+                    "control.intent must be a string",
+                    Some("nexus-control-object".into()),
+                )
+            })?;
         if intent.len() < 3 || intent.len() > 128 {
             return Err(ReflexError::validation(
                 "control.intent length out of range",
@@ -115,9 +121,15 @@ impl NexusControlObjectValidator {
             ));
         }
 
-        let route = control.get("route").and_then(Value::as_str).ok_or_else(|| {
-            ReflexError::validation("control.route must be a string", Some("nexus-control-object".into()))
-        })?;
+        let route = control
+            .get("route")
+            .and_then(Value::as_str)
+            .ok_or_else(|| {
+                ReflexError::validation(
+                    "control.route must be a string",
+                    Some("nexus-control-object".into()),
+                )
+            })?;
         if !ALLOWED_ROUTE.contains(&route) {
             return Err(ReflexError::validation(
                 format!("control.route unknown: {route}"),
@@ -126,7 +138,10 @@ impl NexusControlObjectValidator {
         }
 
         let risk = control.get("risk").and_then(Value::as_str).ok_or_else(|| {
-            ReflexError::validation("control.risk must be a string", Some("nexus-control-object".into()))
+            ReflexError::validation(
+                "control.risk must be a string",
+                Some("nexus-control-object".into()),
+            )
         })?;
         if !ALLOWED_RISK.contains(&risk) {
             return Err(ReflexError::validation(
@@ -135,9 +150,15 @@ impl NexusControlObjectValidator {
             ));
         }
 
-        let privacy = control.get("privacy").and_then(Value::as_str).ok_or_else(|| {
-            ReflexError::validation("control.privacy must be a string", Some("nexus-control-object".into()))
-        })?;
+        let privacy = control
+            .get("privacy")
+            .and_then(Value::as_str)
+            .ok_or_else(|| {
+                ReflexError::validation(
+                    "control.privacy must be a string",
+                    Some("nexus-control-object".into()),
+                )
+            })?;
         if !ALLOWED_PRIVACY.contains(&privacy) {
             return Err(ReflexError::validation(
                 format!("control.privacy unknown: {privacy}"),
@@ -172,12 +193,15 @@ impl NexusControlObjectValidator {
         }
 
         // required_capabilities must be a non-empty unique string array.
-        let caps = control.get("required_capabilities").and_then(Value::as_array).ok_or_else(|| {
-            ReflexError::validation(
-                "control.required_capabilities must be an array",
-                Some("nexus-control-object".into()),
-            )
-        })?;
+        let caps = control
+            .get("required_capabilities")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                ReflexError::validation(
+                    "control.required_capabilities must be an array",
+                    Some("nexus-control-object".into()),
+                )
+            })?;
         if caps.len() > 32 {
             return Err(ReflexError::validation(
                 "control.required_capabilities exceeds 32 entries",
@@ -244,7 +268,8 @@ mod tests {
     #[test]
     fn ep014_unit_validator_rejects_extra_field() {
         let mut object = valid_object();
-        object.control
+        object
+            .control
             .as_object_mut()
             .unwrap()
             .insert("extra".into(), Value::Bool(true));
@@ -257,7 +282,11 @@ mod tests {
     #[test]
     fn ep014_unit_validator_rejects_unknown_risk() {
         let mut object = valid_object();
-        object.control.as_object_mut().unwrap().insert("risk".into(), Value::String("R9".into()));
+        object
+            .control
+            .as_object_mut()
+            .unwrap()
+            .insert("risk".into(), Value::String("R9".into()));
         let validator = NexusControlObjectValidator::new("1.0.0");
         assert!(validator.validate(&object).is_err());
     }
@@ -265,7 +294,8 @@ mod tests {
     #[test]
     fn ep014_unit_validator_rejects_unknown_route() {
         let mut object = valid_object();
-        object.control
+        object
+            .control
             .as_object_mut()
             .unwrap()
             .insert("route".into(), Value::String("AUTOPILOT".into()));
@@ -306,7 +336,8 @@ mod tests {
     #[test]
     fn ep014_unit_validator_rejects_out_of_range_confidence() {
         let mut object = valid_object();
-        object.control
+        object
+            .control
             .as_object_mut()
             .unwrap()
             .insert("confidence".into(), Value::from(1.5));
@@ -317,7 +348,11 @@ mod tests {
     #[test]
     fn ep014_unit_validator_rejects_missing_boolean() {
         let mut object = valid_object();
-        object.control.as_object_mut().unwrap().remove("approval_required");
+        object
+            .control
+            .as_object_mut()
+            .unwrap()
+            .remove("approval_required");
         let validator = NexusControlObjectValidator::new("1.0.0");
         assert!(validator.validate(&object).is_err());
     }

@@ -174,7 +174,10 @@ mod tests {
         let manifest = DeepSeekReflexTransport::deepseek_manifest("https://api.deepseek.com/v1");
         assert_eq!(manifest.provider_id, "deepseek-v4-flash");
         assert_eq!(manifest.kind, ManifestProviderKind::Deepseek);
-        assert_eq!(manifest.credential_ref.as_deref(), Some("secret/model/deepseek"));
+        assert_eq!(
+            manifest.credential_ref.as_deref(),
+            Some("secret/model/deepseek")
+        );
         assert_eq!(manifest.version, "v4-flash");
     }
 
@@ -201,12 +204,17 @@ mod tests {
         // control payload and stamp the canonical schema version.
         // Prove via the real transport against a scripted provider
         // sandbox in the integration suite; here prove the failure mode
-        // for malformed control text is typed and fail-closed.
+        // for malformed control text is typed and fail-closed AND that
+        // Debug never prints a credential VALUE (the manifest's
+        // credential_ref field name may appear; the secret value must
+        // not).
         let manifest = DeepSeekReflexTransport::deepseek_manifest("http://127.0.0.1:1/v1");
-        let transport = DeepSeekReflexTransport::new(manifest, None).unwrap();
+        let transport =
+            DeepSeekReflexTransport::new(manifest, Some("super-secret-credential-value".into()))
+                .unwrap();
         let dbg = format!("{transport:?}");
         // Debug never prints a credential value.
-        assert!(!dbg.contains("credential"));
+        assert!(!dbg.contains("super-secret-credential-value"));
         assert!(dbg.contains("deepseek-v4-flash"));
     }
 }

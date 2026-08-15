@@ -117,7 +117,10 @@ impl DeepSeekFlashProvider {
         &self.validator
     }
 
-    fn deterministic_decision(&self, request: &ReflexRequest) -> Result<ReflexDecision, ReflexError> {
+    fn deterministic_decision(
+        &self,
+        request: &ReflexRequest,
+    ) -> Result<ReflexDecision, ReflexError> {
         // Deterministic tasks bypass the model (SPEC-009 behavior 1).
         // The decision is built from the request's own fields; no model
         // call occurs. The control object still passes the validator.
@@ -231,10 +234,7 @@ mod tests {
     fn ep014_unit_deepseek_provider_id_is_canonical() {
         let p = test_provider();
         assert_eq!(p.provider_id(), "deepseek-v4-flash");
-        assert_eq!(
-            p.health().state,
-            ProviderHealthState::Unknown
-        );
+        assert_eq!(p.health().state, ProviderHealthState::Unknown);
     }
 
     #[test]

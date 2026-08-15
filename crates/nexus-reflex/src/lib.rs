@@ -41,16 +41,16 @@ pub use decision::{ReflexDecision, ReflexDecisionClass};
 pub use effort::{EffortInput, EffortPolicy};
 pub use error::{ReflexError, ReflexErrorCode};
 pub use provider::{DeepSeekFlashProvider, ReflexProvider, ReflexRequest};
+pub use segments::{PromptSegmentCatalog, PromptSegmentVersion, StablePrefix};
 pub use transport::DeepSeekReflexTransport;
-pub use segments::{
-    PromptSegmentCatalog, PromptSegmentVersion, StablePrefix,
-};
 pub use validator::NexusControlObjectValidator;
 pub use vocabulary::ReflexVocabularyError;
 
 // Re-export the canonical model-plane vocabulary so reflex callers have
 // a single import surface: PromptSegment, EffortTier, NexusControlObject,
 // CacheHitRatio, ProviderHealth, ModelGatewayError.
-pub use nexus_model_gateway::model::{NexusControlObject, PromptSegment, PromptSegmentPart, UsageReport};
-pub use nexus_model_gateway::vocabulary::{CacheHitRatio, EffortTier, ProviderHealthState};
 pub use nexus_model_gateway::health::ProviderHealth;
+pub use nexus_model_gateway::model::{
+    NexusControlObject, PromptSegment, PromptSegmentPart, UsageReport,
+};
+pub use nexus_model_gateway::vocabulary::{CacheHitRatio, EffortTier, ProviderHealthState};
