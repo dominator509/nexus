@@ -7,9 +7,9 @@
 //! Direct agent-to-agent authority never bypasses this component.
 
 use nexus_agents::{
-    AdapterEvent, AgentAdapter, AgentArtifact, AgentBudget, AgentCapability, AgentCardId,
-    AgentRegistry, AgentSelection, AgentTask, AgentTaskState, AgentsError, CapabilityRequest,
-    CorrelationId, Delegation, DelegationState, ObjectiveId, TaskId, TenantId,
+    AdapterEvent, AdapterSessionId, AgentAdapter, AgentArtifact, AgentBudget, AgentCapability,
+    AgentCardId, AgentRegistry, AgentSelection, AgentTask, AgentTaskState, AgentsError,
+    CapabilityRequest, CorrelationId, Delegation, DelegationState, ObjectiveId, TaskId, TenantId,
 };
 use std::collections::HashMap;
 
@@ -20,6 +20,9 @@ pub struct TaskOrchestrator<R> {
     adapters: HashMap<String, Box<dyn AgentAdapter>>,
     tasks: HashMap<String, AgentTask>,
     delegations: Vec<Delegation>,
+    /// Live adapter sessions keyed by task id; the orchestrator owns
+    /// the session handle so cancellation terminates the owned process.
+    sessions: HashMap<String, AdapterSessionId>,
     next_delegation: u64,
 }
 
@@ -30,6 +33,7 @@ impl<R: AgentRegistry> TaskOrchestrator<R> {
             adapters: HashMap::new(),
             tasks: HashMap::new(),
             delegations: Vec::new(),
+            sessions: HashMap::new(),
             next_delegation: 0,
         }
     }
@@ -154,6 +158,8 @@ impl<R: AgentRegistry> TaskOrchestrator<R> {
             workdir,
             extra: serde_json::json!({}),
         })?;
+        self.sessions
+            .insert(task_id.to_string(), session.session_id.clone());
         let t = self.tasks.get_mut(task_id).unwrap();
         t.transition(AgentTaskState::Running, now_epoch_ms)?;
         Ok(AdapterEvent::Progress(nexus_agents::AdapterProgress {
@@ -166,17 +172,29 @@ impl<R: AgentRegistry> TaskOrchestrator<R> {
 
     /// Cancel a running task; the task and its delegation end
     /// cancelled/revoked.
+    ///
+    /// Fail-closed: the owned harness process is actually terminated
+    /// through the bound adapter (never a fabricated cancellation).
+    /// If the adapter session exists but termination fails, the task
+    /// is NOT marked cancelled and the error propagates: a live
+    /// process must never be silently orphaned behind a CANCELLED
+    /// state. A task cancelled before any session exists (REQUESTED or
+    /// ASSIGNED) transitions directly, because there is no process to
+    /// terminate.
     pub fn cancel_task(&mut self, task_id: &str, now_epoch_ms: u64) -> Result<(), AgentsError> {
         let task = self.require_task(task_id)?;
-        if let Some(card_id) = task.assigned_agent.clone() {
+        // Idempotent: a task already in the desired CANCELLED state is
+        // a no-op success (SPEC-006 idempotency), never an error and
+        // never a double-terminate of the owned process.
+        if task.state == AgentTaskState::Cancelled {
+            return Ok(());
+        }
+        let assigned = task.assigned_agent.clone();
+        let session = self.sessions.get(task_id).cloned();
+        if let (Some(card_id), Some(session_id)) = (assigned, session) {
             let adapter = self.require_adapter(&card_id.0)?;
-            let session = adapter.progress(&nexus_agents::AdapterSessionId(format!(
-                "{}-{task_id}-0001",
-                card_id.0
-            )));
-            if let Ok(p) = session {
-                let _ = p;
-            }
+            adapter.cancel(&session_id)?;
+            self.sessions.remove(task_id);
         }
         let task = self.tasks.get_mut(task_id).unwrap();
         task.transition(AgentTaskState::Cancelled, now_epoch_ms)?;
@@ -212,6 +230,12 @@ impl<R: AgentRegistry> TaskOrchestrator<R> {
 
     /// Attach an artifact to a task. Immutable by content hash:
     /// a duplicate hash is a conflict, never a mutation.
+    ///
+    /// Fail-closed: the artifact must be bound to THIS task. An
+    /// artifact whose `task_id` names a different task (including a
+    /// different tenant's task) is rejected: artifact integrity does
+    /// not imply authorization, and a cross-task artifact could leak
+    /// another tenant's lineage into this task.
     pub fn attach_artifact(
         &mut self,
         task_id: &str,
@@ -220,6 +244,12 @@ impl<R: AgentRegistry> TaskOrchestrator<R> {
     ) -> Result<(), AgentsError> {
         artifact.validate()?;
         let task = self.require_task(task_id)?;
+        if artifact.task_id.as_str() != task_id {
+            return Err(AgentsError::validation(
+                "artifact task binding does not match task",
+                Some("task-orchestrator".into()),
+            ));
+        }
         if task
             .artifact_ids
             .iter()
