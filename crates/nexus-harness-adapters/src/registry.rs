@@ -195,7 +195,6 @@ impl AgentRegistry for DeterministicAgentRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nexus_agents::{AgentBudget, AgentBudgetClass};
 
     fn card(id: &str, capabilities: Vec<String>, state: AgentCardState) -> AgentCard {
         AgentCard {

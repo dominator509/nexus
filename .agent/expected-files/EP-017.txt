@@ -11,3 +11,4 @@ Cargo.toml
 Cargo.lock
 references/ADR-024-agent-orchestrator-vocabulary.md
 docs/vocabulary/README.md
+scripts/ep017-m3-tests.sh

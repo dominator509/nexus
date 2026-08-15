@@ -140,7 +140,7 @@ fn ep017_unit_budget_validates_and_consumes_fail_closed() {
     assert_eq!(b.used, 40_000);
     let error = b.consume(70_000).unwrap_err();
     assert_eq!(error.code.as_str(), "POLICY");
-    assert!(b.exhausted() == false);
+    assert!(!b.exhausted());
 }
 
 #[test]

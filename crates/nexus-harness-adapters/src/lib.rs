@@ -27,8 +27,8 @@ pub mod orchestrator;
 pub mod registry;
 
 pub use adapter::{
-    capabilities_for, CliHarnessAdapter, HarnessCommand, HarnessCommandKind, HarnessCommandRunner,
-    HarnessExitStatus, HarnessOutput, ScriptedRunner,
+    CliHarnessAdapter, HarnessCommand, HarnessCommandKind, HarnessCommandRunner, HarnessExitStatus,
+    HarnessOutput, ScriptedRunner, capabilities_for,
 };
 pub use orchestrator::TaskOrchestrator;
 pub use registry::{AgentSelector, CardSignals, DeterministicAgentRegistry};

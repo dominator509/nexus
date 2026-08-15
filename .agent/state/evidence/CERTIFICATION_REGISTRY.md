@@ -77,6 +77,18 @@ blocking_for_ship: false
 evidence_reference: EP-004 (PostgreSQL, pgvector, repositories, memory records, world graph); EP-006 (Temporal durable workflows); EP-016 worker ports consume these at the composition boundary
 graph_gap_note: No node contract explicitly names composing the EP-016 context workers with the real EP-004 repositories and EP-006 Temporal runtime; the earliest consuming node per graph direction (agent orchestration and downstream) is the natural owner. EP-040/EP-043 must confirm an explicit integration owner at ship-gate review or add a certification/integration node (directive section 6).
 
+## Component: agent-workflow-contracts
+component_id: agent-workflow-contracts
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED
+provider: none (Temporal workflow contracts; real engine integration owned by the Temporal runtime node EP-006)
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship); real Temporal execution owned by EP-006 substrate, explicit agent-workflow composition owner to be confirmed at ship-gate review (EP-040/EP-043)
+blocking_for_ship: false
+evidence_reference: packages/workflows/src/agents/; EP-017 M3 gate (10 ep017_integration tests via real vitest + vacuity guard + tsc --noEmit clean); TypeScript workflow/state logic executed under real Vitest, NOT against a real Temporal server (no fake Temporal client; real engine integration deferred per EP-006 ownership)
+
 ## Component: control-plane-runtime
 component_id: control-plane-runtime
 implementation_status: IMPLEMENTED
