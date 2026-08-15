@@ -101,6 +101,17 @@ impl RouterError {
         )
     }
 
+    pub fn external_provider(message: impl Into<String>, resource: Option<String>) -> Self {
+        Self::new(
+            RouterErrorCode::ExternalProvider,
+            message,
+            None,
+            None,
+            None,
+            resource,
+        )
+    }
+
     pub fn internal(message: impl Into<String>, resource: Option<String>) -> Self {
         Self::new(
             RouterErrorCode::Internal,
