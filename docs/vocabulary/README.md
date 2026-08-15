@@ -725,3 +725,60 @@ EP-015). Fails closed (REJECT/CLARIFY) rather than routing unsafely.
 The Microbrain seam (SPEC-009 behavior 9; SPEC-025; ADR-022, EP-015).
 Uses the SAME `ReflexProvider` contract as DeepSeek and can remain
 disabled. Begins in shadow; promotion is gated.
+
+## ContextPurpose
+
+`TASK_EXECUTION`, `PLANNING`, `SEARCH`, `NOTIFICATION`,
+`SYSTEM_MAINTENANCE` (SPEC-020; ADR-023, EP-016). Purpose limitation
+classes for context construction and memory proposals. A capsule may
+only carry data whose declared purpose permits the current use.
+
+## GraphExpansionMode
+
+`DIRECT`, `ONE_HOP`, `TWO_HOP` (SPEC-002 behavior 7; ADR-023, EP-016).
+Bounded graph-aware context construction; never expands past the
+declared hop bound.
+
+## PrivacyFilterDecision
+
+`ALLOW`, `REDACT`, `DENY` (SPEC-020, INV-007; ADR-023, EP-016).
+Per-candidate privacy filter outcome; `REDACT` carries metadata only.
+
+## ConsolidationMode
+
+`MODEL_ASSISTED`, `DETERMINISTIC_FALLBACK`, `SKIPPED` (SPEC-002
+behavior 5; ADR-023, EP-016). Semantic consolidation execution mode;
+models can never write canonical memory directly - consolidation always
+emits proposals for policy evaluation.
+
+## ContextEngine
+
+The context engine port (SPEC-002; ADR-023, EP-016). Builds a
+purpose-limited, permission-filtered `ContextCapsule` for the model
+router; only authorized, task-relevant, cited data is included.
+
+## HybridRetriever
+
+The hybrid retrieval port (SPEC-002 behavior 6; ADR-023, EP-016).
+Combines exact, full-text, vector, graph, recency, importance,
+confidence, and diversity signals; always tenant-isolated and
+authorization-filtered.
+
+## MemoryConsolidator
+
+The semantic consolidation port (SPEC-002 behaviors 4-5; ADR-023,
+EP-016). Turns working/episodic sources into semantic/entity proposals;
+never writes canonical memory directly.
+
+## PrivacyFilter
+
+The privacy filter port (SPEC-020, INV-007; ADR-023, EP-016). Enforces
+purpose limitation, sensitivity ceilings, permission, and namespace
+isolation; private shared-room requests use private response routing.
+
+## GraphExpansionPolicy
+
+The bounded graph expansion port (SPEC-002 behavior 7; ADR-023,
+EP-016). Expands context from a seed node within the declared hop mode
+and node budget; never crosses a tenant, namespace, or security
+boundary.

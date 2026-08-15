@@ -4,6 +4,10 @@
 .agent/node-contracts/EP-016.md
 scripts/nodes/EP-016.sh
 crates/nexus-context/
+Cargo.toml
+Cargo.lock
+references/ADR-023-context-engine-vocabulary.md
+docs/vocabulary/README.md
 crates/nexus-memory-workers/
 packages/workflows/src/memory/
 tests/context/

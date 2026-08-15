@@ -270,7 +270,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -283,6 +283,8 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-15 | Decision: Create `crates/nexus-context` as the EP-016 context plane crate. It re-exports the canonical SPEC-002 memory/context vocabulary from lower layers (`MemoryRecord`/`MemoryProposal`/`MemoryQuery`/`MemoryCandidate`/`Sensitivity`/`RetentionPolicy`/`EmbeddingRef`/`MemoryRepository`/`WorldGraphRepository`/`VectorRepository` from nexus-data, `MemoryType`/`NexusId`/`TenantId` from nexus-domain, `ContextCapsule`/`CapsuleId`/`CapsuleState`/`CapsuleReference`/`ContextCapsuleService` from nexus-fabric, `RetrievalPolicy`/`RetrievalBlend`/`ProposalEvaluator`/`RetentionEngine`/`LifecycleEngine` from nexus-memory) so EP-016 callers have a single import surface and locked names are never redefined, and adds the EP-016-owned provider-neutral ports (`ContextEngine`, `HybridRetriever`, `MemoryConsolidator`, `PrivacyFilter`, `GraphExpansionPolicy`) with typed request/outcome value types (`ContextRequest`, `RetrievalSignals`, `ConsolidationRequest`, `ConsolidationOutcome`, `FilteredCandidate`, `GraphExpansionRequest`, `GraphExpansion`, `GraphNodeRef`, `GraphEdgeRef`), the new vocabulary (`ContextPurpose`, `GraphExpansionMode`, `PrivacyFilterDecision`, `ConsolidationMode`; ADR-023 + vocabulary README), and the SPEC-006 `ContextError`/`ContextErrorCode`. The M1 gate was amended from artifact-check-only to run `cargo test --locked -p nexus-context ep016_unit` (vacuity gap, EP-015 M1 precedent). The fence was amended for Cargo.toml/Cargo.lock (workspace member registration), `references/ADR-023-context-engine-vocabulary.md`, and `docs/vocabulary/README.md`. Evidence: `EP-016 M1: ok` (24 ep016_unit tests + 1 dependency-direction), clippy clean (No issues found; result_large_err documented allow), format ok. Alternatives: redefine `ContextCapsule`/`MemoryProposal` in the crate (rejected: SPEC-002 names are vocabulary locked, already implemented in nexus-fabric/nexus-data); skip purpose-limitation vocabulary (rejected: SPEC-020 and acceptance obligation 1 require purpose-limited context). Consequence: deterministic purpose-limited, permission-filtered, bounded context construction contracts; consolidation always emits proposals for policy evaluation. Reversal: revert M1 commit. Security: redacted SPEC-006 errors; no credentials or sensitive content in messages. License: no new dependency classes (workspace members only). Compatibility: additive crate + vocabulary; no existing surface changed.
 
 # 14. Outcomes & Retrospective
 

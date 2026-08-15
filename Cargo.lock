@@ -1132,6 +1132,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-context"
+version = "0.1.0"
+dependencies = [
+ "nexus-data",
+ "nexus-domain",
+ "nexus-fabric",
+ "nexus-memory",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-contracts"
 version = "0.1.0"
 dependencies = [
