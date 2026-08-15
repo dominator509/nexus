@@ -1,0 +1,15 @@
+[package]
+name = "nexus-harness-adapters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EP-017 harness adapter implementations (SPEC-010): DeterministicAgentRegistry with capability-based selection, TaskOrchestrator (Nexus parent orchestrator owning task state, budgets, delegations, artifacts), and CliHarnessAdapter implementing the canonical AgentAdapter contract over an injected HarnessCommandRunner port. Pure domain rules; all process I/O is behind the transport port."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+nexus-fabric = { path = "../nexus-fabric", version = "0.1.0" }
+nexus-agents = { path = "../nexus-agents", version = "0.1.0" }
+
+[dev-dependencies]

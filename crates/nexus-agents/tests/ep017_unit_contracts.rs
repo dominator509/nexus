@@ -303,7 +303,7 @@ fn ep017_unit_vocabulary_capability_round_trip_and_rejection() {
         assert_eq!(AgentCapability::from_str(wire).unwrap(), expected);
         assert_eq!(expected.as_str(), wire);
     }
-    assert!(AgentCapability::from_str("HACK").is_err());
+    assert!(AgentCapability::from_str("GIBBERISH").is_err());
 }
 
 #[test]

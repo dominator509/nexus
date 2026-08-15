@@ -25,6 +25,7 @@ members = [
     "crates/nexus-context",
     "crates/nexus-memory-workers",
     "crates/nexus-agents",
+    "crates/nexus-harness-adapters",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

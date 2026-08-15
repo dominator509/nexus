@@ -1230,6 +1230,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-harness-adapters"
+version = "0.1.0"
+dependencies = [
+ "nexus-agents",
+ "nexus-domain",
+ "nexus-fabric",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-headscale"
 version = "0.1.0"
 dependencies = [
