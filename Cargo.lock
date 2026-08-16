@@ -1271,6 +1271,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-home-assistant"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-home",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-identity"
 version = "0.1.0"
 dependencies = [

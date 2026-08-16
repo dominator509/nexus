@@ -29,6 +29,7 @@ members = [
     "crates/nexus-skills",
     "crates/nexus-healing",
     "crates/nexus-home",
+    "connectors/home-assistant",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

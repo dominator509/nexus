@@ -9,6 +9,7 @@
 .agent/node-contracts/EP-020.md
 scripts/nodes/EP-020.sh
 scripts/ep020-m1-tests.sh
+scripts/ep020-m2-tests.sh
 scripts/live-fire/LF-006.sh
 scripts/live-fire/LF-007.sh
 scripts/live-fire/LF-024.sh

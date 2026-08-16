@@ -1,1 +1,5 @@
 connectors/home-assistant/
+scripts/ep020-m2-tests.sh
+.agent/milestone-files/EP-020-M2.txt
+Cargo.toml
+Cargo.lock

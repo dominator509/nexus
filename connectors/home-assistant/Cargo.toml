@@ -1,0 +1,17 @@
+[package]
+name = "nexus-home-assistant"
+version = "0.1.0"
+edition = "2021"
+description = "EP-020 Home Assistant provider adapter: real REST/WebSocket transport, discovery, canonical mapping, local fast path, exact-target verification, offline queue, reconnect, automation handoff (SPEC-011)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-home = { path = "../../crates/nexus-home", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real HTTP transport for the Home Assistant REST API. Reuses the locked
+# workspace dependency class from nexus-connector-sdk (EP-011); blocking
+# + json only, no TLS default features (keeps the tree free of unused
+# HTTP/TLS license surface).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }
