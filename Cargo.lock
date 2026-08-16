@@ -1088,6 +1088,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-assist-satellite"
+version = "0.1.0"
+dependencies = [
+ "nexus-audio",
+ "nexus-domain",
+ "serde",
+]
+
+[[package]]
 name = "nexus-audio"
 version = "0.1.0"
 dependencies = [

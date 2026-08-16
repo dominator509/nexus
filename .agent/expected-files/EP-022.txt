@@ -4,6 +4,7 @@
 .agent/node-contracts/EP-022.md
 scripts/nodes/EP-022.sh
 scripts/ep022-m1-tests.sh
+scripts/ep022-m2-tests.sh
 Cargo.toml
 Cargo.lock
 crates/nexus-audio/

@@ -274,7 +274,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary (2026-08-16)
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants (2026-08-16)
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -284,6 +284,12 @@ scripts/ep022-m1-tests.sh, EP-001 masking class correction); clippy -D
 warnings clean; cargo fmt clean; scope audit EP-022: ok; reality gate: ok;
 security check: ok; license gate: ok; blueprint validation: ok; format
 check: ok; dependency audit: ok.
+
+M2 evidence: `EP-022 M2: ok` (11 ep022_unit adapter integration tests via
+scripts/ep022-m2-tests.sh vacuity guard + 5 in-crate unit tests, 3 suites
+16 total); clippy -D warnings clean; workspace check 95 crates green; M1
+regression 16 green; side gates ok (scope/reality/security/license/
+blueprint/format/dependency).
 
 # 12. Surprises & Discoveries
 
@@ -304,6 +310,16 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   person-bound endpoint; if none exists the router returns
   AudioErrorCode::NotFound (fail closed, LF-028 precedent, SPEC-012
   behavior 9). Availability or convenience never outranks privacy.
+- 2026-08-16: The pre-created M2 gate in scripts/nodes/EP-022.sh ran
+  `cargo test -p nexus-audio ep022_unit` against the M1 contract crate,
+  not the M2 changed-files fence (connectors/assist-satellite/) - EP-001
+  gate-masking class. Replaced with scripts/ep022-m2-tests.sh running the
+  real nexus-assist-satellite ep022_unit suite with a vacuity guard.
+- 2026-08-16: Assist satellite adapter core needs explicit I/O-agnostic
+  ports (AudioSource/AudioFrameSink) and a local wake gate port; an
+  unbound gate fails closed (UNAVAILABLE) and a satellite cannot start
+  listening without a bound wake gate (SPEC-012 behavior 3 requires local
+  wake; a satellite without local wake is not locally functional).
 
 # 13. Decision Log
 
@@ -358,6 +374,20 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   reused for person binding (serde helper serializes PersonId as its
   UUIDv7 string since nexus-domain has no serde derives). No wire binding
   ripple into nexus-domain.
+- 2026-08-16 | Assist satellite adapter is I/O-agnostic with fail-closed
+  ports | connectors/assist-satellite (nexus-assist-satellite) implements
+  the M2 core: AssistSatelliteAdapter with visible SatelliteState
+  (STOPPED/LISTENING/CAPTURING/HARDWARE_MUTED), local WakeGate port
+  (Armed/Triggered), AudioSource/AudioFrameSink transport ports, and
+  conversation context survival across stop and transfer. Unbound ports
+  fail closed (UNAVAILABLE); start_listening refuses without a bound wake
+  gate; hardware mute is authoritative (Policy error on listen, capture
+  ignored, never auto-resumes on unmute). Transport certification (real
+  mic/Bluetooth/Wyoming) is NOT claimed here - owned by M3/M4/M5.
+  Evidence: 11 ep022_unit adapter integration tests + 5 in-crate tests.
+  Alternatives: hard-wiring a microphone transport in M2 (rejected:
+  no real hardware in this environment; Reality rule). Security:
+  fail-closed gates, visible mute state (SPEC-012 behavior 9).
 
 # 14. Outcomes & Retrospective
 

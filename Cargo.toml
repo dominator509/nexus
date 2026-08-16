@@ -31,6 +31,7 @@ members = [
     "crates/nexus-healing",
     "crates/nexus-home",
     "connectors/home-assistant",
+    "connectors/assist-satellite",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

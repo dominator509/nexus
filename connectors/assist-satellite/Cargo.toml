@@ -1,0 +1,11 @@
+[package]
+name = "nexus-assist-satellite"
+version = "0.1.0"
+edition = "2021"
+description = "EP-022 Assist satellite adapter core: local wake gating, hardware mute authority, room-local ephemeral capture, conversation context survival (SPEC-012 behaviors 3, 6, 9)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-audio = { path = "../../crates/nexus-audio", version = "0.1.0" }
+serde.workspace = true
