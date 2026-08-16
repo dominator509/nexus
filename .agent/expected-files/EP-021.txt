@@ -9,6 +9,7 @@
 .agent/node-contracts/EP-021.md
 scripts/nodes/EP-021.sh
 scripts/ep021-m1-tests.sh
+scripts/ep021-m2-tests.sh
 python/nexus_voice/
 models/wake/
 infra/voice/

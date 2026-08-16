@@ -1,1 +1,2 @@
 models/wake/
+scripts/ep021-m2-tests.sh

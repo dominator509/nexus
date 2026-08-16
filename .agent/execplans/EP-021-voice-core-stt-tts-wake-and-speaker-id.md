@@ -289,3 +289,24 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## 2026-08-16 -- M2 wake model core (evidence: models/wake/tests; SPEC-012/SPEC-019)
+
+- DECISION: models/wake/ owns the deterministic wake machinery as the
+  python package `nexus_wake`: model manifests, license safety, digest
+  verification, idempotent registry, and the armed/triggered/disarmed/
+  uncertified decision state machine. The real openWakeWord runtime
+  inference plugs in behind `WakeModelScore` at M3 (infra/voice); the
+  core never fabricates a trigger and never ships noncommercial weights
+  (SPEC-019 required behavior 2; SPEC-012 non-goal).
+- DECISION: registry `register()` requires real weights digest
+  verification before a model becomes usable; identical re-registration
+  is idempotent; same id with different digest is `WakeModelConflict`
+  (never silent overwrite).
+- DECISION: M2 gate rewritten from the pre-created artifact-only node
+  script entry to vacuity-guarded `scripts/ep021-m2-tests.sh`
+  (EP-001 gate-masking class), same pattern as M1 and LF-023.
+- SECURITY: no credentials/weights in repo; digest verification is
+  mandatory; raw audio never retained or logged.
+- REVERSAL: revert to M1 commit. No public-surface break: nexus_voice
+  contracts unchanged; nexus_wake is a new package under models/wake.
