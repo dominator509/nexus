@@ -271,19 +271,60 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M1: Contract, vocabulary, and package boundary (5f94712)
+- [x] M2: Core behavior and deterministic invariants (461b086)
+- [x] M3: Real dependency and transport integration (57307a1)
+- [x] M4: Forced failures, abuse cases, and observability (14f06db)
+- [x] M5: Live-fire, operations, and node closure (082cb7b)
 
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-16: The pre-created `scripts/nodes/EP-019.sh` M1 gate was
+  artifact-check-only (EP-001 masking class) and M2/M3 referenced cargo
+  filters that would match zero tests; fixed with vacuity-guarded
+  runners (ep019-m1/m2/m3/m4-tests.sh) before any gate ran.
+- 2026-08-16: The workflow determinism audit flags the literal
+  `process.` even in a doc comment (`\bprocess\.` rule). Reworded a
+  doc-comment sentence ("eval/approval process." -> "eval and approval
+  flow.") to keep the real audit clean.
+- 2026-08-16: The M3 milestone-files fence is a repo-level integration
+  directory (tests/healing/) with no crate manifest; the M3 gate is a
+  pytest selection with a vacuity guard (EP-010 pattern), not a cargo
+  filter. The pre-created node script's `cargo test ... ep019_integration`
+  would have been vacuous.
+- 2026-08-16: The `incidentLifecycleState` vocabulary deliberately has
+  NO FIXED/REMEDIATED value: a model/agent can never declare its own fix
+  successful. Tests assert both unknown values are rejected.
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-16 | Vocabulary: single canonical IncidentState enum (18
+  states) with explicit terminals and no collapsed escape value;
+  DiagnosisConfidence HYPOTHESIS->VALIDATED. Evidence: SPEC-018,
+  owner directive sections 1-2, ep019_unit_contract tests. Alternatives:
+  a generic FIXED state (rejected: violates primary invariant).
+  Consequence: no model can self-certify. Reversal: new ADR.
+- 2026-08-16 | Contract crate: nexus-healing depends only on
+  nexus-domain + serde (dependency-direction tests forbid
+  provider/runtime crates). Evidence: cargo tree tests, Cargo.toml.
+  Alternatives: depend on nexus-harness-adapters (rejected: contract
+  crate must stay provider-neutral). Consequence: engine orchestration
+  is deterministic and provider-neutral. Reversal: new ADR.
+- 2026-08-16 | M3 integration: real controlled failing fixture + real
+  patch artifact + isolated working copy proves the strongest real
+  chain available without a production deploy substrate. Evidence:
+  tests/healing/, LF-019. Alternatives: simulate canary (rejected:
+  directive forbids simulated canary). Consequence: real before/after
+  reproduction and deterministic rollback proven; production canary
+  certification DEFERRED to deployment-owning node (EP-042/EP-043).
+  Reversal: new ADR.
+- 2026-08-16 | Certification registry: self-healing-sandbox and
+  self-healing-production-deployment rows DEFERRED with exact owners
+  (EP-040/EP-043; deployment-owning node) per the no-deadlock law.
+  Evidence: CERTIFICATION_REGISTRY.md rows. Alternatives: NODE_BLOCK
+  on later-owned rollout (rejected: would deadlock the graph).
+  Consequence: EP-019 closes with real owned proofs and explicit
+  deferred certification owners. Reversal: new ADR.
 
 # 14. Outcomes & Retrospective
 
