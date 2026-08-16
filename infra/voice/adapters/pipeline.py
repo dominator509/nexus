@@ -19,6 +19,8 @@ import tempfile
 import wave
 from pathlib import Path
 
+from nexus_voice.privacy import AudioPrivacyPolicy
+
 from ..engine_env import WAKE_THRESHOLD
 from . import run_engine
 
@@ -85,6 +87,45 @@ def synthesize(text: str, out_wav: str, voice: str = "af_heart", speed: float = 
         str(speed),
     )
     return result
+
+
+def route_response(text: str, policy: AudioPrivacyPolicy, sensitive: bool) -> dict:
+    """Decide the real response route for a room state.
+
+    SPEC-012 behavior 9: shared-room privacy states propagate to policy;
+    a sensitive response in a shared room must be delivered privately
+    (never spoken aloud on the room speaker). Hardware mute is
+    authoritative and suppresses capture entirely. The audible channel is
+    only permitted when the policy's zone permits it and the content is
+    not sensitive in a shared room.
+    """
+    if policy.hardware_mute_enforced:
+        return {
+            "channel": "SUPPRESSED",
+            "audible": False,
+            "reason": "hardware_mute",
+            "policy_zone": policy.zone,
+        }
+    if sensitive and policy.shared_room:
+        return {
+            "channel": "PRIVATE",
+            "audible": False,
+            "reason": "shared_room_sensitive",
+            "policy_zone": policy.zone,
+        }
+    if policy.allow_cloud_streaming:
+        return {
+            "channel": "SPOKEN",
+            "audible": True,
+            "reason": "cloud_audio",
+            "policy_zone": policy.zone,
+        }
+    return {
+        "channel": "SPOKEN",
+        "audible": True,
+        "reason": "local_audio",
+        "policy_zone": policy.zone,
+    }
 
 
 def wav_properties(path: str) -> dict:

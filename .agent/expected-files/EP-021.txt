@@ -10,6 +10,7 @@
 scripts/nodes/EP-021.sh
 scripts/ep021-m1-tests.sh
 scripts/ep021-m2-tests.sh
+scripts/live-fire/LF-028.sh
 python/nexus_voice/
 models/wake/
 infra/voice/

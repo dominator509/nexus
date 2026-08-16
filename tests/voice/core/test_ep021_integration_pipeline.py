@@ -42,6 +42,39 @@ def test_ep021_integration_chain_wake_to_transcription() -> None:
     assert "turn on the lights" in result["transcript"].lower()
 
 
+def test_ep021_integration_route_shared_room_private() -> None:
+    # SPEC-012 behavior 9: shared-room privacy propagates to the real
+    # policy and routes sensitive responses privately (not spoken).
+    from nexus_voice import AudioPrivacyPolicy, PrivacyZone
+
+    from infra.voice.adapters.pipeline import route_response
+
+    private = AudioPrivacyPolicy(
+        policy_id="route-test",
+        zone=PrivacyZone.Private,
+        hardware_mute_enforced=False,
+    )
+    shared = private.apply_shared_room(True)
+    assert shared.shared_room is True
+    assert shared.zone == PrivacyZone.SharedRoom
+    assert shared.allow_cloud_streaming is False
+
+    shared_route = route_response("sensitive answer", shared, sensitive=True)
+    assert shared_route["channel"] == "PRIVATE"
+    assert shared_route["audible"] is False
+    assert shared_route["reason"] == "shared_room_sensitive"
+
+    private_route = route_response("sensitive answer", private, sensitive=True)
+    assert private_route["channel"] == "SPOKEN"
+    assert private_route["audible"] is True
+
+    muted = private.apply_hardware_mute(True)
+    assert muted.zone == PrivacyZone.Private
+    muted_route = route_response("anything", muted, sensitive=True)
+    assert muted_route["channel"] == "SUPPRESSED"
+    assert muted_route["audible"] is False
+
+
 def test_ep021_integration_chain_text_to_generated_audio() -> None:
     with tempfile.TemporaryDirectory() as td:
         out = str(Path(td) / "generated.wav")
