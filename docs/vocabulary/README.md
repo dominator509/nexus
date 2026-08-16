@@ -887,3 +887,54 @@ owned by the M2/M3 behavior boundary.
 lifecycle transitions only, fail closed, no terminal resurrection.
 A model/agent may PROPOSE a skill; it may not self-approve installation
 (promotion requires a distinct human approver).
+
+## IncidentState
+
+`OBSERVE`, `INCIDENT`, `CORRELATE`, `DIAGNOSE`, `REPRODUCE`,
+`PATCH_PROPOSED`, `SANDBOX_VALIDATION`, `SECURITY_VALIDATION`,
+`APPROVAL`, `STAGED_DEPLOYMENT`, `POST_DEPLOY_VERIFICATION`, `CLOSED`,
+`REJECTED`, `UNREPRODUCIBLE`, `VALIDATION_FAILED`, `SECURITY_FAILED`,
+`ROLLED_BACK`, `BLOCKED` (SPEC-018; ADR-026, EP-019). Canonical
+self-healing lifecycle with explicit terminal/failure states; states are
+never collapsed. DETECTED != DIAGNOSED != REPRODUCED != PATCHED !=
+VERIFIED != APPROVED != DEPLOYED != REMEDIATED. `CLOSED` is reached only
+through real observed post-deploy verification; a model/agent can never
+declare its own fix successful.
+
+## DiagnosisConfidence
+
+`HYPOTHESIS`, `SUPPORTED`, `REPRODUCED`, `VALIDATED` (SPEC-018;
+ADR-026, EP-019). A model-generated explanation ALWAYS begins as
+HYPOTHESIS; only reproducible evidence raises confidence to VALIDATED.
+
+## IncidentSignalKind
+
+`PROCESS_FAILURE`, `HEALTH_FAILURE`, `TEST_FAILURE`,
+`WORKFLOW_FAILURE`, `CONNECTOR_FAILURE`, `SECURITY_EVENT`,
+`RESOURCE_EXHAUSTION`, `DEPLOYMENT_REGRESSION` (SPEC-018; ADR-026,
+EP-019). Real structured signals that may become incidents; production
+behavior never generates fake incidents.
+
+## ReviewDecision
+
+`APPROVE`, `REJECT`, `REQUEST_CHANGES` (SPEC-018; ADR-026, EP-019).
+Independent reviewer verdict bound to the exact patch digest.
+
+## CanaryState
+
+`PLANNED`, `VALIDATING`, `HEALTHY`, `PROMOTED`, `ROLLED_BACK`, `FAILED`
+(SPEC-018; ADR-026, EP-019). Staged deployment state; canary regression
+automatically rolls back and preserves evidence.
+
+## HealthCriterionState
+
+`HEALTHY`, `DEGRADED`, `UNAVAILABLE`, `UNKNOWN` (SPEC-018; ADR-026,
+EP-019). Observed health of a canary criterion; deployment success is
+not remediation success.
+
+## RollbackState
+
+`PLANNED`, `EXECUTING`, `RESTORED`, `FAILED` (SPEC-018; ADR-026,
+EP-019). Deterministic rollback state machine bound to the known
+previous artifact/version; rollback is never improvised from
+model-generated source.

@@ -1,6 +1,14 @@
 .agent/execplans/EP-019-self-healing-engineering-loop.md
 .agent/state/LEDGER.md
 .agent/expected-files/EP-019.txt
+.agent/milestone-files/EP-019-M1.txt
 .agent/node-contracts/EP-019.md
 scripts/nodes/EP-019.sh
+scripts/ep019-m1-tests.sh
 crates/nexus-healing/
+crates/nexus-domain/src/id.rs
+crates/nexus-domain/src/lib.rs
+Cargo.toml
+Cargo.lock
+references/ADR-026-self-healing-vocabulary.md
+docs/vocabulary/README.md

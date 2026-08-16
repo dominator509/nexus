@@ -1,0 +1,11 @@
+[package]
+name = "nexus-healing"
+version = "0.1.0"
+edition = "2021"
+description = "EP-019 self-healing engineering loop: incident correlation, diagnosis, patching, review, HITL approval, canary, verification, rollback (SPEC-018)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

@@ -189,6 +189,30 @@ typed_id!(
     /// Skill package identifier (SPEC-010; ADR-025).
     SkillId
 );
+typed_id!(
+    /// Incident identifier (SPEC-018; ADR-026).
+    IncidentId
+);
+typed_id!(
+    /// Diagnosis task identifier (SPEC-018; ADR-026).
+    DiagnosisId
+);
+typed_id!(
+    /// Patch candidate identifier (SPEC-018; ADR-026).
+    PatchId
+);
+typed_id!(
+    /// Remediation approval identifier (SPEC-018; ADR-026).
+    ApprovalId
+);
+typed_id!(
+    /// Deployment identifier (SPEC-018; ADR-026).
+    DeploymentId
+);
+typed_id!(
+    /// Rollback identifier (SPEC-018; ADR-026).
+    RollbackId
+);
 
 #[cfg(test)]
 mod tests {

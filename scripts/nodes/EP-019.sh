@@ -8,10 +8,10 @@ export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
 case "$mode" in
-  M1) python3 scripts/node-artifact-check.py EP-019 M1 ;;
-  M2) python3 scripts/node-artifact-check.py EP-019 M2; cargo test --locked -p nexus-healing ep019_unit ;;
-  M3) python3 scripts/node-artifact-check.py EP-019 M3; cargo test --locked -p nexus-healing ep019_integration ;;
-  M4) python3 scripts/node-artifact-check.py EP-019 M4; cargo test --locked -p nexus-healing ep019_failure ;;
+  M1) python3 scripts/node-artifact-check.py EP-019 M1 && test -s crates/nexus-healing/tests/ep019_unit_contract.rs && sh scripts/ep019-m1-tests.sh ;;
+  M2) python3 scripts/node-artifact-check.py EP-019 M2 && test -s packages/workflows/src/incidents/index.ts && sh scripts/ep019-m2-tests.sh ;;
+  M3) python3 scripts/node-artifact-check.py EP-019 M3 && sh scripts/ep019-m3-tests.sh ;;
+  M4) python3 scripts/node-artifact-check.py EP-019 M4 && test -s crates/nexus-healing/tests/ep019_failure_suite.rs && sh scripts/ep019-m4-tests.sh ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-019 M5
       cargo test --locked -p nexus-healing
