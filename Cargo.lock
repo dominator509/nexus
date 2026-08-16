@@ -1474,6 +1474,7 @@ dependencies = [
  "jsonschema",
  "nexus-domain",
  "nexus-fabric",
+ "ring",
  "serde",
  "serde_json",
  "sha2",

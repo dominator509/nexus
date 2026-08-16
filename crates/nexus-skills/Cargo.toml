@@ -13,6 +13,10 @@ serde_json.workspace = true
 # Real SHA-256 content hashing for scan-before-install (EP-018 M2).
 # Reuses the already-locked workspace dependency class (nexus-sidecar).
 sha2 = "0.11"
+# Real Ed25519 signature verification (EP-018 M5 / LF-018). Reuses the
+# already-locked workspace dependency class (rustls/rcgen already pull
+# ring 0.17.14); no new dependency class.
+ring = "0.17"
 
 [dev-dependencies]
 # Hermetic schema validation: EP-018 M3 tests resolve only LOCAL $ref

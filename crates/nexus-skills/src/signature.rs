@@ -86,3 +86,123 @@ impl fmt::Display for SkillSignature {
         )
     }
 }
+
+// ---------------------------------------------------------------------------
+// REAL cryptographic signature verification (EP-018 M5 / LF-018)
+// ---------------------------------------------------------------------------
+//
+// The M1 contract boundary validates signature STRUCTURE (hex, lengths).
+// Cryptographic verification is real and pinned: ring 0.17 Ed25519, the
+// same locked workspace dependency class rustls/rcgen already use. A
+// valid cryptographic signature is an integrity/authenticity statement
+// only (ADR-025): it is NOT trust, NOT an authorized installation, and
+// NOT execution permission.
+
+/// Hex-decode a string into bytes (pure std, fails closed on
+/// malformed input). Only used for signature material, never content.
+pub fn decode_hex(value: &str) -> Option<Vec<u8>> {
+    if !is_hex_encoded(value) {
+        return None;
+    }
+    let bytes = value.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len() / 2);
+    for pair in bytes.chunks_exact(2) {
+        let hi = (pair[0] as char).to_digit(16)?;
+        let lo = (pair[1] as char).to_digit(16)?;
+        out.push(((hi << 4) | lo) as u8);
+    }
+    Some(out)
+}
+
+/// Real Ed25519 verification (ring 0.17). Returns `Ok(())` when the
+/// signature verifies against the public key for the message.
+pub fn verify_ed25519(
+    public_key_hex: &str,
+    signature_hex: &str,
+    message: &[u8],
+) -> Result<(), SkillPackageError> {
+    let public_key = decode_hex(public_key_hex).ok_or_else(|| {
+        SkillPackageError::verification(
+            "signature public key is not valid hex",
+            Some("skill-signature".into()),
+        )
+    })?;
+    let signature = decode_hex(signature_hex).ok_or_else(|| {
+        SkillPackageError::verification(
+            "signature value is not valid hex",
+            Some("skill-signature".into()),
+        )
+    })?;
+    use ring::signature::{UnparsedPublicKey, ED25519};
+    let key = UnparsedPublicKey::new(&ED25519, &public_key);
+    key.verify(message, &signature).map_err(|_| {
+        SkillPackageError::verification(
+            "skill signature verification failed",
+            Some("skill-signature".into()),
+        )
+    })
+}
+
+/// Generate a fresh Ed25519 keypair and sign `message`. Returns
+/// `(public_key_hex, signature_hex)`. Used by the Skill Factory and by
+/// the LF-018 live-fire proof; real ring crypto, never hand-rolled.
+pub fn sign_ed25519(message: &[u8]) -> Result<(String, String), SkillPackageError> {
+    use ring::rand::SystemRandom;
+    use ring::signature::{Ed25519KeyPair, KeyPair};
+    let rng = SystemRandom::new();
+    let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng).map_err(|_| {
+        SkillPackageError::unavailable(
+            "cannot generate ed25519 keypair",
+            Some("skill-signature".into()),
+        )
+    })?;
+    let key_pair = Ed25519KeyPair::from_pkcs8(pkcs8.as_ref()).map_err(|_| {
+        SkillPackageError::unavailable(
+            "cannot load generated ed25519 keypair",
+            Some("skill-signature".into()),
+        )
+    })?;
+    let public_hex = key_pair
+        .public_key()
+        .as_ref()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
+    let signature_hex = key_pair
+        .sign(message)
+        .as_ref()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
+    Ok((public_hex, signature_hex))
+}
+
+/// The canonical message a signature covers: the immutable package
+/// identity bytes (`name@version:content_hash`, ADR-025). Signing this
+/// digest binds the signature to the exact immutable version+content.
+pub fn package_signing_message(package: &crate::manifest::SkillPackage) -> Vec<u8> {
+    package.canonical_identity().into_bytes()
+}
+
+impl SkillSignature {
+    /// Real cryptographic verification of this signature over the
+    /// package's canonical identity digest. Structural validity is
+    /// required first (M1), then real ring Ed25519 verification.
+    pub fn verify_cryptographic(
+        &self,
+        package: &crate::manifest::SkillPackage,
+    ) -> Result<(), SkillPackageError> {
+        self.validate()?;
+        match self.algorithm {
+            SignatureAlgorithm::Ed25519 => verify_ed25519(
+                &self.public_key_hex,
+                &self.signature_hex,
+                &package_signing_message(package),
+            ),
+            SignatureAlgorithm::EcdsaP256 => Err(SkillPackageError::verification(
+                "ECDSA_P256 cryptographic verification unavailable (Ed25519 only)",
+                Some("skill-signature".into()),
+            )),
+        }
+    }
+}

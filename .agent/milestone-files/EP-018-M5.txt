@@ -1,1 +1,14 @@
-
+crates/nexus-skills/tests/lf018.rs
+crates/nexus-skills/src/executor.rs
+crates/nexus-skills/src/signature.rs
+crates/nexus-skills/Cargo.toml
+tests/skills/fixtures/livefire-transform.sh
+scripts/live-fire/LF-018.sh
+.agent/execplans/EP-018-skill-registry-and-skill-factory.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-018.txt
+.agent/milestone-files/EP-018-M5.txt
+.agent/node-contracts/EP-018.md
+scripts/nodes/EP-018.sh
+Cargo.lock
+.agent/state/evidence/CERTIFICATION_REGISTRY.md

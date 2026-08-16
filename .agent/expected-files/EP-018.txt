@@ -5,12 +5,14 @@
 .agent/milestone-files/EP-018-M2.txt
 .agent/milestone-files/EP-018-M3.txt
 .agent/milestone-files/EP-018-M4.txt
+.agent/milestone-files/EP-018-M5.txt
 .agent/node-contracts/EP-018.md
 scripts/nodes/EP-018.sh
 scripts/ep018-m1-tests.sh
 scripts/ep018-m2-tests.sh
 scripts/ep018-m3-tests.sh
 scripts/ep018-m4-tests.sh
+scripts/live-fire/LF-018.sh
 crates/nexus-skills/
 schemas/skills/
 tests/skills/

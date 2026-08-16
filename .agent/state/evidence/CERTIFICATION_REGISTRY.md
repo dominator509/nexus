@@ -148,3 +148,88 @@ production_certification: DEFERRED
 certification_owner: EP-043 (production readiness and ship)
 blocking_for_ship: false
 evidence_reference: crates/nexus-router seam; LF-021-ep015-m5.md (real transport attempt; only UNAVAILABLE/TIMEOUT failover-eligible; typed lock)
+
+## Component: skill-plane-contracts
+component_id: skill-plane-contracts
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (vocabulary + manifest + signature structure + package identity + proposal lifecycle + permission authority; 58 ep018_unit M1 tests, clippy clean, schema parity with canonical schemas)
+provider: none (provider-neutral contract crate)
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: crates/nexus-skills (vocabulary.rs, manifest.rs, signature.rs, proposal.rs, composer.rs); ADR-025; 58 ep018_unit contract tests
+
+## Component: skill-plane-bundle-registry
+component_id: skill-plane-bundle-registry
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (real bundle loader with real SHA-256 scan-before-install content hashing, real JSON-file durable registry store, install/remove/revoke lifecycle with terminal revoked flag, immutable-by-version conflict rejection, rollback on persistence failure, durable revocation across store reload, no resurrection of revoked identity)
+provider: none (self-hosted skill plane)
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: crates/nexus-skills (bundle.rs, store.rs, registry.rs); skills/ real bundles; 17 ep018_unit M2 tests; 19 ep018_failure M4 tests; real on-disk tamper test (one-byte flip -> digest change -> CONFLICT, never executable)
+
+## Component: skill-plane-schema-validation
+component_id: skill-plane-schema-validation
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (canonical JSON Schema 2020-12 documents validated by the real jsonschema 0.49.9 crate; Rust serde surface and on-disk bundles conform; unknown permissions/non-canonical ids/invalid semvers rejected by schema)
+provider: none
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: schemas/skills/; crates/nexus-skills/tests/ep018_integration_schema.rs (5 tests)
+
+## Component: skill-plane-signature-crypto
+component_id: skill-plane-signature-crypto
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (real ring 0.17.14 Ed25519 keypair generation, signing, and verification over the canonical package identity digest; tampered content FAILS, wrong signer FAILS, bad signature FAILS; structural hex validation remains distinct from cryptographic certification)
+provider: none (ring is a vetted pinned internal crypto implementation, locked workspace dep via rustls/rcgen)
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: crates/nexus-skills/src/signature.rs; LF-018-ep018-m5.md (real keypair -> sign canonical digest -> verify PASS; tamper/wrong-signer/bad-signature FAIL)
+
+## Component: skill-plane-process-execution
+component_id: skill-plane-process-execution
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (REAL_INTERNAL_PROCESS: SkillExecutor spawns the installed skill payload as a real subprocess with a scrubbed environment, capped output, real exit-status mapping, fail-closed on spawn failure; declared permissions must be within the caller grant; WRITE at runtime denied when not granted)
+provider: none (self-hosted execution boundary; payload is CONTROLLED_TEST_FIXTURE)
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: crates/nexus-skills/src/executor.rs; tests/skills/fixtures/livefire-transform.sh (CONTROLLED_TEST_FIXTURE); LF-018-ep018-m5.md (input -> transformation -> output artifact; runtime WRITE denied exit 3; revoke -> execution denied)
+
+## Component: skill-plane-sandbox
+component_id: skill-plane-sandbox
+implementation_status: IMPLEMENTED (enforcement decision PASS: permission ceiling + caller-grant intersection + fail-closed execution boundary deny undeclared capabilities at runtime)
+internal_proof: INTERNAL_CERTIFIED (permission/trust enforcement proven by M1/M4 tests and LF-018 runtime WRITE denial; real process boundary proven by SkillExecutor)
+provider: none
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: LF-018 runtime permission denial; permission ceiling tests; real sandbox execution certification DEFERRED (no OS-level isolation proof in EP-018; sandbox requirement/enforcement decision PASS, real sandbox execution certification deferred to EP-043/EP-040)
+
+## Component: skill-plane-external-registry
+component_id: skill-plane-external-registry
+implementation_status: NOT ASSERTED (no external/public skill registry is claimed, owned, or exercised by EP-018)
+internal_proof: N/A
+provider: none
+provider_certification: NOT ASSERTED
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: EP-018 non-goals; directive section T (manifest network_rules are REQUESTS, never firewall configuration; real network enforcement deferred to Sentinel/EP-030 class owners)
+

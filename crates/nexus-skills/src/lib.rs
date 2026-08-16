@@ -13,6 +13,7 @@
 pub mod bundle;
 pub mod composer;
 pub mod evaluator;
+pub mod executor;
 pub mod manifest;
 pub mod package;
 pub mod proposal;
@@ -28,6 +29,7 @@ pub use composer::{
     SUPPORTED_EVALUATOR_VERSIONS,
 };
 pub use evaluator::{SkillEvaluation, SkillEvaluator, SkillEvaluatorError};
+pub use executor::{signing_message_for, SkillExecutionResult, SkillExecutor, SKILL_OUTPUT_CAP};
 pub use manifest::{
     is_hex_encoded, is_valid_portable_name, is_valid_semver, SkillManifest, SkillPackageError,
     SkillPackageErrorCode,
@@ -35,7 +37,9 @@ pub use manifest::{
 pub use package::SkillPackage;
 pub use proposal::SkillProposal;
 pub use registry::{SkillRegistry, SkillRegistryEntry};
-pub use signature::SkillSignature;
+pub use signature::{
+    decode_hex, package_signing_message, sign_ed25519, verify_ed25519, SkillSignature,
+};
 pub use store::{JsonFileSkillRegistryStore, SkillRegistryState, SkillRegistryStore};
 pub use vocabulary::{SignatureAlgorithm, SkillPermission, SkillProposalState, SkillTrustLevel};
 
