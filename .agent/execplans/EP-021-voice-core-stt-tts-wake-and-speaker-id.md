@@ -276,7 +276,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
 
@@ -365,3 +365,48 @@ At completion record changed files versus the machine fence, exact commands and 
   raw audio in failures.
 - REVERSAL: revert to M3 commit. No public-surface break: adapter
   behavior on healthy paths unchanged (M3 suite regression green).
+
+## 2026-08-16 -- M5 live-fire, operations, and node closure (evidence: .agent/state/evidence/EP-021-M5-*; EP-021 directive O; node verify EP-021: ok)
+
+- DECISION: LF-028 (shared-room private response) was an artifact-only
+  stub (proof-runner.sh + echo, EP-001 gate-masking class) and was
+  rewritten as a REAL live-fire: real Kokoro synthesis of the sensitive
+  response, real AudioPrivacyPolicy shared-room state (SPEC-012 behavior
+  9), real router decision (infra/voice/adapters/pipeline.route_response),
+  and a private-zone control. Observed: shared room -> PRIVATE/audible
+  false; private room control -> SPOKEN/audible true; hardware mute ->
+  SUPPRESSED. Fence amended to include scripts/live-fire/LF-028.sh.
+- DECISION: benchmarks/voice/benchmark_engines.py records real wall-clock
+  latency per engine (silero VAD, wake, whisper STT ~3.27s mean, Kokoro
+  TTS) as measurement evidence; not certification.
+- DECISION: committed-state node verify required the canonical operator
+  env (NEXUS_SMOKE_URL=http://127.0.0.1:8443, documented by LF-029); the
+  full verify.sh battery passed including the EP-044 runtime smoke, then
+  the node script verify mode ran all 18 ep021 tests plus LF-028.
+- SECURITY: evidence files contain no credentials, no raw audio payloads,
+  only digests and decisions.
+- REVERSAL: revert to M4 commit. No public-surface break: route_response
+  is additive.
+
+# 14. Outcomes & Retrospective
+
+- CHANGED vs fence: infra/voice/ (engine_env, workers, adapters,
+  manifests, README), tests/voice/core/ (ep021_integration x2,
+  ep021_failure), benchmarks/voice/ (LF-028 proof, benchmark), fence
+  amendment (scripts/live-fire/LF-028.sh), python/nexus_voice port
+  default bodies (typed fail-closed), .agent plan/ledger/evidence.
+- SENTINELS: EP-021 M1: ok; EP-021 M2: ok; EP-021 M3: ok (8 ep021_integration);
+  EP-021 M4: ok (9 ep021_failure); EP-021 M5: ok (18 ep021 tests + LF-028:
+  ok); node verify EP-021: ok; verify: ok (full battery + EP-044 runtime
+  smoke); security/license/reality/format/lint/dependency/scope/
+  expected-files all ok.
+- ENGINE PROOFS (real): Silero VAD v5.1 speech 0.737 vs silence 0.004;
+  openwakeword 0.4.0 + Nexus-owned model 18/18 pos @ 1.000, neg <= 0.078;
+  whisper.cpp v1.7.4 "The quick brown fox jumps over the lazy dog." +
+  chain "Turn on the lights."; Kokoro 0.9.4 new waveforms 24 kHz.
+- PROVIDER/HARDWARE STATUS: voice engine integration PASS (bounded chain
+  audio -> VAD -> wake -> utterance -> STT; text -> Kokoro -> audio);
+  physical microphone/speaker/room-satellite hardware NOT ASSERTED
+  (deferred); openwakeword production wake-model certification DEFERRED
+  (graph gap recorded, certification.yaml); fallback push-to-talk.
+- GREEN TAG: green/EP-021 at e906eef (verified M5 implementation commit).
