@@ -1,1 +1,3 @@
 tests/healing/
+scripts/ep019-m3-tests.sh
+.agent/milestone-files/EP-019-M3.txt

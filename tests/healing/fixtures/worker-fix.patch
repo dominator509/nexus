@@ -1,0 +1,11 @@
+--- a/failing-worker.sh
++++ b/failing-worker.sh
+@@ -12,7 +12,7 @@
+ MARKER="${1:-missing}"
+ # BUG (the incident): the worker checks the hard-coded wrong filename
+ # instead of the marker path the operator passed.
+-if [ -f "worker.conf" ]; then
++if [ -f "$MARKER" ]; then
+   printf 'worker: healthy\n'
+   exit 0
+ fi
