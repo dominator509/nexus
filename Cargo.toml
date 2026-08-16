@@ -28,6 +28,7 @@ members = [
     "crates/nexus-harness-adapters",
     "crates/nexus-skills",
     "crates/nexus-healing",
+    "crates/nexus-home",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

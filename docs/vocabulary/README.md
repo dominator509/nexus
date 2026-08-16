@@ -938,3 +938,47 @@ not remediation success.
 EP-019). Deterministic rollback state machine bound to the known
 previous artifact/version; rollback is never improvised from
 model-generated source.
+
+## DeviceCategory
+
+`LIGHT`, `SWITCH`, `LOCK`, `CLIMATE`, `COVER`, `SENSOR`,
+`BINARY_SENSOR`, `MEDIA_PLAYER`, `CAMERA`, `FAN`, `VACUUM`, `ALARM`,
+`SCENE`, `BUTTON`, `NUMBER`, `SELECT`, `OTHER` (SPEC-011; ADR-027,
+EP-020). Provider-neutral canonical device categories; Home Assistant
+domain names are normalized into these at the infrastructure boundary
+and never leak upward.
+
+## CommandState
+
+`AUTHORIZED`, `SUBMITTED`, `VERIFICATION_PENDING`, `VERIFIED`,
+`VERIFICATION_TIMEOUT`, `UNKNOWN` (SPEC-011; ADR-027, EP-020).
+COMMAND ACCEPTED != DEVICE CHANGED != DEVICE VERIFIED. A Home Assistant
+service call being accepted means SUBMITTED, never VERIFIED; only
+exact-target observed verification produces VERIFIED. No fabricated
+success.
+
+## EntityAvailability
+
+`AVAILABLE`, `UNAVAILABLE`, `UNKNOWN` (SPEC-011; ADR-027, EP-020).
+Unknown/unavailable HA state maps honestly; unknown is never treated as
+off/closed/locked/safe.
+
+## FastPathDecision
+
+`EXECUTE_LOCALLY`, `REQUIRES_MODEL`, `DENIED` (SPEC-011; ADR-027,
+EP-020). Known low-risk commands execute locally without model calls
+after authorization; the matcher is deterministic and never consults a
+model.
+
+## VerificationOutcome
+
+`VERIFIED`, `TIMEOUT`, `UNRELATED_CHANGE`, `MISMATCH`, `UNKNOWN`
+(SPEC-011; ADR-027, EP-020). Verification binds the exact target
+entity; unrelated state_changed events never satisfy it.
+
+## ProviderConnectionState
+
+`CONNECTED`, `DEGRADED`, `DISCONNECTED`, `RECONNECTING` (SPEC-011;
+ADR-027, EP-020). A dropped WebSocket is typed, never a silent claim of
+live cache; reconnect authenticates, resubscribes, refreshes state, and
+resumes events.

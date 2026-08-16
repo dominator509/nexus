@@ -1,0 +1,11 @@
+[package]
+name = "nexus-home"
+version = "0.1.0"
+edition = "2021"
+description = "EP-020 Home Assistant provider contracts: device twin mapping, fast path, state verification, automation handoff (SPEC-011)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

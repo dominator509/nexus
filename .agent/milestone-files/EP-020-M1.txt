@@ -1,6 +1,12 @@
 .agent/execplans/EP-020-home-assistant-and-device-control.md
 .agent/state/LEDGER.md
 .agent/expected-files/EP-020.txt
+.agent/milestone-files/EP-020-M1.txt
 .agent/node-contracts/EP-020.md
 scripts/nodes/EP-020.sh
+scripts/ep020-m1-tests.sh
 crates/nexus-home/
+Cargo.toml
+Cargo.lock
+references/ADR-027-home-provider-vocabulary.md
+docs/vocabulary/README.md
