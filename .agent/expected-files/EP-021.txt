@@ -1,8 +1,14 @@
 .agent/execplans/EP-021-voice-core-stt-tts-wake-and-speaker-id.md
 .agent/state/LEDGER.md
 .agent/expected-files/EP-021.txt
+.agent/milestone-files/EP-021-M1.txt
+.agent/milestone-files/EP-021-M2.txt
+.agent/milestone-files/EP-021-M3.txt
+.agent/milestone-files/EP-021-M4.txt
+.agent/milestone-files/EP-021-M5.txt
 .agent/node-contracts/EP-021.md
 scripts/nodes/EP-021.sh
+scripts/ep021-m1-tests.sh
 python/nexus_voice/
 models/wake/
 infra/voice/

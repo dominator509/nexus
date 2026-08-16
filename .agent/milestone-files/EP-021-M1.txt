@@ -3,4 +3,5 @@
 .agent/expected-files/EP-021.txt
 .agent/node-contracts/EP-021.md
 scripts/nodes/EP-021.sh
+scripts/ep021-m1-tests.sh
 python/nexus_voice/
