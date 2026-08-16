@@ -273,19 +273,91 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary (2026-08-16)
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
+M1 evidence: `EP-022 M1: ok` (16 ep022_unit tests; gate vacuity-guarded via
+scripts/ep022-m1-tests.sh, EP-001 masking class correction); clippy -D
+warnings clean; cargo fmt clean; scope audit EP-022: ok; reality gate: ok;
+security check: ok; license gate: ok; blueprint validation: ok; format
+check: ok; dependency audit: ok.
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-16: The pre-created M1 gate in scripts/nodes/EP-022.sh was
+  artifact-only (`node-artifact-check.py` plus nothing) - EP-001
+  gate-masking class. Replaced with scripts/ep022-m1-tests.sh which runs
+  the real `cargo test -p nexus-audio ep022_unit` suite and fails closed
+  when no test ran (vacuity guard), same correction pattern as
+  EP-018/EP-019/EP-020/EP-021 M1 gates.
+- 2026-08-16: The initial DeterministicRouter privacy branch failed open:
+  with `policy.sensitive=true` and only shared-room (room-bound) output
+  candidates, the router fell through to the room-based selection and
+  returned the shared-room speaker. Test
+  `ep022_unit_router_sensitive_never_shared_room_output` caught it at
+  first run (13 passed / 1 failed). Fixed: sensitive output requires a
+  person-bound endpoint; if none exists the router returns
+  AudioErrorCode::NotFound (fail closed, LF-028 precedent, SPEC-012
+  behavior 9). Availability or convenience never outranks privacy.
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-16 | Sensitive-never-shared routing is a hard invariant |
+  DeterministicRouter refuses shared-room (room-bound, non-person) output
+  for sensitive content and fails closed with NOT_FOUND when no
+  person-bound output exists. Evidence:
+  ep022_unit_router_sensitive_never_shared_room_output (private selected
+  when available; NOT_FOUND when only shared). Alternatives: allow shared
+  when no private exists (rejected: LF-028 precedent, SPEC-012 behavior
+  9, directive section C). Consequence: privacy outranks availability.
+  Reversal: only by spec change. Security: fail-closed.
+- 2026-08-16 | Endpoint identity is the canonical ref, never the display
+  name | AudioEndpointId is the authoritative identity; `name` is mutable
+  metadata only. Router tie-breaks on stable endpoint id, not name.
+  Evidence: ep022_unit_endpoint_identity_is_canonical_ref_not_display_name
+  (two endpoints sharing a display name route by id deterministically).
+  Alternatives: name-keyed routing (rejected: mutable, not unique).
+  Security: stable identity prevents spoofing via renamed endpoints.
+- 2026-08-16 | Conversation transfer preserves context and never
+  implicitly upgrades privacy | DeterministicTransfer copies the
+  conversation context exactly (session, principal, objective, privacy
+  policy id, room, transcript, correlation id); privacy class is never
+  mutated by transfer. A move to a more public endpoint requires the
+  canonical router privacy decision (shared speaker never selected for
+  sensitive content). Evidence:
+  ep022_unit_transfer_preserves_conversation_context +
+  ep022_unit_transfer_never_implicitly_upgrades_privacy. Security:
+  no implicit privacy downgrade.
+- 2026-08-16 | BluetoothDeviceRef is a provider-neutral contract, not
+  transport certification | M1 defines stable device reference,
+  state vocabulary (DISCONNECTED/CONNECTING/CONNECTED/RECONNECTING), and
+  the BluetoothEndpointProvider port with fail-closed defaults. Real
+  Bluetooth pairing/connection/audio transport is owned by the later
+  milestone/node that implements it (connectors/bluetooth-audio). No
+  claim of Bluetooth connectivity is made from contracts.
+- 2026-08-16 | AEC profile is not AEC performance certification |
+  EchoCancellationProfile defines endpoint class, aggressiveness bounds
+  (0..=2), and noise-suppression flag; validation is real. Profile
+  existence does not prove an AEC engine works on real hardware.
+  hardware/voice/profiles.yaml records every hardware class as
+  conformance DEFINED / physical certified NOT_ASSERTED; physical
+  certification is later-owned and never upgraded from a YAML profile.
+- 2026-08-16 | M1 gate vacuity correction | The pre-created M1 gate was
+  artifact-only (EP-001 masking class); scripts/ep022-m1-tests.sh now
+  runs the real cargo suite and requires at least one ep022_unit test
+  passed. Evidence: `EP-022 M1: ok` observed from the real test output.
+- 2026-08-16 | nexus-audio owns its typed identity | AudioRoomId and the
+  audio endpoint surface are defined in-crate; nexus-domain PersonId is
+  reused for person binding (serde helper serializes PersonId as its
+  UUIDv7 string since nexus-domain has no serde derives). No wire binding
+  ripple into nexus-domain.
 
 # 14. Outcomes & Retrospective
 

@@ -19,6 +19,7 @@ members = [
     "crates/nexus-fabric",
     "crates/nexus-mcp",
     "crates/nexus-a2a",
+    "crates/nexus-audio",
     "crates/nexus-model-gateway",
     "crates/nexus-reflex",
     "crates/nexus-model-router",

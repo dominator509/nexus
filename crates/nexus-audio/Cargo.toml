@@ -1,0 +1,11 @@
+[package]
+name = "nexus-audio"
+version = "0.1.0"
+edition = "2021"
+description = "EP-022 voice satellites, Bluetooth endpoints, AEC, endpoint transfer, and room routing contracts (SPEC-012)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

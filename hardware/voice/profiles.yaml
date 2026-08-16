@@ -1,0 +1,73 @@
+---
+# EP-022 hardware conformance profiles (SPEC-012 top-ten satellite
+# matrix + software endpoints).
+#
+# Every hardware class has a conformance profile (acceptance obligation
+# 1). `conformance` states the profile is DEFINED; `certified` records
+# physical-hardware certification status. Physical certification is
+# NOT ASSERTED for every class in this node: no physical satellite,
+# speaker, or microphone hardware was exercised (Reality rule). The
+# fallback per node contract: Home Assistant Voice Preview Edition,
+# Linux satellite, Android, and iOS certify first while other classes
+# remain unavailable.
+classes:
+  VOICE_PREVIEW:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "HA Voice Preview Edition; fallback-first class"
+  ESP32_S3_BOX_3:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Espressif ESP32-S3-BOX-3"
+  ATOM_ECHO:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "M5Stack Atom Echo"
+  ESP32_S3_I2S:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Custom ESP32-S3 I2S satellite"
+  PI_5:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Raspberry Pi 5 Linux satellite"
+  PI_4:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Raspberry Pi 4 Linux satellite"
+  PI_ZERO_2_W:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Raspberry Pi Zero 2 W satellite"
+  X86_LINUX:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "x86 Linux satellite (this VPS class)"
+  ANDROID:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Android app endpoint"
+  IOS:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "iOS app endpoint"
+  WYOMING:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Wyoming protocol satellite (M3 integration target)"
+  ASSIST_SATELLITE:
+    role: BIDIRECTIONAL
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Home Assistant Assist satellite"
