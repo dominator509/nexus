@@ -13,7 +13,7 @@ pub mod adapter;
 pub mod transport;
 
 pub use adapter::{
-    default_fast_path_decision, verification_rule_for, AutomationHandoffAdapter,
+    default_fast_path_decision, stable_device_id, verification_rule_for, AutomationHandoffAdapter,
     HomeAssistantAdapter,
 };
 pub use transport::{HaEntityState, HaService, HaTransport, RestTransport};

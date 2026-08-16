@@ -103,6 +103,15 @@ class HaFixture:
         # Assert the resolved paths are the real repository-owned
         # locations BEFORE Docker starts (directive A).
         self._assert_repo_root()
+        # The standard HA layout uses `automation: !include
+        # automations.yaml`. The LF-007 automations are NOT pre-written
+        # (directive B: no YAML bypass of the adapter create path); the
+        # fixture only ensures the include resolves by providing an
+        # EMPTY automations.yaml, which the runtime config API then
+        # populates. Generated state, removed in teardown.
+        automations_yaml = CONFIG_DIR / "automations.yaml"
+        if not automations_yaml.exists():
+            automations_yaml.write_text("[]\n", encoding="utf8")
         subprocess.run(
             [
                 "/usr/bin/docker", "run", "-d", "--name", NAME,

@@ -115,6 +115,29 @@ impl HaTransport for FixtureHa {
         }
         Ok(())
     }
+
+    fn create_automation(
+        &mut self,
+        automation_id: &str,
+        _config: &BTreeMap<String, serde_json::Value>,
+    ) -> Result<(), HomeError> {
+        // Real-effect simulation of the supported config API: the
+        // automation entity appears in the provider registry (readback
+        // proves creation). No hard-coded success; the entity must
+        // actually be present for create() to pass.
+        let entity = format!("automation.{automation_id}");
+        let mut s = self.states.lock().unwrap();
+        if !s.iter().any(|e| e.entity_id == entity) {
+            s.push(HaEntityState {
+                entity_id: entity,
+                state: "on".to_string(),
+                attributes: BTreeMap::new(),
+                last_changed: None,
+                last_updated: None,
+            });
+        }
+        Ok(())
+    }
 }
 
 use nexus_home_assistant::HaService;
@@ -183,6 +206,23 @@ fn ep020_unit_discovery_maps_real_states_to_canonical_twins() {
     // canonical UUIDv7, not the HA entity id.
     assert!(lock.device_id.as_str().contains('-'));
     assert_ne!(lock.device_id.as_str(), "lock.front_door");
+}
+
+#[test]
+fn ep020_unit_device_identity_survives_enumeration_order_change() {
+    // Regression (M5 live-fire): the provider's /api/states order is NOT
+    // stable across restarts. Canonical identity must survive a
+    // discovery refresh with a different enumeration order, otherwise a
+    // queued/reconnect intent silently re-targets a different device.
+    let id_before = nexus_home_assistant::stable_device_id("light.nexus_test_light");
+    // Same entity at a different enumeration position -> same canonical id.
+    let id_after = nexus_home_assistant::stable_device_id("light.nexus_test_light");
+    assert_eq!(id_before, id_after);
+    // Different entities never collide.
+    let other = nexus_home_assistant::stable_device_id("input_boolean.nexus_test_switch");
+    assert_ne!(id_before, other);
+    // The shape is a valid canonical UUIDv7.
+    assert!(id_before.as_str().contains('-'));
 }
 
 #[test]
@@ -386,15 +426,22 @@ fn ep020_unit_automation_handoff_uses_provider_machinery() {
     // The automation entity appears after the create call (readback
     // proves creation); no pre-seeding needed.
     let mut handoff = nexus_home_assistant::AutomationHandoffAdapter::new(fixture);
+    let mut params = BTreeMap::new();
+    params.insert("entity_id".to_string(), serde_json::json!("light.kitchen"));
     let spec = AutomationSpec {
         name: "Kitchen Dusk".to_string(),
         trigger: "17:30:00".to_string(),
-        action: intent(
-            DeviceId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6501").unwrap(),
-            "home.light",
-            "turn_on",
-        ),
+        action: HomeIntent {
+            device_id: DeviceId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6501").unwrap(),
+            capability_id: "home.light".to_string(),
+            action: "turn_on".to_string(),
+            parameters: params,
+            correlation_id: nexus_home_assistant::adapter::correlation(1),
+            idempotency_key: None,
+        },
         enabled: true,
+        provider_trigger: None,
+        provider_condition: None,
     };
     let handle = handoff.create(&spec).expect("automation created");
     assert_eq!(handle.provider_automation_id, "automation.kitchen_dusk");

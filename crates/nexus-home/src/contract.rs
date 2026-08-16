@@ -349,6 +349,12 @@ impl StateVerifier for StateVerifierAdapter {
 /// Automation creation/invocation/readback against the provider's real
 /// automation machinery. The handoff never fabricates an automation
 /// object; creation is proven by provider readback.
+///
+/// Creation semantics (directive B/C): `create()` returns a handle only
+/// after the automation is provisioned through the provider's real
+/// supported provisioning API AND the runnable automation entity
+/// appears through provider readback. Provider acceptance alone is
+/// never success.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AutomationSpec {
     /// Canonical name for the automation.
@@ -361,6 +367,39 @@ pub struct AutomationSpec {
     pub action: HomeIntent,
     /// Whether the automation is initially enabled.
     pub enabled: bool,
+    /// Optional provider-bound state trigger. When present, the
+    /// automation is provisioned as a state-triggered automation on the
+    /// exact provider entity (SPEC-011 conditional commands). The
+    /// adapter maps this to the provider's real trigger machinery.
+    #[serde(default)]
+    pub provider_trigger: Option<AutomationTrigger>,
+    /// Optional provider-bound condition. When present, the automation
+    /// only executes when the condition holds against the real provider
+    /// state (SPEC-011 conditional commands). Absent = unconditional.
+    #[serde(default)]
+    pub provider_condition: Option<AutomationCondition>,
+}
+
+/// Provider-bound state trigger for a conditional automation
+/// (SPEC-011; ADR-027). The trigger fires when the exact provider
+/// entity enters `to_state`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AutomationTrigger {
+    /// Exact provider entity that triggers the automation.
+    pub entity: HaEntityRef,
+    /// Provider state value that fires the trigger (e.g. `on`).
+    pub to_state: String,
+}
+
+/// Provider-bound condition for a conditional automation (SPEC-011;
+/// ADR-027). The automation executes only while the exact provider
+/// entity is in `state`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AutomationCondition {
+    /// Exact provider entity the condition observes.
+    pub entity: HaEntityRef,
+    /// Provider state value required for the condition to hold.
+    pub state: String,
 }
 
 /// Provider handle to a created automation.
@@ -554,6 +593,41 @@ mod tests {
         let json = serde_json::to_string(&handle).unwrap();
         let back: AutomationHandle = serde_json::from_str(&json).unwrap();
         assert_eq!(back, handle);
+    }
+
+    #[test]
+    fn ep020_unit_automation_spec_conditional_roundtrip() {
+        // Provider-bound trigger/condition survive serialization; absent
+        // fields deserialize to None (backward compatible).
+        let spec = AutomationSpec {
+            name: "Nexus Cond".to_string(),
+            trigger: "switch on".to_string(),
+            action: HomeIntent {
+                device_id: device_id(),
+                capability_id: "home.switch".to_string(),
+                action: "turn_on".to_string(),
+                parameters: BTreeMap::new(),
+                correlation_id: correlation(),
+                idempotency_key: None,
+            },
+            enabled: true,
+            provider_trigger: Some(AutomationTrigger {
+                entity: HaEntityRef::new("input_boolean.nexus_test_switch").expect("valid ref"),
+                to_state: "on".to_string(),
+            }),
+            provider_condition: Some(AutomationCondition {
+                entity: HaEntityRef::new("input_boolean.nexus_test_switch").expect("valid ref"),
+                state: "on".to_string(),
+            }),
+        };
+        let json = serde_json::to_string(&spec).unwrap();
+        let back: AutomationSpec = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, spec);
+        // Old payloads without the new fields still parse.
+        let legacy = r#"{"name":"x","trigger":"t","action":{"device_id":"0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6201","capability_id":"home.switch","action":"turn_on","parameters":{},"correlation_id":"0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6202","idempotency_key":null},"enabled":true}"#;
+        let legacy_spec: AutomationSpec = serde_json::from_str(legacy).unwrap();
+        assert!(legacy_spec.provider_trigger.is_none());
+        assert!(legacy_spec.provider_condition.is_none());
     }
 
     #[test]

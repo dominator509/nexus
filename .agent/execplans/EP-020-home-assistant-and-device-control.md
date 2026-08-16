@@ -339,6 +339,64 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   changed set. No compatibility impact: `nexus-home` / `nexus-home-assistant`
   public surfaces unchanged by M3.
 
+## 2026-08-16 -- Pre-closure correction: automation handoff ownership and real create() (evidence: `.agent/state/evidence/EP-020-M5-real-provider-livefire.md`)
+
+- OWNERSHIP (directive A): EP-020 OWNS creation/provisioning of real
+  runnable Home Assistant automations. Sources: SPEC-011 required
+  behavior 4 ("Conditional commands become Temporal or Home Assistant
+  automations"); EP-020 node contract lists `AutomationHandoff` as an
+  EP-020 public interface; ExecPlan interface map defines
+  `AutomationHandoff` in nexus-home "Defined by EP-020"; contract.rs
+  trait doc: "Automation creation/invocation/readback against the
+  provider's real automation machinery... creation is proven by provider
+  readback"; ADR-027: "real provider automation creation/invocation/
+  readback, never a fabricated automation object". No later graph node
+  owns HA automation provisioning (EP-006 owns Temporal machinery;
+  EP-021-024 own voice/media/satellite providers). The method name
+  "handoff" is not authority; the contract and graph are.
+- DEFECT (directive E): `AutomationHandoffAdapter::create()` called
+  `automation.turn_on` with a full config payload -- real HA 2026.8.2
+  returns HTTP 400 (it is an ENABLE service, not a CREATE service). A
+  known-broken production method cannot ship.
+- REAL MECHANISM (directive B, verified from the pinned image source
+  `homeassistant/components/config/automation.py` +
+  `homeassistant/components/config/view.py` + automation component):
+  `POST /api/config/automation/config/<id>` is the real supported
+  provisioning API: it validates the automation config
+  (`async_validate_config_item`/PLATFORM_SCHEMA), writes it atomically
+  to `automations.yaml` (`write_utf8_file_atomic`), then fires
+  `automation.reload` with `{CONF_ID: <id>}` -> `_async_process_single_config`
+  creates the runnable automation entity. The earlier M5 finding
+  ("stores config but state 404 after reload") is explained by the
+  fixture: `configuration.yaml` defined automations INLINE and never
+  `automation: !include automations.yaml`, so the reload hook re-read a
+  config that did not include the written file. Fixed by switching the
+  fixture to the standard `automation: !include automations.yaml` layout
+  and creating automations at runtime through the adapter (no
+  pre-written YAML bypass).
+- CONTRACT (directive B/C): `AutomationSpec` extended with optional
+  provider-bound `provider_trigger` (`AutomationTrigger`: entity +
+  to_state) and `provider_condition` (`AutomationCondition`: entity +
+  state) so a canonical conditional automation can be expressed;
+  serde-default keeps serialization backward compatible. Adapter
+  `create()` now: derives a stable automation id from the canonical
+  name, builds the real HA automation config (id/alias/triggers/
+  conditions/actions/mode/initial_state), provisions via the config API,
+  then REQUIRES readback (the automation entity must appear with the
+  configured id and be enabled) before returning a handle. Creation
+  success is proven by provider readback; SUBMITTED != VERIFIED is
+  preserved (behavioral verification is the LF-007 proof's chain).
+- CERTIFICATION (directive H): automation behavior PROVIDER_CERTIFIED
+  (real HA conditional execution/cancellation); programmatic automation
+  creation PROVIDER_CERTIFIED (create() repaired and real-live-fired);
+  controlled template light CONTROLLED_TEST_FIXTURE; physical hardware
+  NOT ASSERTED / DEFERRED.
+- SECURITY: no credentials/tokens in repo; config API writes remain
+  inside the mounted fixture config dir (generated state, cleaned in
+  teardown); `--tb=native`.
+- REVERSAL: revert to the pre-correction M5 commit. No public-surface
+  break: new fields are serde-default optional additions.
+
 ## 2026-08-16 -- M4 forced failures, abuse cases, and observability (evidence: `.agent/state/evidence/EP-020-M4-forced-failures.md`)
 
 - DECISION: Contract-level fail-closed suite as REAL Rust tests in the
@@ -377,3 +435,40 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## 2026-08-16 -- EP-020 M5 outcomes (post pre-closure correction)
+
+- CHANGED VERSUS MACHINE FENCE: M5 correction touched exactly the
+  fence-listed files (see .agent/milestone-files/EP-020-M5.txt):
+  scripts/live-fire/LF-006.sh, LF-007.sh, LF-024.sh (rewritten from
+  proof-runner indirection to direct real pytest drivers over the
+  production adapter), connectors/home-assistant examples + adapter +
+  transport, crates/nexus-home contract + lib, fixture configuration.yaml,
+  M3/M4 test suites, evidence + registry + ExecPlan + ADR-027. No
+  unrelated path retained.
+- COMMANDS AND OBSERVED SENTINELS (committed-state final verify):
+  `sh scripts/node-verify.sh EP-020` -> node verify EP-020: ok; runtime
+  smoke: ok (real EP-044 control-plane container, host 127.0.0.1:8443,
+  /healthz healthy /readyz ready /v1/capabilities non-empty);
+  EP-020 M5: ok; LF-006: ok; LF-007: ok; LF-024: ok; cargo suites 62
+  passed; M3 19 integration; M4 9 failure; scope audit EP-020: ok;
+  expected files EP-020: ok; blueprint validation: ok;
+  security/license/reality/format/lint/dependency: ok.
+- PROOF EVIDENCE: .agent/state/evidence/EP-020-M5-real-provider-livefire.md
+  (LF-006/LF-007/LF-024 real-container proofs; create() readback chain;
+  restart persistence; conditional exec/cancel; offline queue drain).
+- ASSUMPTIONS CONFIRMED: `POST /api/config/automation/config/<id>` is
+  the real provisioning API on the pinned 2026.8.2 image; `automation:
+  !include automations.yaml` is the standard layout required for reload
+  activation; enumeration index is NOT stable identity across restarts.
+- PROVIDER / HARDWARE STATUS: HA real server, auth, discovery, service
+  execution, readback, WebSocket, programmatic automation creation,
+  persistence/conditional behavior, offline/reconnect queue all
+  PROVIDER_CERTIFIED; template-light CONTROLLED_TEST_FIXTURE; physical
+  device hardware NOT ASSERTED / DEFERRED to its certification owner.
+- REMAINING RISKS: physical hardware certification deferred; production
+  canary deferred (EP-042/EP-043); Temporal-hosted home workflow owned
+  by Temporal/deployment nodes; OS-level sandbox certification deferred
+  to EP-040/EP-043.
+- GREEN TAG: green/EP-020 at the verified M5 implementation commit
+  (convention: tag M5 commit before the separate ledger closure commit).

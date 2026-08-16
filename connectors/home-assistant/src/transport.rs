@@ -64,6 +64,18 @@ pub trait HaTransport {
         service: &str,
         data: &BTreeMap<String, Value>,
     ) -> Result<(), HomeError>;
+
+    /// Provision an automation through the provider's real supported
+    /// automation config API (POST
+    /// /api/config/automation/config/<automation_id>). The provider
+    /// validates the automation config, persists it, and creates the
+    /// runnable automation entity; creation is proven by readback, never
+    /// by acceptance alone.
+    fn create_automation(
+        &mut self,
+        automation_id: &str,
+        config: &BTreeMap<String, Value>,
+    ) -> Result<(), HomeError>;
 }
 
 /// Real Home Assistant REST transport over reqwest (blocking).
@@ -207,6 +219,38 @@ impl HaTransport for RestTransport {
             return Err(HomeError::new(
                 HomeErrorCode::External,
                 format!("HA service call {path} returned {status}"),
+                None,
+                Some(Box::from(path)),
+            ));
+        }
+        Ok(())
+    }
+
+    fn create_automation(
+        &mut self,
+        automation_id: &str,
+        config: &BTreeMap<String, Value>,
+    ) -> Result<(), HomeError> {
+        let path = format!("/api/config/automation/config/{automation_id}");
+        let resp = self
+            .client
+            .post(self.url(&path))
+            .bearer_auth(&self.token)
+            .json(config)
+            .send()
+            .map_err(|e| {
+                HomeError::new(
+                    HomeErrorCode::Unavailable,
+                    format!("HA automation config request failed: {e}"),
+                    None,
+                    Some(Box::from(path.clone())),
+                )
+            })?;
+        let status = resp.status();
+        if !status.is_success() {
+            return Err(HomeError::new(
+                HomeErrorCode::External,
+                format!("HA automation config {path} returned {status}"),
                 None,
                 Some(Box::from(path)),
             ));

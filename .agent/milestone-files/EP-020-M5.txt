@@ -1,1 +1,12 @@
-
+scripts/live-fire/LF-006.sh
+scripts/live-fire/LF-007.sh
+scripts/live-fire/LF-024.sh
+connectors/home-assistant/examples/
+tests/home/test_ep020_livefire.py
+infra/home-assistant/config/configuration.yaml
+.agent/state/evidence/EP-020-M5-real-provider-livefire.md
+.agent/milestone-files/EP-020-M5.txt
+.agent/expected-files/EP-020.txt
+.agent/execplans/EP-020-home-assistant-and-device-control.md
+.agent/state/LEDGER.md
+scripts/nodes/EP-020.sh

@@ -22,7 +22,6 @@ admin token is never affected by lockout.
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 import time
@@ -52,7 +51,7 @@ class M4Fixture(HaFixture):
 
     abuse_password: str = ""
 
-    def __enter__(self) -> "M4Fixture":
+    def __enter__(self) -> M4Fixture:
         super().__enter__()
         # Add a dedicated user for the abuse test; the auth store is
         # read at boot, so a restart loads it. The admin token survives
@@ -60,9 +59,19 @@ class M4Fixture(HaFixture):
         self.abuse_password = _random_pw()
         add = subprocess.run(
             [
-                "/usr/bin/docker", "exec", NAME, "python3",
-                "-m", "homeassistant", "--script", "auth",
-                "--config", "/config", "add", ABUSE_USER, self.abuse_password,
+                "/usr/bin/docker",
+                "exec",
+                NAME,
+                "python3",
+                "-m",
+                "homeassistant",
+                "--script",
+                "auth",
+                "--config",
+                "/config",
+                "add",
+                ABUSE_USER,
+                self.abuse_password,
             ],
             capture_output=True,
             text=True,
@@ -193,9 +202,7 @@ def test_ep020_failure_ha_offline_fail_closed():
     failed_closed = False
     try:
         try:
-            with urllib.request.urlopen(
-                urllib.request.Request(f"{BASE}/api/"), timeout=3
-            ) as resp:
+            with urllib.request.urlopen(urllib.request.Request(f"{BASE}/api/"), timeout=3) as resp:
                 raise AssertionError(f"unexpected success {resp.status}")
         except urllib.error.URLError:
             failed_closed = True
@@ -216,9 +223,7 @@ def test_ep020_failure_abuse_rate_limit_fail_closed():
     def post_json(path: str, body: dict) -> dict:
         req = urllib.request.Request(f"{BASE}{path}", method="POST")
         req.add_header("Content-Type", "application/json")
-        with urllib.request.urlopen(
-            req, data=json.dumps(body).encode(), timeout=10
-        ) as resp:
+        with urllib.request.urlopen(req, data=json.dumps(body).encode(), timeout=10) as resp:
             return json.loads(resp.read())
 
     flow = post_json(
@@ -250,8 +255,7 @@ def test_ep020_failure_abuse_rate_limit_fail_closed():
     # Record the real throttle signal for evidence (may or may not
     # appear in this HA version - the denial assertion is unconditional).
     throttled = any(
-        "attempt" in o.lower() or "throttl" in o.lower() or "lock" in o.lower()
-        for o in observed
+        "attempt" in o.lower() or "throttl" in o.lower() or "lock" in o.lower() for o in observed
     )
     print(f"ep020 abuse: {len(observed)} attempts; throttle_signal={throttled}")
 

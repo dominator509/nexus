@@ -101,6 +101,50 @@ pub fn default_fast_path_decision(intent: &HomeIntent, twin: &DeviceTwin) -> Fas
     }
 }
 
+/// Deterministic stable canonical DeviceId derived from a provider
+/// entity id (SPEC-011; ADR-027).
+///
+/// Canonical identity MUST survive restart and discovery refresh. The
+/// provider's /api/states enumeration order is NOT stable across
+/// restarts (HA re-registers entities in a different order), so an
+/// index-derived id would silently re-target a different device after a
+/// reconnect. Deriving from the exact provider entity id makes the
+/// canonical id stable per entity. The result is a valid UUIDv7-shaped
+/// string (version nibble 7, variant 10xx) built from a deterministic
+/// FNV-1a mix of the entity id; it is an opaque canonical id, never the
+/// provider id itself.
+pub fn stable_device_id(entity_id: &str) -> DeviceId {
+    // Two independent FNV-1a passes -> 16 bytes.
+    const OFFSET: u64 = 0xcbf29ce484222325;
+    const PRIME: u64 = 0x100000001b3;
+    let mut h1 = OFFSET;
+    let mut h2 = OFFSET ^ 0x9e3779b97f4a7c15;
+    for (i, b) in entity_id.bytes().enumerate() {
+        h1 ^= u64::from(b);
+        h1 = h1.wrapping_mul(PRIME);
+        h2 ^= u64::from(b ^ (i as u8).wrapping_mul(0x5d));
+        h2 = h2.wrapping_mul(PRIME);
+    }
+    let mut bytes = [0u8; 16];
+    bytes[..8].copy_from_slice(&h1.to_be_bytes());
+    bytes[8..].copy_from_slice(&h2.to_be_bytes());
+    // UUIDv7 shape: version nibble 7 (byte 6 high nibble), variant
+    // 10xx (byte 8 high bits). The id is opaque; the shape keeps the
+    // canonical DeviceId validator satisfied.
+    bytes[6] = (bytes[6] & 0x0f) | 0x70;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    let hex: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+    let s = format!(
+        "{}-{}-{}-{}-{}",
+        &hex[0..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..32]
+    );
+    DeviceId::new(s).expect("deterministic UUIDv7-shaped id is valid")
+}
+
 /// The concrete Home Assistant provider adapter.
 ///
 /// `authorized_intents` is the fast-path decision authority (fed by
@@ -192,13 +236,12 @@ impl<T: HaTransport, V: StateVerifier> HomeProvider for HomeAssistantAdapter<T, 
     fn discover(&mut self) -> Result<Vec<DeviceTwin>, HomeError> {
         let states = self.transport.get_states()?;
         let mut twins = Vec::new();
-        for (i, state) in states.iter().enumerate() {
+        for state in states.iter() {
             // Canonical identity is derived deterministically from the
-            // provider's stable entity id, not from mutable names.
-            let id = DeviceId::new(format!("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f{:04x}", i + 1))
-                .map_err(|_| {
-                    HomeError::new(HomeErrorCode::Internal, "device id derivation", None, None)
-                })?;
+            // provider's stable entity id (survives restart and
+            // discovery refresh), never from mutable names or the
+            // enumeration order.
+            let id = stable_device_id(&state.entity_id);
             let category = nexus_home::category_from_provider_domain(
                 state.entity_id.split('.').next().unwrap_or(""),
             );
@@ -356,11 +399,11 @@ impl<T: HaTransport, V: StateVerifier> HomeProvider for HomeAssistantAdapter<T, 
         // provider, then drain the bounded offline queue.
         let states = self.transport.get_states()?;
         let mut twins = BTreeMap::new();
-        for (i, state) in states.iter().enumerate() {
-            let id = DeviceId::new(format!("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f{:04x}", i + 1))
-                .map_err(|_| {
-                    HomeError::new(HomeErrorCode::Internal, "device id derivation", None, None)
-                })?;
+        for state in states.iter() {
+            // Stable canonical identity per provider entity (survives
+            // restart / discovery refresh; the enumeration order is not
+            // stable across restarts).
+            let id = stable_device_id(&state.entity_id);
             let category = nexus_home::category_from_provider_domain(
                 state.entity_id.split('.').next().unwrap_or(""),
             );
@@ -462,36 +505,159 @@ impl<T: HaTransport> AutomationHandoffAdapter<T> {
         }
     }
 
-    /// Create an automation via the provider's real machinery.
-    /// Returns a handle; readback proves creation.
+    /// Create an automation via the provider's real supported
+    /// provisioning API (POST /api/config/automation/config/<id>).
+    ///
+    /// Creation success REQUIRES readback: after the provider persists
+    /// the automation config and creates the runnable entity, this
+    /// method polls the provider state until the automation entity
+    /// exists and is enabled (bounded). Provider acceptance alone is
+    /// never success (directive C; SUBMITTED != VERIFIED).
     pub fn create(&mut self, spec: &AutomationSpec) -> Result<AutomationHandle, HomeError> {
-        let data = BTreeMap::from([
-            (
-                "alias".to_string(),
-                serde_json::Value::String(spec.name.clone()),
-            ),
-            (
-                "trigger".to_string(),
-                serde_json::json!([{ "platform": "time", "at": spec.trigger }]),
-            ),
-            (
-                "action".to_string(),
-                serde_json::json!([{ "service": format!("{}/{}", spec.action.capability_id, spec.action.action), "data": spec.action.parameters }]),
-            ),
-        ]);
+        // Stable automation id derived from the canonical name (HA
+        // entity-id slug convention: lowercase, non-alnum -> '_').
+        let automation_id: String = spec
+            .name
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_lowercase()
+                } else {
+                    '_'
+                }
+            })
+            .collect();
+        let entity_id = format!("automation.{automation_id}");
+
+        // The real HA automation config (PLATFORM_SCHEMA shape). The
+        // action service is derived from the exact target entity in the
+        // canonical intent parameters; the trigger/condition use the
+        // provider-bound spec fields when present.
+        let mut data = BTreeMap::new();
+        data.insert(
+            "id".to_string(),
+            serde_json::Value::String(automation_id.clone()),
+        );
+        data.insert("alias".to_string(), serde_json::json!(spec.name));
+        data.insert(
+            "triggers".to_string(),
+            match &spec.provider_trigger {
+                Some(t) => serde_json::json!([{
+                    "platform": "state",
+                    "entity_id": t.entity.0,
+                    "to": t.to_state,
+                }]),
+                None => serde_json::json!([{
+                    "platform": "time",
+                    "at": spec.trigger,
+                }]),
+            },
+        );
+        if let Some(c) = &spec.provider_condition {
+            data.insert(
+                "conditions".to_string(),
+                serde_json::json!([{
+                    "condition": "state",
+                    "entity_id": c.entity.0,
+                    "state": c.state,
+                }]),
+            );
+        }
+        // Action: exact HA service from the target entity id. The
+        // canonical intent parameters carry `entity_id` (same
+        // convention as execute()); the provider domain is the entity
+        // prefix (e.g. input_boolean.nexus_test_switch_2 ->
+        // input_boolean.turn_on).
+        let target_entity = spec
+            .action
+            .parameters
+            .get("entity_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                HomeError::new(
+                    HomeErrorCode::Validation,
+                    "automation action requires entity_id parameter",
+                    Some(Box::from(spec.action.correlation_id.as_str().to_string())),
+                    None,
+                )
+            })?;
+        let domain = target_entity.split('.').next().unwrap_or("");
+        if domain.is_empty() {
+            return Err(HomeError::new(
+                HomeErrorCode::Validation,
+                "automation action entity_id has no provider domain",
+                Some(Box::from(spec.action.correlation_id.as_str().to_string())),
+                None,
+            ));
+        }
+        let service = match spec.action.action.as_str() {
+            "turn_on" => "turn_on",
+            "turn_off" => "turn_off",
+            "open_cover" => "open_cover",
+            "close_cover" => "close_cover",
+            "stop_cover" => "stop_cover",
+            "lock" => "lock",
+            "unlock" => "unlock",
+            "set_temperature" => "set_temperature",
+            "set_hvac_mode" => "set_hvac_mode",
+            other => {
+                return Err(HomeError::new(
+                    HomeErrorCode::Validation,
+                    format!("unknown canonical action {other}"),
+                    None,
+                    None,
+                ))
+            }
+        };
+        data.insert(
+            "actions".to_string(),
+            serde_json::json!([{
+                "service": format!("{domain}.{service}"),
+                "target": { "entity_id": target_entity },
+            }]),
+        );
+        data.insert("mode".to_string(), serde_json::json!("single"));
+        data.insert("initial_state".to_string(), serde_json::json!(spec.enabled));
+
         self.transport
-            .call_service("automation", "turn_on", &data)
+            .create_automation(&automation_id, &data)
             .map_err(|e| HomeError {
                 code: e.code,
-                message: format!("automation creation rejected: {}", e.message),
+                message: format!("automation provisioning rejected: {}", e.message),
                 correlation_id: Some(Box::from(spec.action.correlation_id.as_str().to_string())),
                 resource: None,
             })?;
+
+        // Creation REQUIRES readback: the runnable automation entity
+        // must exist and be enabled. The provider's reload hook is
+        // asynchronous; poll with a bounded window.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        let mut enabled = false;
+        loop {
+            match self.transport.get_state(&entity_id) {
+                Ok(st) if st.state == "on" => {
+                    enabled = true;
+                    break;
+                }
+                Ok(_) => {}
+                Err(_) => {}
+            }
+            if std::time::Instant::now() >= deadline {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(500));
+        }
+        if !enabled {
+            return Err(HomeError::new(
+                HomeErrorCode::Verification,
+                "automation not active after provisioning (readback failed)",
+                Some(Box::from(spec.action.correlation_id.as_str().to_string())),
+                Some(Box::from(entity_id)),
+            ));
+        }
+
         let handle = AutomationHandle {
-            provider_automation_id: format!(
-                "automation.{}",
-                spec.name.to_lowercase().replace(' ', "_")
-            ),
+            provider_automation_id: entity_id,
             name: spec.name.clone(),
         };
         self.created.push(handle.clone());

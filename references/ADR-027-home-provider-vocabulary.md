@@ -66,7 +66,15 @@ Contract types owned by EP-020 in `crates/nexus-home`:
   exact-target binding; unrelated entity change is UNRELATED_CHANGE.
 - `AutomationHandoff` port + `AutomationSpec`/`AutomationHandle`/
   `AutomationStatus`: real provider automation creation/invocation/
-  readback, never a fabricated automation object.
+  readback, never a fabricated automation object. `AutomationSpec`
+  optionally carries provider-bound `provider_trigger`
+  (`AutomationTrigger`: entity + to_state) and `provider_condition`
+  (`AutomationCondition`: entity + state) for conditional automations
+  (SPEC-011 conditional commands); serde-default optional fields keep
+  serialization backward compatible. `create()` provisions through the
+  provider's real supported config API and succeeds only when the
+  runnable automation entity appears through provider readback and is
+  enabled (creation is never inferred from acceptance alone).
 - `HomeProvider` port: discovery, read, execute, verify, reconnect.
 - `HomeAssistantProvider` port: HA-specific surface behind the same
   authority boundary.

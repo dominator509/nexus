@@ -24,9 +24,10 @@ pub mod mapping;
 pub mod vocabulary;
 
 pub use contract::{
-    AreaId, AutomationHandle, AutomationSpec, AutomationStatus, CommandReceipt, DeviceCapability,
-    DeviceTwin, HaDeviceRef, HaEntityRef, HomeAssistantProvider, HomeIntent, HomeProvider,
-    StateObservation, StateVerifier, StateVerifierAdapter, VerificationRule,
+    AreaId, AutomationCondition, AutomationHandle, AutomationSpec, AutomationStatus,
+    AutomationTrigger, CommandReceipt, DeviceCapability, DeviceTwin, HaDeviceRef, HaEntityRef,
+    HomeAssistantProvider, HomeIntent, HomeProvider, StateObservation, StateVerifier,
+    StateVerifierAdapter, VerificationRule,
 };
 pub use error::{HomeError, HomeErrorCode};
 pub use mapping::{canonical_action, category_from_provider_domain, is_strong_provider_identity};

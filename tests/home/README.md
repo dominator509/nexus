@@ -43,15 +43,15 @@ ids are deterministic UUIDv7.
 
 ## Operations diagnostic (every new service/provider)
 
-| Signal | Diagnostic | Bounded recovery |
-| --- | --- | --- |
-| HA container absent | `docker ps -a --filter name=nexus-ep020-ha` | `docker rm -f nexus-ep020-ha; re-run the suite` (fixture recreates) |
-| HA image missing | `docker image inspect ghcr.io/home-assistant/home-assistant:stable@sha256:56690a...cb42a5` | Pull the pinned digest; the fixture fails fast with a clear error if absent |
-| HTTP ready but entities missing | `GET /api/states` (needs token) or the container LogPath (`docker inspect <name> --format 'LogPath-template'`) | The fixture's pre-auth boot wait + post-restart entity wait fail the suite closed (never false-ready) |
-| 401 on every request | Token stale (30 min expiry) | Re-run the suite; the fixture mints a fresh OAuth token per run (never reuse debug tokens) |
-| Container boots with defaults (fixture entities absent) | `docker inspect <name> --format 'Mounts-template'` (prints each Source -> Destination) | Fix the config mount; the mount assertion fails the suite closed (infra/infra regression test) |
-| Rate-limit lockout of admin user | Only `nexus-abuse` is hammered; admin token unaffected | If admin is ever locked, remove `.storage/auth` and re-run (fresh auth store) |
-| Offline/stopped container | `docker ps --filter name=nexus-ep020-ha` | `docker start nexus-ep020-ha`; wait ready + entities |
+| Signal                                                  | Diagnostic                                                                                                     | Bounded recovery                                                                                      |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| HA container absent                                     | `docker ps -a --filter name=nexus-ep020-ha`                                                                    | `docker rm -f nexus-ep020-ha; re-run the suite` (fixture recreates)                                   |
+| HA image missing                                        | `docker image inspect ghcr.io/home-assistant/home-assistant:stable@sha256:56690a...cb42a5`                     | Pull the pinned digest; the fixture fails fast with a clear error if absent                           |
+| HTTP ready but entities missing                         | `GET /api/states` (needs token) or the container LogPath (`docker inspect <name> --format 'LogPath-template'`) | The fixture's pre-auth boot wait + post-restart entity wait fail the suite closed (never false-ready) |
+| 401 on every request                                    | Token stale (30 min expiry)                                                                                    | Re-run the suite; the fixture mints a fresh OAuth token per run (never reuse debug tokens)            |
+| Container boots with defaults (fixture entities absent) | `docker inspect <name> --format 'Mounts-template'` (prints each Source -> Destination)                         | Fix the config mount; the mount assertion fails the suite closed (infra/infra regression test)        |
+| Rate-limit lockout of admin user                        | Only `nexus-abuse` is hammered; admin token unaffected                                                         | If admin is ever locked, remove `.storage/auth` and re-run (fresh auth store)                         |
+| Offline/stopped container                               | `docker ps --filter name=nexus-ep020-ha`                                                                       | `docker start nexus-ep020-ha`; wait ready + entities                                                  |
 
 Recovery command (bounded): re-running the M4 gate
 `sh scripts/nodes/EP-020.sh M4` recreates the ephemeral container,

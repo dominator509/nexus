@@ -6,6 +6,14 @@
 # real HA entity with real state transitions; it certifies the provider
 # transport/state machinery. It is NOT physical hardware (hardware
 # certification is DEFERRED to its exact owner).
+#
+# Automations live in `automations.yaml` (the standard HA layout:
+# `automation: !include automations.yaml`). The fixture starts with an
+# EMPTY automations.yaml (generated per run, cleaned in teardown). The
+# LF-007 conditional automations are NOT pre-written: they are created
+# at runtime through the production AutomationHandoffAdapter::create()
+# config-API path (POST /api/config/automation/config/<id>), which
+# requires provider readback before reporting success (directive B/C).
 homeassistant:
   name: Nexus Test Home
   latitude: 47.6062
@@ -21,6 +29,12 @@ input_boolean:
   nexus_test_switch:
     name: Nexus Test Switch
     initial: off
+  # Second controlled fixture entity (LF-007 conditional-workflow proof
+  # target): the conditional automations act on this switch so the
+  # template-light mirror does not confound execution/cancellation.
+  nexus_test_switch_2:
+    name: Nexus Test Switch 2
+    initial: off
 
 template:
   - light:
@@ -35,3 +49,5 @@ template:
           action: input_boolean.turn_off
           target:
             entity_id: input_boolean.nexus_test_switch
+
+automation: !include automations.yaml

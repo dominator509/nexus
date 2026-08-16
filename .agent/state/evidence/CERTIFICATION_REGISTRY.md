@@ -269,3 +269,15 @@ production_certification: DEFERRED
 certification_owner: deployment-owning node (EP-042/EP-043 real production canary certification)
 blocking_for_ship: false
 evidence_reference: crates/nexus-healing/src/canary.rs + rollback.rs; LF-019-ep019-m5.md rollback section; real production canary deployment certification DEFERRED to the deployment-owning node (no simulated canary)
+
+## Component: home-assistant-provider
+component_id: home-assistant-provider
+implementation_status: IMPLEMENTED (real HA provider adapter + contract crate)
+internal_proof: INTERNAL_CERTIFIED (ep020_unit contract + adapter suites; dependency direction nexus-domain+serde only)
+provider: ghcr.io/home-assistant/home-assistant:stable@sha256:56690a89c79a0de98035e1719f8324a92d5859c1192ff45adb0230ea81cb42a5 (Apache-2.0; running version 2026.8.2)
+provider_certification: PROVIDER_CERTIFIED (real container live-fire: real auth/OAuth login_flow, discovery + canonical mapping, real service execution, exact-target readback, WebSocket state_changed, programmatic automation creation via config API, automation persistence + conditional behavior, offline/reconnect queue; M3 19 integration + M4 9 failure + LF-006/LF-007/LF-024 real proofs)
+hardware_certification: NOT ASSERTED (template-light entity light.nexus_test_light = CONTROLLED_TEST_FIXTURE; physical light hardware certification DEFERRED to its certification owner; no NODE_BLOCK)
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: crates/nexus-home; connectors/home-assistant; infra/home-assistant; tests/home; .agent/state/evidence/EP-020-M3-real-ha-provider.md; EP-020-M4-forced-failures.md; EP-020-M5-real-provider-livefire.md

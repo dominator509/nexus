@@ -28,3 +28,6 @@ COMPONENT_REGISTRY.yaml
 references/ADR-027-home-provider-vocabulary.md
 docs/vocabulary/README.md
 scripts/blueprint_validate.py
+connectors/home-assistant/examples/
+tests/home/test_ep020_livefire.py
+.agent/state/evidence/EP-020-M5-real-provider-livefire.md
