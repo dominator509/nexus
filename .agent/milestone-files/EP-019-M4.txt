@@ -1,1 +1,9 @@
 runbooks/self-healing/
+scripts/ep019-m4-tests.sh
+crates/nexus-healing/tests/ep019_failure_suite.rs
+.agent/execplans/EP-019-self-healing-engineering-loop.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-019.txt
+.agent/milestone-files/EP-019-M4.txt
+.agent/node-contracts/EP-019.md
+scripts/nodes/EP-019.sh
