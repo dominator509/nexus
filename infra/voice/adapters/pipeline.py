@@ -19,13 +19,14 @@ import tempfile
 import wave
 from pathlib import Path
 
-from ..engine_env import WAKE_THRESHOLD, run_worker
+from ..engine_env import WAKE_THRESHOLD
+from . import run_engine
 
 
 def run_chain(wav_path: str, wake_threshold: float = WAKE_THRESHOLD) -> dict:
     """Run the bounded voice chain over a WAV file and return evidence."""
-    vad = run_worker("silero_worker.py", "--wav", wav_path)
-    wake = run_worker("wake_worker.py", "--wav", wav_path, "--threshold", str(wake_threshold))
+    vad = run_engine("silero_worker.py", "--wav", wav_path)
+    wake = run_engine("wake_worker.py", "--wav", wav_path, "--threshold", str(wake_threshold))
     segments = [[float(a), float(b)] for a, b in vad.get("segments", [])]
     trigger_seconds = wake.get("trigger_seconds")
 
@@ -44,7 +45,7 @@ def run_chain(wav_path: str, wake_threshold: float = WAKE_THRESHOLD) -> dict:
                 utterance_span = [start_s, end_s]
                 with tempfile.TemporaryDirectory() as td:
                     crop_wav = str(Path(td) / "utterance.wav")
-                    run_worker(
+                    run_engine(
                         "crop_worker.py",
                         "--wav",
                         wav_path,
@@ -55,7 +56,7 @@ def run_chain(wav_path: str, wake_threshold: float = WAKE_THRESHOLD) -> dict:
                         "--out",
                         crop_wav,
                     )
-                    stt = run_worker("whisper_worker.py", "--wav", crop_wav)
+                    stt = run_engine("whisper_worker.py", "--wav", crop_wav)
                     transcript = str(stt.get("transcript", ""))
 
     return {
@@ -72,7 +73,7 @@ def run_chain(wav_path: str, wake_threshold: float = WAKE_THRESHOLD) -> dict:
 
 def synthesize(text: str, out_wav: str, voice: str = "af_heart", speed: float = 1.0) -> dict:
     """Synthesize text to a WAV through real Kokoro inference."""
-    result = run_worker(
+    result = run_engine(
         "kokoro_worker.py",
         "--text",
         text,

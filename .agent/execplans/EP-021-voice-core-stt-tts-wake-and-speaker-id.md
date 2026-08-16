@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
@@ -346,3 +346,22 @@ At completion record changed files versus the machine fence, exact commands and 
   ephemeral and never logged.
 - REVERSAL: revert to M2 commit. No public-surface break: nexus_voice
   contracts unchanged (only default port bodies); infra/voice is new.
+
+## 2026-08-16 -- M4 forced failures and observability (evidence: tests/voice/core ep021_failure; SPEC-006; EP-021 directive O)
+
+- DECISION: adapters fail closed with typed SPEC-006 VoiceErrors. A new
+  `run_engine` wrapper (infra/voice/adapters/__init__.py) maps real
+  engine failures to UNAVAILABLE and real subprocess timeouts to TIMEOUT;
+  no raw audio ever reaches an error surface (as_dict redacts payload).
+- DECISION: M4 suite exercises only real failure mechanisms (no mocks):
+  missing silero/wake/whisper model files, a genuinely corrupt WAV
+  rejected by the worker, a permission-denied model (chmod 0), a missing
+  sidecar venv, and a real 1s subprocess timeout against a ~3.3s whisper
+  transcription. Unsupported compressed frames are refused at the adapter
+  boundary (typed validation) before any engine is invoked.
+- DECISION: SttProviderWhisperCpp gained model/binary/timeout constructor
+  parameters so real failure injection does not require mocks.
+- SECURITY: error surfaces verified redacted in tests; no credentials or
+  raw audio in failures.
+- REVERSAL: revert to M3 commit. No public-surface break: adapter
+  behavior on healthy paths unchanged (M3 suite regression green).

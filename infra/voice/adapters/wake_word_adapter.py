@@ -18,7 +18,8 @@ from nexus_voice.audio import AudioFormat, AudioFrame
 from nexus_voice.vocabulary import WakeWordState
 from nexus_voice.wake import WakeWordProvider, WakeWordResult
 
-from ..engine_env import WAKE_THRESHOLD, run_worker
+from ..engine_env import WAKE_THRESHOLD
+from . import run_engine
 
 WAKE_WORD_LABEL = "nexus"
 
@@ -47,7 +48,7 @@ class WakeWordProviderOpenWakeWord(WakeWordProvider):
             args = ["--wav", wav, "--threshold", str(self.threshold)]
             if self.model:
                 args += ["--model", self.model]
-            result = run_worker("wake_worker.py", *args)
+            result = run_engine("wake_worker.py", *args)
         detected = bool(result["detected"])
         score = max(0.0, min(1.0, float(result["score"])))
         state = WakeWordState.Triggered if detected else WakeWordState.Armed

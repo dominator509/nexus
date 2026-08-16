@@ -9,7 +9,8 @@ from pathlib import Path
 from nexus_voice.audio import AudioFormat, AudioFrame
 from nexus_voice.vad import VadDecision, VadProvider, VadResult
 
-from ..engine_env import SILERO_THRESHOLD, run_worker
+from ..engine_env import SILERO_THRESHOLD
+from . import run_engine
 
 
 def _frame_to_wav(frame: AudioFrame, path: str) -> None:
@@ -45,7 +46,7 @@ class VadProviderSilero(VadProvider):
             args = ["--wav", wav, "--threshold", str(self.threshold)]
             if self.model:
                 args += ["--model", self.model]
-            result = run_worker("silero_worker.py", *args)
+            result = run_engine("silero_worker.py", *args)
         decision = result["decision"]
         if decision not in (VadDecision.Speech, VadDecision.Silence):
             raise ValueError(f"worker returned unknown decision: {decision!r}")

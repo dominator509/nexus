@@ -9,7 +9,7 @@ from pathlib import Path
 from nexus_voice.audio import AudioFormat, AudioFrame
 from nexus_voice.stt import SttProvider, SttResult
 
-from ..engine_env import run_worker
+from . import run_engine
 
 
 def _frames_to_wav(frames: list[AudioFrame], path: str) -> None:
@@ -30,11 +30,26 @@ def _frames_to_wav(frames: list[AudioFrame], path: str) -> None:
 class SttProviderWhisperCpp(SttProvider):
     """SttProvider backed by whisper.cpp."""
 
+    def __init__(
+        self,
+        model: str | None = None,
+        binary: str | None = None,
+        timeout: int = 900,
+    ) -> None:
+        self.model = model
+        self.binary = binary
+        self.timeout = timeout
+
     def transcribe(self, frames: list[AudioFrame]) -> SttResult:
         with tempfile.TemporaryDirectory() as td:
             wav = str(Path(td) / "frames.wav")
             _frames_to_wav(frames, wav)
-            result = run_worker("whisper_worker.py", "--wav", wav)
+            args = ["--wav", wav]
+            if self.model:
+                args += ["--model", self.model]
+            if self.binary:
+                args += ["--binary", self.binary]
+            result = run_engine("whisper_worker.py", *args, timeout=self.timeout)
         return SttResult(
             transcript=str(result["transcript"]),
             confidence=None,

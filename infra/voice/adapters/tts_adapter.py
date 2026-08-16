@@ -9,7 +9,7 @@ from pathlib import Path
 from nexus_voice.audio import AudioFormat, AudioFrame
 from nexus_voice.tts import TtsProvider, TtsResult
 
-from ..engine_env import run_worker
+from . import run_engine
 
 CHUNK_SAMPLES = 24000  # one second at the Kokoro output rate
 
@@ -24,7 +24,7 @@ class TtsProviderKokoro(TtsProvider):
     def synthesize(self, text: str) -> TtsResult:
         with tempfile.TemporaryDirectory() as td:
             out = str(Path(td) / "tts.wav")
-            run_worker(
+            run_engine(
                 "kokoro_worker.py",
                 "--text",
                 text,
