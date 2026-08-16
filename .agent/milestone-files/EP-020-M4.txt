@@ -1,1 +1,8 @@
 tests/home/
+crates/nexus-home/tests/ep020_failure_forced.rs
+scripts/ep020-m4-tests.sh
+.agent/milestone-files/EP-020-M4.txt
+.agent/expected-files/EP-020.txt
+.agent/execplans/EP-020-home-assistant-and-device-control.md
+.agent/state/LEDGER.md
+scripts/nodes/EP-020.sh

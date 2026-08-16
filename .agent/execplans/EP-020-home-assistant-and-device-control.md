@@ -272,10 +272,10 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M1: Contract, vocabulary, and package boundary
+- [x] M2: Core behavior and deterministic invariants
+- [x] M3: Real dependency and transport integration
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
@@ -338,6 +338,41 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 - REVERSAL: revert to the pre-M3 commit; the M3 fence files define the
   changed set. No compatibility impact: `nexus-home` / `nexus-home-assistant`
   public surfaces unchanged by M3.
+
+## 2026-08-16 -- M4 forced failures, abuse cases, and observability (evidence: `.agent/state/evidence/EP-020-M4-forced-failures.md`)
+
+- DECISION: Contract-level fail-closed suite as REAL Rust tests in the
+  nexus-home crate (`ep020_failure_*` names; gate filter matches).
+  13 tests: verifier missing-target UNKNOWN / unrelated UNRELATED_CHANGE
+  / mismatch MISMATCH / missing-attribute UNKNOWN, verification-timeout
+  terminal distinct from VERIFIED, unknown-domain mapping total (OTHER,
+  no panic), display-name identity rejected, unknown vocabulary
+  rejected at parse with no cross-class coercion, unknown availability
+  never safe, error redaction never leaks payload, correlation
+  preserved, typed auth/policy/unavailable/conflict, UUIDv7
+  correlation ids.
+- DECISION: Real-container failure suite under `tests/home/` reuses the
+  M3 fixture + automated OAuth bootstrap and adds a throwaway
+  `nexus-abuse` user ONLY for the abuse proof (admin token never
+  affected by lockout). 9 tests against the real pinned container.
+- DECISION: Real wire facts recorded -- malformed service body
+  (wrong-typed entity_id) returns 500 in this HA version (fail-closed,
+  status >= 400 asserted, never 2xx), with NO partial side effect.
+- DECISION: Abuse proof is fail-closed by assertion (6 bad login flows
+  never mint a token) with HA's real throttle signal observed and
+  recorded, never fabricated.
+- DECISION: M4 gate rewritten to a vacuity-guarded script
+  (`ep020-m4-tests.sh`) running BOTH the cargo contract suite and the
+  real-container pytest suite (EP-001 gate-masking class; the
+  pre-created gate ran bare `cargo test` with no zero-match guard).
+- DECISION: Operations diagnostic + bounded recovery commands in
+  `tests/home/README.md` (container absent / image missing / entities
+  missing / 401 / wrong mount / rate-lockout / offline; recovery = gate
+  re-run, fixture recreates container + fresh token).
+- SECURITY: security check ok; license gate ok; credentials never in
+  repo; `--tb=native`; error surfaces proven to never echo secrets.
+- REVERSAL: revert to pre-M4 commit. No public-surface change:
+  `nexus-home` tests only; no production code modified in M4.
 
 # 14. Outcomes & Retrospective
 

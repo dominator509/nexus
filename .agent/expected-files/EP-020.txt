@@ -19,6 +19,9 @@ connectors/home-assistant/
 infra/home-assistant/
 tests/home/
 .agent/state/evidence/EP-020-M3-real-ha-provider.md
+.agent/state/evidence/EP-020-M4-forced-failures.md
+crates/nexus-home/tests/ep020_failure_forced.rs
+scripts/ep020-m4-tests.sh
 Cargo.toml
 Cargo.lock
 COMPONENT_REGISTRY.yaml
