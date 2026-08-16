@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .audio import AudioFrame
+from .error import VoiceError, VoiceErrorCode
 
 
 @dataclass(frozen=True)
@@ -48,5 +49,12 @@ class SttProvider:
     """
 
     def transcribe(self, frames: list[AudioFrame]) -> SttResult:
-        """Transcribe a sequence of audio frames."""
-        raise NotImplementedError
+        """Transcribe a sequence of audio frames.
+
+        A port without a bound provider fails closed with a typed
+        UNAVAILABLE error; it never fabricates a transcript.
+        """
+        raise VoiceError(
+            VoiceErrorCode.Unavailable,
+            "stt provider has no implementation bound",
+        )

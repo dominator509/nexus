@@ -272,9 +272,9 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M1: Contract, vocabulary, and package boundary
+- [x] M2: Core behavior and deterministic invariants
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -310,3 +310,39 @@ At completion record changed files versus the machine fence, exact commands and 
   mandatory; raw audio never retained or logged.
 - REVERSAL: revert to M1 commit. No public-surface break: nexus_voice
   contracts unchanged; nexus_wake is a new package under models/wake.
+
+## 2026-08-16 -- M3 real engine integration (evidence: infra/voice/, tests/voice/core ep021_integration; SPEC-012/SPEC-019; EP-021 owner directive)
+
+- DECISION: four real engines integrated as an isolated sidecar venv
+  (/opt/nexus-voice-engines, Python 3.12.3) with subprocess workers
+  (EP-021 directive G): Silero VAD v5.1 ONNX, openwakeword 0.4.0,
+  whisper.cpp v1.7.4 (commit 8a9ad784), Kokoro 0.9.4 on torch 2.13.0+cpu
+  (official CPU index, directive I). The main project interpreter (3.14)
+  stays frozen; adapters under infra/voice/ are stdlib-only and map worker
+  JSON onto the nexus_voice contracts. Disk: 41.3 GiB reclaimed via
+  owner-authorized `cargo clean` of the regenerable workspace target/
+  (directive B); engines/models consume ~2.5 GiB; ~40 GiB remains free.
+- DECISION: openwakeword production wake-model certification is DEFERRED
+  (recorded in infra/voice/manifests/certification.yaml with the graph
+  gap); the bundled noncommercial pretrained weights are never used
+  (SPEC-019). A real controlled-test wake model (nexus_wake_hey_nexus_v1)
+  was trained in-repo on Kokoro-synthesized fixtures through the real
+  openwakeword feature frontend (LR on 96-dim embeddings, ONNX export
+  matching the engine contract [1,16,96] -> [1,1]): 18/18 positives at
+  1.000, negatives <= 0.078. Weights are Nexus-owned (Apache-2.0);
+  retraining is functionally deterministic (identical separation stats),
+  byte digest varies with BLAS float scheduling (documented in manifest).
+- DECISION: M1 abstract contract ports converted from `raise
+  NotImplementedError` to typed fail-closed `VoiceError(UNAVAILABLE)`
+  (repo convention per python/nexus_connector_sdk) to satisfy the reality
+  gate honestly; contracts otherwise unchanged (M1 suite still green).
+- DECISION: wake worker streams int16 1280-sample frames through the real
+  engine predict loop (openwakeword buffer zeroes the first 5 frames;
+  float32 input collapses to silence); whisper worker resamples to 16 kHz
+  (whisper-cli requires 16 kHz input).
+- SECURITY: no credentials or weights in the repository; models and
+  binaries live outside the repo (/opt) with digests recorded in
+  infra/voice/manifests/models.yaml + engines.yaml; raw audio is
+  ephemeral and never logged.
+- REVERSAL: revert to M2 commit. No public-surface break: nexus_voice
+  contracts unchanged (only default port bodies); infra/voice is new.

@@ -1,0 +1,24 @@
+---
+# EP-021 M3 certification registry
+#
+# Software/model/hardware certification is recorded separately and never
+# collapsed (EP-021 directive N). "INTERNAL_CERTIFIED" means the real
+# engine/model was exercised in this node with real inference and the
+# sentinels below were observed. Deferred items have explicit owners.
+software_engines:
+  silero-engine: "INTERNAL_CERTIFIED - real model silero_vad_v5.1.onnx (sha256 2623a295...); speech fixture mean prob 0.737 / max 0.9997; silence fixture mean prob 0.0037"
+  openwakeword-engine: "INTERNAL_CERTIFIED - real runtime 0.4.0 + real custom ONNX model (Nexus-owned weights, sha256 776e3658...); 18/18 'hey nexus' positives at 1.000, negatives all <= 0.078 (silence 0.021, noise 0.001)"
+  whisper-cpp-engine: "INTERNAL_CERTIFIED - real binary v1.7.4 + ggml-tiny.en; deterministic phrase -> 'The quick brown fox jumps over the lazy dog.' (exact); chain utterance -> 'Turn on the lights.'"
+  kokoro-engine: "INTERNAL_CERTIFIED - real torch-CPU inference, model kokoro-v1.0 (sha256 496dba11...); every fixture is a newly generated waveform (24 kHz, RMS > 0.01, duration > 1s)"
+models:
+  silero-vad-v5.1: "INTERNAL_CERTIFIED (MIT, commercial permitted)"
+  whisper-ggml-tiny-en: "INTERNAL_CERTIFIED (MIT, commercial permitted; transport/engine proof only, larger model = deployment decision)"
+  kokoro-v1.0: "INTERNAL_CERTIFIED (Apache-2.0, commercial permitted)"
+  nexus-wake-hey-nexus-v1: "CONTROLLED-TEST certified (Apache-2.0, commercial permitted)"
+  openwakeword-production-wake-model: "DEFERRED - production wake-model training/certification is not owned by this node's milestone; graph gap recorded rather than shipping bundled noncommercial weights. Fallback per node contract: push-to-talk with local STT/TTS until certified."
+hardware:
+  physical-microphone: "NOT ASSERTED (deferred; controlled WAV fixtures used)"
+  physical-speaker: "NOT ASSERTED (deferred)"
+  room-satellite-hardware: "NOT ASSERTED (deferred)"
+composed_integration:
+  voice-engine-integration: "PASS - bounded chain: audio -> Silero VAD -> wake detection -> captured utterance -> whisper.cpp transcription ('Hey nexus. Turn on the lights.' -> 'Turn on the lights.'); independent chain: text -> Kokoro -> generated audio"

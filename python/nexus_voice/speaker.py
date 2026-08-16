@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .error import VoiceError, VoiceErrorCode
+
 SPEAKER_VERDICTS = ("MATCH", "NOMATCH", "UNKNOWN", "UNSUPPORTED")
 
 
@@ -74,5 +76,12 @@ class SpeakerEvidenceProvider:
     """
 
     def verify(self, utterance_id: str, expected_speaker_id: str) -> SpeakerEvidence:
-        """Verify an utterance against an expected speaker identity."""
-        raise NotImplementedError
+        """Verify an utterance against an expected speaker identity.
+
+        A port without a bound provider fails closed with a typed
+        UNAVAILABLE error; it never fabricates a verdict.
+        """
+        raise VoiceError(
+            VoiceErrorCode.Unavailable,
+            "speaker evidence provider has no implementation bound",
+        )

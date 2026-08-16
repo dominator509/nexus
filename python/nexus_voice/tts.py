@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .audio import AudioFrame
+from .error import VoiceError, VoiceErrorCode
 
 
 @dataclass(frozen=True)
@@ -43,5 +44,12 @@ class TtsProvider:
     """
 
     def synthesize(self, text: str) -> TtsResult:
-        """Synthesize speech audio for text."""
-        raise NotImplementedError
+        """Synthesize speech audio for text.
+
+        A port without a bound provider fails closed with a typed
+        UNAVAILABLE error; it never fabricates audio.
+        """
+        raise VoiceError(
+            VoiceErrorCode.Unavailable,
+            "tts provider has no implementation bound",
+        )

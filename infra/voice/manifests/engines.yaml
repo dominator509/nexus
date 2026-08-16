@@ -1,0 +1,47 @@
+---
+# EP-021 M3 engine manifest
+#
+# Exact versions of the real engines integrated under `infra/voice/`.
+# The sidecar environment is isolated so the main Nexus Python
+# environment stays frozen (EP-021 directive G).
+engines:
+  whisper.cpp:
+    version: "v1.7.4 (commit 8a9ad7844d6e2a10cddf4b92de4089d7ac2b14a9)"
+    license: "MIT"
+    binary: "/opt/nexus-whisper/build/bin/whisper-cli"
+    integration: "sidecar native binary, subprocess invocation"
+    replacement_contract: "STT provider contract; Deepgram or OpenAI speech fallback (same SttProvider port)"
+  onnxruntime:
+    version: "1.28.0"
+    license: "MIT"
+    used_by: ["Silero VAD worker", "openwakeword runtime", "wake model"]
+  openwakeword:
+    version: "0.4.0 (PyPI)"
+    license: "Apache-2.0 (runtime code)"
+    bundled_pretrained_weights: "NOT used, NOT shipped (SPEC-019; noncommercial)"
+    integration: "library in the sidecar venv; custom Nexus ONNX model only"
+  kokoro:
+    version: "0.9.4 (PyPI; misaki 0.9.4)"
+    license: "Apache-2.0"
+    integration: "sidecar venv, torch CPU inference"
+    model: "kokoro-v1.0 (models.yaml)"
+  torch:
+    version: "2.13.0+cpu (official CPU index, no CUDA/ROCm packages)"
+    license: "BSD-3-Clause"
+  scikit-learn:
+    version: "1.9.0"
+    license: "BSD-3-Clause"
+  scipy:
+    version: "1.18.0"
+    license: "BSD-3-Clause"
+  numpy:
+    version: "2.5.2"
+    license: "BSD-3-Clause"
+sidecar:
+  venv: "/opt/nexus-voice-engines"
+  python: "3.12.3"
+  override_env: "NEXUS_VOICE_ENGINE_VENV"
+  rationale: "openwakeword/torch wheels target stable CPython; the main project interpreter (3.14) is not forced to change (EP-021 directive G)"
+artifact_roots:
+  models: "/opt/nexus-voice-models (NEXUS_VOICE_MODELS)"
+  fixtures: "/opt/nexus-voice-fixtures (NEXUS_VOICE_FIXTURES)"

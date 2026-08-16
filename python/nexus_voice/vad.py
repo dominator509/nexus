@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .audio import AudioFrame
+from .error import VoiceError, VoiceErrorCode
 
 VAD_DECISIONS = ("SPEECH", "SILENCE")
 
@@ -57,5 +58,12 @@ class VadProvider:
     """
 
     def detect(self, frame: AudioFrame) -> VadResult:
-        """Return the VAD decision for a frame."""
-        raise NotImplementedError
+        """Return the VAD decision for a frame.
+
+        A port without a bound provider fails closed with a typed
+        UNAVAILABLE error; it never fabricates a speech decision.
+        """
+        raise VoiceError(
+            VoiceErrorCode.Unavailable,
+            "vad provider has no implementation bound",
+        )

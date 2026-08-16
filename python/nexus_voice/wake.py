@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .audio import AudioFrame
+from .error import VoiceError, VoiceErrorCode
 from .vocabulary import require_wake_word_state
 
 WAKE_WORD_STATES = ("ARMED", "TRIGGERED", "DISARMED", "UNCERTIFIED")
@@ -52,5 +53,12 @@ class WakeWordProvider:
     """
 
     def detect(self, frame: AudioFrame) -> WakeWordResult:
-        """Return the wake word detection result for a frame."""
-        raise NotImplementedError
+        """Return the wake word detection result for a frame.
+
+        A port without a bound provider fails closed with a typed
+        UNAVAILABLE error; it never fabricates a trigger.
+        """
+        raise VoiceError(
+            VoiceErrorCode.Unavailable,
+            "wake word provider has no implementation bound",
+        )

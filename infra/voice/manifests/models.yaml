@@ -1,0 +1,53 @@
+---
+# EP-021 M3 model integrity manifest
+#
+# Every model used by the real engine proofs is recorded here with its
+# canonical source, version/revision, SHA-256 digest, license
+# classification, and commercial-use status (SPEC-019; EP-021 directive L).
+# M2's wake registry machinery (`models/wake/nexus_wake`) remains
+# authoritative for wake-model registration; this manifest is the
+# operational record for all voice models.
+models:
+  silero-vad-v5.1:
+    source: "https://github.com/snakers4/silero-vad tag v5.1 (src/silero_vad/data/silero_vad.onnx)"
+    local: "/opt/nexus-voice-models/silero_vad_v5.1.onnx"
+    sha256: "2623a2953f6ff3d2c1e61740c6cdb7168133479b267dfef114a4a3cc5bdd788f"
+    license: "MIT (code and weights, per upstream repository)"
+    commercial_use: permitted
+    status: "INTERNAL_CERTIFIED (real ONNX inference, speech/silence fixtures)"
+  whisper-ggml-tiny-en:
+    source: "https://huggingface.co/ggerganov/whisper.cpp (ggml-tiny.en.bin, digest-pinned)"
+    local: "/opt/nexus-voice-models/ggml-tiny.en.bin"
+    sha256: "921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f"
+    license: "MIT"
+    commercial_use: permitted
+    status: "INTERNAL_CERTIFIED for transport/engine proof; larger-model selection is a deployment/benchmark decision"
+  kokoro-v1.0:
+    source: "https://huggingface.co/hexgrad/Kokoro-82M snapshot f3ff3571 (v1.0/kokoro-v1.0.pth)"
+    sha256: "496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4"
+    license: "Apache-2.0 (model weights, per upstream repository)"
+    commercial_use: permitted
+    status: "INTERNAL_CERTIFIED (CPU inference, newly generated waveform)"
+  nexus-wake-hey-nexus-v1:
+    source: "in-repo training pipeline infra/voice/workers/train_wake_model.py; Kokoro-synthesized controlled fixtures via openwakeword feature frontend"
+    local: "/opt/nexus-voice-models/nexus_wake_hey_nexus_v1.onnx"
+    sha256: "776e365896d3c6640a8e371d27790b253d00ff5178c8e663cc9e87f67f2fa7ec"
+    license: "Apache-2.0 (Nexus-owned weights; bundled noncommercial openwakeword weights prohibited by SPEC-019)"
+    commercial_use: permitted
+    status: "CONTROLLED-TEST certified (18/18 positive at 1.000, negatives <= 0.078); production wake-model certification DEFERRED (certification.yaml)"
+    note: "Weights are functionally deterministic: retraining reproduces identical engine separation (pos_min 1.0, neg_max 0.078); the byte digest can vary with BLAS float scheduling, so the recorded digest identifies the certified artifact and regeneration must re-verify the separation stats (train_wake_model.py asserts them)."
+  openwakeword-melspectrogram-frontend:
+    source: "openwakeword 0.4.0 wheel (resources/models/melspectrogram.onnx)"
+    sha256: "ba2b0e0f8b7b875369a2c89cb13360ff53bac436f2895cced9f479fa65eb176f"
+    license: "Apache-2.0"
+    commercial_use: permitted
+  openwakeword-embedding-frontend:
+    source: "openwakeword 0.4.0 wheel (resources/models/embedding_model.onnx)"
+    sha256: "ba754db3cd768a524c655ea90655ee5e6055a43b8dfd29366a11e93716ae9e51"
+    license: "Apache-2.0"
+    commercial_use: permitted
+  en-core-web-sm:
+    source: "spaCy models release 3.8.0 (en_core_web_sm-3.8.0-py3-none-any.whl)"
+    license: "MIT"
+    commercial_use: permitted
+    status: "runtime dependency of Kokoro G2P (misaki), not a voice model"
