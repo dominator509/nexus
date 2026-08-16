@@ -99,7 +99,9 @@ impl SkillRegistry {
     }
 
     /// Install a scanned bundle: register the package (authority checks
-    /// apply unchanged) and persist through the store.
+    /// apply unchanged) and persist through the store. Rollback is
+    /// fail-closed: if persistence fails, the in-memory registration is
+    /// undone so memory and disk never diverge (partial side effect).
     pub fn install_bundle<S: crate::store::SkillRegistryStore>(
         &mut self,
         bundle: SkillBundle,
@@ -108,12 +110,18 @@ impl SkillRegistry {
         store: &S,
     ) -> Result<SkillRegistryEntry, SkillPackageError> {
         let entry = self.register(bundle.package, caller_trust, now_epoch_ms)?;
-        store.save(&self.to_state())?;
+        let key = version_key(&entry.name, &entry.version);
+        if let Err(e) = store.save(&self.to_state()) {
+            // Rollback the in-memory mutation before failing.
+            self.entries.remove(&key);
+            return Err(e);
+        }
         Ok(entry)
     }
 
     /// Remove an installed version. Revoked or missing entries cannot
-    /// be removed silently; removal is explicit and persists.
+    /// be removed silently; removal is explicit and persists. On
+    /// persistence failure the entry is restored (compensation).
     pub fn remove<S: crate::store::SkillRegistryStore>(
         &mut self,
         name: &str,
@@ -121,17 +129,19 @@ impl SkillRegistry {
         store: &S,
     ) -> Result<(), SkillPackageError> {
         let key = version_key(name, version);
-        if self.entries.remove(&key).is_none() {
-            return Err(SkillPackageError::not_found(
-                "skill version not installed",
-                Some(key),
-            ));
+        let removed = self.entries.remove(&key).ok_or_else(|| {
+            SkillPackageError::not_found("skill version not installed", Some(key.clone()))
+        })?;
+        if let Err(e) = store.save(&self.to_state()) {
+            self.entries.insert(key, removed);
+            return Err(e);
         }
-        store.save(&self.to_state())
+        Ok(())
     }
 
     /// Revoke an installed version (ADR-025). A revoked entry remains
-    /// in state for audit but can never be resolved for execution.
+    /// in state for audit but can never be resolved for execution. On
+    /// persistence failure the revocation is undone (compensation).
     pub fn revoke<S: crate::store::SkillRegistryStore>(
         &mut self,
         name: &str,
@@ -139,11 +149,50 @@ impl SkillRegistry {
         store: &S,
     ) -> Result<(), SkillPackageError> {
         let key = version_key(name, version);
-        let entry = self.entries.get_mut(&key).ok_or_else(|| {
+        {
+            let entry = self.entries.get_mut(&key).ok_or_else(|| {
+                SkillPackageError::not_found("skill version not installed", Some(key.clone()))
+            })?;
+            entry.revoked = true;
+        }
+        if let Err(e) = store.save(&self.to_state()) {
+            if let Some(entry) = self.entries.get_mut(&key) {
+                entry.revoked = false;
+            }
+            return Err(e);
+        }
+        Ok(())
+    }
+
+    /// Bounded recovery command: clear all installed state. This is the
+    /// operations diagnostic for the registry (EP-018 M4); it is
+    /// explicit, persisted, and never reconstructs authority.
+    pub fn clear<S: crate::store::SkillRegistryStore>(
+        &mut self,
+        store: &S,
+    ) -> Result<(), SkillPackageError> {
+        self.entries.clear();
+        store.save(&self.to_state())
+    }
+
+    /// Resolve a package for execution. Fails closed: missing or
+    /// revoked entries are never executable (ADR-025).
+    pub fn resolve_for_execution(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<SkillPackage, SkillPackageError> {
+        let key = version_key(name, version);
+        let entry = self.entries.get(&key).ok_or_else(|| {
             SkillPackageError::not_found("skill version not installed", Some(key.clone()))
         })?;
-        entry.revoked = true;
-        store.save(&self.to_state())
+        if entry.revoked {
+            return Err(SkillPackageError::policy(
+                "skill version is revoked and cannot execute",
+                Some(key),
+            ));
+        }
+        Ok(entry.package.clone())
     }
 
     /// Whether the installed version is revoked (not installed -> not
