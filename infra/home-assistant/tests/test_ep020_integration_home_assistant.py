@@ -159,6 +159,8 @@ class HaFixture:
             "scripts.yaml",
             "secrets.yaml",
             "blueprints",
+            "deps",
+            "tts",
         ]:
             p = CONFIG_DIR / name
             if p.exists() or p.is_symlink():
