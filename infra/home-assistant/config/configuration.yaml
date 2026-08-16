@@ -1,0 +1,37 @@
+# EP-020 Home Assistant controlled test configuration (SPEC-011; M3).
+#
+# This configuration is a CONTROLLED_TEST_FIXTURE. It enables a real
+# Home Assistant instance with one template light
+# (`light.nexus_test_light`) backed by an input_boolean. The light is a
+# real HA entity with real state transitions; it certifies the provider
+# transport/state machinery. It is NOT physical hardware (hardware
+# certification is DEFERRED to its exact owner).
+homeassistant:
+  name: Nexus Test Home
+  latitude: 47.6062
+  longitude: -122.3321
+  unit_system: metric
+  time_zone: UTC
+
+# The template light's state is derived from the input_boolean. Turning
+# the light on/off is a REAL service call (light.turn_on/light.turn_off)
+# that changes real entity state observable through the REST and
+# WebSocket APIs.
+input_boolean:
+  nexus_test_switch:
+    name: Nexus Test Switch
+    initial: off
+
+template:
+  - light:
+      - name: "Nexus Test Light"
+        unique_id: nexus_test_light
+        state: "{{ states('input_boolean.nexus_test_switch') }}"
+        turn_on:
+          action: input_boolean.turn_on
+          target:
+            entity_id: input_boolean.nexus_test_switch
+        turn_off:
+          action: input_boolean.turn_off
+          target:
+            entity_id: input_boolean.nexus_test_switch

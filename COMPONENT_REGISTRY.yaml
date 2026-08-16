@@ -127,13 +127,13 @@ components:
     rationale: "Central secret service"
   - id: home-assistant
     capability: home.control
-    implementation: "Home Assistant"
+    implementation: "Home Assistant (ghcr.io/home-assistant/home-assistant:stable@sha256:56690a89c79a0de98035e1719f8324a92d5859c1192ff45adb0230ea81cb42a5)"
     license: "Apache-2.0"
     integration_mode: sidecar
     replacement_contract: "Home control provider contract; canonical device mapping isolates provider"
     commercial_review: "Apache-2.0; commercial use permitted"
     status: home-profile
-    rationale: "Primary home abstraction"
+    rationale: "Primary home abstraction; pinned digest proven by EP-020 M3 real-container integration (light.nexus_test_light CONTROLLED_TEST_FIXTURE, hardware certification DEFERRED to its exact owner)"
   - id: frigate
     capability: vision.nvr
     implementation: "Frigate"

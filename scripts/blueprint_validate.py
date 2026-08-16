@@ -57,6 +57,15 @@ IGNORE_DIRS = {
 
 CODE_EXTS = {".py", ".rs", ".ts", ".js"}
 
+# Files that legitimately contain Jinja2 double-braces and are NOT
+# unresolved placeholders. The HA fixture config is a REAL template
+# light backed by an input_boolean; Home Assistant REQUIRES Jinja2
+# `{{ }}` syntax for template entities (EP-020 M3). Narrow allowlist,
+# not a broad gate weakening - every other non-code file still fails.
+ALLOW_DOUBLE_BRACE = {
+    "infra/home-assistant/config/configuration.yaml",
+}
+
 for path in ROOT.rglob("*"):
     if not path.is_file() or ".git" in path.parts:
         continue
@@ -71,6 +80,12 @@ for path in ROOT.rglob("*"):
         continue
     if any(ord(ch) > 127 for ch in text):
         fail(f"non-ASCII text in {path.relative_to(ROOT)}")
-    if "{" * 2 in text and path.suffix not in CODE_EXTS and path.name not in {"reality-patterns"}:
+    rel = str(path.relative_to(ROOT))
+    if (
+        "{" * 2 in text
+        and path.suffix not in CODE_EXTS
+        and rel not in ALLOW_DOUBLE_BRACE
+        and path.name not in {"reality-patterns"}
+    ):
         fail(f"unresolved double-brace placeholder in {path.relative_to(ROOT)}")
 print("blueprint validation: ok")

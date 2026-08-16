@@ -286,6 +286,59 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
 
+## 2026-08-16 -- M3 real Home Assistant container integration (evidence: `.agent/state/evidence/EP-020-M3-real-ha-provider.md`)
+
+- DECISION: Prove the provider against a REAL pinned HA container
+  (`ghcr.io/home-assistant/home-assistant:stable@sha256:56690a...cb42a5`,
+  Apache-2.0, running version **2026.8.2**). No in-memory substitute.
+- DECISION: Fix the repository-root defect class
+  (`Path(__file__).parents[2]` -> `parents[2].parent` for
+  `infra/<component>/tests/` depth) and guard it with a pre-Docker root
+  assertion, a post-boot mount proof, and a regression test. The old
+  shallow root mounted `<repo>/infra/infra/home-assistant/config` and HA
+  booted with DEFAULTS (fixture entities absent) -- the "infra/infra"
+  symptom.
+- DECISION: Auth bootstrap is fully automated per run -- `auth` CLI verb
+  `add` (no add-user/add-token verbs), restart-to-load the user, then the
+  REAL OAuth flow `login_flow -> authorization_code -> access_token`.
+  Fresh random password and fresh token per run; nothing checked in.
+- DECISION: Wait for the FIRST boot to finish integration setup BEFORE
+  the auth-restart (pre-auth readiness via docker LogPath + entity
+  registry, since `/api/states` needs the not-yet-minted token), and wait
+  again for entities after the restart with the valid token.
+- DECISION: The control path is exclusively the HA service/action API
+  (`POST /api/services/<domain>/<service>`); `POST /api/states/<entity_id>`
+  is a state write that does not reach the device. Proven by
+  `ep020_integration_no_state_forgery_for_control` (state-write to the
+  light leaves the backing input_boolean unchanged; the service call
+  changes it).
+- DECISION: Wire-shape corrections from live observation -- `GET /api/`
+  returns `{"message": "API running."}`; unknown service returns 400 (not
+  404); WebSocket receive timeouts are "no event yet", polled against the
+  test deadline (post-loop assertions unchanged, no gate weakening).
+- DECISION: Fix a blueprint-validator false positive for the HA fixture:
+  `scripts/blueprint_validate.py` flagged the real Jinja2 double-brace syntax
+  of the template light as an "unresolved double-brace placeholder".
+  Added a NARROW allowlist for exactly
+  `infra/home-assistant/config/configuration.yaml` (documented in the
+  script; every other non-code file still fails). Gate-fix precedent:
+  EP-019 M1 gate vacuity fix. Registered in the M3 fence.
+- DECISION: Post-restart determinism -- `ha_offline_fails` restarts the
+  container and now waits for HTTP readiness AND fixture-entity presence
+  before the next tests run (observed flake: 404 on
+  `input_boolean.nexus_test_switch` during the integration-reload
+  window).
+- CERTIFICATION (exact): HA real server PASS; HA real authentication
+  PASS; HA API provider integration PASS; HA command/readback PASS;
+  controlled template-light entity CONTROLLED_TEST_FIXTURE; physical
+  light hardware NOT ASSERTED / DEFERRED TO ITS CERTIFICATION OWNER.
+- SECURITY: no credentials/tokens in repo; fresh OAuth token per run in
+  memory only; `--tb=native` to avoid leaking token locals in failure
+  tracebacks. LICENSE: Apache-2.0 image recorded in COMPONENT_REGISTRY.
+- REVERSAL: revert to the pre-M3 commit; the M3 fence files define the
+  changed set. No compatibility impact: `nexus-home` / `nexus-home-assistant`
+  public surfaces unchanged by M3.
+
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.

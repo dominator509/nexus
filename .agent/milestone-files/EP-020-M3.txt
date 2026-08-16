@@ -1,1 +1,5 @@
 infra/home-assistant/
+scripts/ep020-m3-tests.sh
+.agent/milestone-files/EP-020-M3.txt
+COMPONENT_REGISTRY.yaml
+scripts/blueprint_validate.py

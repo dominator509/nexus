@@ -1,0 +1,31 @@
+# EP-020 Home Assistant real integration profile (SPEC-011; M3).
+#
+# Runs a REAL Home Assistant instance (pinned digest) as the provider
+# under test. The configuration enables a controlled template light
+# (`light.nexus_test_light`) backed by an input_boolean - a
+# CONTROLLED_TEST_FIXTURE entity used to certify provider transport and
+# state machinery. It is explicitly NOT physical hardware; hardware
+# certification is DEFERRED to its exact owner.
+#
+# Token bootstrap is fully automated by the M3 suite
+# (infra/home-assistant/tests/test_ep020_integration_home_assistant.py):
+#   1. docker run -d with ./config:/config (pinned digest)
+#   2. wait for HTTP readiness, then for the FIRST boot to finish
+#      integration setup (template light registered) BEFORE any restart
+#   3. docker exec nexus-ha python3 -m homeassistant --script auth \
+#        --config /config add nexus-admin '<random>'   (verb: add)
+#   4. docker restart (CLI users load from the auth store at boot),
+#      then complete the REAL OAuth login flow over HTTP:
+#        login_flow -> authorization_code -> access_token
+# No credentials are checked in; a fresh token is minted per run.
+services:
+  home-assistant:
+    image: ghcr.io/home-assistant/home-assistant:stable@sha256:56690a89c79a0de98035e1719f8324a92d5859c1192ff45adb0230ea81cb42a5
+    container_name: nexus-ha
+    restart: "no"
+    volumes:
+      - ./config:/config
+    ports:
+      - "127.0.0.1:8123:8123"
+    environment:
+      TZ: "UTC"

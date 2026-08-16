@@ -10,6 +10,7 @@
 scripts/nodes/EP-020.sh
 scripts/ep020-m1-tests.sh
 scripts/ep020-m2-tests.sh
+scripts/ep020-m3-tests.sh
 scripts/live-fire/LF-006.sh
 scripts/live-fire/LF-007.sh
 scripts/live-fire/LF-024.sh
@@ -17,7 +18,10 @@ crates/nexus-home/
 connectors/home-assistant/
 infra/home-assistant/
 tests/home/
+.agent/state/evidence/EP-020-M3-real-ha-provider.md
 Cargo.toml
 Cargo.lock
+COMPONENT_REGISTRY.yaml
 references/ADR-027-home-provider-vocabulary.md
 docs/vocabulary/README.md
+scripts/blueprint_validate.py
