@@ -1,1 +1,14 @@
-
+crates/nexus-healing/tests/lf019.rs
+crates/nexus-healing/Cargo.toml
+scripts/live-fire/LF-019.sh
+.agent/execplans/EP-019-self-healing-engineering-loop.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-019.txt
+.agent/milestone-files/EP-019-M5.txt
+.agent/node-contracts/EP-019.md
+scripts/nodes/EP-019.sh
+Cargo.lock
+.agent/state/evidence/CERTIFICATION_REGISTRY.md
+.agent/state/evidence/ep019-m5/LF-019-ep019-m5.md
+tests/healing/fixtures/failing-worker.sh
+tests/healing/fixtures/worker-fix.patch

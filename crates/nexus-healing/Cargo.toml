@@ -9,3 +9,8 @@ license = "MIT"
 nexus-domain = { path = "../nexus-domain", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
+
+[dev-dependencies]
+# Real SHA-256 for the LF-019 live-fire digest (reuses the locked
+# workspace dependency class, test-only).
+sha2 = "0.11"

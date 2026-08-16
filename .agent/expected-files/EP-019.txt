@@ -12,6 +12,7 @@ scripts/ep019-m1-tests.sh
 scripts/ep019-m2-tests.sh
 scripts/ep019-m3-tests.sh
 scripts/ep019-m4-tests.sh
+scripts/live-fire/LF-019.sh
 crates/nexus-healing/
 crates/nexus-domain/src/id.rs
 crates/nexus-domain/src/lib.rs

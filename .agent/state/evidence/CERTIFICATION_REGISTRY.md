@@ -233,3 +233,39 @@ certification_owner: EP-043 (production readiness and ship)
 blocking_for_ship: false
 evidence_reference: EP-018 non-goals; directive section T (manifest network_rules are REQUESTS, never firewall configuration; real network enforcement deferred to Sentinel/EP-030 class owners)
 
+
+## Component: self-healing-engine
+component_id: self-healing-engine
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (deterministic self-healing lifecycle: IncidentState 18-state vocabulary with explicit terminals, DiagnosisConfidence escalation, incident memory dedup/idempotency, approval digest binding, canary/rollback state machines; 19 ep019_unit + 13 ep019_failure + 12 ep019_integration + 1 LF-019 tests green)
+provider: none (self-hosted engineering loop; controlled failing fixture CONTROLLED_TEST_FIXTURE)
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: crates/nexus-healing/; packages/workflows/src/incidents/; tests/healing/; LF-019-ep019-m5.md (real failing fixture -> real subprocess incident -> reproduce -> patch -> review -> approval -> canary -> verify -> close/rollback)
+
+## Component: self-healing-sandbox
+component_id: self-healing-sandbox
+implementation_status: IMPLEMENTED (enforcement decision PASS: isolated working copy + fail-closed execution boundary + scope preservation + sandbox/security verdicts)
+internal_proof: INTERNAL_CERTIFIED (patch applies to isolated copy, reproduction FAIL->PASS, fail-closed preserved after patch, scope remains allowed; security gate failures rejected)
+provider: none
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-040/EP-043 (real OS-level sandbox isolation certification deferred)
+blocking_for_ship: false
+evidence_reference: LF-019 isolated working copy; ep019_m3 integration; runbooks/self-healing/README.md; real sandbox execution certification DEFERRED (no OS-level isolation proof in EP-019)
+
+## Component: self-healing-production-deployment
+component_id: self-healing-production-deployment
+implementation_status: IMPLEMENTED (deterministic canary/rollback state machine; staged contract recorded)
+internal_proof: INTERNAL_CERTIFIED (CanaryState + RollbackState machines, auto_rollback_on_regression, rollback bound to known previous artifact; LF-019 rollback proof restores failing behavior = health restored to known previous state)
+provider: none (production deployment substrate later-owned)
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: deployment-owning node (EP-042/EP-043 real production canary certification)
+blocking_for_ship: false
+evidence_reference: crates/nexus-healing/src/canary.rs + rollback.rs; LF-019-ep019-m5.md rollback section; real production canary deployment certification DEFERRED to the deployment-owning node (no simulated canary)
