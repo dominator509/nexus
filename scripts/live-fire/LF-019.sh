@@ -12,7 +12,7 @@ export CARGO_TERM_COLOR=never
 #
 # Trigger a controlled defect, detect it through a real process
 # failure, reproduce, patch, review, request approval, canary, verify,
-# and close — with a deterministic rollback proof. The REAL EP-019
+# and close -- with a deterministic rollback proof. The REAL EP-019
 # composition is exercised end to end:
 #   - real controlled failing fixture (tests/healing/fixtures/
 #     failing-worker.sh, CONTROLLED_TEST_FIXTURE) crashes in a real

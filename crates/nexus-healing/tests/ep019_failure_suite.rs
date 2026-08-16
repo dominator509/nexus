@@ -1,7 +1,7 @@
 //! EP-019 M4 forced-failure and abuse suite (SPEC-018; ADR-026).
 //!
 //! `ep019_failure_*` tests exercise REAL failure mechanisms through the
-//! REAL contract machinery — no mocks of the proven component:
+//! REAL contract machinery -- no mocks of the proven component:
 //! malformed vocabulary input, duplicate/conflicting idempotency,
 //! denied approval digest binding, terminal-state resurrection
 //! rejection, unavailable incident memory records, verification

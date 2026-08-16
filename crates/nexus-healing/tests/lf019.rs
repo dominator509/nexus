@@ -3,7 +3,7 @@
 //!
 //! Trigger a controlled defect, detect it through a real process
 //! failure, reproduce it, patch it, review, request approval, canary,
-//! verify, and close — with a deterministic rollback proof.
+//! verify, and close -- with a deterministic rollback proof.
 //!
 //! The REAL EP-019 composition is exercised end to end:
 //!   - REAL controlled failing fixture (tests/healing/fixtures/
@@ -47,7 +47,6 @@ use nexus_healing::{
 use std::path::PathBuf;
 use std::process::Command;
 
-const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/healing/fixtures");
 const WORKER: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../tests/healing/fixtures/failing-worker.sh"
@@ -393,6 +392,3 @@ fn lf019_self_healing_fix_loop_full_chain() {
     let _ = std::fs::remove_dir_all(&workdir);
     assert!(!workdir.exists());
 }
-
-// Keep sha2 available for the direct digest above.
-use sha2::Digest as _;

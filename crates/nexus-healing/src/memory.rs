@@ -4,7 +4,7 @@
 //! canonical signature, correlation of repeated incidents, and evidence
 //! preservation. A successful remediation may become a candidate
 //! reusable skill ONLY through the EP-018 skill proposal/evaluation/
-//! signing/trust/install process — the self-healing system can never
+//! signing/trust/install process -- the self-healing system can never
 //! directly install its own generated skills.
 
 use crate::contract::Incident;

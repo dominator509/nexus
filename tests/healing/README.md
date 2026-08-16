@@ -4,16 +4,16 @@ Real integration suite for the self-healing engineering loop (SPEC-018;
 ADR-026). This directory exercises the REAL process boundary against a
 REAL controlled failing fixture and a REAL patch artifact:
 
-- `fixtures/failing-worker.sh` — CONTROLLED_TEST_FIXTURE (TESTING.md):
+- `fixtures/failing-worker.sh` -- CONTROLLED_TEST_FIXTURE (TESTING.md):
   a real deterministic executable with a real logic bug. It checks a
   hard-coded wrong filename, so it crashes (exit 1) even when the
   operator provides the correct marker path. This is the "controlled
   failing software" the EP-019 owner directive permits for generating
   incidents.
-- `fixtures/worker-fix.patch` — the REAL patch artifact. Applying it to
+- `fixtures/worker-fix.patch` -- the REAL patch artifact. Applying it to
   an isolated working copy fixes the filename check; the same
   reproduction that FAILED before the patch PASSES after it.
-- `test_ep019_integration_healing_loop.py` — the integration suite.
+- `test_ep019_integration_healing_loop.py` -- the integration suite.
 
 The strongest real chain proven here (directive section 23):
 

@@ -325,6 +325,16 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   on later-owned rollout (rejected: would deadlock the graph).
   Consequence: EP-019 closes with real owned proofs and explicit
   deferred certification owners. Reversal: new ADR.
+- 2026-08-16 | Committed-state verify fixes (M5): blueprint gate found
+  non-ASCII em-dashes in tests/healing/README.md, crates/nexus-healing/
+  src+test comments, runbooks/self-healing/README.md, LF-019.sh, and
+  the LF-019 evidence file; replaced with ASCII "--". Prettier gate
+  found runbooks/self-healing/README.md unformatted; formatted.
+  clippy found unused sha2::Digest import + unused FIXTURES const in
+  lf019.rs (left from the fmt reorder); removed. All gates re-run green.
+  Evidence: node-verify log sentinels, cargo fmt/clippy output.
+  Consequence: committed tree passes the full verify chain.
+  Reversal: none needed (format-only).
 
 # 14. Outcomes & Retrospective
 
