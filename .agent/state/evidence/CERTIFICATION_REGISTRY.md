@@ -415,3 +415,17 @@ production_certification: DEFERRED
 certification_owner: EP-043 (production readiness and ship); physical irrigation hardware DEFERRED to its exact owner
 blocking_for_ship: false
 evidence_reference: connectors/irrigation; EP-024 M4 gate (scripts/ep024-m4-tests.sh); COMPONENT_REGISTRY.yaml home-assistant row; EP-020 M3/M5 evidence
+
+## Component: nexus-vacuum (EP-024 M5 connector)
+component_id: nexus-vacuum
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (11 unit observability/transport + 10 ep024_unit_vacuum adapter tests + 10 ep024_failure_vacuum_probe tests + 1 ep024_failure_vacuum_journey_live; real adapter composed through the EP-020-certified Home Assistant boundary; real capability discovery from observed provider feature bits; real StartClean->CLEANING/Pause->PAUSED/ReturnHome->RETURNING->DOCKED transitions; Condvar-bounded in-flight idempotency; forced-failure matrix; M5 gate green)
+provider: Home Assistant ghcr.io/home-assistant/home-assistant:stable@sha256:56690a89c79a0de98035e1719f8324a92d5859c1192ff45adb0230ea81cb42a5 (REAL_EXTERNAL_DEPENDENCY, same immutable digest certified by EP-020; authentication reuses the EP-020-certified OAuth bootstrap - fresh token per run, never persisted)
+provider_certification: PROVIDER_CERTIFIED via EP-020 + M5 composition proof (this crate reuses nexus-home-assistant RestTransport::with_timeout; EP-020 owns HA auth/REST/transport semantics; EP-024 owns vacuum semantics only)
+fixture_certification: CONTROLLED_TEST_FIXTURE (template vacuum.nexus_vacuum_a + vacuum.nexus_vacuum_b real entities with real state transitions + real auto-dock automation; NOT physical robot vacuums)
+hardware_certification: NOT ASSERTED (physical robot vacuum DEFERRED to its exact owner; physical SLAM map NOT ASSERTED; Home Assistant state is never represented as physical robot motion)
+map_certification: NOT CERTIFIED (vacuum map provider path not exercised - no real map surface on the controlled fixture; MapReadback implementation IMPLEMENTED but fails closed Policy; no fabricated map data ever)
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship); physical vacuum hardware DEFERRED to its exact owner
+blocking_for_ship: false
+evidence_reference: connectors/vacuum; .agent/state/evidence/EP-024-M5-real-vacuum-provider-livefire.md; EP-024 M5 gate (scripts/ep024-m5-tests.sh); COMPONENT_REGISTRY.yaml home-assistant row; EP-020 M3/M5 evidence

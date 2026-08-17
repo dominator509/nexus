@@ -1,0 +1,141 @@
+# EP-024 M5 controlled vacuum test configuration (SPEC-011; M5).
+#
+# CONTROLLED_TEST_FIXTURE: this configuration drives a REAL pinned Home
+# Assistant instance (same immutable digest certified by EP-020) with
+# controlled vacuum entities:
+#
+#   - vacuum.nexus_vacuum_a  (template vacuum A, real state machine)
+#   - vacuum.nexus_vacuum_b  (template vacuum B, real state machine)
+#
+# Each template vacuum derives its REAL state from an input_select
+# helper and exposes real start / pause / return_to_base actions that
+# mutate that helper through real service calls. An automation performs
+# the real RETURNING -> DOCKED transition after a short delay, so
+# RETURNING is observable and distinct from DOCKED (the fixture never
+# jumps directly to docked on return).
+#
+# The Home Assistant vacuum domain publishes `supported_features` in
+# the real /api/states attributes; the adapter maps ONLY the
+# genuinely advertised features into the locked EP-024 taxonomy. No
+# map surface is configured: MapReadback is therefore not advertised
+# and fails closed (REAL map data only - never fabricated).
+#
+# These are real HA entities with real state transitions through real
+# service calls. They certify the vacuum provider transport/state
+# machinery and forced-failure behavior. They are explicitly NOT
+# physical robot vacuums; physical hardware certification is DEFERRED
+# to its exact owner (NOT ASSERTED).
+#
+# The Home Assistant server/API itself remains a REAL_EXTERNAL_DEPENDENCY.
+#
+# Generated state (.storage, logs, db, .HA_VERSION, ...) is disposable
+# per run and removed by fixture teardown; only this file is checked in.
+homeassistant:
+  name: Nexus Vacuum Test Home
+  latitude: 47.6062
+  longitude: -122.3321
+  unit_system: metric
+  time_zone: UTC
+
+# Vacuum state backing stores: real input_select helpers whose state is
+# the vacuum's canonical HA activity (cleaning/paused/returning/docked).
+input_select:
+  nexus_vac_a_state:
+    name: Nexus Vac A State
+    options:
+      - cleaning
+      - paused
+      - returning
+      - docked
+    initial: docked
+  nexus_vac_b_state:
+    name: Nexus Vac B State
+    options:
+      - cleaning
+      - paused
+      - returning
+      - docked
+    initial: docked
+
+# Real template vacuum entities (modern template integration layout:
+# template: -> vacuum:, as observed by the pinned HA build). The state
+# template renders the backing helper's real value; the configured
+# actions map to real HA vacuum services (vacuum.start,
+# vacuum.pause, vacuum.return_to_base) that the adapter calls through
+# the EP-020-certified REST boundary.
+template:
+  - vacuum:
+      - name: Nexus Vacuum A
+        unique_id: nexus_vacuum_a
+        state: "{{ states('input_select.nexus_vac_a_state') }}"
+        start:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.nexus_vac_a_state
+            data:
+              option: cleaning
+        pause:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.nexus_vac_a_state
+            data:
+              option: paused
+        return_to_base:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.nexus_vac_a_state
+            data:
+              option: returning
+      - name: Nexus Vacuum B
+        unique_id: nexus_vacuum_b
+        state: "{{ states('input_select.nexus_vac_b_state') }}"
+        start:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.nexus_vac_b_state
+            data:
+              option: cleaning
+        pause:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.nexus_vac_b_state
+            data:
+              option: paused
+        return_to_base:
+          - action: input_select.select_option
+            target:
+              entity_id: input_select.nexus_vac_b_state
+            data:
+              option: returning
+
+# Real RETURNING -> DOCKED transition: when a vacuum enters the
+# returning state, the automation waits briefly then docks it. This
+# makes RETURNING observable (distinct from DOCKED) through a real
+# provider-driven transition.
+automation:
+  - id: nexus_vac_a_auto_dock
+    alias: Nexus Vacuum A Auto Dock
+    trigger:
+      - platform: state
+        entity_id: input_select.nexus_vac_a_state
+        to: "returning"
+    action:
+      - delay: "00:00:05"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.nexus_vac_a_state
+        data:
+          option: docked
+  - id: nexus_vac_b_auto_dock
+    alias: Nexus Vacuum B Auto Dock
+    trigger:
+      - platform: state
+        entity_id: input_select.nexus_vac_b_state
+        to: "returning"
+    action:
+      - delay: "00:00:05"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.nexus_vac_b_state
+        data:
+          option: docked

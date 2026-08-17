@@ -1,0 +1,19 @@
+[package]
+name = "nexus-vacuum"
+version = "0.1.0"
+edition = "2021"
+description = "EP-024 M5 vacuum provider adapter: real vacuum semantics, live-fire, forced-failure proofs, observability, and ops diagnostic composed through the EP-020-certified Home Assistant boundary (SPEC-011)"
+license = "MIT"
+
+[dependencies]
+nexus-devices = { path = "../../crates/nexus-devices", version = "0.1.0" }
+nexus-home = { path = "../../crates/nexus-home", version = "0.1.0" }
+nexus-home-assistant = { path = "../home-assistant", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real HTTP transport is NOT implemented here: EP-020 owns the Home
+# Assistant REST transport (nexus-home-assistant RestTransport). This
+# crate composes through that certified surface. reqwest is a direct
+# dependency only for the live-stack tests' bare probes, reusing the
+# locked workspace dependency class from EP-011.
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }

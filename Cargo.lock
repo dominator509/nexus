@@ -1644,6 +1644,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-vacuum"
+version = "0.1.0"
+dependencies = [
+ "nexus-devices",
+ "nexus-home",
+ "nexus-home-assistant",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-vision"
 version = "0.1.0"
 dependencies = [

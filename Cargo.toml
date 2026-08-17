@@ -41,6 +41,7 @@ members = [
     "connectors/media",
     "connectors/appliances",
     "connectors/irrigation",
+    "connectors/vacuum",
     "tests/audio",
     "tests/vision",
     "tests/devices",

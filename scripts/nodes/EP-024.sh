@@ -14,7 +14,7 @@ case "$mode" in
   M4) python3 scripts/node-artifact-check.py EP-024 M4; sh scripts/ep024-m4-tests.sh ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-024 M5
-      cargo test --locked -p nexus-devices
+      sh scripts/ep024-m5-tests.sh
       :
       ;;
   *) echo "EP-024: FAIL - unknown mode $mode" >&2; exit 2;;

@@ -67,6 +67,7 @@ ALLOW_DOUBLE_BRACE = {
     "infra/home-assistant/config/configuration.yaml",
     "connectors/appliances/fixture/config/configuration.yaml",
     "connectors/irrigation/fixture/config/configuration.yaml",
+    "connectors/vacuum/fixture/config/configuration.yaml",
 }
 
 for path in ROOT.rglob("*"):
