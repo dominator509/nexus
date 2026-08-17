@@ -402,3 +402,16 @@ production_certification: DEFERRED
 certification_owner: EP-043 (production readiness and ship); physical hardware DEFERRED to its exact owner
 blocking_for_ship: false
 evidence_reference: connectors/appliances; .agent/state/evidence/EP-024-M3; COMPONENT_REGISTRY.yaml home-assistant row; EP-020 M3/M5 evidence; EP-024 M3 gate
+
+## Component: nexus-irrigation (EP-024 M4 connector)
+component_id: nexus-irrigation
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (9 unit observability/transport + 10 ep024_unit_irrigation adapter tests + 10 ep024_failure_probe tests + 1 ep024_failure_journey_live; real adapter composed through the EP-020-certified Home Assistant boundary; deterministic Condvar-bounded in-flight idempotency concurrency proof; real forced-failure mechanisms: silent peer TIMEOUT, refused endpoint UNAVAILABLE distinct, bad credential, malformed response, unknown zone NotFound, unknown state never safe/closed, capability denial before provider mutation, redaction canary, offline UNAVAILABLE, bounded recovery, restore fresh-readback only; M4 gate green)
+provider: Home Assistant ghcr.io/home-assistant/home-assistant:stable@sha256:56690a89c79a0de98035e1719f8324a92d5859c1192ff45adb0230ea81cb42a5 (REAL_EXTERNAL_DEPENDENCY, same immutable digest certified by EP-020; authentication reuses the EP-020-certified OAuth bootstrap - fresh token per run, never persisted)
+provider_certification: PROVIDER_CERTIFIED via EP-020 + M4 composition proof (this crate reuses nexus-home-assistant RestTransport::with_timeout; EP-020 owns HA auth/REST/transport semantics; EP-024 owns irrigation semantics only)
+fixture_certification: CONTROLLED_TEST_FIXTURE (input_boolean.nexus_zone_a + nexus_zone_b + template sensor.nexus_zone_unknown real entities with real state transitions; NOT physical irrigation hardware)
+hardware_certification: NOT ASSERTED (physical irrigation controller/valve DEFERRED to its exact owner; actual water flow NOT ASSERTED; logical valve state is never called physical-flow certification)
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship); physical irrigation hardware DEFERRED to its exact owner
+blocking_for_ship: false
+evidence_reference: connectors/irrigation; EP-024 M4 gate (scripts/ep024-m4-tests.sh); COMPONENT_REGISTRY.yaml home-assistant row; EP-020 M3/M5 evidence

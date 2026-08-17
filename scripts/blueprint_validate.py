@@ -66,6 +66,7 @@ CODE_EXTS = {".py", ".rs", ".ts", ".js"}
 ALLOW_DOUBLE_BRACE = {
     "infra/home-assistant/config/configuration.yaml",
     "connectors/appliances/fixture/config/configuration.yaml",
+    "connectors/irrigation/fixture/config/configuration.yaml",
 }
 
 for path in ROOT.rglob("*"):

@@ -1,0 +1,54 @@
+# EP-024 M4 controlled irrigation test configuration (SPEC-011; M4).
+#
+# CONTROLLED_TEST_FIXTURE: drives a REAL pinned Home Assistant
+# instance (same immutable digest certified by EP-020) with controlled
+# irrigation zone entities:
+#
+#   - input_boolean.nexus_zone_a  (irrigation zone A, real on/off)
+#   - input_boolean.nexus_zone_b  (irrigation zone B, real on/off)
+#   - sensor.nexus_zone_unknown (template entity whose real
+#     state is UNKNOWN - proves unknown states are never mapped to a
+#     safe/closed state)
+#
+# These are real HA entities with real state transitions through real
+# service calls (input_boolean.turn_on/turn_off). They certify the
+# irrigation provider transport/state machinery and forced-failure
+# behavior. They are explicitly NOT physical irrigation hardware;
+# hardware certification is DEFERRED to its exact owner (NOT ASSERTED).
+#
+# The Home Assistant server/API itself remains a REAL_EXTERNAL_DEPENDENCY.
+#
+# Generated state (.storage, logs, db, .HA_VERSION, ...) is disposable
+# per run and removed by fixture teardown; only this file is checked in.
+homeassistant:
+  name: Nexus Irrigation Test Home
+  latitude: 47.6062
+  longitude: -122.3321
+  unit_system: metric
+  time_zone: UTC
+
+# Irrigation zone fixtures: real input_boolean entities with real
+# on/off state transitions (input_boolean.turn_on / turn_off).
+# Zone A is the primary forced-failure target; zone B proves that a
+# failure on one zone never mutates or verifies another.
+input_boolean:
+  nexus_zone_a:
+    name: Nexus Zone A
+    initial: off
+  nexus_zone_b:
+    name: Nexus Zone B
+    initial: off
+
+# Unknown-state fixture: a real template sensor whose state template
+# references a NON-EXISTENT entity, so Home Assistant renders the real
+# state "unknown" (a template SENSOR renders the literal template
+# string; the pinned build's template binary_sensor instead normalizes
+# non-"on" renders to "off", so a sensor is the honest unknown-state
+# fixture). This entity is a controlled fixture proving that an unknown
+# provider state is never mapped to a safe/closed state (OFF), and
+# that verification cannot succeed against it.
+template:
+  - sensor:
+      - name: Nexus Zone Unknown
+        unique_id: nexus_zone_unknown
+        state: "{{ states('sensor.nexus_does_not_exist') }}"

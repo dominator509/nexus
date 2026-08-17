@@ -6,12 +6,14 @@ scripts/nodes/EP-024.sh
 scripts/ep024-m1-tests.sh
 scripts/ep024-m2-tests.sh
 scripts/ep024-m3-tests.sh
+scripts/ep024-m4-tests.sh
 scripts/blueprint_validate.py
 Cargo.toml
 Cargo.lock
 crates/nexus-devices/
 connectors/media/
 connectors/appliances/
+connectors/home-assistant/src/transport.rs
 connectors/irrigation/
 connectors/vacuum/
 connectors/robotics/

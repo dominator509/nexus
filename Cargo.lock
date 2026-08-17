@@ -1373,6 +1373,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-irrigation"
+version = "0.1.0"
+dependencies = [
+ "nexus-devices",
+ "nexus-home",
+ "nexus-home-assistant",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-keycloak"
 version = "0.1.0"
 dependencies = [

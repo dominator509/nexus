@@ -90,12 +90,45 @@ pub struct RestTransport {
     client: reqwest::blocking::Client,
 }
 
+/// Map a reqwest transport error to the canonical HomeError code.
+/// Timeout errors (silent peer, stalled connection) are TIMEOUT;
+/// every other transport failure (refused, reset, DNS, TLS) is
+/// UNAVAILABLE. A silent HTTP peer must never hang a caller and must
+/// never be conflated with a refused endpoint.
+fn map_send_error(e: reqwest::Error, message: String, resource: Option<Box<str>>) -> HomeError {
+    if e.is_timeout() {
+        HomeError::new(HomeErrorCode::Timeout, message, None, resource)
+    } else {
+        HomeError::new(HomeErrorCode::Unavailable, message, None, resource)
+    }
+}
+
 impl RestTransport {
     pub fn new(base_url: impl Into<String>, token: impl Into<String>) -> Self {
         Self {
             base_url: base_url.into(),
             token: token.into(),
             client: reqwest::blocking::Client::new(),
+        }
+    }
+
+    /// Construct with a bounded per-request timeout. Used by
+    /// consequential physical-control connectors (irrigation) so a
+    /// stalled provider can never hang a command indefinitely; the
+    /// ambiguity is preserved as TIMEOUT/UNKNOWN rather than a
+    /// fabricated outcome.
+    pub fn with_timeout(
+        base_url: impl Into<String>,
+        token: impl Into<String>,
+        timeout: std::time::Duration,
+    ) -> Self {
+        Self {
+            base_url: base_url.into(),
+            token: token.into(),
+            client: reqwest::blocking::Client::builder()
+                .timeout(timeout)
+                .build()
+                .expect("reqwest client with timeout"),
         }
     }
 
@@ -110,12 +143,8 @@ impl RestTransport {
             .bearer_auth(&self.token)
             .send()
             .map_err(|e| {
-                HomeError::new(
-                    HomeErrorCode::Unavailable,
-                    format!("HA request failed: {e}"),
-                    None,
-                    Some(Box::from(path)),
-                )
+                let message = format!("HA request failed: {e}");
+                map_send_error(e, message, Some(Box::from(path)))
             })?;
         let status = resp.status();
         if !status.is_success() {
@@ -146,12 +175,8 @@ impl HaTransport for RestTransport {
             .bearer_auth(&self.token)
             .send()
             .map_err(|e| {
-                HomeError::new(
-                    HomeErrorCode::Unavailable,
-                    format!("HA auth check failed: {e}"),
-                    None,
-                    None,
-                )
+                let message = format!("HA auth check failed: {e}");
+                map_send_error(e, message, None)
             })?;
         Ok(resp.status().is_success())
     }
@@ -207,12 +232,8 @@ impl HaTransport for RestTransport {
             .json(data)
             .send()
             .map_err(|e| {
-                HomeError::new(
-                    HomeErrorCode::Unavailable,
-                    format!("HA service call failed: {e}"),
-                    None,
-                    Some(Box::from(path.clone())),
-                )
+                let message = format!("HA service call failed: {e}");
+                map_send_error(e, message, Some(Box::from(path.clone())))
             })?;
         let status = resp.status();
         if !status.is_success() {
@@ -239,12 +260,8 @@ impl HaTransport for RestTransport {
             .json(config)
             .send()
             .map_err(|e| {
-                HomeError::new(
-                    HomeErrorCode::Unavailable,
-                    format!("HA automation config request failed: {e}"),
-                    None,
-                    Some(Box::from(path.clone())),
-                )
+                let message = format!("HA automation config request failed: {e}");
+                map_send_error(e, message, Some(Box::from(path.clone())))
             })?;
         let status = resp.status();
         if !status.is_success() {
