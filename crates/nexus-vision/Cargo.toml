@@ -1,0 +1,11 @@
+[package]
+name = "nexus-vision"
+version = "0.1.0"
+edition = "2021"
+description = "EP-023 camera/vision contract crate: CameraProvider, FrigateProvider, RokuHomeProvider, StreamSource, CameraEvent, VisitorIdentity, TwoWayAudioCapability, CameraFallbackPlan (SPEC-021)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

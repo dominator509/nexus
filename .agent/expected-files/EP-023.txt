@@ -3,6 +3,9 @@
 .agent/expected-files/EP-023.txt
 .agent/node-contracts/EP-023.md
 scripts/nodes/EP-023.sh
+scripts/ep023-m1-tests.sh
+Cargo.toml
+Cargo.lock
 crates/nexus-vision/
 connectors/frigate/
 connectors/roku-home/

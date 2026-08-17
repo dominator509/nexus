@@ -1,0 +1,41 @@
+---
+# EP-023 camera hardware conformance profiles (SPEC-021).
+#
+# Every camera/device class has a conformance profile. `conformance`
+# states the profile is DEFINED; `certified` records physical-hardware
+# certification status. Physical certification is NOT ASSERTED for
+# every class in this node: no physical camera, NVR, or Roku device
+# was exercised (Reality rule). The fallback per node contract: Roku
+# official web or Google Home bridge for available operations and
+# microSD as independent recording, without claiming network retrieval.
+classes:
+  FRIGATE_NVR:
+    role: NVR_OBJECT_SOURCE
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Frigate local NVR (SPEC-021 behavior 1)"
+  RTSP_CAMERA:
+    role: CAMERA
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Generic RTSP camera; no unverified RTSP claim"
+  ONVIF_CAMERA:
+    role: CAMERA
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "ONVIF camera; no unverified ONVIF claim"
+  ROKU_DEVICE:
+    role: HOME_DISPLAY
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Roku player/TV; inventory advertises only proven capabilities (SPEC-021 behavior 2)"
+  GOOGLE_HOME_BRIDGE:
+    role: HOME_BRIDGE
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Google Home bridge fallback tier (SPEC-021 behavior 3)"
+  BROWSER_AUTOMATION:
+    role: FALLBACK
+    conformance: DEFINED
+    certified: NOT_ASSERTED
+    note: "Isolated, monitored, rate-limited browser automation; never a stable API without certification (SPEC-021 behavior 4)"

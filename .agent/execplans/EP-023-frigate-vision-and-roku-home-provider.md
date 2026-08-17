@@ -273,19 +273,83 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary (2026-08-17)
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
+M1 evidence: `EP-023 M1: ok` (13 ep023_unit tests via
+scripts/ep023-m1-tests.sh vacuity guard): crates/nexus-vision
+contract crate (SPEC-021 canonical terms): CameraId typed bounded
+identity; CameraCapability vocabulary lock (OBJECT_DETECTION /
+RECORDING / LIVE_STREAM / TWO_WAY_AUDIO / VISITOR_EVENTS / ROKU_CONTROL,
+unknown rejected at parse, serde roundtrip); PrivacyClass;
+RokuCapabilityTier with fixed ladder order (LOCAL_VERIFIED <
+VENDOR_AUTHENTICATED < GOOGLE_HOME_BRIDGE < BROWSER_AUTOMATION <
+UNAVAILABLE, SPEC-021 behavior 3); StreamRef with VerificationStatus
+(no unverified RTSP/ONVIF claim - verified() requires real evidence
+ref, acceptance obligation 3); CameraEvent (camera/time/object/zones/
+confidence/media_refs/retention/privacy_class, SPEC-021 behavior 5)
++ ReviewItem + VisitorEvent with validation; VisitorIdentity
+Known/Unknown with advisory_only enforced at construction (behavior 6,
+never unlocks/disarms); TwoWayAudioCapability certified only when
+verified speaker path + approval + disclosure + echo handling all
+hold (behavior 7, acceptance obligation 4); CameraFallbackPlan
+deterministic ladder selection + BrowserAutomationPolicy
+(isolated/monitored/rate-limited/never stable API, behavior 4);
+CameraProvider/FrigateProvider/RokuHomeProvider ports fail closed;
+VisionError/VisionErrorCode SPEC-006 codes + redacted surface.
+hardware/cameras/profiles.yaml: 6 camera classes (FRIGATE_NVR,
+RTSP_CAMERA, ONVIF_CAMERA, ROKU_DEVICE, GOOGLE_HOME_BRIDGE,
+BROWSER_AUTOMATION) all conformance DEFINED / physical certified
+NOT_ASSERTED. clippy -D warnings clean; workspace check green; side
+gates ok (scope audit EP-023: ok, reality gate: ok, security check:
+ok, license gate: ok, blueprint validation: ok, format check: ok,
+dependency audit: ok). M1 gate vacuity fixed (pre-created gate was
+artifact-only, EP-001 masking class).
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-17: The pre-created M1 gate in scripts/nodes/EP-023.sh was
+  artifact-only (node-artifact-check.py plus nothing) - EP-001
+  gate-masking class. Replaced with scripts/ep023-m1-tests.sh which
+  runs the real `cargo test -p nexus-vision ep023_unit` suite and
+  fails closed when no test ran (vacuity guard), same correction
+  pattern as EP-018/EP-019/EP-020/EP-021/EP-022 M1 gates.
+- 2026-08-17: Structs carrying f32 confidence cannot derive Eq; the
+  contract types use PartialEq + Serialize only.
+- 2026-08-17: The scope audit fence for EP-023 did not authorize
+  Cargo.toml/Cargo.lock; adding the workspace member required the
+  fence to list them (EP-022 precedent).
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-17 | Contract-first vision crate with fail-closed ports |
+  crates/nexus-vision owns the provider-neutral vision contracts;
+  unbound CameraProvider/FrigateProvider/RokuHomeProvider fail closed
+  and never fabricate cameras, events, or streams. Alternatives:
+  provider code in the contract crate (rejected: EP-022/EP-020
+  pattern separates contracts from connectors). Security: fail-closed
+  ports, redacted errors.
+- 2026-08-17 | No unverified RTSP/ONVIF claim | StreamRef::verified()
+  requires a real evidence reference; unverified streams stay
+  UNVERIFIED (acceptance obligation 3, SPEC-021 behavior 3).
+  Evidence: ep023_unit_stream_ref_unverified_no_claim.
+- 2026-08-17 | Known-person matching is advisory-only enforced at
+  construction | KnownVisitor.advisory_only is always true; identity
+  can never unlock or disarm by itself (SPEC-021 behavior 6).
+  Evidence: ep023_unit_known_visitor_advisory_only +
+  ep023_unit_visitor_identity_never_authorizes.
+- 2026-08-17 | Two-way audio certified only after all gates | Verified
+  speaker path, approval, disclosure, and echo handling are each
+  mandatory; certify() fails closed otherwise (behavior 7,
+  acceptance obligation 4). Evidence:
+  ep023_unit_two_way_audio_never_without_certification.
 
 # 14. Outcomes & Retrospective
 
