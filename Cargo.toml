@@ -39,6 +39,7 @@ members = [
     "connectors/roku-home",
     "connectors/robotics",
     "connectors/media",
+    "connectors/appliances",
     "tests/audio",
     "tests/vision",
     "tests/devices",

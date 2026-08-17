@@ -1088,6 +1088,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-appliances"
+version = "0.1.0"
+dependencies = [
+ "nexus-devices",
+ "nexus-home",
+ "nexus-home-assistant",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-assist-satellite"
 version = "0.1.0"
 dependencies = [

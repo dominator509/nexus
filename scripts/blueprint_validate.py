@@ -58,12 +58,14 @@ IGNORE_DIRS = {
 CODE_EXTS = {".py", ".rs", ".ts", ".js"}
 
 # Files that legitimately contain Jinja2 double-braces and are NOT
-# unresolved placeholders. The HA fixture config is a REAL template
-# light backed by an input_boolean; Home Assistant REQUIRES Jinja2
-# `{{ }}` syntax for template entities (EP-020 M3). Narrow allowlist,
-# not a broad gate weakening - every other non-code file still fails.
+# unresolved placeholders. The HA fixture configs are REAL template
+# entities (light / fan) backed by input_boolean/input_number; Home
+# Assistant REQUIRES Jinja2 `{{ }}` syntax for template entities
+# (EP-020 M3; EP-024 M3). Narrow allowlist, not a broad gate
+# weakening - every other non-code file still fails.
 ALLOW_DOUBLE_BRACE = {
     "infra/home-assistant/config/configuration.yaml",
+    "connectors/appliances/fixture/config/configuration.yaml",
 }
 
 for path in ROOT.rglob("*"):

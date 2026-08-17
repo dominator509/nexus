@@ -1,0 +1,18 @@
+# Home Assistant regenerates these inside the mounted config dir on
+# every boot. They are disposable per-run state for the EP-024 M3
+# fixture container; only configuration.yaml is checked in.
+.storage/
+home-assistant.log
+home-assistant.log.*
+home-assistant_v2.db
+home-assistant_v2.db-*
+.HA_VERSION
+.ha_run.lock
+automations.yaml
+scenes.yaml
+scripts.yaml
+secrets.yaml
+blueprints/
+deps/
+tts/
+*.zip

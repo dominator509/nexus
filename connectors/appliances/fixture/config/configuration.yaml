@@ -1,0 +1,81 @@
+# EP-024 M3 controlled appliance test configuration (SPEC-011; M3).
+#
+# CONTROLLED_TEST_FIXTURE: this configuration drives a REAL pinned Home
+# Assistant instance (same immutable digest certified by EP-020) with
+# controlled appliance entities:
+#
+#   - input_boolean.nexus_app_switch  (binary switch fixture, real on/off)
+#   - fan.nexus_app_fan               (variable fan fixture, real
+#     percentage state backed by input_number.nexus_app_fan_speed)
+#
+# These are real HA entities with real state transitions through real
+# service calls (input_boolean.turn_on/turn_off, fan.turn_on/
+# fan.turn_off/fan.set_percentage). They certify appliance provider
+# transport/state machinery. They are explicitly NOT physical
+# appliance hardware; hardware certification is DEFERRED to its exact
+# owner (NOT ASSERTED).
+#
+# The Home Assistant server/API itself remains a REAL_EXTERNAL_DEPENDENCY.
+#
+# Generated state (.storage, logs, db, .HA_VERSION, ...) is disposable
+# per run and removed by fixture teardown; only this file is checked in.
+homeassistant:
+  name: Nexus Appliance Test Home
+  latitude: 47.6062
+  longitude: -122.3321
+  unit_system: metric
+  time_zone: UTC
+
+# Binary switch fixture: a real input_boolean entity with real on/off
+# state transitions (input_boolean.turn_on / input_boolean.turn_off).
+input_boolean:
+  nexus_app_switch:
+    name: Nexus Appliance Switch
+    initial: off
+
+# Fan percentage backing store: the template fan derives its real
+# percentage attribute from this input_number through real service
+# calls (input_number.set_value).
+input_number:
+  nexus_app_fan_speed:
+    name: Nexus Appliance Fan Speed
+    initial: 0
+    min: 0
+    max: 100
+    step: 1
+
+# Variable fan fixture: a real template fan entity (modern template
+# integration layout: template: -> fan:, as observed by the pinned
+# HA build; the legacy fan: platform: template key is rejected by this
+# build). fan.turn_on with a percentage, fan.turn_off, and
+# fan.set_percentage change real entity state observable through the
+# REST API (state on/off, attributes percentage). The adapter/tests
+# bind to the OBSERVED provider shapes; no state is invented.
+template:
+  - fan:
+      - name: Nexus App Fan
+        unique_id: nexus_app_fan
+        percentage: "{{ states('input_number.nexus_app_fan_speed') | int(0) }}"
+        turn_on:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.nexus_app_fan_speed
+            data:
+              # Observed provider behavior: fan.turn_on without a
+              # percentage passes percentage=None into this action, and
+              # Jinja `default(100)` does NOT apply to None (only to
+              # undefined) - input_number.set_value(None) is rejected
+              # with 400. Handle None explicitly.
+              value: "{{ percentage if percentage is not none else 100 }}"
+        turn_off:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.nexus_app_fan_speed
+            data:
+              value: 0
+        set_percentage:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.nexus_app_fan_speed
+            data:
+              value: "{{ percentage }}"

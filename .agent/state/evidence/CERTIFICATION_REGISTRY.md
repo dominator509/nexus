@@ -389,3 +389,16 @@ production_certification: DEFERRED
 certification_owner: EP-043 (production readiness and ship)
 blocking_for_ship: false
 evidence_reference: tests/vision; .agent/state/evidence/EP-023-M5-LF-008-visitor-response.json
+
+## Component: nexus-appliances (EP-024 M3 connector)
+component_id: nexus-appliances
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (23 ep024_unit appliance tests + 5 ep024_integration_appliances_probe tests + 1 ep024_integration_appliances_journey_live; real adapter composed through the EP-020-certified Home Assistant boundary; deterministic unit rules with fixture transport; M3 gate green)
+provider: Home Assistant ghcr.io/home-assistant/home-assistant:stable@sha256:56690a89c79a0de98035e1719f8324a92d5859c1192ff45adb0230ea81cb42a5 (REAL_EXTERNAL_DEPENDENCY, same immutable digest certified by EP-020; authentication reuses the EP-020-certified OAuth bootstrap - fresh token per run, never persisted)
+provider_certification: PROVIDER_CERTIFIED via EP-020 + M3 composition proof (this crate reuses nexus-home-assistant RestTransport; EP-020 owns HA auth/REST/transport semantics; EP-024 owns appliance semantics only)
+fixture_certification: CONTROLLED_TEST_FIXTURE (input_boolean.nexus_app_switch + fan.nexus_app_fan real entities with real state transitions; NOT physical hardware)
+hardware_certification: NOT ASSERTED (physical appliance hardware DEFERRED; irrigation/vacuum/robot hardware NOT ASSERTED; fixtures never become hardware certification)
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship); physical hardware DEFERRED to its exact owner
+blocking_for_ship: false
+evidence_reference: connectors/appliances; .agent/state/evidence/EP-024-M3; COMPONENT_REGISTRY.yaml home-assistant row; EP-020 M3/M5 evidence; EP-024 M3 gate
