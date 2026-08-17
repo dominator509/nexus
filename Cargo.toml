@@ -43,6 +43,7 @@ members = [
     "connectors/appliances",
     "connectors/irrigation",
     "connectors/vacuum",
+    "connectors/asterisk",
     "tests/audio",
     "tests/vision",
     "tests/devices",

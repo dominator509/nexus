@@ -272,7 +272,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary (2026-08-17; gate `EP-025 M1: ok`)
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants (2026-08-17; gate `EP-025 M2: ok`)
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -288,6 +288,10 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 - 2026-08-17 | Asterisk 22.10.1 already pinned in VERSIONS.lock (class telephony, policy isolated-sidecar-lts) matching SPEC-014 "Asterisk 22 LTS". Preserved. Container image `andrius/asterisk:22.10.1_debian-trixie-amd64` digest `sha256:7a22d773fe0f81adb715cd3e8df57c602726f8ef9d39deead6360e051483e280` selected (official `asterisk/asterisk` Docker Hub/GHCR repos do not exist; andrius/asterisk is the maintained image publishing the exact pinned version; `asterisk -V` inside container verified `Asterisk 22.10.1`). Evidence: docker pull + run output. Alternatives: source build via upstream Dockerfile (no official repo exists); rejected for reproducibility risk. Security: GPL-2.0, isolated-sidecar per COMPONENT_REGISTRY. License: GPL-2.0 behind isolated process boundary per LICENSE_POLICY.md. Compatibility: res_pjsip/chan_pjsip/res_ari*/res_http_websocket/res_rtp_asterisk modules confirmed present (47 res_pjsip modules).
 - 2026-08-17 | M1 canonical call state ladder locks the permanent hierarchy as distinct ordered rungs REQUESTED < INVITE_SENT < RINGING < ANSWERED < BRIDGED < MEDIA_ESTABLISHED < TWO_WAY_AUDIO_VERIFIED with terminal HUNG_UP/BUSY/NO_ANSWER/REJECTED/UNAVAILABLE/AUTH_FAILED/NETWORK_ERROR/FAILED. A 200/ANSWER proves signaling only; TWO_WAY_AUDIO_VERIFIED requires decoded bidirectional audio evidence. Evidence: vocabulary.rs + ep025_unit_call_state_ladder_order test. Alternatives: a coarser state model; rejected because SIP signaling != media certification must be encoded in the type.
 - 2026-08-17 | CallVerifier exact-target: only the exact session + expected state verifies; unrelated session change = UnrelatedChange; unobservable = Unknown; terminal readback never verifies an active expectation. Evidence: verifier.rs ep025_unit_verifier_* tests. Security: prevents cross-call verification confusion (directive 22).
+- 2026-08-17 | M2 adapter state mapping binds to DOCUMENTED ARI channel states only: Up (Answered; Bridged when a real bridge id is present), Ring/Ringing, Dialing, Busy, Down; unrecognized state -> External fail-closed, never fabricated. ARI channel.state proves signaling only; MEDIA_ESTABLISHED/TWO_WAY_AUDIO_VERIFIED come only from the media bridge proof (M3/M5). Evidence: adapter.rs map_channel_state + ep025_unit_state_mapping_documented. Security: prevents signaling==media overclaim (directive 7/32).
+- 2026-08-17 | ARI transport: real Asterisk 22 REST surface (health/info, channels CRUD, answer, bridge, dtmf, moh, redirect, continue) over reqwest blocking with bounded timeout; HTTP 401/403->Authorization, 404->NotFound, 500/502/503->Unavailable, 409->Conflict, silent peer->Timeout, malformed JSON->External. reqwest 0.13 requires the `query` feature for .query() (recorded pitfall). A fake Asterisk HTTP server may support parser-failure tests only (directive 2).
+- 2026-08-17 | M2 in-flight idempotency: same target + same command in flight -> Conflict; completion releases the entry so retry is not Conflict (M2/M4 precedent preserved; crash-durable NOT ASSERTED process-local). Evidence: ep025_unit_idempotency_duplicate_conflict.
+- 2026-08-17 | asterisk-diag status/recover: bounded actions only - health probe + fresh readback; NEVER originates/answers/hangs up/plays/DTMF (directive V). Evidence: connectors/asterisk/src/bin/asterisk-diag.rs.
 
 # 14. Outcomes & Retrospective
 

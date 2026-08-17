@@ -1109,6 +1109,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-asterisk"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-telephony",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-audio"
 version = "0.1.0"
 dependencies = [
@@ -2176,6 +2187,7 @@ dependencies = [
  "pin-project-lite",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "sync_wrapper",
  "tokio",
  "tower",

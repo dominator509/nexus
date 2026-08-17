@@ -4,6 +4,8 @@
 .agent/node-contracts/EP-025.md
 scripts/nodes/EP-025.sh
 scripts/ep025-m1-tests.sh
+scripts/ep025-m2-tests.sh
 Cargo.toml
 Cargo.lock
 crates/nexus-telephony/
+connectors/asterisk/

@@ -1,0 +1,17 @@
+[package]
+name = "nexus-asterisk"
+version = "0.1.0"
+edition = "2021"
+description = "EP-025 M2/M3/M4 Asterisk adapter core: real ARI HTTP transport against the DOCUMENTED Asterisk 22 ARI surface, capability-gated call commands, exact-target verification, idempotency, observability, and ops diagnostic (SPEC-014)"
+license = "MIT"
+
+[dependencies]
+nexus-telephony = { path = "../../crates/nexus-telephony", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real ARI HTTP transport (Asterisk is the REAL_EXTERNAL_DEPENDENCY;
+# Nexus orchestrates Asterisk, it does not implement SIP/RTP itself).
+# reqwest is the locked workspace dependency class (EP-011/EP-024
+# precedent).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "query"] }
