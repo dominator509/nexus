@@ -1,0 +1,12 @@
+[package]
+name = "nexus-media"
+version = "0.1.0"
+edition = "2021"
+description = "EP-024 media connector: real MediaProvider adapter core behind a transport port (SPEC-011 behaviors 1-3, 5). Device discovery, deterministic capability mapping, availability truth table, command dispatch with idempotency, exact-target verification, redaction. No hardware is present, so unbound transports fail closed; capabilities are never fabricated."
+license = "MIT"
+
+[dependencies]
+nexus-devices = { path = "../../crates/nexus-devices", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

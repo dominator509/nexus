@@ -1,0 +1,13 @@
+[package]
+name = "nexus-devices-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-024 M2 cross-component E2E: compose nexus-devices contracts + nexus-media adapter core + nexus-robotics fail-closed host proving acceptance obligations (SPEC-011)"
+license = "MIT"
+
+[dependencies]
+nexus-devices = { path = "../../crates/nexus-devices", version = "0.1.0" }
+nexus-media = { path = "../../connectors/media", version = "0.1.0" }
+nexus-robotics = { path = "../../connectors/robotics", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde_json.workspace = true

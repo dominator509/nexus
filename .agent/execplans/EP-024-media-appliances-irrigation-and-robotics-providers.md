@@ -274,7 +274,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -283,11 +283,16 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - 2026-08-17 M1: Pre-created node script M1 gate was artifact-only (EP-001 masking class: `node-artifact-check.py` only, no test execution). Replaced with `scripts/ep024-m1-tests.sh` (real cargo suite + vacuity guards) per the EP-019..EP-023 precedent.
 - 2026-08-17 M1: SPEC-011 canonical capability taxonomy differs from intuition — the domain vocabulary uses `CapabilityClass::Query/Command/Workflow/Stream/Administrative`, `Risk::R0..R4`, `ApprovalClass::None/Policy/Human/StrongHuman/FourEyes`, `Idempotency::NotApplicable/Optional/Required`. The mapper uses exactly these locked values (verified from nexus-domain sources), never invented classes.
+- 2026-08-17 M2: Pre-created node script M2 gate ran the M1 contract suite (`cargo test -p nexus-devices ep024_unit`) — EP-001 masking class. Replaced with `scripts/ep024-m2-tests.sh` (nexus-media + nexus-devices-e2e real suites + vacuity guards).
+- 2026-08-17 M2: The media adapter uses `Mutex` interior mutability (not `RefCell`) so the in-flight idempotency guard is provable under a real concurrent duplicate; the adapter is thread-safe when the transport is `Send + Sync`.
+- 2026-08-17 M2: Exact-target verification fails closed with NotFound when the transport cannot observe the target — the adapter never invents a state or a Verified outcome for an unobservable device; availability truth table maps both Unavailable and NotFound to UNAVAILABLE (configured != reachable != streaming).
 
 # 13. Decision Log
 
 - 2026-08-17 M1: Create `crates/nexus-devices` as the provider-neutral contract crate for MediaProvider/ApplianceProvider/IrrigationProvider/VacuumProvider/RobotProvider/DeviceCapabilityMapper/DeviceCommandVerifier. Evidence: SPEC-011 behaviors 5-7, node contract. Alternatives: fold into nexus-home (rejected: nexus-home owns the Home Assistant provider surface; devices are provider-neutral across media/appliance/irrigation/vacuum/robot classes). Consequence: callers import one device surface; later milestones add connectors behind ports. Reversal: rename crate under ADR. Security: no new authority; robot activation gated by safety declaration. License: MIT. Compatibility: workspace member addition only.
 - 2026-08-17 M1: Create `connectors/robotics` as the fail-closed robotics connector with real safety-declaration gating but no fabricated hardware inventory (Reality rule; acceptance obligation 4). Evidence: SPEC-011 behavior 6, EP-023 roku-home precedent. Consequence: robot activation refuses until real hardware certification; the gating rule is proven now so a future bound robot cannot bypass it.
+- 2026-08-17 M2: Create `connectors/media` (nexus-media) as the real media adapter core behind a `MediaTransport` port. Evidence: SPEC-011 behaviors 1-3/5, EP-023 frigate-adapter precedent. Alternatives: implement a concrete Sonos/HA transport now (rejected: no certified hardware/transport on this host; the adapter core is real, the transport binds later behind the same port). Consequence: media commands are target-scoped, idempotent, and verified through exact-target readback; unbound transports fail closed. Reversal: rename crate under ADR. Security: capability-gated commands, redacted transport errors. License: MIT. Compatibility: workspace member addition only.
+- 2026-08-17 M2: Create `tests/devices` (nexus-devices-e2e) composing nexus-devices + nexus-media + nexus-robotics to prove all four acceptance obligations in one suite. Evidence: tests/vision precedent (EP-023). Consequence: cross-component composition is proven at M2; live-fire stays owned by later milestones.
 
 # 14. Outcomes & Retrospective
 

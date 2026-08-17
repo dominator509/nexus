@@ -1235,6 +1235,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-devices-e2e"
+version = "0.1.0"
+dependencies = [
+ "nexus-devices",
+ "nexus-domain",
+ "nexus-media",
+ "nexus-robotics",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-domain"
 version = "0.1.0"
 dependencies = [
@@ -1368,6 +1379,16 @@ dependencies = [
  "nexus-auth",
  "nexus-domain",
  "nexus-fabric",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-media"
+version = "0.1.0"
+dependencies = [
+ "nexus-devices",
+ "nexus-domain",
  "serde",
  "serde_json",
 ]
