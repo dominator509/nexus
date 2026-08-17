@@ -1633,6 +1633,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-telephony"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-trust"
 version = "0.1.0"
 dependencies = [

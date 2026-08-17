@@ -1,0 +1,11 @@
+[package]
+name = "nexus-telephony"
+version = "0.1.0"
+edition = "2021"
+description = "EP-025 provider-neutral telephony contracts: TelephonyProvider, AsteriskProvider, SipCarrierProvider, CallSession, MediaBridge, CallPolicy, DisclosurePolicy, TranscriptArtifact (SPEC-014)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

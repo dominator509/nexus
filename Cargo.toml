@@ -32,6 +32,7 @@ members = [
     "crates/nexus-healing",
     "crates/nexus-home",
     "crates/nexus-devices",
+    "crates/nexus-telephony",
     "connectors/home-assistant",
     "connectors/assist-satellite",
     "connectors/bluetooth-audio",
