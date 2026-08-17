@@ -136,13 +136,31 @@ components:
     rationale: "Primary home abstraction; pinned digest proven by EP-020 M3 real-container integration (light.nexus_test_light CONTROLLED_TEST_FIXTURE, hardware certification DEFERRED to its exact owner)"
   - id: frigate
     capability: vision.nvr
-    implementation: "Frigate"
+    implementation: "Frigate 0.17.2 (ghcr.io/blakeblackshear/frigate:0.17.2@sha256:d4351369984d4a9e2a49ac59736f6490856a7ea11f7790040746d21496967010)"
     license: "MIT"
     integration_mode: sidecar
     replacement_contract: "NVR/vision provider contract; camera streams stay on home edge"
     commercial_review: "MIT; commercial use permitted"
     status: camera-profile
-    rationale: "Primary local NVR and vision event source"
+    rationale: "Primary local NVR and vision event source; pinned digest proven by EP-023 M3 real-container integration (embedded go2rtc v1.9.10, real CPU detector /cpu_model.tflite, FFmpeg canary CONTROLLED_TEST_FIXTURE; physical camera certification DEFERRED to its exact owner)"
+  - id: go2rtc
+    capability: vision.restream
+    implementation: "go2rtc v1.9.10 (embedded in Frigate 0.17.2 image; Dockerfile pin https://github.com/AlexxIT/go2rtc/releases/download/v1.9.10)"
+    license: "MIT"
+    integration_mode: embedded
+    replacement_contract: "Stream normalization/restream contract; go2rtc owns media transport, Nexus adapter owns canonical mapping"
+    commercial_review: "MIT; commercial use permitted"
+    status: camera-profile
+    rationale: "Verified stream normalization (SPEC-021 behavior 1); producer evidence read from real /api/go2rtc/streams (live producers carry format_name/remote_addr/bytes_recv; dead sources are bare url entries - adapter maps truthfully)"
+  - id: mediamtx
+    capability: vision.fixture-rtsp
+    implementation: "mediamtx v1.20.0 (bluenviron/mediamtx binary sha256 25947caac403f37ec881c9be213af2cad67e344a6c7098905b0d31c17f40e336)"
+    license: "MIT"
+    integration_mode: controlled-fixture
+    replacement_contract: "Controlled RTSP camera-source transport for M3/M5 certification only; never production routing"
+    commercial_review: "MIT; commercial use permitted"
+    status: camera-profile
+    rationale: "CONTROLLED_TEST_FIXTURE transport: host FFmpeg canary publishes to mediamtx, Frigate go2rtc pulls it (EP-023 M3); not a certified physical camera"
   - id: whisper-cpp
     capability: voice.stt
     implementation: "whisper.cpp"

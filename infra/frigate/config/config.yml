@@ -1,0 +1,69 @@
+# EP-023 M3 Frigate configuration (SPEC-021; production-style).
+#
+# This is a REAL Frigate 0.17.2 instance configuration used to certify
+# the nexus-frigate adapter against real provider/media behavior. It is
+# an ephemeral, LAN-only test instance:
+#   - auth disabled (no user bootstrap; real authz is EP-007/EP-009
+#     owned and exercised in M4/M5 against this same adapter contract)
+#   - mqtt disabled (not part of the M3 media proof)
+#   - one camera `nexus_front` fed by the REAL controlled media source:
+#       host FFmpeg (canary stream) -> mediamtx RTSP server (host:8554)
+#       -> go2rtc restream (in-container 8554) -> Frigate ffmpeg detect
+#   - one camera `nexus_secure` with TEST-ONLY credentials in its input
+#     URL (never connects; used to prove redaction under real
+#     integration, directive Q). The credentials are recognizable
+#     test values, never real secrets.
+#
+# Frigate 0.17.2 bundles the default `cpu` detector model
+# (/cpu_model.tflite, ssdlite_mobiledet_coco) so detection is REAL.
+mqtt:
+  enabled: false
+
+logger:
+  default: info
+
+auth:
+  enabled: false
+
+detectors:
+  cpu:
+    type: cpu
+
+cameras:
+  nexus_front:
+    ffmpeg:
+      inputs:
+        # Frigate ffmpeg pulls the go2rtc restream inside the container.
+        - path: rtsp://127.0.0.1:8554/nexus_front
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: true
+    record:
+      enabled: true
+    snapshots:
+      enabled: true
+    live:
+      streams:
+        default: nexus_front
+
+  nexus_secure:
+    ffmpeg:
+      inputs:
+        # TEST-ONLY credentials; this camera never connects. Proves the
+        # adapter redacts rtsp://user:pass@ URLs under real integration.
+        - path: rtsp://m3user:m3secret@192.0.2.55:554/never
+          roles: []
+    detect:
+      enabled: false
+    record:
+      enabled: false
+    snapshots:
+      enabled: false
+    live:
+      streams: {}
+
+go2rtc:
+  streams:
+    nexus_front: rtsp://host.docker.internal:8554/nexus_front

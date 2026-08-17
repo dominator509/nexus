@@ -2,9 +2,12 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-023.txt
 .agent/node-contracts/EP-023.md
+.agent/milestone-files/EP-023-M3.txt
+COMPONENT_REGISTRY.yaml
 scripts/nodes/EP-023.sh
 scripts/ep023-m1-tests.sh
 scripts/ep023-m2-tests.sh
+scripts/ep023-m3-tests.sh
 Cargo.toml
 Cargo.lock
 crates/nexus-vision/

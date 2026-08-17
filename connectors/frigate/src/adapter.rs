@@ -90,18 +90,24 @@ impl<T: FrigateTransport> FrigateAdapter<T> {
             let Some(cam_cfg) = cfg.cameras.get(camera.as_str()) else {
                 return Ok(CameraAvailability::Unavailable);
             };
-            let stream_attached = t
-                .go2rtc_streams()?
+            let streams = t.go2rtc_streams()?;
+            let declared = streams.contains_key(camera.as_str());
+            let stream_attached = streams
                 .get(camera.as_str())
-                .map(|info| !info.producers.is_empty())
+                .map(|info| info.producers.iter().any(|p| p.is_live()))
                 .unwrap_or(false);
             let provider_healthy = t.health().is_ok();
-            Ok(map_availability(
-                true,
-                cam_cfg.enabled,
-                provider_healthy,
-                stream_attached,
-            ))
+            let mut state =
+                map_availability(true, cam_cfg.enabled, provider_healthy, stream_attached);
+            // A declared go2rtc stream whose producer is NOT live is
+            // DEGRADED, never AVAILABLE: the stream exists in
+            // configuration but is not transporting media (directive
+            // I/Q truth table; real go2rtc keeps the bare producer
+            // entry for dead sources).
+            if state == CameraAvailability::Available && declared && !stream_attached {
+                state = CameraAvailability::Degraded;
+            }
+            Ok(state)
         })
     }
 
@@ -240,7 +246,13 @@ impl<T: FrigateTransport> FrigateAdapter<T> {
         if cam_cfg.record.enabled {
             caps.push(CameraCapability::Recording);
         }
-        if !cam_cfg.live.streams.is_empty() || !cam_cfg.ffmpeg.inputs.is_empty() {
+        if !cam_cfg.live.streams.is_empty()
+            || cam_cfg
+                .ffmpeg
+                .inputs
+                .iter()
+                .any(|input| !input.roles.is_empty())
+        {
             caps.push(CameraCapability::LiveStream);
         }
         // Never TwoWayAudio from metadata (certification required).

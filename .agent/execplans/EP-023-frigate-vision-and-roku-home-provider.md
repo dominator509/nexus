@@ -157,7 +157,7 @@ GOAL: Connect EP-023 to its real selected dependencies and prove contract behavi
 
 READ: Re-read this milestone, Section 3 Non-goals, `.agent/milestone-files/EP-023-M3.txt`, `.agent/node-contracts/EP-023.md`, the owning accepted specs, and `sh scripts/ledger.sh tail 15`.
 
-CHANGE: `connectors/roku-home/`
+CHANGE: `infra/frigate/` (owner directive supersedes the pre-wired `connectors/roku-home/` line: M3 proves the REAL Frigate/go2rtc media chain; Roku stays a layered provider ladder with no hardware)
 
 CONTENT:
 
@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary (2026-08-17)
 - [x] M2: Core behavior and deterministic invariants (2026-08-17)
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration (2026-08-17)
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -343,6 +343,50 @@ check: ok, license gate: ok, blueprint validation: ok, format check:
 ok, dependency audit: ok). M2 gate vacuity fixed (pre-created gate ran
 the M1 contract suite ep023_unit, EP-001 masking class).
 
+M3 evidence: `EP-023 M3: ok` (scripts/ep023-m3-tests.sh, real
+provider/media chain; observed run /tmp/ep023-m3-gate-run5.log and
+evidence /tmp/ep023-m3-evidence.json; node gate re-run also `EP-023 M3:
+ok`). Pinned providers verified from real output: Frigate 0.17.2 at
+sha256:d4351369984d4a9e2a49ac59736f6490856a7ea11f7790040746d21496967010
+(API version `0.17.2-3d4dd3a`), embedded go2rtc v1.9.10 (df95ce3),
+mediamtx v1.20.0 binary sha256
+25947caac403f37ec881c9be213af2cad67e344a6c7098905b0d31c17f40e336
+(CONTROLLED_TEST_FIXTURE transport). Real chain: host FFmpeg canary
+(testsrc2 1280x360, unique NX3-<hex> token + localtime, fontsize 64)
+-> mediamtx RTSP 8554 -> Frigate go2rtc producer -> detect pipeline ->
+/api/nexus_front/latest.jpg readback. Phase A (source up): 9
+ep023_integration_frigate tests green (version prefix match, discovery
+stable identity, capabilities, availability STREAMING with live
+producer, snapshot JPEG, events API, restart identity, redaction;
+source-dead excluded via libtest --skip, canonical `--` boundary).
+Live-fire proof: snapshots real (51868/43557 bytes, FFD8FF, sha256
+differ over time), independent PIL decode 1920x1080, canary OCR ratio
+0.917 (tesseract crop+2x upscale+normalized fuzzy match), go2rtc
+producer evidence real (format_name rtsp, protocol rtsp+tcp, remote
+172.17.0.1:8554, H264 SDP, user_agent go2rtc/1.9.10, bytes_recv
+1401130), independent RTSP restream client decoded 8 real frames and
+canary visible at ratio 0.917, no m3secret in /api/config or
+/api/go2rtc/streams surfaces. Phase B (source killed): observed go2rtc
+lose live evidence at +24s (bounded poll, real transition) ->
+availability_source_dead green (never STREAMING, DEGRADED). Phase C
+(source restarted): producer reattached +12s -> availability_recovered
+green (STREAMING). Phase D (docker restart Frigate): producer reattached
++60s -> restart_same_identity green. Cross-phase accounting: 10/10
+required integration tests executed (directive D). Zero-orphan teardown
+verified. Sysctl hygiene (directive G): fs.inotify.max_user_watches
+found 200000 (already sufficient), recorded, no change needed, verified
+in teardown; mediamtx now runs from $WORK so auto.crt/auto.key certs
+stay out of the repository. Adapter production fix: go2rtc bare-url
+producer (dead source) is DEGRADED never STREAMING; live-producer
+evidence (format_name/bytes_recv) required for STREAMING; capability
+LiveStream requires live.streams non-empty OR an ffmpeg input with
+roles (Frigate normalizes roles [] -> [record,detect] and auto-populates
+live.streams, so nexus_secure truthfully reports Available + LiveStream
+but never ObjectDetection/Recording/TwoWayAudio). M2 regression green:
+50 unit tests (28 ep023_unit + 22 in-crate); clippy clean; format/lint/
+security/license/dependency/reality gates ok; scope audit EP-023: ok
+(after removing mediamtx-generated auto.crt/auto.key scratch).
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
@@ -374,6 +418,32 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - 2026-08-17: The scope audit fence for EP-023 did not authorize
   Cargo.toml/Cargo.lock; adding the workspace member required the
   fence to list them (EP-022 precedent).
+- 2026-08-17: Frigate 0.17.2 NORMALIZES the config surface: `roles: []`
+  becomes `["record","detect"]` and `live.streams` auto-populates for
+  cameras with ffmpeg inputs. The M3 integration test initially
+  asserted `caps.is_empty()` for the never-connecting nexus_secure
+  camera; the real /api/config proves LiveStream IS declared. The
+  truthful assertion: Available (configured + healthy + no go2rtc
+  stream declared), LiveStream declared, but never ObjectDetection /
+  Recording / TwoWayAudio (directive H/M).
+- 2026-08-17: go2rtc does NOT drop dead-source producer evidence
+  quickly: observed ~24-29s after killing the FFmpeg source on mediamtx
+  1.20.0 before format_name/bytes_recv disappear. The gate now polls
+  /api/go2rtc/streams (bounded 90s) for the REAL transition instead of
+  a fixed short sleep; restart reattachment is likewise polled (observed
+  +12s source restart, +60s Frigate container restart).
+- 2026-08-17: cargo libtest prints "running 1 test" (singular); the
+  vacuity regex `running [1-9][0-9]* tests` missed single-test phases.
+  Fixed to `running [1-9][0-9]* test`.
+- 2026-08-17: mediamtx generates auto.crt/auto.key in its CWD; running
+  it from the repository root left cert scratch files that the scope
+  audit flagged. The gate now launches mediamtx from $WORK (removed in
+  teardown).
+- 2026-08-17: tesseract confuses glyphs (S/5) on rendered video frames
+  even at fontsize 64; the live-fire proof now crop+2x-upscales the
+  canary region and fuzzy-matches (difflib >= 0.75; observed 0.917).
+  A wrong/absent canary scores far lower, so the canary readback still
+  defeats a canned camera-error image.
 
 # 13. Decision Log
 
@@ -425,6 +495,28 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   adapter uses RefCell (documented single-threaded) so port methods
   drive the real transport; no test-mode branches, no _mut
   duplicates. Evidence: adapter.rs with_transport.
+- 2026-08-17 | STREAMING requires live-producer evidence | go2rtc keeps
+  a bare {"url":...} producer entry for a DEAD source; only real
+  Connection evidence (format_name/protocol/remote_addr/bytes_recv)
+  permits STREAMING. A declared-but-dead stream is DEGRADED, never
+  AVAILABLE or STREAMING (directive I/Q). Evidence: M3 phase B
+  availability_source_dead_never_streaming (observed go2rtc lose live
+  evidence at +24s) + unit
+  ep023_unit_frigate_availability_dead_producer_never_streaming.
+- 2026-08-17 | LiveStream capability requires an actual live path |
+  live.streams non-empty OR an ffmpeg input with roles; an empty-roles
+  input does not grant LiveStream. Frigate normalizes roles [] ->
+  [record,detect] and auto-populates live.streams, so the
+  never-connecting nexus_secure truthfully reports Available + declared
+  LiveStream but never ObjectDetection/Recording/TwoWayAudio (directive
+  H/M). Evidence: M3 integration redaction test + real /api/config.
+- 2026-08-17 | M3 media chain certified with controlled fixture only |
+  Frigate 0.17.2 (pinned digest) + embedded go2rtc v1.9.10 +
+  mediamtx v1.20.0 (pinned sha256) proven REAL via FFmpeg canary
+  CONTROLLED_TEST_FIXTURE (media INPUT only; transport/processing real):
+  live producer evidence, independent RTSP decode, canary OCR. Physical
+  camera NOT_ASSERTED; Roku NOT_ASSERTED/DEFERRED (no hardware). No
+  certification upgraded from partial runs.
 
 # 14. Outcomes & Retrospective
 

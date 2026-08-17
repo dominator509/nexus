@@ -168,10 +168,41 @@ pub struct Go2RtcStreamInfo {
     pub producers: Vec<Go2RtcProducer>,
 }
 
-/// One go2rtc producer (source URL attached to the stream).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// One go2rtc producer attached to a stream.
+///
+/// The real go2rtc API distinguishes a LIVE producer from a
+/// configured-but-dead source: a live producer carries the full
+/// Connection payload (`format_name`, `protocol`, `remote_addr`,
+/// `bytes_recv`, ...), while a dead/not-connected source is emitted
+/// as a bare `{"url": ...}` entry. `is_live` reads that real
+/// evidence, so a configured stream URL can never be mistaken for a
+/// transported stream (directive I/Q: configured != streaming).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Go2RtcProducer {
     pub url: String,
+    /// Present only when the producer actually connected
+    /// (e.g. "rtsp", "mjpeg", "webrtc").
+    #[serde(default)]
+    pub format_name: Option<String>,
+    /// Transport protocol of the live connection (e.g. "tcp").
+    #[serde(default)]
+    pub protocol: Option<String>,
+    /// Remote address of the live connection (host:port).
+    #[serde(default)]
+    pub remote_addr: Option<String>,
+    /// Bytes received by the live producer (0 when never connected).
+    #[serde(default)]
+    pub bytes_recv: u64,
+}
+
+impl Go2RtcProducer {
+    /// Whether this producer has REAL connection evidence (it is
+    /// actually attached to a media source), as opposed to a bare
+    /// configured URL. A dead source keeps its producer entry in the
+    /// go2rtc API with only `url` set; that is NOT streaming.
+    pub fn is_live(&self) -> bool {
+        self.format_name.is_some() || self.remote_addr.is_some() || self.bytes_recv > 0
+    }
 }
 
 /// Transport port for the Frigate provider.

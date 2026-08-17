@@ -1,1 +1,1 @@
-connectors/roku-home/
+infra/frigate/

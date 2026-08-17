@@ -1,0 +1,15 @@
+# EP-023 M3 controlled RTSP server (mediamtx v1.20.0) configuration.
+#
+# This is the CONTROLLED camera-source transport: host FFmpeg publishes
+# the canary stream to this real RTSP server, and Frigate's embedded
+# go2rtc pulls from it. mediamtx is real transport software (MIT); the
+# media INPUT is the controlled FFmpeg fixture (CONTROLLED_TEST_FIXTURE).
+# No auth: the test instance is bound to 127.0.0.1 only.
+logLevel: info
+rtsp: true
+rtspAddress: :8554
+authMethod: internal
+# No users configured -> anonymous publish/read is allowed on
+# 127.0.0.1 only for this ephemeral fixture.
+paths:
+  all_others:

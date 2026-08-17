@@ -251,6 +251,11 @@ fn ep023_unit_frigate_availability_stream_attached_is_streaming_metadata() {
         Go2RtcStreamInfo {
             producers: vec![Go2RtcProducer {
                 url: "rtsp://127.0.0.1:8554/front".to_string(),
+                // Real go2rtc live-producer evidence (Connection payload).
+                format_name: Some("rtsp".to_string()),
+                protocol: Some("tcp".to_string()),
+                remote_addr: Some("127.0.0.1:8554".to_string()),
+                bytes_recv: 12345,
             }],
         },
     );
@@ -263,6 +268,36 @@ fn ep023_unit_frigate_availability_stream_attached_is_streaming_metadata() {
     let adapter = FrigateAdapter::new(mock);
     let state = adapter.availability(&camera("front")).expect("state");
     assert_eq!(state, CameraAvailability::Streaming);
+}
+
+#[test]
+fn ep023_unit_frigate_availability_dead_producer_never_streaming() {
+    // A configured go2rtc stream whose producer is a bare {"url": ...}
+    // entry (source not connected / dead) is NOT streaming. This is the
+    // real go2rtc API shape for a dead source (directive I/Q: configured
+    // != streaming; no stale STREAMING claim).
+    let mut cameras = BTreeMap::new();
+    cameras.insert("front".to_string(), front_cfg());
+    let mut streams = BTreeMap::new();
+    streams.insert(
+        "front".to_string(),
+        Go2RtcStreamInfo {
+            producers: vec![Go2RtcProducer {
+                url: "rtsp://127.0.0.1:8554/front".to_string(),
+                ..Default::default()
+            }],
+        },
+    );
+    let mock = MockTransport {
+        config: cfg_with(cameras),
+        health_ok: true,
+        streams,
+        ..Default::default()
+    };
+    let adapter = FrigateAdapter::new(mock);
+    let state = adapter.availability(&camera("front")).expect("state");
+    assert_eq!(state, CameraAvailability::Degraded);
+    assert!(!nexus_frigate::availability::is_operational(state));
 }
 
 #[test]
@@ -322,6 +357,10 @@ fn ep023_unit_frigate_stream_never_verified_without_evidence() {
         Go2RtcStreamInfo {
             producers: vec![Go2RtcProducer {
                 url: "rtsp://127.0.0.1:8554/front".to_string(),
+                format_name: Some("rtsp".to_string()),
+                protocol: Some("tcp".to_string()),
+                remote_addr: Some("127.0.0.1:8554".to_string()),
+                bytes_recv: 999,
             }],
         },
     );
