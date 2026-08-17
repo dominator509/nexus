@@ -1,0 +1,12 @@
+[package]
+name = "nexus-bluetooth-audio"
+version = "0.1.0"
+edition = "2021"
+description = "EP-022 Bluetooth audio connector: real D-Bus/BlueZ transport probing, typed fail-closed BluetoothEndpointProvider behavior (SPEC-012 behavior 7)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-audio = { path = "../../crates/nexus-audio", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

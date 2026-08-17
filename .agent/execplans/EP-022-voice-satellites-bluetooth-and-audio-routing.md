@@ -276,7 +276,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary (2026-08-16)
 - [x] M2: Core behavior and deterministic invariants (2026-08-16)
 - [x] M3: Real dependency and transport integration (2026-08-16)
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability (2026-08-17)
 - [ ] M5: Live-fire, operations, and node closure
 
 M1 evidence: `EP-022 M1: ok` (16 ep022_unit tests; gate vacuity-guarded via
@@ -306,6 +306,28 @@ COMPONENT_REGISTRY.yaml row wyoming-openwakeword added (EP-020 M3
 precedent). M1 16 green; M2 16 green; clippy clean; workspace check 95
 crates green; side gates ok (scope/reality/security/license/blueprint/
 format/dependency).
+
+M4 evidence: `EP-022 M4: ok` (13 ep022_failure tests via
+scripts/ep022-m4-tests.sh vacuity guard): connectors/bluetooth-audio
+(nexus-bluetooth-audio crate) with a minimal REAL D-Bus wire client
+(SASL EXTERNAL auth + mandatory Hello registration + GetNameOwner,
+wire format verified byte-for-byte against a live dbus-send capture
+through a real proxy); 3 real system-bus tests (canary
+GetNameOwner("org.freedesktop.DBus") live on the real bus;
+org.bluez NameHasNoOwner -> BlueZ absent; connector connect fails
+closed UNAVAILABLE with rollback to DISCONNECTED + audit + metrics);
+real unreachable/silent(Timeout)/garbage(External)/auth-rejecting
+(Authorization) Unix peers; pure state machine duplicate-conflict /
+cancel-rollback; policy deny fail-closed; malformed device refs;
+payload redaction (audit redact() progress-guaranteed); ops
+diagnostic bin bluetooth-diag status/recover reports real
+`"bluez":"absent"` (gate vacuity guard 3); clippy -D warnings clean;
+workspace check green; side gates ok (scope audit EP-022: ok,
+reality gate: ok, security check: ok, license gate: ok, blueprint
+validation: ok, format check: ok, dependency audit: ok); M1 16
+green; M2 16 green; M3 4 green (real container); COMPONENT_REGISTRY
+bluez row added; Bluetooth/A2DP transport certification DEFERRED
+(hardware ownership EP-040/EP-043), never claimed.
 
 # 12. Surprises & Discoveries
 
@@ -349,6 +371,44 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   protocol handshake, not a bare TCP connect - the port accepts at the
   kernel level before the app is ready (tests errored with empty events
   on first gate run). The gate now waits for the describe/info handshake.
+- 2026-08-17: The real dbus-daemon denies unregistered connections:
+  after SASL EXTERNAL auth and BEGIN, a client MUST send Hello first;
+  GetNameOwner from an unregistered connection returns
+  org.freedesktop.DBus.Error.AccessDenied.
+- 2026-08-17: D-Bus header-fields wire layout (verified byte-for-byte
+  against a live dbus-send capture): the fields array length sits at
+  offset 12 right after the 12-byte fixed header, the first element
+  starts at offset 16, elements are 8-aligned, and the length counts
+  from the first element start to the end of the last element (no
+  leading or trailing pad). The PATH field is signature "o", not "s",
+  and body-bearing calls carry the SIGNATURE field.
+- 2026-08-17: Trailing message padding is fatal: the first builder
+  padded the whole message to 8 bytes (dbus-send does not). The daemon
+  parsed the stale trailing bytes as the start of the NEXT message and
+  closed the connection on the following call. Messages end exactly at
+  the body end.
+- 2026-08-17: The daemon batches the NameAcquired signal with the Hello
+  reply; the client keeps a persistent receive buffer, drains exactly
+  the consumed bytes, and skips non-reply messages (signals) so no
+  batched bytes are lost.
+- 2026-08-17: EXTERNAL auth data is the hex encoding of the DECIMAL uid
+  string (uid 0 -> "0" -> byte 0x30 -> "30"), not the hex of the uid
+  value ("0"); the wrong form is rejected with "REJECTED EXTERNAL".
+- 2026-08-17: redact() had an infinite loop: replacing a value with
+  "[REDACTED]" left the key prefix (secret=) in place, so the same
+  region was re-scanned and re-replaced forever. The redactor now
+  advances its search position past every replaced region.
+- 2026-08-17: A failed connect rolls back to DISCONNECTED and a policy
+  denial never inserts state: connector.state() returns NOT_FOUND for a
+  policy-denied device (fail closed before any transition; no
+  fabricated state).
+- 2026-08-17: The pre-created M4 gate in scripts/nodes/EP-022.sh ran
+  `cargo test -p nexus-audio ep022_failure` against the M1 contract
+  crate, not the M4 changed-files fence (connectors/bluetooth-audio/) -
+  EP-001 gate-masking class. Replaced with scripts/ep022-m4-tests.sh
+  (real nexus-bluetooth-audio ep022_failure suite + vacuity guards:
+  non-zero pass count, the two real system-bus tests present and green,
+  and the ops diagnostic reporting real `"bluez":"absent"`).
 
 # 13. Decision Log
 
@@ -435,6 +495,31 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   swapping the Nexus model into the container (rejected: SPEC-019).
   Security: real wire behavior, fail-closed timeouts, no fabricated
   detections.
+- 2026-08-17 | M4 uses a minimal REAL D-Bus wire client, not a
+  heavyweight crate | connectors/bluetooth-audio implements SASL
+  EXTERNAL auth, Hello registration, and GetNameOwner over a real Unix
+  socket; wire format verified byte-for-byte against a live dbus-send
+  capture. Alternatives: zbus/bluer crates (rejected: heavy dependency
+  tree for one call; recorded as the replacement boundary), busctl
+  subprocess (rejected: connector must own its transport). Security:
+  real wire behavior, fail-closed timeouts.
+- 2026-08-17 | BlueZ absence is the designed M4 forced-failure
+  substrate | org.bluez has no owner on this host's real system bus;
+  the connector proves it with a real GetNameOwner call and fails
+  closed (UNAVAILABLE) with an audit record and metrics. No simulated
+  failure and no fabricated connectivity. Bluetooth/A2DP transport
+  certification is DEFERRED (hardware ownership, EP-040/EP-043) and
+  never claimed from this crate. COMMAND ACCEPTED != DEVICE CHANGED !=
+  DEVICE VERIFIED.
+- 2026-08-17 | Connect policy defaults to deny | Only an explicit
+  allowlist grants connect; a denied device is a real Policy error,
+  never a fallthrough (SPEC-012 behavior 7, fail-closed security).
+  Evidence: ep022_failure_policy_denied_fails_closed.
+- 2026-08-17 | CONNECTED is unreachable without a certified transport |
+  The state machine supports complete_connect, but the connector never
+  fabricates it: even a BlueZ-present probe fails closed with the
+  deferred certification named (A2DP transport is not certified on
+  this host). Evidence: ep022_failure_connector_connect_fails_closed_bluez_absent.
 
 # 14. Outcomes & Retrospective
 

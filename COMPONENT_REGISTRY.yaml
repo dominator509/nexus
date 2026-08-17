@@ -179,6 +179,15 @@ components:
     commercial_review: "Apache-2.0 upstream classifier; MIT LICENSE.md text; commercial use permitted"
     status: voice-profile
     rationale: "Real Wyoming protocol transport for assist satellites; proven by EP-022 M3 real-container integration (real Describe/Detect events; container wake models are upstream test fixtures, Nexus wake model remains Nexus-owned per SPEC-019)"
+  - id: bluez
+    capability: voice.bluetooth
+    implementation: "host system D-Bus service (org.bluez)"
+    license: "GPL-2.0-or-later (host OS component, not distributed)"
+    integration_mode: external-host
+    replacement_contract: "BluetoothEndpointProvider port in nexus-audio; real transport behind the port; BlueZ via org.bluez D-Bus"
+    commercial_review: "Host OS component; no distribution by Nexus"
+    status: absent-on-host
+    rationale: "EP-022 M4 forced-failure substrate: org.bluez has no owner on this build host; connector proves absence via real D-Bus GetNameOwner and fails closed (UNAVAILABLE). Real Bluetooth/A2DP transport certification DEFERRED to hardware ownership (EP-040/EP-043); never claimed from the connector"
   - id: asterisk
     capability: phone.gateway
     implementation: "Asterisk"

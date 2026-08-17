@@ -1126,6 +1126,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-bluetooth-audio"
+version = "0.1.0"
+dependencies = [
+ "nexus-audio",
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-capabilities"
 version = "0.1.0"
 dependencies = [

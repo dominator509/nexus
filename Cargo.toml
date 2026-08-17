@@ -32,6 +32,7 @@ members = [
     "crates/nexus-home",
     "connectors/home-assistant",
     "connectors/assist-satellite",
+    "connectors/bluetooth-audio",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",
