@@ -9,9 +9,9 @@
   "proof": "LF-008 visitor-response",
   "real_person_event": {
     "camera": "nexus_front",
-    "confidence": 0.68359375,
+    "confidence": 0.734375,
     "object": "person",
-    "timestamp_ms": 1786972576202
+    "timestamp_ms": 1786988671010
   },
   "roku_tier": "UNAVAILABLE",
   "stream_ref_status": "UNVERIFIED",

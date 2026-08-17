@@ -7,6 +7,8 @@ FROM rust:1.97.1-bookworm AS builder
 WORKDIR /build
 COPY Cargo.toml Cargo.lock ./
 COPY crates/ ./crates/
+COPY connectors/ ./connectors/
+COPY tests/ ./tests/
 COPY apps/control-plane/ ./apps/control-plane/
 COPY infra/ ./infra/
 COPY config/models/ ./config/models/

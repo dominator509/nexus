@@ -136,6 +136,38 @@ fn wait_vacuums(adapter: &VacuumAdapter<HaVacuumTransport>, timeout: u64) {
     panic!("fixture vacuums did not become active after restart");
 }
 
+/// Bounded wait for the REAL vacuum service to be registered. After a
+/// container restart HA serves /api/states (entities visible) BEFORE
+/// integrations finish registering services; issuing a service call
+/// too early returns 400. This waits for the actual service surface.
+fn wait_vacuum_service_ready(timeout: u64) -> Result<(), String> {
+    let client = reqwest::blocking::Client::new();
+    let deadline = Instant::now() + Duration::from_secs(timeout);
+    while Instant::now() < deadline {
+        let resp = client
+            .get(format!("{}/api/services", base_url()))
+            .bearer_auth(token())
+            .send();
+        if let Ok(resp) = resp {
+            if resp.status().is_success() {
+                if let Ok(services) = resp.json::<serde_json::Value>() {
+                    let has_start = services.as_array().is_some_and(|domains| {
+                        domains.iter().any(|d| {
+                            d.get("domain").and_then(serde_json::Value::as_str) == Some("vacuum")
+                                && d.get("services").and_then(|s| s.get("start")).is_some()
+                        })
+                    });
+                    if has_start {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        thread::sleep(Duration::from_secs(2));
+    }
+    Err("vacuum.start service never registered after restart".to_string())
+}
+
 fn vacuum_state(t: &HaVacuumTransport, entity_id: &str) -> String {
     t.read_vacuum(entity_id).expect("real read").state
 }
@@ -589,6 +621,7 @@ fn ep024_failure_vacuum_journey_live() {
     docker(&["restart", &container_name()]).expect("docker restart");
     wait_http_up(300).expect("HA ready after restart");
     wait_vacuums(&adapter, 180);
+    wait_vacuum_service_ready(120).expect("vacuum.start service ready after restart");
     let devices_after = adapter.list_devices().expect("rediscovery");
     assert!(
         devices_after.contains(&device_a) && devices_after.contains(&device_b),
@@ -631,6 +664,7 @@ fn ep024_failure_vacuum_journey_live() {
     docker(&["start", &container_name()]).expect("docker start");
     wait_http_up(300).expect("HA ready after offline phase");
     wait_vacuums(&adapter, 180);
+    wait_vacuum_service_ready(120).expect("vacuum.start service ready after restore");
     let avail = adapter
         .availability(&device_a)
         .expect("availability after restore");

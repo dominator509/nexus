@@ -18,4 +18,5 @@ connectors/home-assistant/src/transport.rs
 connectors/irrigation/
 connectors/vacuum/
 connectors/robotics/
+apps/control-plane/Dockerfile
 tests/devices/
