@@ -33,6 +33,7 @@ use nexus_vision::vocabulary::{CameraCapability, CameraId, PrivacyClass};
 use nexus_vision::{VisionError, VisionErrorCode};
 
 use crate::availability::{availability as map_availability, CameraAvailability};
+use crate::observability::{AuditRecord, FrigateObservability};
 use crate::transport::{FrigateConfig, FrigateEvent, FrigateTransport};
 
 /// The canonical privacy class applied to Frigate cameras. Frigate
@@ -46,15 +47,46 @@ const DEFAULT_CAMERA_PRIVACY: PrivacyClass = PrivacyClass::Private;
 /// `T` is the real transport (`RestTransport`) or a controlled fixture
 /// in test zones. The adapter is single-threaded; interior mutability
 /// lets the `&self` port methods drive the stateful transport.
+///
+/// Observability: every provider operation is recorded (redacted) into
+/// the adapter's `FrigateObservability` for metrics/audit (M4 content
+/// 4). Raw frames and credentials never enter audit records.
 pub struct FrigateAdapter<T: FrigateTransport> {
     transport: RefCell<T>,
+    observability: FrigateObservability,
 }
 
 impl<T: FrigateTransport> FrigateAdapter<T> {
     pub fn new(transport: T) -> Self {
         Self {
             transport: RefCell::new(transport),
+            observability: FrigateObservability::default(),
         }
+    }
+
+    /// Adapter with a custom observability sink (tests may bound the
+    /// audit ring).
+    pub fn with_observability(transport: T, observability: FrigateObservability) -> Self {
+        Self {
+            transport: RefCell::new(transport),
+            observability,
+        }
+    }
+
+    /// Snapshot of redacted audit records (M4 observability).
+    pub fn audit(&self) -> Vec<AuditRecord> {
+        self.observability.audit()
+    }
+
+    /// Snapshot of metric counters (M4 observability).
+    pub fn metrics(&self) -> serde_json::Value {
+        let mut value = self.observability.metrics();
+        // Malformed responses are detected at the transport boundary
+        // (where JSON/DTO parsing happens); merge that counter so the
+        // adapter metrics surface the full failure picture.
+        value["malformed_total"] =
+            serde_json::Value::from(self.transport.borrow().malformed_count());
+        value
     }
 
     /// Consume the adapter and return the underlying transport.
@@ -64,6 +96,7 @@ impl<T: FrigateTransport> FrigateAdapter<T> {
 
     fn with_transport<R>(
         &self,
+        operation: &str,
         f: impl FnOnce(&mut T) -> Result<R, VisionError>,
     ) -> Result<R, VisionError> {
         let mut guard = self.transport.try_borrow_mut().map_err(|_| {
@@ -74,18 +107,43 @@ impl<T: FrigateTransport> FrigateAdapter<T> {
                 None,
             )
         })?;
-        f(&mut guard)
+        let result = f(&mut guard);
+        match &result {
+            Ok(_) => self
+                .observability
+                .record(operation, true, None, String::new(), None),
+            Err(error) => {
+                let detail = if error.message.is_empty() {
+                    String::new()
+                } else {
+                    // Bounded redacted detail: operation + code only.
+                    // The message itself is already redacted upstream,
+                    // but we keep audit detail minimal.
+                    error.code.as_str().to_string()
+                };
+                let correlation = error.correlation_id.clone();
+                self.observability
+                    .record(operation, false, correlation, detail, Some(error.code));
+            }
+        }
+        result
     }
 
     /// Real provider health (probe the Frigate instance).
     pub fn health(&self) -> Result<(), VisionError> {
-        self.with_transport(|t| t.health())
+        self.with_transport("health", |t| t.health())
+    }
+
+    /// Real provider version (GET /api/version). Falls back to the
+    /// transport default for fixtures that do not support it.
+    pub fn version(&self) -> Result<String, VisionError> {
+        self.with_transport("version", |t| t.version())
     }
 
     /// Camera availability truthfully mapped from configuration,
     /// provider health, and go2rtc stream attachment (directive I/Q).
     pub fn availability(&self, camera: &CameraId) -> Result<CameraAvailability, VisionError> {
-        self.with_transport(|t| {
+        self.with_transport("availability", |t| {
             let cfg = t.config()?;
             let Some(cam_cfg) = cfg.cameras.get(camera.as_str()) else {
                 return Ok(CameraAvailability::Unavailable);
@@ -119,7 +177,7 @@ impl<T: FrigateTransport> FrigateAdapter<T> {
     /// unverified reference so callers know the stream is *declared*,
     /// never that it is *proven*.
     pub fn stream_ref(&self, camera: &CameraId) -> Result<StreamRef, VisionError> {
-        self.with_transport(|t| {
+        self.with_transport("stream_ref", |t| {
             // Prefer the go2rtc restream URL when a producer is attached.
             if let Some(info) = t.go2rtc_streams()?.get(camera.as_str()) {
                 if let Some(producer) = info.producers.first() {
@@ -267,7 +325,7 @@ impl<T: FrigateTransport> FrigateAdapter<T> {
         since_ms: u64,
         limit: usize,
     ) -> Result<Vec<CameraEvent>, VisionError> {
-        self.with_transport(|t| {
+        self.with_transport("events_since", |t| {
             let events = t.events(camera.as_str(), since_ms, limit)?;
             let base_url = t.base_url();
             let mut out = Vec::with_capacity(events.len());
@@ -281,7 +339,7 @@ impl<T: FrigateTransport> FrigateAdapter<T> {
 
 impl<T: FrigateTransport> CameraProvider for FrigateAdapter<T> {
     fn list_cameras(&self) -> Result<Vec<CameraId>, VisionError> {
-        self.with_transport(|t| {
+        self.with_transport("list_cameras", |t| {
             let cfg = t.config()?;
             let mut cameras: Vec<CameraId> = cfg
                 .cameras
@@ -294,7 +352,7 @@ impl<T: FrigateTransport> CameraProvider for FrigateAdapter<T> {
     }
 
     fn capabilities(&self, camera: &CameraId) -> Result<Vec<CameraCapability>, VisionError> {
-        self.with_transport(|t| {
+        self.with_transport("capabilities", |t| {
             let cfg = t.config()?;
             self.capabilities_from_config(camera.as_str(), &cfg)
         })

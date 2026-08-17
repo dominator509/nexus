@@ -26,13 +26,19 @@
 
 pub mod adapter;
 pub mod availability;
+pub mod observability;
 pub mod redact;
 pub mod transport;
 
 pub use adapter::FrigateAdapter;
 pub use availability::CameraAvailability;
+pub use observability::{AuditRecord, FrigateObservability};
 pub use redact::redact_url;
 pub use transport::{
     FrigateCameraConfig, FrigateConfig, FrigateEvent, FrigateTransport, Go2RtcProducer,
     Go2RtcStreamInfo, RestTransport,
 };
+
+// Re-export for observability's error-code typing without a circular
+// dependency on nexus-vision's private paths.
+pub use nexus_vision::VisionErrorCode;

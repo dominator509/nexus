@@ -276,7 +276,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary (2026-08-17)
 - [x] M2: Core behavior and deterministic invariants (2026-08-17)
 - [x] M3: Real dependency and transport integration (2026-08-17)
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability (2026-08-17)
 - [ ] M5: Live-fire, operations, and node closure
 
 M1 evidence: `EP-023 M1: ok` (13 ep023_unit tests via
@@ -387,6 +387,64 @@ but never ObjectDetection/Recording/TwoWayAudio). M2 regression green:
 security/license/dependency/reality gates ok; scope audit EP-023: ok
 (after removing mediamtx-generated auto.crt/auto.key scratch).
 
+M4 evidence: `EP-023 M4: ok` (scripts/ep023-m4-tests.sh; observed run
+/tmp/ep023-m4-tests.log + evidence /tmp/ep023-m4-evidence.json; node
+gate re-run also `EP-023 M4: ok`). Production changes: RestTransport
+now carries a bounded per-request timeout (with_timeout; production
+wiring sets a small bound) and classifies transport failures into
+Timeout (is_timeout) vs Unavailable (connect/other) - the M4 directive
+G/H distinction; 401/403 -> Authorization, 404 -> NotFound,
+500/502/503 -> Unavailable, other non-success -> External
+(classify_status, directive K); per-request provider-boundary
+correlation id (frigate-<nanos>-<seq>, unique + safe) is threaded
+through get/get_json AND preserved on status/parse error paths
+(directive B: the outer provider correlation is never replaced);
+`malformed_count()` on the transport trait counts real malformed
+responses at the boundary, surfaced in adapter metrics. New
+observability module: FrigateObservability (operation counters:
+operations/failures/timeouts/auth_failures + bounded redacted audit
+ring with correlation ids, poison-safe lock so telemetry can never
+alter provider semantics, directive C). Adapter with_transport records
+every operation (canonical names: health/version/availability/
+stream_ref/list_cameras/capabilities/events_since) with redacted
+detail (code only) + correlation; adapter.metrics() merges the
+transport malformed counter. New frigate-diag binary
+(connectors/frigate/src/bin/frigate-diag.rs, directive N/O): status
+(provider_reachable, frigate_version, camera_count, streams_live/
+degraded/unavailable, go2rtc_available/stream_count, metrics) and
+recover (bounded: fresh observation only, never infrastructure
+restart); all output passes redact_url. Failure suite
+connectors/frigate/tests/ep023_failure_frigate.rs (18 tests, real
+mechanisms only): closed port -> Unavailable; REAL silent TCP peer
+(accepts, never responds) + with_timeout(700ms) -> Timeout in <6s
+(directive G, the timeout classifier proven against a real socket
+read deadline); real HTTP responders: 401/403 -> Authorization, 404 ->
+NotFound, 500 -> Unavailable, invalid JSON -> External +
+malformed_total >= 1, schema-invalid {"cameras": 42} -> External fail
+closed (directive J); redaction canaries (rtsp://user:
+EP023_SECRET_CANARY@... and ?token=EP023_TOKEN_CANARY) ZERO occurrence
+in VisionError/audit/metrics/diag stdout/stderr (directive E);
+correlation present + stable per operation (audit record matches
+error correlation, directive P.8); audit ring bounded at capacity with
+oldest eviction (directive D); counters increment (timeouts on silent
+peer, auth_failures on 401); phase B (REAL Frigate container stopped):
+the SAME production operation -> VisionErrorCode::Unavailable, failure
+counter increments, audit records the failure, fresh availability
+observation never STREAMING (directive F/M, no stale cache);
+diagnostic status against healthy provider (phase A) and unavailable
+provider (phase B) + diagnostic redaction (directive O/P.12-14);
+phase C (container restarted): recovery observed (list_cameras +
+nexus_front discovered). Cross-phase accounting 18/18 (directive D).
+Frigate restart cold boot observed ~175-179s on this host; the phase C
+wait bound is 300s (initial boot bound 240s; first gate run failed at
+120s restart bound - genuine timing, not a defect). M2 regression
+green (29 ep023_unit + 23 in-crate); M3 regression green (re-run after
+RestTransport changes); clippy -D warnings clean; fmt/format/lint/
+security/license/dependency/reality gates ok; scope audit EP-023: ok
+(scripts/ep023-m4-tests.sh registered in .agent/expected-files/
+EP-023.txt); zero-orphan teardown; sysctl hygiene recorded (directive
+G: 200000, sufficient, no change).
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
@@ -444,6 +502,35 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   canary region and fuzzy-matches (difflib >= 0.75; observed 0.917).
   A wrong/absent canary scores far lower, so the canary readback still
   defeats a canned camera-error image.
+- 2026-08-17: Frigate 0.17.2 cold boot is SLOW on this host: observed
+  ~175s first boot and ~179s after `docker stop`/`docker start`. The
+  first M4 gate run failed phase C with a 120s restart bound; the
+  container itself was healthy (probe proved restart up at +179s).
+  The gate now bounds restart at 300s and dumps container logs on
+  failure. This is a genuine host timing fact, not a provider defect.
+- 2026-08-17: A "non-routable address" timeout test is flaky across
+  platforms (may give refused/unreachable instead of a read timeout);
+  the M4 suite instead runs a REAL local TCP peer that accepts the
+  connection and stays silent longer than the transport bound. The
+  peer is a CONTROLLED_TEST_FIXTURE; the timeout mechanism is the real
+  reqwest client read deadline (directive G).
+- 2026-08-17: RestTransport `get_json` used to drop the correlation id
+  on HTTP-status and JSON-parse error paths (None), which broke audit
+  correlation for exactly the failure classes M4 certifies. The
+  correlation is now generated once per request and preserved across
+  send/status/parse errors; per-request ids include a monotonic
+  sequence suffix (time alone could collide).
+- 2026-08-17: The pre-created M4 gate in scripts/nodes/EP-023.sh ran
+  `cargo test --locked -p nexus-vision ep023_failure` - the M1
+  contract crate, EP-001 gate-masking class (same defect class as the
+  M2 gate). Replaced with scripts/ep023-m4-tests.sh running the real
+  nexus-frigate ep023_failure_frigate suite (vacuity guarded,
+  cross-phase accounting, skip verification).
+- 2026-08-17: malformed_total cannot be incremented in the adapter
+  observability alone: the adapter sees only the canonical External
+  code. The malformed counter lives at the transport boundary where
+  JSON/DTO parsing actually fails (trait default 0, RestTransport
+  counts real parse failures) and adapter.metrics() merges it.
 
 # 13. Decision Log
 
@@ -517,6 +604,70 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   live producer evidence, independent RTSP decode, canary OCR. Physical
   camera NOT_ASSERTED; Roku NOT_ASSERTED/DEFERRED (no hardware). No
   certification upgraded from partial runs.
+- 2026-08-17 | Bounded RestTransport timeout required in production |
+  The default reqwest client has no timeout; a blackholed provider
+  would hang callers forever. RestTransport::with_timeout sets the
+  per-request bound (production wiring MUST call it; the failure suite
+  proves a silent peer fails closed with Timeout in <6s). Evidence:
+  ep023_failure_frigate_silent_peer_times_out.
+- 2026-08-17 | Timeout vs Unavailable are distinct | is_timeout ->
+  Timeout; connect/DNS/other transport failures -> Unavailable. A
+  closed port (connection refused) is Unavailable; an accepted-but-
+  silent peer is Timeout. Evidence:
+  ep023_failure_frigate_closed_port_connection_failure_unavailable +
+  ep023_failure_frigate_silent_peer_times_out (directive H).
+- 2026-08-17 | Real silent-peer timeout mechanism | The timeout proof
+  uses a REAL local TCP peer that accepts and never responds
+  (CONTROLLED_TEST_FIXTURE); the timeout itself is the real reqwest
+  read deadline. No non-routable-address flakiness. Evidence: silent
+  peer test elapsed <6s at 700ms bound.
+- 2026-08-17 | HTTP authorization classification | 401/403 ->
+  Authorization on every provider path (classify_status); no fallback
+  to unauthenticated success; auth_failures counter increments.
+  Evidence: ep023_failure_frigate_http_401_authorization +
+  counters test.
+- 2026-08-17 | Provider operation correlation | One provider-boundary
+  correlation id per request (frigate-<nanos>-<seq>), preserved across
+  status/parse error paths and recorded in audit + VisionError. The
+  nexus-vision provider ports do NOT carry caller correlation context
+  (contract unchanged); when one arrives in input/error context later,
+  with_transport preserves it exactly (directive B). Evidence:
+  ep023_failure_frigate_correlation_present_and_stable.
+- 2026-08-17 | Process-local observability semantics | Counters are
+  monotonic within process lifetime; the audit ring is PROCESS_LOCAL
+  and BOUNDED (capacity, oldest eviction). No durability across
+  restart is implied; EP-045 owns metrics shipping. Evidence:
+  ep023_failure_frigate_audit_ring_bounded.
+- 2026-08-17 | Redaction tested against actual secret values | The M4
+  suite uses recognizable canaries (EP023_SECRET_CANARY in userinfo,
+  EP023_TOKEN_CANARY as token) and requires ZERO occurrence across
+  VisionError/audit/metrics/diag stdout/stderr - not a
+  "password replaced" substring check. Evidence:
+  ep023_failure_frigate_redaction_canaries_absent +
+  ep023_failure_frigate_diag_redaction.
+- 2026-08-17 | Real provider death behavior | The SAME production
+  operation that succeeds in phase A returns
+  VisionErrorCode::Unavailable after the real Frigate container is
+  stopped; no stale success, no STREAMING from cache, failure counter
+  increments, audit records the failure; restart proves recovery.
+  Evidence: provider_stopped_unavailable + never_streaming_without_
+  fresh_evidence + recovery_after_provider_restart (directive F/M).
+- 2026-08-17 | Stream liveness requires current provider evidence |
+  The adapter keeps no stale state cache; every availability call
+  re-probes the real provider. After provider death a fresh
+  observation is Unavailable/Degraded, never STREAMING (directive M).
+- 2026-08-17 | frigate-diag status/recovery ownership | status reports
+  provider reachability, version, camera counts, live/degraded/
+  unavailable streams, go2rtc availability, metrics - all via the real
+  production adapter paths, all redacted. recover performs a bounded
+  fresh observation only; it NEVER restarts host infrastructure or
+  fabricates stream health (directive N/O). Evidence:
+  ep023_failure_frigate_diag_status_healthy + _unavailable +
+  _redaction.
+- 2026-08-17 | M4 gate masking/vacuity defect fixed | The scaffold M4
+  line ran the M1/nexus-vision suite (EP-001 class). Replaced with a
+  vacuity-guarded ep023-frigate failure suite gate with cross-phase
+  accounting (18/18) and per-phase skip verification.
 
 # 14. Outcomes & Retrospective
 

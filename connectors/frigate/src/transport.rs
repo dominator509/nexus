@@ -242,6 +242,24 @@ pub trait FrigateTransport {
     fn base_url(&self) -> Option<String> {
         None
     }
+
+    /// Provider version string (GET /api/version). Unsupported by
+    /// fixtures; the real transport reports the live Frigate version.
+    fn version(&mut self) -> Result<String, VisionError> {
+        Err(VisionError::new(
+            VisionErrorCode::Unavailable,
+            "version not supported by this transport",
+            None,
+            None,
+        ))
+    }
+
+    /// Number of malformed provider responses detected at this
+    /// transport boundary (M4 observability). Monotonic within process
+    /// lifetime; the adapter surfaces it in metrics.
+    fn malformed_count(&self) -> u64 {
+        0
+    }
 }
 
 /// Real Frigate REST transport over reqwest (blocking).
@@ -250,10 +268,19 @@ pub trait FrigateTransport {
 /// `http://127.0.0.1:5000`); `token` is an optional Frigate JWT routed
 /// through EP-009 SecretStore references by the caller. The token is
 /// never logged or serialized.
+///
+/// A bounded timeout is REQUIRED in production paths (M4): without
+/// one a blackholed provider would hang the caller forever. The
+/// default client has no timeout, so `with_timeout` must be used by
+/// production wiring; the failure tests prove the bound.
 pub struct RestTransport {
     base_url: String,
     token: Option<String>,
     client: reqwest::blocking::Client,
+    timeout: std::time::Duration,
+    /// Malformed provider responses detected at this transport
+    /// boundary (M4 observability). Monotonic within process lifetime.
+    malformed: std::sync::atomic::AtomicU64,
 }
 
 impl RestTransport {
@@ -262,6 +289,8 @@ impl RestTransport {
             base_url: base_url.into(),
             token: None,
             client: reqwest::blocking::Client::new(),
+            timeout: std::time::Duration::from_secs(30),
+            malformed: std::sync::atomic::AtomicU64::new(0),
         }
     }
 
@@ -270,44 +299,122 @@ impl RestTransport {
         self
     }
 
+    /// Set the per-request timeout bound. Production wiring MUST call
+    /// this with a small bound (e.g. 5s); the M4 failure tests prove a
+    /// blackholed provider fails closed with Timeout, never hangs.
+    pub fn with_timeout(mut self, timeout: std::time::Duration) -> Self {
+        self.timeout = timeout;
+        let client = reqwest::blocking::Client::builder()
+            .timeout(timeout)
+            .build()
+            .unwrap_or_else(|_| reqwest::blocking::Client::new());
+        self.client = client;
+        self
+    }
+
+    pub fn timeout(&self) -> std::time::Duration {
+        self.timeout
+    }
+
     fn url(&self, path: &str) -> String {
         format!("{}{}", self.base_url.trim_end_matches('/'), path)
     }
 
-    fn get(&self, path: &str) -> Result<reqwest::blocking::Response, VisionError> {
+    /// Correlation id for this request (incident correlation; M4
+    /// observability). Never carries secrets. Unique per request via a
+    /// monotonic sequence suffix (time alone could collide).
+    fn correlation_id() -> String {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        use std::time::{SystemTime, UNIX_EPOCH};
+        static SEQ: AtomicU64 = AtomicU64::new(0);
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let seq = SEQ.fetch_add(1, Ordering::Relaxed);
+        format!("frigate-{nanos:x}-{seq}")
+    }
+
+    /// Send the GET request and map transport failures to VisionError,
+    /// preserving the given correlation id exactly. The id is the
+    /// provider-boundary correlation: caller-supplied when one exists
+    /// in the input context, generated otherwise (directive B).
+    fn get_with_correlation(
+        &self,
+        path: &str,
+        correlation_id: &str,
+    ) -> Result<reqwest::blocking::Response, VisionError> {
+        let correlation_id: Box<str> = Box::from(correlation_id);
         let mut req = self.client.get(self.url(path));
         if let Some(token) = &self.token {
             req = req.bearer_auth(token);
         }
         req.send().map_err(|e| {
+            let code = if e.is_timeout() {
+                VisionErrorCode::Timeout
+            } else {
+                VisionErrorCode::Unavailable
+            };
             VisionError::new(
-                VisionErrorCode::Unavailable,
+                code,
                 format!("Frigate request failed: {}", redact_error(&e)),
-                None,
+                Some(correlation_id),
                 Some(Box::from(path.to_string())),
             )
         })
     }
 
-    fn get_json(&self, path: &str) -> Result<Value, VisionError> {
-        let resp = self.get(path)?;
+    /// GET a JSON body preserving the given correlation id across
+    /// status and parse failure paths (directive B: the provider
+    /// boundary correlation is never replaced by a fresh id).
+    fn get_json_with_correlation(
+        &self,
+        path: &str,
+        correlation_id: &str,
+    ) -> Result<Value, VisionError> {
+        let correlation_id: Box<str> = Box::from(correlation_id);
+        let resp = self.get_with_correlation(path, &correlation_id)?;
         let status = resp.status();
         if !status.is_success() {
+            let code = classify_status(status);
             return Err(VisionError::new(
-                VisionErrorCode::External,
+                code,
                 format!("Frigate GET {path} returned {status}"),
-                None,
+                Some(correlation_id),
                 Some(Box::from(path.to_string())),
             ));
         }
         resp.json().map_err(|e| {
+            self.malformed
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             VisionError::new(
                 VisionErrorCode::External,
                 format!("Frigate GET {path} returned malformed JSON: {e}"),
-                None,
+                Some(correlation_id),
                 Some(Box::from(path.to_string())),
             )
         })
+    }
+}
+
+/// Canonical HTTP status -> VisionErrorCode mapping (M4 directive K).
+///
+/// - 401/403 -> Authorization (never fall back to unauthenticated
+///   success; the adapter fails closed)
+/// - 404 -> NotFound (unknown camera/resource)
+/// - 500/502/503 -> Unavailable (provider-side error; the provider is
+///   reachable but not serving)
+/// - other non-success -> External
+fn classify_status(status: reqwest::StatusCode) -> VisionErrorCode {
+    match status {
+        reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN => {
+            VisionErrorCode::Authorization
+        }
+        reqwest::StatusCode::NOT_FOUND => VisionErrorCode::NotFound,
+        reqwest::StatusCode::INTERNAL_SERVER_ERROR
+        | reqwest::StatusCode::BAD_GATEWAY
+        | reqwest::StatusCode::SERVICE_UNAVAILABLE => VisionErrorCode::Unavailable,
+        _ => VisionErrorCode::External,
     }
 }
 
@@ -322,14 +429,41 @@ impl FrigateTransport for RestTransport {
         Some(self.base_url.clone())
     }
 
-    fn health(&mut self) -> Result<(), VisionError> {
-        let resp = self.get("/api/")?;
+    fn malformed_count(&self) -> u64 {
+        self.malformed.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    fn version(&mut self) -> Result<String, VisionError> {
+        let correlation_id = Self::correlation_id();
+        let resp = self.get_with_correlation("/api/version", &correlation_id)?;
         let status = resp.status();
         if !status.is_success() {
             return Err(VisionError::new(
+                classify_status(status),
+                format!("Frigate version returned {status}"),
+                Some(Box::from(correlation_id)),
+                Some(Box::from("/api/version".to_string())),
+            ));
+        }
+        resp.text().map(|t| t.trim().to_string()).map_err(|e| {
+            VisionError::new(
                 VisionErrorCode::External,
+                format!("Frigate /api/version body read failed: {e}"),
+                Some(Box::from(correlation_id)),
+                Some(Box::from("/api/version".to_string())),
+            )
+        })
+    }
+
+    fn health(&mut self) -> Result<(), VisionError> {
+        let correlation_id = Self::correlation_id();
+        let resp = self.get_with_correlation("/api/", &correlation_id)?;
+        let status = resp.status();
+        if !status.is_success() {
+            return Err(VisionError::new(
+                classify_status(status),
                 format!("Frigate health returned {status}"),
-                None,
+                Some(Box::from(correlation_id)),
                 Some(Box::from("/api/".to_string())),
             ));
         }
@@ -337,12 +471,15 @@ impl FrigateTransport for RestTransport {
     }
 
     fn config(&mut self) -> Result<FrigateConfig, VisionError> {
-        let value = self.get_json("/api/config")?;
+        let correlation_id = Self::correlation_id();
+        let value = self.get_json_with_correlation("/api/config", &correlation_id)?;
         serde_json::from_value(value).map_err(|e| {
+            self.malformed
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             VisionError::new(
                 VisionErrorCode::External,
                 format!("Frigate /api/config malformed: {e}"),
-                None,
+                Some(Box::from(correlation_id)),
                 None,
             )
         })
@@ -360,24 +497,30 @@ impl FrigateTransport for RestTransport {
             since_ms as f64 / 1000.0,
             limit
         );
-        let value = self.get_json(&path)?;
+        let correlation_id = Self::correlation_id();
+        let value = self.get_json_with_correlation(&path, &correlation_id)?;
         serde_json::from_value(value).map_err(|e| {
+            self.malformed
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             VisionError::new(
                 VisionErrorCode::External,
                 format!("Frigate {path} malformed: {e}"),
-                None,
+                Some(Box::from(correlation_id)),
                 Some(Box::from(camera.to_string())),
             )
         })
     }
 
     fn go2rtc_streams(&mut self) -> Result<BTreeMap<String, Go2RtcStreamInfo>, VisionError> {
-        let value = self.get_json("/api/go2rtc/streams")?;
+        let correlation_id = Self::correlation_id();
+        let value = self.get_json_with_correlation("/api/go2rtc/streams", &correlation_id)?;
         serde_json::from_value(value).map_err(|e| {
+            self.malformed
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             VisionError::new(
                 VisionErrorCode::External,
                 format!("Frigate /api/go2rtc/streams malformed: {e}"),
-                None,
+                Some(Box::from(correlation_id)),
                 None,
             )
         })
@@ -385,13 +528,14 @@ impl FrigateTransport for RestTransport {
 
     fn latest_frame(&mut self, camera: &str) -> Result<Vec<u8>, VisionError> {
         let path = format!("/api/{camera}/latest.jpg");
-        let resp = self.get(&path)?;
+        let correlation_id = Self::correlation_id();
+        let resp = self.get_with_correlation(&path, &correlation_id)?;
         let status = resp.status();
         if !status.is_success() {
             return Err(VisionError::new(
-                VisionErrorCode::External,
+                classify_status(status),
                 format!("Frigate GET {path} returned {status}"),
-                None,
+                Some(Box::from(correlation_id)),
                 Some(Box::from(path)),
             ));
         }
@@ -399,7 +543,7 @@ impl FrigateTransport for RestTransport {
             VisionError::new(
                 VisionErrorCode::External,
                 format!("Frigate GET {path} body read failed: {e}"),
-                None,
+                Some(Box::from(correlation_id)),
                 Some(Box::from(path.clone())),
             )
         })
