@@ -34,6 +34,7 @@ members = [
     "connectors/home-assistant",
     "connectors/assist-satellite",
     "connectors/bluetooth-audio",
+    "connectors/frigate",
     "tests/audio",
     "infra/nats",
     "infra/keycloak",

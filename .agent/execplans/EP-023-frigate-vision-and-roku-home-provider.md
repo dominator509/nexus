@@ -274,7 +274,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary (2026-08-17)
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants (2026-08-17)
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -306,19 +306,69 @@ BROWSER_AUTOMATION) all conformance DEFINED / physical certified
 NOT_ASSERTED. clippy -D warnings clean; workspace check green; side
 gates ok (scope audit EP-023: ok, reality gate: ok, security check:
 ok, license gate: ok, blueprint validation: ok, format check: ok,
-dependency audit: ok). M1 gate vacuity fixed (pre-created gate was
+ok, dependency audit: ok). M1 gate vacuity fixed (pre-created gate was
 artifact-only, EP-001 masking class).
+
+M2 evidence: `EP-023 M2: ok` (28 ep023_unit tests via
+scripts/ep023-m2-tests.sh vacuity guard): connectors/frigate
+(nexus-frigate crate, SPEC-021; M2 fence): real production adapter
+against the documented Frigate HTTP API and embedded go2rtc API -
+FrigateTransport port + real RestTransport (health GET /api/, config
+GET /api/config, events GET /api/events with after/limit, go2rtc
+streams GET /api/go2rtc/streams, latest frame GET /api/{camera}/latest.jpg);
+DTOs bound to the REAL provider shapes verified from upstream source
+(FrigateConfig cameras map; CameraConfig enabled/detect/record/
+snapshots/live/ffmpeg-inputs/audio; EventResponse id/label/camera/
+start_time/zones/has_clip/has_snapshot/data with score in data.score;
+go2rtc streams map name -> producers[{url}]/consumers). FrigateAdapter
+implements CameraProvider + FrigateProvider via RefCell interior
+mutability: camera discovery from config keys (stable identity, never
+display name/list index - directive H), capability metadata (object
+detection/visitor events from detect.enabled, recording, live stream;
+TwoWayAudio NEVER advertised from config - directive M), stream refs
+always Unverified (directive F/G/Q, acceptance obligation 3), event
+mapping (data.score -> confidence, zones, absolute media refs from
+provider base URL, PRIVATE default privacy - directive L), availability
+mapping configured != reachable != streaming (DISCOVERED/AVAILABLE/
+STREAMING/DEGRADED/UNAVAILABLE truth table - directive I/Q), snapshot
+refs URL-only (no raw frames in events), redaction rtsp://user:pass@ ->
+rtsp://***@ + query-secret masking (directive S). 28 tests prove:
+response mapping, stable identity, availability mapping, exact stream
+mapping, error handling (unavailable/timeout/malformed/not-found),
+privacy boundaries, advisory visitor identity, two-way-audio gating,
+Roku ladder ordering, no unverified RTSP/ONVIF claim, no secret
+leakage. clippy -D warnings clean; workspace check green; M1 13 green;
+side gates ok (scope audit EP-023: ok, reality gate: ok, security
+check: ok, license gate: ok, blueprint validation: ok, format check:
+ok, dependency audit: ok). M2 gate vacuity fixed (pre-created gate ran
+the M1 contract suite ep023_unit, EP-001 masking class).
 
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
-- 2026-08-17: The pre-created M1 gate in scripts/nodes/EP-023.sh was
-  artifact-only (node-artifact-check.py plus nothing) - EP-001
-  gate-masking class. Replaced with scripts/ep023-m1-tests.sh which
-  runs the real `cargo test -p nexus-vision ep023_unit` suite and
-  fails closed when no test ran (vacuity guard), same correction
-  pattern as EP-018/EP-019/EP-020/EP-021/EP-022 M1 gates.
+- 2026-08-17: The pre-created M2 gate in scripts/nodes/EP-023.sh ran
+  `cargo test --locked -p nexus-vision ep023_unit` - the M1 contract
+  suite - EP-001 gate-masking class. Replaced with
+  scripts/ep023-m2-tests.sh which runs the real
+  `cargo test -p nexus-frigate ep023_unit` suite (vacuity guarded) and
+  a `test -s connectors/frigate/tests/ep023_unit_frigate.rs` artifact
+  check, same correction pattern as every prior M2 gate.
+- 2026-08-17: Frigate EventResponse has NO top-level score field; the
+  real detection score lives in `data.score` (verified in Frigate
+  source: min_score/max_score filters query Event.data["score"]). The
+  adapter maps confidence from data.score and rejects events without a
+  valid score rather than fabricating confidence.
+- 2026-08-17: go2rtc `/api/streams` (as mounted by Frigate at
+  /api/go2rtc/streams) returns a map of stream name -> {producers,
+  consumers}; Producer.MarshalJSON emits `{"url": ...}`. A producer
+  entry means a source is attached - provider metadata, NOT media-level
+  proof (directive F/G/Q); the adapter keeps StreamRef Unverified.
+- 2026-08-17: The nexus-vision provider ports take `&self`; the real
+  REST transport is stateful. The FrigateAdapter uses RefCell interior
+  mutability (single-threaded adapter) so the port methods drive the
+  real transport without test-mode branches or duplicated _mut
+  entry points.
 - 2026-08-17: Structs carrying f32 confidence cannot derive Eq; the
   contract types use PartialEq + Serialize only.
 - 2026-08-17: The scope audit fence for EP-023 did not authorize
@@ -350,6 +400,31 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   mandatory; certify() fails closed otherwise (behavior 7,
   acceptance obligation 4). Evidence:
   ep023_unit_two_way_audio_never_without_certification.
+- 2026-08-17 | Frigate adapter DTOs bound to real provider shapes |
+  DTO field names and semantics copied from the Frigate source
+  (frigate/api/defs/response/event_response.py, config/camera/*.py,
+  go2rtc streams.go Producer.MarshalJSON) and proven by unit parsing
+  of real-shaped JSON. No invented endpoints. Alternatives: guessed
+  API (rejected: anti-hallucination law). Evidence:
+  ep023_unit_frigate_config_camera_defaults,
+  ep023_unit_frigate_event_score_reads_data_score.
+- 2026-08-17 | Event confidence from data.score only | Frigate
+  EventResponse has no top-level score; the real score lives in
+  data.score. Events without a valid score are rejected External
+  (malformed provider response) rather than fabricating confidence
+  (directive J). Evidence:
+  ep023_unit_frigate_events_reject_missing_score_no_fabrication.
+- 2026-08-17 | Availability truth table, never collapse | configured
+  != reachable != streaming; disabled camera is DEGRADED, provider
+  down is UNAVAILABLE, producer attached is STREAMING metadata only
+  (directive I/Q). Evidence:
+  ep023_unit_frigate_availability_disabled_never_online,
+  ep023_unit_frigate_availability_provider_down_is_unavailable.
+- 2026-08-17 | RefCell interior mutability for &self ports | The
+  nexus-vision ports take &self; the real transport is stateful. The
+  adapter uses RefCell (documented single-threaded) so port methods
+  drive the real transport; no test-mode branches, no _mut
+  duplicates. Evidence: adapter.rs with_transport.
 
 # 14. Outcomes & Retrospective
 

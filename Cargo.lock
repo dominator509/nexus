@@ -1255,6 +1255,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-frigate"
+version = "0.1.0"
+dependencies = [
+ "nexus-vision",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-gateway"
 version = "0.1.0"
 dependencies = [

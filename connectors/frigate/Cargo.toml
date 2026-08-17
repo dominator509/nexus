@@ -1,0 +1,16 @@
+[package]
+name = "nexus-frigate"
+version = "0.1.0"
+edition = "2021"
+description = "EP-023 Frigate/go2rtc provider adapter: real REST transport, camera discovery, canonical mapping, event retrieval, availability, redaction (SPEC-021)"
+license = "MIT"
+
+[dependencies]
+nexus-vision = { path = "../../crates/nexus-vision", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real HTTP transport for the Frigate REST API. Reuses the locked
+# workspace dependency class from nexus-connector-sdk (EP-011); blocking
+# + json only, no default TLS features (keeps the tree free of unused
+# HTTP/TLS license surface).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }
