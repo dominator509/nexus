@@ -170,6 +170,15 @@ components:
     commercial_review: "Runtime Apache-2.0; bundled noncommercial weights must not ship (SPEC-019)"
     status: voice-profile
     rationale: "Custom commercially safe wake models only"
+  - id: wyoming-openwakeword
+    capability: voice.satellite-wake
+    implementation: "rhasspy/wyoming-openwakeword (container rhasspy/wyoming-openwakeword:latest@sha256:52cb1168731a1849fc28cf339c935fde58746bbabc94226668a40ef6ddf5d42b)"
+    license: "Apache-2.0"
+    integration_mode: sidecar
+    replacement_contract: "Wyoming protocol server; WyomingProvider port in nexus-audio isolates the server (any Wyoming-compatible server may replace)"
+    commercial_review: "Apache-2.0 upstream classifier; MIT LICENSE.md text; commercial use permitted"
+    status: voice-profile
+    rationale: "Real Wyoming protocol transport for assist satellites; proven by EP-022 M3 real-container integration (real Describe/Detect events; container wake models are upstream test fixtures, Nexus wake model remains Nexus-owned per SPEC-019)"
   - id: asterisk
     capability: phone.gateway
     implementation: "Asterisk"

@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary (2026-08-16)
 - [x] M2: Core behavior and deterministic invariants (2026-08-16)
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration (2026-08-16)
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -290,6 +290,22 @@ scripts/ep022-m2-tests.sh vacuity guard + 5 in-crate unit tests, 3 suites
 16 total); clippy -D warnings clean; workspace check 95 crates green; M1
 regression 16 green; side gates ok (scope/reality/security/license/
 blueprint/format/dependency).
+
+M3 evidence: `EP-022 M3: ok` (4 ep022_integration tests via
+scripts/ep022-m3-tests.sh vacuity guard against the REAL
+rhasspy/wyoming-openwakeword container, digest
+sha256:52cb1168731a1849fc28cf339c935fde58746bbabc94226668a40ef6ddf5d42b):
+canonical describe/info handshake returns the real server advertising
+openwakeword wake program with installed models; real
+Kokoro-generated hey-jarvis.wav streamed through the real Wyoming
+protocol (wyoming==1.10.0 client, MIT) produces a real Detection event
+(hey_jarvis at 1000ms); real silence produces NotDetected (real
+negative); dead server fails closed fast. Container lifecycle managed by
+the gate (start -> protocol readiness -> suite -> zero-orphan teardown).
+COMPONENT_REGISTRY.yaml row wyoming-openwakeword added (EP-020 M3
+precedent). M1 16 green; M2 16 green; clippy clean; workspace check 95
+crates green; side gates ok (scope/reality/security/license/blueprint/
+format/dependency).
 
 # 12. Surprises & Discoveries
 
@@ -320,6 +336,19 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   unbound gate fails closed (UNAVAILABLE) and a satellite cannot start
   listening without a bound wake gate (SPEC-012 behavior 3 requires local
   wake; a satellite without local wake is not locally functional).
+- 2026-08-16: The real rhasspy/wyoming-openwakeword container (latest,
+  digest 52cb1168...d42b) is a tflite-lineage openwakeword 2.1.0 server;
+  its bundled wake models (okay_nabu, hey_jarvis, etc.) are upstream
+  fixtures. The M3 transport proof streams REAL Kokoro-generated audio
+  and observes a REAL Detection event (hey_jarvis at 1000ms) through the
+  REAL protocol. The Nexus-owned wake model is NOT swapped into the
+  container; production wake-model certification remains DEFERRED per
+  SPEC-019 (no bundled noncommercial weights; Nexus model stays
+  Nexus-owned).
+- 2026-08-16: Readiness probing for the Wyoming container must do a real
+  protocol handshake, not a bare TCP connect - the port accepts at the
+  kernel level before the app is ready (tests errored with empty events
+  on first gate run). The gate now waits for the describe/info handshake.
 
 # 13. Decision Log
 
@@ -388,6 +417,24 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   Alternatives: hard-wiring a microphone transport in M2 (rejected:
   no real hardware in this environment; Reality rule). Security:
   fail-closed gates, visible mute state (SPEC-012 behavior 9).
+- 2026-08-16 | Wyoming transport integration uses the REAL protocol
+  server | connectors/wyoming (Python connector + unittest suite) talks
+  the canonical Wyoming protocol to the REAL
+  rhasspy/wyoming-openwakeword container (digest
+  52cb1168...d42b, Apache-2.0 classifier/MIT LICENSE text) over TCP.
+  Real client library wyoming==1.10.0 (MIT) in the engine venv. Real
+  Kokoro-generated audio -> real Describe handshake -> real Detection
+  event; silence -> real NotDetected; dead server fails closed fast.
+  The container wake models are upstream fixtures (tflite lineage); the
+  Nexus-owned wake model is never placed inside the container and its
+  production certification remains DEFERRED (SPEC-019; EP-021 M3 graph
+  gap). COMPONENT_REGISTRY.yaml row added (EP-020 M3 precedent).
+  Evidence: 4 ep022_integration tests; gate manages container lifecycle
+  with zero-orphan teardown. Alternatives: an in-memory protocol stub
+  (rejected: Reality rule - would prove nothing about the wire);
+  swapping the Nexus model into the container (rejected: SPEC-019).
+  Security: real wire behavior, fail-closed timeouts, no fabricated
+  detections.
 
 # 14. Outcomes & Retrospective
 
