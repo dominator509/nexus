@@ -1,0 +1,11 @@
+[package]
+name = "nexus-devices"
+version = "0.1.0"
+edition = "2021"
+description = "EP-024 provider-neutral device contracts: MediaProvider, ApplianceProvider, IrrigationProvider, VacuumProvider, RobotProvider, DeviceCapabilityMapper, DeviceCommandVerifier (SPEC-011)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

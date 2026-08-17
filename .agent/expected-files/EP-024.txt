@@ -3,6 +3,9 @@
 .agent/expected-files/EP-024.txt
 .agent/node-contracts/EP-024.md
 scripts/nodes/EP-024.sh
+scripts/ep024-m1-tests.sh
+Cargo.toml
+Cargo.lock
 crates/nexus-devices/
 connectors/media/
 connectors/appliances/

@@ -273,7 +273,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -281,11 +281,13 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-17 M1: Pre-created node script M1 gate was artifact-only (EP-001 masking class: `node-artifact-check.py` only, no test execution). Replaced with `scripts/ep024-m1-tests.sh` (real cargo suite + vacuity guards) per the EP-019..EP-023 precedent.
+- 2026-08-17 M1: SPEC-011 canonical capability taxonomy differs from intuition — the domain vocabulary uses `CapabilityClass::Query/Command/Workflow/Stream/Administrative`, `Risk::R0..R4`, `ApprovalClass::None/Policy/Human/StrongHuman/FourEyes`, `Idempotency::NotApplicable/Optional/Required`. The mapper uses exactly these locked values (verified from nexus-domain sources), never invented classes.
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-17 M1: Create `crates/nexus-devices` as the provider-neutral contract crate for MediaProvider/ApplianceProvider/IrrigationProvider/VacuumProvider/RobotProvider/DeviceCapabilityMapper/DeviceCommandVerifier. Evidence: SPEC-011 behaviors 5-7, node contract. Alternatives: fold into nexus-home (rejected: nexus-home owns the Home Assistant provider surface; devices are provider-neutral across media/appliance/irrigation/vacuum/robot classes). Consequence: callers import one device surface; later milestones add connectors behind ports. Reversal: rename crate under ADR. Security: no new authority; robot activation gated by safety declaration. License: MIT. Compatibility: workspace member addition only.
+- 2026-08-17 M1: Create `connectors/robotics` as the fail-closed robotics connector with real safety-declaration gating but no fabricated hardware inventory (Reality rule; acceptance obligation 4). Evidence: SPEC-011 behavior 6, EP-023 roku-home precedent. Consequence: robot activation refuses until real hardware certification; the gating rule is proven now so a future bound robot cannot bypass it.
 
 # 14. Outcomes & Retrospective
 

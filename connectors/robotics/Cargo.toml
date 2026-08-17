@@ -1,0 +1,12 @@
+[package]
+name = "nexus-robotics"
+version = "0.1.0"
+edition = "2021"
+description = "EP-024 robotics connector: fail-closed RobotProviderHost with real safety-declaration gating (SPEC-011 behavior 6). No robot hardware is present, so inventory and capability declarations truthfully report UNAVAILABLE; capabilities are never fabricated."
+license = "MIT"
+
+[dependencies]
+nexus-devices = { path = "../../crates/nexus-devices", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
