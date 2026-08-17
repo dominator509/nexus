@@ -1,0 +1,11 @@
+[package]
+name = "nexus-roku-home"
+version = "0.1.0"
+edition = "2021"
+description = "EP-023 Roku home provider: canonical fallback ladder with real fail-closed semantics (SPEC-021 behavior 2/3). No hardware/credentials are present, so inventory and tier selection truthfully report UNAVAILABLE; capabilities are never fabricated."
+license = "MIT"
+
+[dependencies]
+nexus-vision = { path = "../../crates/nexus-vision", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

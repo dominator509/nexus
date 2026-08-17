@@ -437,6 +437,7 @@ fn ep023_failure_frigate_counters_increment() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m4-tests.sh"]
 fn ep023_failure_frigate_provider_stopped_unavailable() {
     // Gate phase B: the real Frigate container is stopped. The SAME
     // production operation that succeeded in phase A must now return
@@ -461,6 +462,7 @@ fn ep023_failure_frigate_provider_stopped_unavailable() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m4-tests.sh"]
 fn ep023_failure_frigate_never_streaming_without_fresh_evidence() {
     // Phase B (provider stopped): a fresh availability observation must
     // never report STREAMING. The adapter has no stale cache - it
@@ -561,6 +563,7 @@ fn ep023_failure_frigate_diag_redaction() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m4-tests.sh"]
 fn ep023_failure_frigate_diag_status_healthy() {
     // Gate phase A: the real Frigate stack is up.
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_frigate-diag"))
@@ -589,6 +592,7 @@ fn ep023_failure_frigate_diag_status_healthy() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m4-tests.sh"]
 fn ep023_failure_frigate_recovery_after_provider_restart() {
     // Gate phase C: the real Frigate container was restarted. A fresh
     // observation must recover: list_cameras succeeds and the canary

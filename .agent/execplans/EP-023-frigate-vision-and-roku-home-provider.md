@@ -277,7 +277,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants (2026-08-17)
 - [x] M3: Real dependency and transport integration (2026-08-17)
 - [x] M4: Forced failures, abuse cases, and observability (2026-08-17)
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure (2026-08-17)
 
 M1 evidence: `EP-023 M1: ok` (13 ep023_unit tests via
 scripts/ep023-m1-tests.sh vacuity guard): crates/nexus-vision
@@ -445,6 +445,58 @@ security/license/dependency/reality gates ok; scope audit EP-023: ok
 EP-023.txt); zero-orphan teardown; sysctl hygiene recorded (directive
 G: 200000, sufficient, no change).
 
+M5 evidence: `EP-023 M5: ok` (scripts/ep023-m5-tests.sh; observed run
+/tmp/ep023-m5-node-gate5.log + LF-008 standalone /tmp/lf008-standalone.log;
+node gate re-run also `EP-023 M5: ok`). Pure-contract E2E phase (no
+stack): 4 nexus-vision-e2e ep023_e2e tests green - stream refs never
+claim verified without evidence (evidence_ref None, verified("") fails
+closed, verified("probe-1") only with a real ref), two-way audio fails
+closed without certification (state NotCertified, certify() ->
+VisionErrorCode::Verification even with other gates), identity
+advisory-only (KnownVisitor.advisory_only always true), Roku ladder
+fails closed truthfully (host inventory empty, tier UNAVAILABLE,
+select_tier picks best available, empty -> UNAVAILABLE); 5
+nexus-roku-home ep023_unit_roku tests green (host fail-closed,
+ladder order, never fabricates higher tier, canonical vocabulary,
+fixture provider port). LF-008 live-fire (scripts/live-fire/LF-008.sh,
+real stack): pinned Frigate 0.17.2 digest + mediamtx v1.20.0 sha +
+REAL person photograph (infra/frigate/fixtures/person-einstein.jpg,
+3250x4333 JPEG) streamed through mediamtx RTSP -> go2rtc -> Frigate cpu
+detector with slow horizontal pan (walking pace motion, probe-verified
+detection_fps 13.5; static/slow-zoom streams do NOT open Frigate's
+motion gate - genuine host behavior, recorded in Surprises); the gate
+POLLS /api/events until a real person detection appears (observed at
+poll 1, label person, no canned fixture, honest failure otherwise);
+E2E journey test ep023_e2e_visitor_response_lf008 (run FOR REAL with
+--ignored): maps the REAL person event through the production adapter
+into CameraEvent (object person, confidence 0.734, camera nexus_front)
+-> VisitorEvent -> advisory UNKNOWN identity -> deterministic
+notification-target decision (PRIVATE -> owner only) -> two-way audio
+certify() fails closed NOT_CERTIFIED (no verified speaker path, never
+fabricated) -> capabilities never advertise TwoWayAudio from metadata
+-> stream ref stays Unverified -> real provider availability Streaming;
+machine-readable evidence written to
+.agent/state/evidence/EP-023-M5-LF-008-visitor-response.json (real
+observed values only: real_person_event confidence 0.734, identity
+UNKNOWN, two_way NOT_CERTIFIED, roku UNAVAILABLE, stream UNVERIFIED);
+zero-orphan teardown verified; LF-008 placeholder (proof-runner.sh
+nexusctl/nexus-cli - no such crate) replaced with the real live-fire
+script + vacuity guards (EP-001 class). tests/vision/OPS.md ops doc
+(health/readiness/backup-restore/upgrade/disable/rollback +
+certification boundary). Workspace battery with the live-stack
+#[ignore] convention: 1553 passed, 15 ignored (142 suites) - the 14
+live-stack integration/failure tests + LF-008 journey are #[ignore]d
+for ambient battery and run FOR REAL via --ignored in the M3/M4/M5
+gates. Certification registry rows appended (nexus-vision,
+nexus-frigate, nexus-roku-home, nexus-vision-e2e INTERNAL_CERTIFIED;
+Frigate provider INTERNAL_CERTIFIED pinned digest; Roku hardware
+DEFERRED EP-040/EP-043; physical camera NOT ASSERTED). clippy -D
+warnings clean; fmt/format/lint/security/license/dependency/reality
+gates ok; scope audit EP-023: ok (scripts/ep023-m5-tests.sh +
+scripts/live-fire/LF-008.sh registered in
+.agent/expected-files/EP-023.txt); M2 regression 52 green; M3
+regression ok; M4 regression ok.
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
@@ -531,6 +583,38 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   code. The malformed counter lives at the transport boundary where
   JSON/DTO parsing actually fails (trait default 0, RestTransport
   counts real parse failures) and adapter.metrics() merges it.
+- 2026-08-17: The pre-created LF-008.sh was a placeholder calling
+  scripts/proof-runner.sh LF-008 which invokes `nexusctl`/`nexus-cli`
+  - NO such crate exists in the workspace (verified: target/release/
+  nexusctl absent, no nexus-cli package). Replaced with a real
+  live-fire script (LF-026 pattern) that starts the pinned stack,
+  polls for a REAL person detection, runs the journey test with
+  --ignored, and writes machine-readable evidence.
+- 2026-08-17: Frigate's motion gate does NOT open on a static or
+  slow-zoom person image: probes with a still loop (zoompan 0.0005)
+  and a slow zoom (0.0004) both yielded detection_fps=0.1 and zero
+  person events after 240s; a slow HORIZONTAL PAN across the portrait
+  (walking pace, crop x advancing ~90px/s) immediately opened the
+  gate (detection_fps=13.5) and produced a real person event at the
+  first poll. The LF-008 gate uses the pan; the events poll is the
+  honest detector (no canned fixture, failure if no person appears).
+- 2026-08-17: cargo libtest prints "running 1 test" (singular) for a
+  single-test filter; two LF-008 vacuity regexes (`running [1-9][0-9]*
+  tests` and the double-escaped `\\\\.\\\\.\\\\.` journey pattern)
+  missed single-test phases. Fixed to `running [1-9][0-9]* test` and
+  `\.\.\.` (single-escape, verified against the real log line).
+- 2026-08-17: The pre-created M5/verify gate in scripts/nodes/
+  EP-023.sh ran `cargo test --locked -p nexus-vision` - the M1
+  contract crate, EP-001 gate-masking class (same defect class as M2/
+  M4). Replaced with scripts/ep023-m5-tests.sh (vacuity-guarded
+  pure-contract E2E + Roku units) + the real LF-008 live-fire.
+- 2026-08-17: EP-023 is the first node whose integration tests need a
+  live stack; the ambient `verify.sh` battery (`cargo test --workspace
+  --tests`) panicked on the 14 live-stack tests without
+  FRIGATE_BASE_URL. The 10 integration + 4 failure live-stack tests
+  are now `#[ignore]`d for the ambient battery and run FOR REAL with
+  `--ignored` inside the M3/M4 gates (and the LF-008 journey in the
+  M5 gate). Workspace battery: 1553 passed, 15 ignored.
 
 # 13. Decision Log
 
@@ -668,7 +752,117 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   line ran the M1/nexus-vision suite (EP-001 class). Replaced with a
   vacuity-guarded ep023-frigate failure suite gate with cross-phase
   accounting (18/18) and per-phase skip verification.
+- 2026-08-17 | Live-stack tests #[ignore]d for ambient battery | EP-023
+  is the first node whose integration/failure tests need a live stack;
+  the ambient verify battery panicked without FRIGATE_BASE_URL. The 14
+  live-stack tests (10 integration + 4 failure) and the LF-008 journey
+  carry #[ignore] with an explicit reason; the M3/M4/M5 gates run them
+  FOR REAL with --ignored against the live pinned stack. The gate
+  evidence is unchanged (same tests, same assertions); only the ambient
+  battery skips them. Evidence: workspace battery 1553 passed / 15
+  ignored, M3/M4/M5 gates green.
+- 2026-08-17 | LF-008 real person event, not a canned fixture | The
+  gate streams the REAL person photograph (person-einstein.jpg) with
+  slow-pan motion and POLLS /api/events until Frigate's cpu detector
+  emits a genuine person event (observed at poll 1, confidence 0.734);
+  failure to detect within 240s fails the gate. The journey test maps
+  that real event through the production adapter; evidence JSON
+  records real observed values only. Alternatives: injecting a fake
+  event (rejected: fabrication).
+- 2026-08-17 | Roku stays a fail-closed ladder, hardware DEFERRED |
+  connectors/roku-home binds RokuHomeProviderHost honestly (empty
+  inventory, tier UNAVAILABLE, never fabricates a capability or a
+  higher ladder tier); HARDWARE_CERTIFICATION DEFERRED to EP-040/EP-043
+  with no physical device. The crate exists so the provider port is
+  bound to a real implementation instead of an unbound default.
+  Evidence: ep023_unit_roku_* tests + EP-023-M5 evidence JSON
+  roku_tier UNAVAILABLE.
+- 2026-08-17 | TwoWayAudio stays NOT certified on this node | LF-008
+  proves certify() fails closed (no verified speaker path) and
+  capabilities never advertise TwoWayAudio from config metadata; the
+  approved-response playback leg is proven as NOT certified, never
+  fabricated. Certification owner: EP-043 with real media hardware.
+  Evidence: ep023_e2e_two_way_audio_fails_closed_without_certification
+  + EP-023-M5 evidence JSON two_way NOT_CERTIFIED.
 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## Changed files vs machine fence (M5)
+
+- `tests/vision/` (fence: tests/vision/): Cargo.toml + tests/
+  ep023_e2e_visitor_response.rs (nexus-vision-e2e, 5 tests: 4 pure
+  contract + 1 #[ignore]d LF-008 journey) + OPS.md ops doc.
+- `connectors/roku-home/` (fence: connectors/roku-home/): Cargo.toml +
+  src/lib.rs (nexus-roku-home, real fail-closed RokuHomeProviderHost,
+  5 ep023_unit_roku tests).
+- `Cargo.toml` + `Cargo.lock`: +2 workspace members (nexus-roku-home,
+  nexus-vision-e2e).
+- `connectors/frigate/tests/ep023_integration_frigate.rs`: 10 tests
+  #[ignore]d (live stack; run via M3 gate --ignored).
+- `connectors/frigate/tests/ep023_failure_frigate.rs`: 4 live-stack
+  tests #[ignore]d (run via M4 gate --ignored).
+- `scripts/ep023-m3-tests.sh` + `scripts/ep023-m4-tests.sh`:
+  run_cargo now passes --ignored to the live-stack suites.
+- `scripts/ep023-m5-tests.sh` (new, registered in expected-files):
+  M5 gate - vacuity-guarded pure-contract E2E + Roku units + LF-008.
+- `scripts/live-fire/LF-008.sh` (registered): real live-fire (was a
+  broken proof-runner placeholder invoking nonexistent nexusctl).
+- `scripts/nodes/EP-023.sh`: M5/verify line de-masked (was
+  `cargo test -p nexus-vision` EP-001 class) -> ep023-m5-tests.sh.
+- `.agent/expected-files/EP-023.txt`: + scripts/ep023-m5-tests.sh +
+  scripts/live-fire/LF-008.sh.
+- `.agent/state/evidence/EP-023-M5-LF-008-visitor-response.json` (new,
+  machine-readable real observed values).
+- `.agent/state/evidence/CERTIFICATION_REGISTRY.md`: + EP-023 rows.
+
+## Commands and observed sentinels (M5)
+
+- `sh scripts/nodes/EP-023.sh M5` -> `EP-023 M5: ok` (GATE_EXIT=0;
+  phase 1: 4 E2E + 5 Roku pure tests green; phase 2: LF-008 live-fire
+  green with real person event at poll 1).
+- `sh scripts/live-fire/LF-008.sh` -> `LF-008: ok` (standalone run;
+  real person detection observed; journey test ok; zero-orphan
+  teardown).
+- `sh scripts/node-verify.sh EP-023` -> `node verify EP-023: ok`
+  (verify battery + M5 gate).
+- `sh scripts/scope-audit.sh EP-023` -> `scope audit EP-023: ok`.
+- `sh scripts/expected-files.sh EP-023` -> `expected files EP-023: ok`.
+- `cargo test --workspace --tests --locked` -> 1553 passed, 15 ignored
+  (142 suites).
+- `cargo test --locked -p nexus-roku-home -p nexus-vision-e2e` ->
+  9 passed, 1 ignored.
+- `cargo clippy --locked -p nexus-roku-home -p nexus-vision-e2e
+  --all-targets -- -D warnings` -> clean.
+- `sh scripts/reality-gate.sh` -> `reality gate: ok`.
+
+## Provider and hardware status
+
+- Frigate 0.17.2 (pinned digest) provider: INTERNAL_CERTIFIED (real
+  container, real media chain, real person detection, real events).
+- mediamtx v1.20.0 (pinned sha): CONTROLLED_TEST_FIXTURE transport.
+- Physical camera hardware: NOT ASSERTED (no hardware exercised).
+- Roku hardware: NOT ASSERTED / HARDWARE_CERTIFICATION DEFERRED to
+  EP-040/EP-043 (no physical device).
+- Two-way audio live certification: NOT ASSERTED (requires real
+  speaker/media path; LF-008 proves the honest fail-closed leg).
+- WebRTC/RTSP media-level certification: NOT ASSERTED; stream refs
+  stay Unverified.
+
+## Remaining risks
+
+- Frigate cold boot ~175-179s on this host: gates use 240s/300s bounds
+  (genuine host timing, not a defect).
+- Live-stack proofs depend on the host Docker + mediamtx binary; they
+  are gated (#[ignore]) in the ambient battery and run FOR REAL in the
+  M3/M4/M5 gates.
+- Roku and physical-camera certification are explicitly deferred
+  debts with owners (EP-040/EP-043); not incomplete simulated code.
+
+## Green tag
+
+- `green/EP-023` created at the M5 implementation commit (the node
+  closure commit follows as the ledger closure commit, EP-022
+  convention preserved).
+

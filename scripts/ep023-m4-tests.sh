@@ -215,7 +215,10 @@ run_cargo() {
   shift 2
   phase_log="$WORK/cargo-${filter}.log"
   cargo_args="-p nexus-frigate --test $test_bin $filter"
-  libtest_args=""
+  # Live-stack failure tests are #[ignore]d so the ambient workspace
+  # verify battery stays green without the stack; the M4 gate runs them
+  # FOR REAL with --ignored against the live container.
+  libtest_args="--ignored"
   skips=""
   while [ "$#" -gt 0 ]; do
     case "$1" in

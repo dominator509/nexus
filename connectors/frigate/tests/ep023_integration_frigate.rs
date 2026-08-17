@@ -13,6 +13,12 @@
 //!   - everything else: stack-up invariants
 //!
 //! Env: `FRIGATE_BASE_URL` (e.g. http://127.0.0.1:5000) is REQUIRED.
+//!
+//! These are LIVE-STACK tests: they require the real Frigate stack and
+//! are marked `#[ignore]` so the ambient workspace verify battery
+//! (`cargo test --workspace --tests`) stays green without the stack.
+//! The M3 gate (scripts/ep023-m3-tests.sh) runs them with `--ignored`
+//! against the real container, so the proofs remain mandatory.
 
 use std::env;
 
@@ -40,6 +46,7 @@ fn camera() -> CameraId {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_version_matches_pinned() {
     let resp =
         reqwest::blocking::get(format!("{}/api/version", base_url())).expect("GET /api/version");
@@ -56,6 +63,7 @@ fn ep023_integration_frigate_version_matches_pinned() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_discovers_real_camera_with_stable_identity() {
     let adapter = adapter();
     let cameras = adapter.list_cameras().expect("discovery");
@@ -69,6 +77,7 @@ fn ep023_integration_frigate_discovers_real_camera_with_stable_identity() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_capabilities_from_real_config() {
     let adapter = adapter();
     let caps = adapter.capabilities(&camera()).expect("capabilities");
@@ -80,6 +89,7 @@ fn ep023_integration_frigate_capabilities_from_real_config() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_availability_streaming_with_live_producer() {
     let adapter = adapter();
     let state = adapter.availability(&camera()).expect("availability");
@@ -93,6 +103,7 @@ fn ep023_integration_frigate_availability_streaming_with_live_producer() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_availability_source_dead_never_streaming() {
     // Run only while the FFmpeg source is stopped (gate phase 2). The
     // real go2rtc producer for a dead source is a bare {"url": ...}
@@ -108,6 +119,7 @@ fn ep023_integration_frigate_availability_source_dead_never_streaming() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_availability_recovered_streaming() {
     // Run only after the source restarts (gate phase 3).
     let adapter = adapter();
@@ -116,6 +128,7 @@ fn ep023_integration_frigate_availability_recovered_streaming() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_snapshot_is_real_jpeg() {
     let mut transport = RestTransport::new(base_url());
     let bytes = transport
@@ -133,6 +146,7 @@ fn ep023_integration_frigate_snapshot_is_real_jpeg() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_events_api_is_real() {
     let adapter = adapter();
     let events = adapter.events(&camera(), 0).expect("real events query");
@@ -143,6 +157,7 @@ fn ep023_integration_frigate_events_api_is_real() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_restart_same_identity_and_snapshot() {
     // Run only after `docker restart` of the Frigate container (gate
     // phase 4). The same camera must map to the same canonical CameraId
@@ -163,6 +178,7 @@ fn ep023_integration_frigate_restart_same_identity_and_snapshot() {
 }
 
 #[test]
+#[ignore = "requires live Frigate stack (FRIGATE_BASE_URL); run via scripts/ep023-m3-tests.sh"]
 fn ep023_integration_frigate_redaction_under_real_config() {
     let secret = "m3secret";
     let url = format!("rtsp://m3user:{secret}@192.0.2.55:554/never");

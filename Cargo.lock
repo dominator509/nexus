@@ -1527,6 +1527,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-roku-home"
+version = "0.1.0"
+dependencies = [
+ "nexus-vision",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-sidecar"
 version = "0.1.0"
 dependencies = [
@@ -1576,6 +1585,16 @@ version = "0.1.0"
 dependencies = [
  "nexus-domain",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-vision-e2e"
+version = "0.1.0"
+dependencies = [
+ "nexus-frigate",
+ "nexus-roku-home",
+ "nexus-vision",
  "serde_json",
 ]
 

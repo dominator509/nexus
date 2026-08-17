@@ -216,9 +216,12 @@ run_cargo() {
   skip="${2:-}"
   phase_log="$WORK/cargo-${filter}.log"
   cargo_args="-p nexus-frigate --test ep023_integration_frigate $filter"
-  libtest_args=""
+  # Live-stack integration tests are #[ignore]d so the ambient
+  # workspace verify battery stays green without the stack; the M3 gate
+  # runs them FOR REAL with --ignored against the live container.
+  libtest_args="--ignored"
   if [ -n "$skip" ]; then
-    libtest_args="--skip $skip"
+    libtest_args="$libtest_args --skip $skip"
   fi
   # shellcheck disable=SC2086
   if ! cargo test --locked $cargo_args -- $libtest_args >>"$phase_log" 2>&1; then

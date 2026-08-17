@@ -9,6 +9,8 @@ scripts/ep023-m1-tests.sh
 scripts/ep023-m2-tests.sh
 scripts/ep023-m3-tests.sh
 scripts/ep023-m4-tests.sh
+scripts/ep023-m5-tests.sh
+scripts/live-fire/LF-008.sh
 Cargo.toml
 Cargo.lock
 crates/nexus-vision/

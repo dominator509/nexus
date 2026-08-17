@@ -1,0 +1,24 @@
+{
+  "capabilities_two_way_audio_advertised": false,
+  "identity_advisory_only": true,
+  "milestone": "M5",
+  "node": "EP-023",
+  "notify_targets": [
+    "owner"
+  ],
+  "proof": "LF-008 visitor-response",
+  "real_person_event": {
+    "camera": "nexus_front",
+    "confidence": 0.75390625,
+    "object": "person",
+    "timestamp_ms": 1786971062088
+  },
+  "roku_tier": "UNAVAILABLE",
+  "stream_ref_status": "UNVERIFIED",
+  "two_way_audio": {
+    "approved_response_played": false,
+    "certify_code": "VERIFICATION",
+    "state": "NOT_CERTIFIED"
+  },
+  "visitor_identity": "UNKNOWN"
+}

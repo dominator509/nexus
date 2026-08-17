@@ -1,0 +1,12 @@
+[package]
+name = "nexus-vision-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-023 M5 cross-node E2E: visitor-response live-fire (LF-008) composing real nexus-vision contracts + nexus-frigate adapter + roku-home fail-closed ladder"
+license = "MIT"
+
+[dependencies]
+nexus-vision = { path = "../../crates/nexus-vision", version = "0.1.0" }
+nexus-frigate = { path = "../../connectors/frigate", version = "0.1.0" }
+nexus-roku-home = { path = "../../connectors/roku-home", version = "0.1.0" }
+serde_json.workspace = true

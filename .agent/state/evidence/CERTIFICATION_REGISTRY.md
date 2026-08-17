@@ -341,3 +341,51 @@ production_certification: DEFERRED
 certification_owner: EP-043 (production readiness and ship)
 blocking_for_ship: false
 evidence_reference: tests/audio; .agent/state/evidence/EP-022-M5-LF-026-voice-endpoint-transfer.json
+
+## Component: nexus-vision (EP-023 M1 contract crate)
+component_id: nexus-vision
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (13 ep023_unit tests; camera/stream/identity/two-way/roku contracts; StreamRef no-unverified-claim, two-way fails closed, advisory identity; M1 gate green)
+provider: none (provider-neutral ports by design)
+provider_certification: N/A
+hardware_certification: NOT ASSERTED (hardware/cameras/profiles.yaml conformance DEFINED only; physical camera classes never upgraded from YAML)
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: crates/nexus-vision; EP-023 M1 gate; hardware/cameras/profiles.yaml
+
+## Component: nexus-frigate (EP-023 M2/M3/M4 connector)
+component_id: nexus-frigate
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (28 ep023_unit + 10 ep023_integration + 18 ep023_failure tests; real adapter against documented Frigate HTTP/go2rtc API; real media chain; forced-failure suite; observability + frigate-diag; M2/M3/M4 gates green)
+provider: ghcr.io/blakeblackshear/frigate:0.17.2@sha256:d4351369984d4a9e2a49ac59736f6490856a7ea11f7790040746d21496967010 (embedded go2rtc v1.9.10 df95ce3); mediamtx v1.20.0 sha256 25947caac403f37ec881c9be213af2cad67e344a6c7098905b0d31c17f40e336 CONTROLLED_TEST_FIXTURE transport
+provider_certification: INTERNAL_CERTIFIED (real pinned container + real RTSP/media chain + real person detection in LF-008)
+hardware_certification: NOT ASSERTED (no physical camera; stream refs stay Unverified)
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship); Roku/physical-camera hardware DEFERRED to EP-040/EP-043
+blocking_for_ship: false
+evidence_reference: connectors/frigate; COMPONENT_REGISTRY.yaml frigate/go2rtc/mediamtx rows; EP-023 M2/M3/M4 gates; LF-008
+
+## Component: nexus-roku-home (EP-023 M5 provider ladder)
+component_id: nexus-roku-home
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (5 ep023_unit_roku tests; real fail-closed RokuHomeProviderHost: empty inventory, tier UNAVAILABLE, canonical ladder select_tier; M5 gate green)
+provider: none (no Roku hardware/credentials bound on this host)
+provider_certification: N/A
+hardware_certification: NOT ASSERTED (Roku HARDWARE_CERTIFICATION DEFERRED to EP-040/EP-043; no physical device; never fabricated)
+production_certification: DEFERRED
+certification_owner: EP-040/EP-043 (real Roku hardware transport certification; never claimed from the connector)
+blocking_for_ship: false
+evidence_reference: connectors/roku-home; EP-023 M5 gate; .agent/state/evidence/EP-023-M5-LF-008-visitor-response.json (roku_tier UNAVAILABLE)
+
+## Component: nexus-vision-e2e (EP-023 M5 cross-node proof)
+component_id: nexus-vision-e2e
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (4 ep023_e2e pure-contract tests + LF-008 journey composing real nexus-vision + nexus-frigate + nexus-roku-home; real person event -> VisitorEvent -> notification decision -> two-way NOT certified; M5 gate green)
+provider: none (composition proof)
+provider_certification: N/A
+hardware_certification: NOT ASSERTED (two-way audio live certification NOT ASSERTED; requires real speaker/media path)
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: tests/vision; .agent/state/evidence/EP-023-M5-LF-008-visitor-response.json
