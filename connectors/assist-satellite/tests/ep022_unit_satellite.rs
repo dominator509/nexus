@@ -13,8 +13,8 @@ use nexus_assist_satellite::{
     transport::{AudioBatch, AudioFrameSink, AudioSource, SourceEvent},
 };
 use nexus_audio::{
-    AudioEndpointId, AudioError, AudioErrorCode, ConversationContext, ConversationTransfer,
-    DeterministicTransfer, VoiceSatelliteId,
+    AudioEndpointId, AudioError, AudioErrorCode, ConversationContext, DeterministicTransfer,
+    VoiceSatelliteId,
 };
 use nexus_domain::PersonId;
 
