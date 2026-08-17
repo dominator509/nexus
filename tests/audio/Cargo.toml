@@ -1,0 +1,13 @@
+[package]
+name = "nexus-audio-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-022 M5 cross-node E2E: voice endpoint transfer live-fire (LF-026) composing real nexus-audio + nexus-assist-satellite + nexus-bluetooth-audio"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-audio = { path = "../../crates/nexus-audio", version = "0.1.0" }
+nexus-assist-satellite = { path = "../../connectors/assist-satellite", version = "0.1.0" }
+nexus-bluetooth-audio = { path = "../../connectors/bluetooth-audio", version = "0.1.0" }
+serde_json.workspace = true

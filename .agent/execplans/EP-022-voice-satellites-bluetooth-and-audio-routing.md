@@ -277,7 +277,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants (2026-08-16)
 - [x] M3: Real dependency and transport integration (2026-08-16)
 - [x] M4: Forced failures, abuse cases, and observability (2026-08-17)
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure (2026-08-17)
 
 M1 evidence: `EP-022 M1: ok` (16 ep022_unit tests; gate vacuity-guarded via
 scripts/ep022-m1-tests.sh, EP-001 masking class correction); clippy -D
@@ -328,6 +328,36 @@ validation: ok, format check: ok, dependency audit: ok); M1 16
 green; M2 16 green; M3 4 green (real container); COMPONENT_REGISTRY
 bluez row added; Bluetooth/A2DP transport certification DEFERRED
 (hardware ownership EP-040/EP-043), never claimed.
+
+M5 evidence: `EP-022 M5: ok` (5 ep022_e2e tests via the LF-026
+live-fire through scripts/live-fire/LF-026.sh vacuity guard +
+`cargo test --locked -p nexus-audio` 16 green): tests/audio
+(nexus-audio-e2e crate) composes the REAL production components
+(nexus-audio router/transfer/context + nexus-assist-satellite adapter
+core + nexus-bluetooth-audio real system-bus connector) and proves
+the acceptance obligations: room satellite locally functional
+(unbound wake fails closed, LISTENING with bound wake, wake trigger ->
+CAPTURING, stop -> STOPPED); endpoint transfer preserves user/task/
+privacy context exactly (session/principal/objective/privacy/room/
+transcript/correlation; no implicit privacy upgrade); router selects
+by person/room/privacy/availability (person-bound preferred for
+sensitive, shared-room never selected for sensitive, offline never
+selected, fail-closed NOT_FOUND when only shared room); Bluetooth leg
+on this host: real system-bus probe proves org.bluez absent, connect
+fails closed UNAVAILABLE, state DISCONNECTED, audit + metrics, no
+fabricated connectivity (COMMAND ACCEPTED != DEVICE CHANGED != DEVICE
+VERIFIED); LF-026 full journey writes machine-readable evidence
+.agent/state/evidence/EP-022-M5-LF-026-voice-endpoint-transfer.json
+(real observed values). tests/audio/OPS.md operations doc (health,
+readiness, backup/restore, upgrade, disable, rollback). Certification
+registry rows appended: nexus-audio/nexus-assist-satellite/
+wyoming-connector/nexus-bluetooth-audio/nexus-audio-e2e
+INTERNAL_CERTIFIED; BlueZ host substrate and Bluetooth/A2DP transport
+NOT ASSERTED / DEFERRED with owner EP-040/EP-043. clippy -D warnings
+clean; side gates ok (scope audit EP-022: ok, expected files: ok,
+reality gate: ok, security check: ok, license gate: ok, blueprint
+validation: ok, format check: ok, dependency audit: ok); M1 16 green;
+M2 16 green; M3 4 green; M4 13 green.
 
 # 12. Surprises & Discoveries
 
@@ -409,6 +439,16 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   (real nexus-bluetooth-audio ep022_failure suite + vacuity guards:
   non-zero pass count, the two real system-bus tests present and green,
   and the ops diagnostic reporting real `"bluez":"absent"`).
+- 2026-08-17: PersonId requires UUIDv7 (nexus-domain typed_id
+  validation rejects other versions: WrongVersion); the E2E uses a
+  v7-format canonical id.
+- 2026-08-17: LF-026 placeholder (proof-runner via nexus-cli) could not
+  run - nexus-cli is not a workspace member; replaced with the real
+  live-fire script running the nexus-audio-e2e suite (LF-028
+  precedent) with vacuity guards and machine-readable evidence.
+- 2026-08-17: Prettier requires markdown list/bullet formatting in the
+  ops doc; format check failed until tests/audio/OPS.md was prettier
+  --write cleaned.
 
 # 13. Decision Log
 
@@ -520,7 +560,57 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   fabricates it: even a BlueZ-present probe fails closed with the
   deferred certification named (A2DP transport is not certified on
   this host). Evidence: ep022_failure_connector_connect_fails_closed_bluez_absent.
+- 2026-08-17 | M5 live-fire is a real cross-node composition, not a
+  mini-implementation | tests/audio (nexus-audio-e2e) composes the
+  production nexus-audio + nexus-assist-satellite + nexus-bluetooth-audio
+  crates for LF-026. Wake gates and audio ports in the E2E are
+  test-double transport infrastructure (TESTING.md zones); the router,
+  transfer, adapter core, connector, and D-Bus client under proof are
+  the production code. Alternatives: a Python reimplementation
+  (rejected: would prove nothing about the real crates).
+  Evidence: 5 ep022_e2e tests + LF-026 evidence JSON.
 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+Changed files vs fence: crates/nexus-audio/ (M1 contract crate),
+hardware/voice/ (12 conformance classes DEFINED / NOT_ASSERTED),
+connectors/assist-satellite/ (M2 adapter core), connectors/wyoming/
+(M3 real protocol transport), connectors/bluetooth-audio/ (M4 real
+D-Bus connector + forced-failure suite + ops diagnostic), tests/audio/
+(M5 cross-node E2E + OPS.md), scripts/ep022-m1/m2/m3/m4-tests.sh,
+scripts/nodes/EP-022.sh, scripts/live-fire/LF-026.sh,
+COMPONENT_REGISTRY.yaml (wyoming-openwakeword + bluez rows),
+Cargo.toml/Cargo.lock (workspace members), ExecPlan, LEDGER,
+expected-files, node-contracts. All within the machine fence; scope
+audit EP-022: ok.
+
+Commands and observed sentinels: `EP-022 M1: ok` (16 ep022_unit),
+`EP-022 M2: ok` (16), `EP-022 M3: ok` (4 ep022_integration vs real
+container digest 52cb1168...d42b), `EP-022 M4: ok` (13 ep022_failure),
+`EP-022 M5: ok` (5 ep022_e2e + LF-026: ok), `node verify EP-022: ok`,
+`scope audit EP-022: ok`, `expected files EP-022: ok`, clippy -D
+warnings clean (all crates), workspace check green, side gates ok.
+
+Assumptions confirmed: BlueZ is genuinely absent on this build host
+(real D-Bus GetNameOwner NameHasNoOwner); the system bus is the real
+substrate. Assumptions changed: the D-Bus header-fields wire layout,
+trailing-padding hazard, Hello registration requirement, and
+EXTERNAL uid hex form were all discovered empirically against the
+real daemon and fixed (Surprises).
+
+Provider and hardware status: wyoming-openwakeword INTERNAL_CERTIFIED
+(real container + real protocol); nexus-audio / nexus-assist-satellite
+/ nexus-bluetooth-audio / nexus-audio-e2e INTERNAL_CERTIFIED. BlueZ
+host substrate and Bluetooth/A2DP transport NOT ASSERTED, DEFERRED to
+EP-040/EP-043 (hardware ownership). Physical hardware classes
+NOT_ASSERTED. Nexus wake model production certification DEFERRED per
+SPEC-019.
+
+Remaining risks: no physical Bluetooth hardware exercised (deferred);
+no physical mic/speaker/satellite hardware exercised (deferred);
+production runtime deployment not performed (EP-043).
+
+Green tag: green/EP-022 -> M5 implementation commit; LEDGER-only
+closure commit follows NODE_DONE.

@@ -281,3 +281,63 @@ production_certification: DEFERRED
 certification_owner: EP-043 (production readiness and ship)
 blocking_for_ship: false
 evidence_reference: crates/nexus-home; connectors/home-assistant; infra/home-assistant; tests/home; .agent/state/evidence/EP-020-M3-real-ha-provider.md; EP-020-M4-forced-failures.md; EP-020-M5-real-provider-livefire.md
+
+## Component: nexus-audio (EP-022 contract crate)
+component_id: nexus-audio
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (16 ep022_unit tests; vocabulary/endpoint/router/transfer/satellite/bluetooth/AEC contracts; M1 gate green)
+provider: none (provider-neutral ports by design)
+provider_certification: N/A
+hardware_certification: NOT ASSERTED (hardware/voice/profiles.yaml conformance DEFINED only; physical classes never upgraded from YAML)
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: crates/nexus-audio; EP-022 M1 gate; hardware/voice/profiles.yaml
+
+## Component: nexus-assist-satellite (EP-022 M2 adapter core)
+component_id: nexus-assist-satellite
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (16 ep022_unit tests; local wake gating, hardware mute authority, context survival; M2 gate green)
+provider: none (I/O-agnostic ports; real transports owned by M3/M4/M5)
+provider_certification: N/A
+hardware_certification: NOT ASSERTED
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: connectors/assist-satellite; EP-022 M2 gate; LF-026 e2e (tests/audio)
+
+## Component: wyoming-connector (EP-022 M3 transport)
+component_id: wyoming-connector
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (4 ep022_integration tests vs REAL rhasspy/wyoming-openwakeword container digest 52cb1168...d42b; real Describe/Detection/NotDetected wire events; M3 gate green)
+provider: rhasspy/wyoming-openwakeword (Apache-2.0 classifier, MIT LICENSE text)
+provider_certification: INTERNAL_CERTIFIED (real container + real protocol; container wake models are upstream fixtures per SPEC-019)
+hardware_certification: NOT ASSERTED
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship); Nexus wake model certification DEFERRED per SPEC-019 (EP-021 M3 graph gap)
+blocking_for_ship: false
+evidence_reference: connectors/wyoming; COMPONENT_REGISTRY.yaml wyoming-openwakeword row; EP-022 M3 gate
+
+## Component: nexus-bluetooth-audio (EP-022 M4 connector)
+component_id: nexus-bluetooth-audio
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (13 ep022_failure tests; real D-Bus wire client verified byte-for-byte vs live dbus-send capture; 3 real system-bus tests; real peer fault injection; M4 gate green)
+provider: host system D-Bus daemon (real bus; org.bluez absent on this host)
+provider_certification: NOT ASSERTED (BlueZ absence proven by real GetNameOwner NameHasNoOwner; connector fails closed UNAVAILABLE)
+hardware_certification: NOT ASSERTED (Bluetooth/A2DP transport certification DEFERRED to hardware ownership)
+production_certification: DEFERRED
+certification_owner: EP-040/EP-043 (real Bluetooth hardware transport certification; never claimed from the connector)
+blocking_for_ship: false
+evidence_reference: connectors/bluetooth-audio; COMPONENT_REGISTRY.yaml bluez row; EP-022 M4 gate; LF-026 bluetooth leg
+
+## Component: nexus-audio-e2e (EP-022 M5 cross-node proof)
+component_id: nexus-audio-e2e
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (5 ep022_e2e tests composing real nexus-audio + nexus-assist-satellite + nexus-bluetooth-audio; LF-026 live-fire green with machine-readable evidence)
+provider: none (composition proof)
+provider_certification: N/A
+hardware_certification: NOT ASSERTED
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: tests/audio; .agent/state/evidence/EP-022-M5-LF-026-voice-endpoint-transfer.json

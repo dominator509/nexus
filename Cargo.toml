@@ -33,6 +33,7 @@ members = [
     "connectors/home-assistant",
     "connectors/assist-satellite",
     "connectors/bluetooth-audio",
+    "tests/audio",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

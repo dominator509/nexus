@@ -1,0 +1,27 @@
+{
+  "bluetooth_leg": {
+    "audit_records": 1,
+    "bluez_present": false,
+    "connect_code": "UNAVAILABLE",
+    "fabricated_connect": false,
+    "state_after": "DISCONNECTED"
+  },
+  "milestone": "M5",
+  "node": "EP-022",
+  "proof": "LF-026 voice-endpoint-transfer",
+  "router_sensitive_output": {
+    "selected": "person-headset-1",
+    "shared_room_rejected": true
+  },
+  "satellite_state_after_start": "LISTENING",
+  "transfer": {
+    "context_preserved": true,
+    "correlation_id": "corr-session-lf026-7",
+    "objective": "control the kitchen light",
+    "privacy_policy_id": "policy-ephemeral-v1",
+    "session_id": "session-lf026-7",
+    "target_endpoint": "android-mobile-1",
+    "transcript_lines": 2
+  },
+  "wake_triggered_capture": true
+}
