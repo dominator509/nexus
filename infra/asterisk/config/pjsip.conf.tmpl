@@ -1,0 +1,100 @@
+; EP-025 Asterisk 22.10.1 PJSIP endpoints (CONTROLLED_TEST_FIXTURE).
+;
+; Two real PJSIP endpoints with real authentication. direct_media=no
+; forces RTP through Asterisk so the bridge proof exercises real
+; Asterisk media, not peer-to-peer RTP.
+;
+; Passwords are rendered by the fixture bootstrap from random
+; per-run values - NEVER committed.
+;
+; AOR policy (CONTROLLED_TEST_FIXTURE): each AOR models ONE real
+; device (one baresip endpoint), so a new registration must
+; deterministically REPLACE the old one. max_contacts=1 +
+; remove_existing=yes force that; remove_unavailable=yes prunes
+; contacts Asterisk has qualified as unavailable. Expiration bounds
+; are TEST-FIXTURE timing only (client regint=5): Asterisk defaults
+; would clamp the 5s refresh up to minimum_expiration=60s, leaving a
+; stale post-restart contact observable for ~60s. Production
+; deployment policy is separate and NOT set here.
+
+[transport-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0:5060
+
+[transport-tcp]
+type=transport
+protocol=tcp
+bind=0.0.0.0:5061
+
+[global]
+type=global
+max_forwards=10
+
+; ---- endpoint-a ---------------------------------------------------
+[endpoint-a]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-a
+aors=endpoint-a
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+; identify_by=username only: both controlled clients share the same
+; source host, so IP identification would be ambiguous. The AOR name
+; equals the SIP To-URI username (endpoint-a), so username matching
+; alone resolves the AOR after the 401 digest challenge.
+identify_by=username
+
+[endpoint-a]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-a]
+type=auth
+auth_type=userpass
+username=endpoint-a
+password={{endpoint_a_password}}
+
+; ---- endpoint-b ---------------------------------------------------
+[endpoint-b]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-b
+aors=endpoint-b
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+identify_by=username
+
+[endpoint-b]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-b]
+type=auth
+auth_type=userpass
+username=endpoint-b
+password={{endpoint_b_password}}

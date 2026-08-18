@@ -35,6 +35,7 @@
 
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use nexus_telephony::{
     AsteriskProvider, CallCapability, CallCommand, CallDirection, CallError, CallErrorCode,
@@ -43,7 +44,7 @@ use nexus_telephony::{
 };
 
 use crate::observability::TelephonyObservability;
-use crate::transport::{AriChannel, AriTransport, ChannelSelector};
+use crate::transport::{AriBridge, AriChannel, AriEndpoint, AriTransport, ChannelSelector};
 
 /// Canonical mapping from REAL Asterisk ARI channel state strings to
 /// the locked Nexus call state ladder.
@@ -115,6 +116,11 @@ pub struct AsteriskAdapter {
     obs: Mutex<TelephonyObservability>,
     in_flight: Mutex<HashMap<String, InFlightEntry>>,
     verifier: CallVerifier,
+    /// Bounded window for verifying real bridge membership after an
+    /// addChannel 200/204 (ARI propagates the channel's bridge field
+    /// asynchronously). Unit tests shrink this to keep fail-closed
+    /// paths fast.
+    bridge_verify_timeout: Duration,
 }
 
 impl AsteriskAdapter {
@@ -125,7 +131,16 @@ impl AsteriskAdapter {
             obs: Mutex::new(TelephonyObservability::default()),
             in_flight: Mutex::new(HashMap::new()),
             verifier: CallVerifier,
+            bridge_verify_timeout: Duration::from_secs(8),
         }
+    }
+
+    /// Test helper: shrink the bounded bridge-membership verification
+    /// window (production default is 8s for real async propagation).
+    #[cfg(test)]
+    pub fn with_bridge_verify_timeout(mut self, timeout: Duration) -> Self {
+        self.bridge_verify_timeout = timeout;
+        self
     }
 
     pub fn with_observability(
@@ -139,7 +154,14 @@ impl AsteriskAdapter {
             obs: Mutex::new(obs),
             in_flight: Mutex::new(HashMap::new()),
             verifier: CallVerifier,
+            bridge_verify_timeout: Duration::from_secs(8),
         }
+    }
+
+    /// Real transport access (integration/live-fire suites read real
+    /// Asterisk state through the production surface).
+    pub fn transport(&self) -> &dyn AriTransport {
+        self.transport.as_ref()
     }
 
     pub fn observability(&self) -> TelephonyObservability {
@@ -278,13 +300,29 @@ impl AsteriskAdapter {
     }
 
     /// Read the media verification state for a session. Media states
-    /// beyond NONE come only from a real media bridge proof (M3/M5);
-    /// channel state alone never proves media.
+    /// beyond NONE come only from real evidence:
+    /// - TransportActive requires the real ARI channel to be Up AND in
+    ///   a real bridge (M3 Stasis topology).
+    /// - TwoWayAudioVerified is NOT derived here: it requires decoded
+    ///   audio proof (whisper canary readback) owned by the
+    ///   integration/live-fire suite. Never fabricated from channel
+    ///   state alone.
     pub fn media_state(&self, session: &CallSessionId) -> Result<MediaState, CallError> {
-        let _ = session;
-        // M2: no media bridge bound yet. Always NONE until the real
-        // media path proof (M3) attaches evidence. Never fabricated.
-        Ok(MediaState::None)
+        let selector = self.selector_for_session(session)?;
+        let channel = self.transport.channel_state(&selector)?;
+        // Asterisk 22 ARI does NOT serialize the channel's `bridge`
+        // field; real bridge membership (GET /ari/bridges -> channels)
+        // is the authoritative surface.
+        let in_real_bridge = match self.transport.list_bridges() {
+            Ok(bridges) => bridges
+                .iter()
+                .any(|b| b.channels.iter().any(|c| c == session.as_str())),
+            Err(_) => false,
+        };
+        match channel.state.as_str() {
+            "Up" if in_real_bridge => Ok(MediaState::TransportActive),
+            _ => Ok(MediaState::None),
+        }
     }
 
     /// List real sessions (real ARI channels).
@@ -382,6 +420,264 @@ impl AsteriskAdapter {
         }
     }
 
+    /// Originate a call directly into a real Stasis application
+    /// (capability-gated Dial; the canonical ARI path for
+    /// Stasis-controlled call legs, M3).
+    pub fn originate_stasis(
+        &self,
+        endpoint: &SipEndpointId,
+        app: &str,
+        app_args: &str,
+        caller_id: Option<&str>,
+    ) -> Result<CallSession, CallError> {
+        let mut obs = self.obs.lock().unwrap();
+        let correlation = obs.correlation();
+        let target = format!("originate-stasis:{}", endpoint.as_str());
+        self.check_capability(CallCommand::Dial, &target, &correlation)?;
+        let key = self.acquire_in_flight(&target, "DIAL").map_err(|e| {
+            obs.record_error(
+                &correlation,
+                "ORIGINATE_STASIS",
+                e.code.as_str(),
+                "duplicate",
+            );
+            e.with_correlation(correlation.clone())
+                .with_resource(target.clone())
+        })?;
+        drop(obs);
+        let result = self
+            .transport
+            .originate_with_app(endpoint, app, app_args, caller_id);
+        self.release_in_flight(&key);
+        let mut obs = self.obs.lock().unwrap();
+        match result {
+            Ok(channel) => {
+                let session = session_from_channel(&channel).map_err(|e| {
+                    obs.record_error(
+                        &correlation,
+                        "ORIGINATE_STASIS",
+                        e.code.as_str(),
+                        "channel mapping failed",
+                    );
+                    e.with_correlation(correlation.clone())
+                })?;
+                obs.record(
+                    &correlation,
+                    "ORIGINATE_STASIS",
+                    "ok",
+                    &format!(
+                        "session {} channel {} in stasis app {}",
+                        session.id.as_str(),
+                        channel.id,
+                        app
+                    ),
+                );
+                Ok(session)
+            }
+            Err(e) => {
+                obs.record_error(
+                    &correlation,
+                    "ORIGINATE_STASIS",
+                    e.code.as_str(),
+                    "stasis originate failed",
+                );
+                Err(e
+                    .with_correlation(correlation.clone())
+                    .with_resource(target))
+            }
+        }
+    }
+
+    /// Create a real ARI mixing bridge (M3 Stasis topology). Returns
+    /// the real bridge id. Never fabricates membership.
+    pub fn create_mixing_bridge(&self, name: &str) -> Result<String, CallError> {
+        let mut obs = self.obs.lock().unwrap();
+        let correlation = obs.correlation();
+        match self.transport.create_bridge("mixing", name) {
+            Ok(bridge) => {
+                obs.record(
+                    &correlation,
+                    "BRIDGE_CREATE",
+                    "ok",
+                    &format!("bridge {} ({})", bridge.id, name),
+                );
+                Ok(bridge.id)
+            }
+            Err(e) => {
+                obs.record_error(
+                    &correlation,
+                    "BRIDGE_CREATE",
+                    e.code.as_str(),
+                    "bridge create failed",
+                );
+                Err(e.with_correlation(correlation.clone()))
+            }
+        }
+    }
+
+    /// Add a real Stasis-controlled channel to a real ARI bridge,
+    /// then verify the exact session's channel is actually a member
+    /// (bridge id observed on the channel's real ARI object).
+    pub fn add_to_bridge(&self, session: &CallSessionId, bridge_id: &str) -> Result<(), CallError> {
+        let mut obs = self.obs.lock().unwrap();
+        let correlation = obs.correlation();
+        let selector = match self.selector_for_session(session) {
+            Ok(s) => s,
+            Err(e) => return Err(e.with_correlation(correlation.clone())),
+        };
+        match self.transport.add_channel_to_bridge(bridge_id, &selector) {
+            Ok(()) => {
+                obs.record(
+                    &correlation,
+                    "BRIDGE_ADD",
+                    "ok",
+                    &format!("session {} added to bridge {}", session.as_str(), bridge_id),
+                );
+                drop(obs);
+                // Verify membership from the REAL bridge object.
+                // Asterisk 22 ARI does NOT serialize the channel's
+                // `bridge` field on GET /ari/channels/{id} (verified
+                // live: keys = accountcode/caller/connected/... no
+                // bridge). The authoritative membership surface is the
+                // bridge resource (GET /ari/bridges/{id} -> channels).
+                // ARI returns 200/204 for addChannel immediately, but
+                // membership propagates asynchronously (ChannelEntered-
+                // Bridge fires after the response). Bounded retry: poll
+                // the real bridge object until the exact session's
+                // channel is listed, or fail closed with Verification.
+                let deadline = Instant::now() + self.bridge_verify_timeout;
+                let mut last: Option<Vec<String>> = None;
+                loop {
+                    let readback = self.transport.get_bridge(bridge_id);
+                    match readback {
+                        Ok(bridge) => {
+                            let members = bridge.channels.clone();
+                            last = Some(members.clone());
+                            if members.iter().any(|c| c == session.as_str()) {
+                                return Ok(());
+                            }
+                        }
+                        Err(e) => {
+                            let _ = e;
+                        }
+                    }
+                    if Instant::now() >= deadline {
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(300));
+                }
+                Err(CallError::new(
+                    CallErrorCode::Verification,
+                    format!(
+                        "channel not a member of bridge {bridge_id} (bridge channels {:?})",
+                        last.unwrap_or_default()
+                    ),
+                    Some(correlation.clone()),
+                    Some(session.to_string()),
+                ))
+            }
+            Err(e) => {
+                obs.record_error(
+                    &correlation,
+                    "BRIDGE_ADD",
+                    e.code.as_str(),
+                    "bridge add failed",
+                );
+                Err(e
+                    .with_correlation(correlation.clone())
+                    .with_resource(session.to_string()))
+            }
+        }
+    }
+
+    /// Query a real ARI bridge (real membership; never fabricated).
+    pub fn get_bridge(&self, bridge_id: &str) -> Result<AriBridge, CallError> {
+        let mut obs = self.obs.lock().unwrap();
+        let correlation = obs.correlation();
+        match self.transport.get_bridge(bridge_id) {
+            Ok(bridge) => {
+                obs.record(
+                    &correlation,
+                    "BRIDGE_GET",
+                    "ok",
+                    &format!(
+                        "bridge {} has {} channels",
+                        bridge.id,
+                        bridge.channels.len()
+                    ),
+                );
+                Ok(bridge)
+            }
+            Err(e) => {
+                obs.record_error(
+                    &correlation,
+                    "BRIDGE_GET",
+                    e.code.as_str(),
+                    "bridge get failed",
+                );
+                Err(e.with_correlation(correlation.clone()))
+            }
+        }
+    }
+
+    /// Delete a real ARI bridge (real teardown).
+    pub fn delete_bridge(&self, bridge_id: &str) -> Result<(), CallError> {
+        let mut obs = self.obs.lock().unwrap();
+        let correlation = obs.correlation();
+        match self.transport.delete_bridge(bridge_id) {
+            Ok(()) => {
+                obs.record(
+                    &correlation,
+                    "BRIDGE_DELETE",
+                    "ok",
+                    &format!("bridge {bridge_id} deleted"),
+                );
+                Ok(())
+            }
+            Err(e) => {
+                obs.record_error(
+                    &correlation,
+                    "BRIDGE_DELETE",
+                    e.code.as_str(),
+                    "bridge delete failed",
+                );
+                Err(e.with_correlation(correlation.clone()))
+            }
+        }
+    }
+
+    /// Real PJSIP endpoint registration state from Asterisk's own ARI
+    /// surface (state "online" when a real contact is registered).
+    pub fn endpoint_state(&self, resource: &str) -> Result<AriEndpoint, CallError> {
+        let mut obs = self.obs.lock().unwrap();
+        let correlation = obs.correlation();
+        match self.transport.endpoint_state(resource) {
+            Ok(endpoint) => {
+                obs.record(
+                    &correlation,
+                    "ENDPOINT_STATE",
+                    "ok",
+                    &format!(
+                        "endpoint {}/{} state {}",
+                        endpoint.technology,
+                        endpoint.resource,
+                        endpoint.state.as_deref().unwrap_or("unknown")
+                    ),
+                );
+                Ok(endpoint)
+            }
+            Err(e) => {
+                obs.record_error(
+                    &correlation,
+                    "ENDPOINT_STATE",
+                    e.code.as_str(),
+                    "endpoint state failed",
+                );
+                Err(e.with_correlation(correlation.clone()))
+            }
+        }
+    }
+
     /// Answer a real channel (capability-gated Answer), then verify
     /// the exact target reached ANSWERED/BRIDGED.
     pub fn answer(&self, session: &CallSessionId) -> Result<(), CallError> {
@@ -459,43 +755,59 @@ impl AsteriskAdapter {
                     &format!("session {} hung up", session.as_str()),
                 );
                 // Verify: the channel must be gone (NotFound readback).
+                // ARI DELETE returns 200 immediately, but the channel
+                // object propagates destruction asynchronously
+                // (ChannelDestroyed fires after the response). Bounded
+                // retry, same pattern as bridge membership.
                 drop(obs);
-                let selector = self.selector_for_session(session)?;
-                match self.transport.channel_state(&selector) {
-                    Ok(_) => {
-                        let err = CallError::new(
-                            CallErrorCode::Verification,
-                            "channel still present after hangup",
-                            Some(correlation.clone()),
-                            Some(session.to_string()),
-                        );
-                        self.obs.lock().unwrap().record_error(
-                            &correlation,
-                            "verify",
-                            "VERIFICATION",
-                            "channel still present after hangup",
-                        );
-                        Err(err)
+                let deadline = Instant::now() + Duration::from_secs(8);
+                let mut last_err: Option<CallError>;
+                loop {
+                    let selector = match self.selector_for_session(session) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            last_err = Some(e);
+                            break;
+                        }
+                    };
+                    match self.transport.channel_state(&selector) {
+                        Err(e) if e.code == CallErrorCode::NotFound => {
+                            self.obs.lock().unwrap().record(
+                                &correlation,
+                                "verify",
+                                "ok",
+                                "channel removed after hangup",
+                            );
+                            return Ok(());
+                        }
+                        Ok(_) => {
+                            last_err = None;
+                        }
+                        Err(e) => {
+                            last_err = Some(e);
+                        }
                     }
-                    Err(e) if e.code == CallErrorCode::NotFound => {
-                        self.obs.lock().unwrap().record(
-                            &correlation,
-                            "verify",
-                            "ok",
-                            "channel removed after hangup",
-                        );
-                        Ok(())
+                    if Instant::now() >= deadline {
+                        break;
                     }
-                    Err(e) => {
-                        self.obs.lock().unwrap().record_error(
-                            &correlation,
-                            "verify",
-                            e.code.as_str(),
-                            "readback failed after hangup",
-                        );
-                        Err(e)
-                    }
+                    std::thread::sleep(Duration::from_millis(300));
                 }
+                let err = CallError::new(
+                    CallErrorCode::Verification,
+                    format!(
+                        "channel still present after hangup (last readback {:?})",
+                        last_err.as_ref().map(|e| e.code.as_str())
+                    ),
+                    Some(correlation.clone()),
+                    Some(session.to_string()),
+                );
+                self.obs.lock().unwrap().record_error(
+                    &correlation,
+                    "verify",
+                    "VERIFICATION",
+                    "channel still present after hangup",
+                );
+                Err(err)
             }
             Err(e) => {
                 obs.record_error(&correlation, "HANGUP", e.code.as_str(), "hangup failed");
@@ -654,7 +966,29 @@ impl TelephonyProvider for AsteriskAdapter {
         let selector = self.selector_for_session(session)?;
         match self.transport.channel_state(&selector) {
             Ok(channel) => {
-                let state = map_channel_state(&channel)?;
+                let base = map_channel_state(&channel)?;
+                // Asterisk 22 ARI does NOT serialize the channel's
+                // `bridge` field, so BRIDGED can only be derived from
+                // real bridge membership (GET /ari/bridges -> channels).
+                // An Up channel that is a member of a real bridge is
+                // Bridged; otherwise Answered.
+                let state = if base == CallState::Answered {
+                    match self.transport.list_bridges() {
+                        Ok(bridges) => {
+                            if bridges
+                                .iter()
+                                .any(|b| b.channels.iter().any(|c| c == session.as_str()))
+                            {
+                                CallState::Bridged
+                            } else {
+                                base
+                            }
+                        }
+                        Err(_) => base,
+                    }
+                } else {
+                    base
+                };
                 obs.record(
                     &correlation,
                     "STATUS",
@@ -697,13 +1031,31 @@ impl AsteriskProvider for AsteriskAdapter {
         self.hangup(session)
     }
 
-    fn bridge(&self, session: &CallSessionId, _other: &CallSessionId) -> Result<(), CallError> {
-        // Bridging is implemented at M3 against the real ARI bridge
-        // surface; unbound here fails closed (Reality rule).
-        let _ = session;
-        Err(CallError::unavailable(
-            "bridge not yet bound to a real ARI bridge",
-        ))
+    fn bridge(&self, session: &CallSessionId, other: &CallSessionId) -> Result<(), CallError> {
+        // M3: bind the production bridge surface to a real ARI mixing
+        // bridge. Both sessions must be real Stasis-controlled
+        // channels; membership is verified from the real bridge and
+        // channel objects (never fabricated).
+        let bridge_id = self.create_mixing_bridge("nexus-bridge")?;
+        let add_a = self.add_to_bridge(session, &bridge_id);
+        let add_b = self.add_to_bridge(other, &bridge_id);
+        if add_a.is_err() || add_b.is_err() {
+            let _ = self.delete_bridge(&bridge_id);
+        }
+        add_a?;
+        add_b?;
+        let bridge = self.get_bridge(&bridge_id)?;
+        let has_a = bridge.channels.iter().any(|c| c == session.as_str());
+        let has_b = bridge.channels.iter().any(|c| c == other.as_str());
+        if !(has_a && has_b) {
+            return Err(CallError::new(
+                CallErrorCode::Verification,
+                "bridge membership missing after add",
+                None,
+                Some(session.to_string()),
+            ));
+        }
+        Ok(())
     }
 
     fn transfer(&self, session: &CallSessionId, _target: &str) -> Result<(), CallError> {
@@ -729,7 +1081,7 @@ impl AsteriskProvider for AsteriskAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transport::AriCallerId;
+    use crate::transport::{AriCallerId, AriDialplan};
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
 
@@ -742,6 +1094,7 @@ mod tests {
         health_ok: Arc<AtomicBool>,
         channels: Arc<Mutex<Vec<AriChannel>>>,
         calls: Arc<Mutex<Vec<String>>>,
+        noop_bridge_add: Arc<AtomicBool>,
     }
 
     impl Default for ControlledTransport {
@@ -750,6 +1103,7 @@ mod tests {
                 health_ok: Arc::new(AtomicBool::new(true)),
                 channels: Arc::new(Mutex::new(Vec::new())),
                 calls: Arc::new(Mutex::new(Vec::new())),
+                noop_bridge_add: Arc::new(AtomicBool::new(false)),
             }
         }
     }
@@ -810,6 +1164,139 @@ mod tests {
             };
             self.channels.lock().unwrap().push(channel.clone());
             Ok(channel)
+        }
+
+        fn originate_with_app(
+            &self,
+            endpoint: &SipEndpointId,
+            app: &str,
+            app_args: &str,
+            _caller_id: Option<&str>,
+        ) -> Result<AriChannel, CallError> {
+            self.record(&format!(
+                "originate-app:{}:{}:{}",
+                endpoint.as_str(),
+                app,
+                app_args
+            ));
+            let channel = AriChannel {
+                id: format!("PJSIP/{}-00000001", endpoint.as_str()),
+                name: format!("PJSIP/{}", endpoint.as_str()),
+                state: "Ring".to_string(),
+                caller: Some(AriCallerId {
+                    name: "Nexus".to_string(),
+                    number: "100".to_string(),
+                }),
+                connected: None,
+                dialplan: Some(AriDialplan {
+                    context: "stasis".to_string(),
+                    exten: "s".to_string(),
+                    priority: 1,
+                }),
+                bridge: None,
+                creationtime: None,
+                language: None,
+            };
+            self.channels.lock().unwrap().push(channel.clone());
+            Ok(channel)
+        }
+
+        fn create_bridge(&self, bridge_type: &str, name: &str) -> Result<AriBridge, CallError> {
+            self.record(&format!("bridge-create:{bridge_type}:{name}"));
+            Ok(AriBridge {
+                id: format!("bridge-{name}"),
+                name: Some(name.to_string()),
+                technology: Some("native_rtp".to_string()),
+                bridge_type: Some(bridge_type.to_string()),
+                bridge_class: Some("stasis".to_string()),
+                creator: Some("Stasis".to_string()),
+                channels: Vec::new(),
+                creationtime: None,
+            })
+        }
+
+        fn get_bridge(&self, bridge_id: &str) -> Result<AriBridge, CallError> {
+            self.record(&format!("bridge-get:{bridge_id}"));
+            let channels = self
+                .channels
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|c| c.bridge.as_deref() == Some(bridge_id))
+                .map(|c| c.id.clone())
+                .collect::<Vec<_>>();
+            Ok(AriBridge {
+                id: bridge_id.to_string(),
+                name: Some(bridge_id.to_string()),
+                technology: Some("native_rtp".to_string()),
+                bridge_type: Some("mixing".to_string()),
+                bridge_class: Some("stasis".to_string()),
+                creator: Some("Stasis".to_string()),
+                channels,
+                creationtime: None,
+            })
+        }
+
+        fn delete_bridge(&self, bridge_id: &str) -> Result<(), CallError> {
+            self.record(&format!("bridge-delete:{bridge_id}"));
+            Ok(())
+        }
+
+        fn add_channel_to_bridge(
+            &self,
+            bridge_id: &str,
+            channel: &ChannelSelector,
+        ) -> Result<(), CallError> {
+            self.record(&format!("bridge-add:{bridge_id}:{}", channel.as_str()));
+            if self.noop_bridge_add.load(Ordering::SeqCst) {
+                // Simulate a transport that returns Ok but does not
+                // actually move the channel (Asterisk refused / the
+                // channel is not a member).
+                return Ok(());
+            }
+            let mut channels = self.channels.lock().unwrap();
+            if let Some(c) = channels.iter_mut().find(|c| c.id == channel.as_str()) {
+                c.bridge = Some(bridge_id.to_string());
+                Ok(())
+            } else {
+                Err(CallError::not_found("channel not found"))
+            }
+        }
+
+        fn endpoint_state(&self, resource: &str) -> Result<AriEndpoint, CallError> {
+            self.record(&format!("endpoint:{resource}"));
+            Ok(AriEndpoint {
+                technology: "PJSIP".to_string(),
+                resource: resource.to_string(),
+                state: Some("online".to_string()),
+                channel_ids: Vec::new(),
+            })
+        }
+
+        fn list_bridges(&self) -> Result<Vec<AriBridge>, CallError> {
+            self.record("bridges");
+            let channels = self.channels.lock().unwrap();
+            let mut by_bridge: std::collections::BTreeMap<String, Vec<String>> =
+                std::collections::BTreeMap::new();
+            for c in channels.iter() {
+                if let Some(bid) = c.bridge.clone() {
+                    by_bridge.entry(bid.clone()).or_default().push(c.id.clone());
+                }
+            }
+            let bridges = by_bridge
+                .into_iter()
+                .map(|(id, members)| AriBridge {
+                    id: id.clone(),
+                    name: Some(id.clone()),
+                    technology: Some("native_rtp".to_string()),
+                    bridge_type: Some("mixing".to_string()),
+                    bridge_class: Some("stasis".to_string()),
+                    creator: Some("Stasis".to_string()),
+                    channels: members,
+                    creationtime: None,
+                })
+                .collect();
+            Ok(bridges)
         }
 
         fn answer(&self, channel: &ChannelSelector) -> Result<(), CallError> {
@@ -1090,8 +1577,51 @@ mod tests {
         let adapter =
             AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Status]));
         let session = CallSessionId::new("PJSIP/a-00000001").unwrap();
-        // No media bridge bound: NONE, never fabricated.
-        assert_eq!(adapter.media_state(&session).unwrap(), MediaState::None);
+        // Unknown session: NotFound propagates (never fabricates NONE
+        // for a session that does not exist).
+        let err = adapter.media_state(&session).unwrap_err();
+        assert_eq!(err.code, CallErrorCode::NotFound);
+        // Real channel Up WITHOUT a bridge: NONE (signaling only, no
+        // media claim from channel state alone).
+        {
+            let transport = ControlledTransport::default();
+            transport.channels.lock().unwrap().push(AriChannel {
+                id: "PJSIP/a-00000001".into(),
+                name: "PJSIP/a-00000001".into(),
+                state: "Up".into(),
+                caller: None,
+                connected: None,
+                dialplan: None,
+                bridge: None,
+                creationtime: None,
+                language: None,
+            });
+            let adapter =
+                AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Status]));
+            assert_eq!(adapter.media_state(&session).unwrap(), MediaState::None);
+        }
+        // Real channel Up IN a real bridge: TRANSPORT_ACTIVE only
+        // (two-way audio verification still requires decoded proof).
+        {
+            let transport = ControlledTransport::default();
+            transport.channels.lock().unwrap().push(AriChannel {
+                id: "PJSIP/a-00000001".into(),
+                name: "PJSIP/a-00000001".into(),
+                state: "Up".into(),
+                caller: None,
+                connected: None,
+                dialplan: None,
+                bridge: Some("bridge-1".into()),
+                creationtime: None,
+                language: None,
+            });
+            let adapter =
+                AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Status]));
+            assert_eq!(
+                adapter.media_state(&session).unwrap(),
+                MediaState::TransportActive
+            );
+        }
     }
 
     #[test]
@@ -1111,7 +1641,11 @@ mod tests {
         let transport = ControlledTransport::default();
         let adapter = AsteriskAdapter::new(
             Box::new(transport),
-            policy_with(&[CallCapability::Dial, CallCapability::Status]),
+            policy_with(&[
+                CallCapability::Dial,
+                CallCapability::Answer,
+                CallCapability::Status,
+            ]),
         );
         let endpoint = SipEndpointId::new("endpoint-a").unwrap();
         adapter
@@ -1129,6 +1663,7 @@ mod tests {
             channels: Arc::new(Mutex::new(vec![channel("PJSIP/a-00000001", "Up", None)])),
             calls: Arc::new(Mutex::new(Vec::new())),
             health_ok: Arc::new(AtomicBool::new(false)),
+            noop_bridge_add: Arc::new(AtomicBool::new(false)),
         };
         let adapter = AsteriskAdapter::new(
             Box::new(transport.clone()),
@@ -1174,5 +1709,151 @@ mod tests {
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].legs[0].state, CallState::Ringing);
         assert_eq!(sessions[0].state, CallState::Ringing);
+    }
+
+    #[test]
+    fn ep025_unit_originate_stasis_capability_gated() {
+        // Dial capability missing -> Policy BEFORE any transport call.
+        let transport = ControlledTransport::default();
+        let calls = transport.calls.clone();
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Status]));
+        let endpoint = SipEndpointId::new("endpoint-a").unwrap();
+        let err = adapter
+            .originate_stasis(&endpoint, "nexus-telephony", "leg=a", None)
+            .unwrap_err();
+        assert_eq!(err.code, CallErrorCode::Policy);
+        assert!(
+            calls.lock().unwrap().is_empty(),
+            "no transport call on denial"
+        );
+    }
+
+    #[test]
+    fn ep025_unit_originate_stasis_real_channel() {
+        let transport = ControlledTransport::default();
+        let calls = transport.calls.clone();
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dial]));
+        let endpoint = SipEndpointId::new("endpoint-a").unwrap();
+        let session = adapter
+            .originate_stasis(&endpoint, "nexus-telephony", "leg=a", None)
+            .unwrap();
+        assert_eq!(session.id.as_str(), "PJSIP/endpoint-a-00000001");
+        assert!(calls
+            .lock()
+            .unwrap()
+            .contains(&"originate-app:endpoint-a:nexus-telephony:leg=a".to_string()));
+    }
+
+    #[test]
+    fn ep025_unit_bridge_orchestration_verified_membership() {
+        // Full bridge journey: create mixing bridge, add two real
+        // channels, verify membership, delete.
+        let transport = ControlledTransport::default();
+        let adapter = AsteriskAdapter::new(
+            Box::new(transport.clone()),
+            policy_with(&[
+                CallCapability::Dial,
+                CallCapability::Answer,
+                CallCapability::Status,
+            ]),
+        );
+        let ep_a = SipEndpointId::new("endpoint-a").unwrap();
+        let ep_b = SipEndpointId::new("endpoint-b").unwrap();
+        let a = adapter
+            .originate_stasis(&ep_a, "nexus-telephony", "leg=a", None)
+            .unwrap();
+        let b = adapter
+            .originate_stasis(&ep_b, "nexus-telephony", "leg=b", None)
+            .unwrap();
+        adapter.answer(&a.id).unwrap();
+        adapter.answer(&b.id).unwrap();
+        let bridge_id = adapter.create_mixing_bridge("nexus-m3-unit").unwrap();
+        adapter.add_to_bridge(&a.id, &bridge_id).unwrap();
+        adapter.add_to_bridge(&b.id, &bridge_id).unwrap();
+        let bridge = adapter.get_bridge(&bridge_id).unwrap();
+        assert_eq!(bridge.channels.len(), 2);
+        assert!(bridge.channels.contains(&a.id.as_str().to_string()));
+        assert!(bridge.channels.contains(&b.id.as_str().to_string()));
+        adapter.delete_bridge(&bridge_id).unwrap();
+        // media_state now reflects real bridge membership.
+        assert_eq!(
+            adapter.media_state(&a.id).unwrap(),
+            MediaState::TransportActive
+        );
+    }
+
+    #[test]
+    fn ep025_unit_bridge_membership_never_fabricated() {
+        // Verification reads the REAL channel object: if the channel
+        // is not actually a member of the requested bridge (transport
+        // did not move it), the add fails closed with Verification.
+        let transport = ControlledTransport {
+            noop_bridge_add: Arc::new(AtomicBool::new(true)),
+            ..Default::default()
+        };
+        let adapter = AsteriskAdapter::new(
+            Box::new(transport.clone()),
+            policy_with(&[
+                CallCapability::Dial,
+                CallCapability::Answer,
+                CallCapability::Status,
+            ]),
+        )
+        .with_bridge_verify_timeout(Duration::from_millis(200));
+        let ep = SipEndpointId::new("endpoint-a").unwrap();
+        let session = adapter
+            .originate_stasis(&ep, "nexus-telephony", "leg=a", None)
+            .unwrap();
+        adapter.answer(&session.id).unwrap();
+        let bridge_id = adapter.create_mixing_bridge("nexus-m3x").unwrap();
+        // add_channel_to_bridge returns Ok but the channel object is
+        // not updated -> membership verification must fail closed.
+        let err = adapter.add_to_bridge(&session.id, &bridge_id).unwrap_err();
+        assert_eq!(err.code, CallErrorCode::Verification);
+    }
+
+    #[test]
+    fn ep025_unit_provider_bridge_binds_real_ari_bridge() {
+        // The AsteriskProvider::bridge() surface (previously
+        // unavailable) now orchestrates a real mixing bridge with
+        // verified membership.
+        let transport = ControlledTransport::default();
+        let adapter = AsteriskAdapter::new(
+            Box::new(transport.clone()),
+            policy_with(&[
+                CallCapability::Dial,
+                CallCapability::Answer,
+                CallCapability::Status,
+            ]),
+        );
+        let ep_a = SipEndpointId::new("endpoint-a").unwrap();
+        let ep_b = SipEndpointId::new("endpoint-b").unwrap();
+        let a = adapter
+            .originate_stasis(&ep_a, "nexus-telephony", "leg=a", None)
+            .unwrap();
+        let b = adapter
+            .originate_stasis(&ep_b, "nexus-telephony", "leg=b", None)
+            .unwrap();
+        adapter.answer(&a.id).unwrap();
+        adapter.answer(&b.id).unwrap();
+        let provider: &dyn AsteriskProvider = &adapter;
+        provider.bridge(&a.id, &b.id).unwrap();
+        assert_eq!(
+            adapter.media_state(&a.id).unwrap(),
+            MediaState::TransportActive
+        );
+    }
+
+    #[test]
+    fn ep025_unit_endpoint_state_online() {
+        let transport = ControlledTransport::default();
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Status]));
+        let endpoint = adapter.endpoint_state("endpoint-a").unwrap();
+        assert_eq!(endpoint.technology, "PJSIP");
+        assert_eq!(endpoint.resource, "endpoint-a");
+        assert_eq!(endpoint.state.as_deref(), Some("online"));
     }
 }

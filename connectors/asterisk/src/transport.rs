@@ -80,6 +80,42 @@ pub struct AriDialplan {
     pub priority: i64,
 }
 
+/// DOCUMENTED Asterisk 22 ARI bridge object (POST /ari/bridges,
+/// GET /ari/bridges/{id}). Only fields Nexus needs; unknown fields
+/// are ignored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AriBridge {
+    pub id: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub technology: Option<String>,
+    #[serde(default)]
+    pub bridge_type: Option<String>,
+    #[serde(default)]
+    pub bridge_class: Option<String>,
+    #[serde(default)]
+    pub creator: Option<String>,
+    /// Real channel ids currently members of the bridge.
+    #[serde(default)]
+    pub channels: Vec<String>,
+    #[serde(default)]
+    pub creationtime: Option<String>,
+}
+
+/// DOCUMENTED Asterisk 22 ARI endpoint object (GET /ari/endpoints).
+/// `state` is Asterisk's own registration surface ("online" when a
+/// real contact is registered for the endpoint).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AriEndpoint {
+    pub technology: String,
+    pub resource: String,
+    #[serde(default)]
+    pub state: Option<String>,
+    #[serde(default)]
+    pub channel_ids: Vec<String>,
+}
+
 /// Canonical session/leg selector: the real Asterisk channel id bound
 /// to a CallSession.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -139,6 +175,79 @@ pub trait AriTransport {
         caller_id: Option<&str>,
     ) -> Result<AriChannel, CallError> {
         let _ = (endpoint, context, extension, caller_id);
+        Err(CallError::unavailable(
+            "ari transport has no implementation bound",
+        ))
+    }
+
+    /// Originate a channel directly into a Stasis application
+    /// (POST /ari/channels with app + appArgs). This is the real
+    /// ARI-supported path for Stasis-controlled call legs.
+    fn originate_with_app(
+        &self,
+        endpoint: &SipEndpointId,
+        app: &str,
+        app_args: &str,
+        caller_id: Option<&str>,
+    ) -> Result<AriChannel, CallError> {
+        let _ = (endpoint, app, app_args, caller_id);
+        Err(CallError::unavailable(
+            "ari transport has no implementation bound",
+        ))
+    }
+
+    /// Create a real ARI bridge (POST /ari/bridges). `bridge_type`
+    /// is the DOCUMENTED ARI bridge type (e.g. "mixing").
+    fn create_bridge(&self, bridge_type: &str, name: &str) -> Result<AriBridge, CallError> {
+        let _ = (bridge_type, name);
+        Err(CallError::unavailable(
+            "ari transport has no implementation bound",
+        ))
+    }
+
+    /// Query a real ARI bridge (GET /ari/bridges/{id}).
+    fn get_bridge(&self, bridge_id: &str) -> Result<AriBridge, CallError> {
+        let _ = bridge_id;
+        Err(CallError::unavailable(
+            "ari transport has no implementation bound",
+        ))
+    }
+
+    /// Delete a real ARI bridge (DELETE /ari/bridges/{id}).
+    fn delete_bridge(&self, bridge_id: &str) -> Result<(), CallError> {
+        let _ = bridge_id;
+        Err(CallError::unavailable(
+            "ari transport has no implementation bound",
+        ))
+    }
+
+    /// Add a channel to a real ARI bridge
+    /// (POST /ari/bridges/{id}/addChannel). This is the canonical
+    /// bridge-resource route (the channel-resource route returns 404
+    /// for channels controlled by a different app).
+    fn add_channel_to_bridge(
+        &self,
+        bridge_id: &str,
+        channel: &ChannelSelector,
+    ) -> Result<(), CallError> {
+        let _ = (bridge_id, channel);
+        Err(CallError::unavailable(
+            "ari transport has no implementation bound",
+        ))
+    }
+
+    /// Query a real PJSIP endpoint registration state
+    /// (GET /ari/endpoints/PJSIP/{resource}). Asterisk's own state
+    /// surface: "online" when a real contact is registered.
+    fn endpoint_state(&self, resource: &str) -> Result<AriEndpoint, CallError> {
+        let _ = resource;
+        Err(CallError::unavailable(
+            "ari transport has no implementation bound",
+        ))
+    }
+
+    /// List real ARI bridges (GET /ari/bridges).
+    fn list_bridges(&self) -> Result<Vec<AriBridge>, CallError> {
         Err(CallError::unavailable(
             "ari transport has no implementation bound",
         ))
@@ -314,6 +423,34 @@ impl RestAriTransport {
             .map_err(|e| CallError::external(format!("ari malformed JSON response on {path}: {e}")))
     }
 
+    /// POST an ARI action whose success response is 200 with an EMPTY
+    /// body (answer, bridge, continue, dtmf, moh, redirect, addChannel).
+    /// Status-only: no JSON body is expected or decoded.
+    fn post(&self, path: &str, params: &[(&str, String)]) -> Result<(), CallError> {
+        let url = format!("{}{}", self.base_url, path);
+        let mut request = self
+            .client
+            .post(&url)
+            .basic_auth(&self.username, Some(&self.password));
+        for (key, value) in params {
+            request = request.query(&[(key, value.as_str())]);
+        }
+        let response = request.send().map_err(|e| {
+            if e.is_timeout() {
+                CallError::timeout(format!("ari request timed out: {path}"))
+            } else if e.is_connect() {
+                CallError::unavailable(format!("ari connect failed: {path}: {e}"))
+            } else {
+                CallError::external(format!("ari request failed: {path}: {e}"))
+            }
+        })?;
+        let status = response.status();
+        if !status.is_success() {
+            return Err(classify_status(status.as_u16(), path));
+        }
+        Ok(())
+    }
+
     fn delete(&self, path: &str) -> Result<(), CallError> {
         let url = format!("{}{}", self.base_url, path);
         let response = self
@@ -414,10 +551,77 @@ impl AriTransport for RestAriTransport {
             .map_err(|e| CallError::external(format!("ari originate schema invalid: {e}")))
     }
 
+    fn originate_with_app(
+        &self,
+        endpoint: &SipEndpointId,
+        app: &str,
+        app_args: &str,
+        caller_id: Option<&str>,
+    ) -> Result<AriChannel, CallError> {
+        let mut params: Vec<(&str, String)> = vec![
+            ("endpoint", format!("PJSIP/{}", endpoint.as_str())),
+            ("app", app.to_string()),
+            ("appArgs", app_args.to_string()),
+        ];
+        if let Some(cid) = caller_id {
+            params.push(("callerId", cid.to_string()));
+        }
+        let value = self.post_json("/ari/channels", &params)?;
+        serde_json::from_value(value)
+            .map_err(|e| CallError::external(format!("ari originate schema invalid: {e}")))
+    }
+
+    fn create_bridge(&self, bridge_type: &str, name: &str) -> Result<AriBridge, CallError> {
+        if bridge_type.is_empty() || name.is_empty() {
+            return Err(CallError::validation(
+                "bridge type and name must not be empty",
+            ));
+        }
+        let value = self.post_json(
+            "/ari/bridges",
+            &[
+                ("type", bridge_type.to_string()),
+                ("name", name.to_string()),
+            ],
+        )?;
+        serde_json::from_value(value)
+            .map_err(|e| CallError::external(format!("ari bridge schema invalid: {e}")))
+    }
+
+    fn get_bridge(&self, bridge_id: &str) -> Result<AriBridge, CallError> {
+        let value = self.get_json(&format!("/ari/bridges/{bridge_id}"))?;
+        serde_json::from_value(value)
+            .map_err(|e| CallError::external(format!("ari bridge schema invalid: {e}")))
+    }
+
+    fn delete_bridge(&self, bridge_id: &str) -> Result<(), CallError> {
+        self.delete(&format!("/ari/bridges/{bridge_id}"))
+    }
+
+    fn add_channel_to_bridge(
+        &self,
+        bridge_id: &str,
+        channel: &ChannelSelector,
+    ) -> Result<(), CallError> {
+        let path = format!("/ari/bridges/{bridge_id}/addChannel");
+        self.post(&path, &[("channel", channel.as_str().to_string())])
+    }
+
+    fn endpoint_state(&self, resource: &str) -> Result<AriEndpoint, CallError> {
+        let value = self.get_json(&format!("/ari/endpoints/PJSIP/{resource}"))?;
+        serde_json::from_value(value)
+            .map_err(|e| CallError::external(format!("ari endpoint schema invalid: {e}")))
+    }
+
+    fn list_bridges(&self) -> Result<Vec<AriBridge>, CallError> {
+        let value = self.get_json("/ari/bridges")?;
+        serde_json::from_value(value)
+            .map_err(|e| CallError::external(format!("ari bridges schema invalid: {e}")))
+    }
+
     fn answer(&self, channel: &ChannelSelector) -> Result<(), CallError> {
         let path = format!("/ari/channels/{}/answer", channel.as_str());
-        let _ = self.post_json(&path, &[])?;
-        Ok(())
+        self.post(&path, &[])
     }
 
     fn hangup(&self, channel: &ChannelSelector) -> Result<(), CallError> {
@@ -427,8 +631,7 @@ impl AriTransport for RestAriTransport {
 
     fn bridge(&self, channel: &ChannelSelector, bridge_id: &str) -> Result<(), CallError> {
         let path = format!("/ari/channels/{}/bridge", channel.as_str());
-        let _ = self.post_json(&path, &[("bridge", bridge_id.to_string())])?;
-        Ok(())
+        self.post(&path, &[("bridge", bridge_id.to_string())])
     }
 
     fn r#continue(
@@ -438,15 +641,14 @@ impl AriTransport for RestAriTransport {
         extension: &str,
     ) -> Result<(), CallError> {
         let path = format!("/ari/channels/{}/continue", channel.as_str());
-        let _ = self.post_json(
+        self.post(
             &path,
             &[
                 ("context", context.to_string()),
                 ("extension", extension.to_string()),
                 ("priority", "1".to_string()),
             ],
-        )?;
-        Ok(())
+        )
     }
 
     fn send_dtmf(&self, channel: &ChannelSelector, digits: &str) -> Result<(), CallError> {
@@ -454,14 +656,12 @@ impl AriTransport for RestAriTransport {
             return Err(CallError::validation("dtmf digits must not be empty"));
         }
         let path = format!("/ari/channels/{}/dtmf", channel.as_str());
-        let _ = self.post_json(&path, &[("dtmf", digits.to_string())])?;
-        Ok(())
+        self.post(&path, &[("dtmf", digits.to_string())])
     }
 
     fn start_moh(&self, channel: &ChannelSelector) -> Result<(), CallError> {
         let path = format!("/ari/channels/{}/moh", channel.as_str());
-        let _ = self.post_json(&path, &[])?;
-        Ok(())
+        self.post(&path, &[])
     }
 
     fn stop_moh(&self, channel: &ChannelSelector) -> Result<(), CallError> {
@@ -476,15 +676,14 @@ impl AriTransport for RestAriTransport {
         extension: &str,
     ) -> Result<(), CallError> {
         let path = format!("/ari/channels/{}/redirect", channel.as_str());
-        let _ = self.post_json(
+        self.post(
             &path,
             &[
                 ("context", context.to_string()),
                 ("extension", extension.to_string()),
                 ("priority", "1".to_string()),
             ],
-        )?;
-        Ok(())
+        )
     }
 }
 
@@ -594,6 +793,64 @@ mod tests {
         .unwrap();
         let ch = ChannelSelector::new("x").unwrap();
         let err = transport.send_dtmf(&ch, "").unwrap_err();
+        assert_eq!(err.code, CallErrorCode::Validation);
+    }
+
+    #[test]
+    fn ep025_unit_ari_bridge_json_mapping() {
+        // DOCUMENTED ARI bridge object shape (Asterisk 22 ARI model).
+        let json = r#"{
+            "id": "bridge-1",
+            "name": "nexus-m3",
+            "technology": "native_rtp",
+            "bridge_type": "mixing",
+            "bridge_class": "stasis",
+            "creator": "Stasis",
+            "channels": ["PJSIP/a-00000001", "PJSIP/b-00000001"],
+            "creationtime": "2026-08-17T12:00:00.000+0000"
+        }"#;
+        let bridge: AriBridge = serde_json::from_str(json).unwrap();
+        assert_eq!(bridge.id, "bridge-1");
+        assert_eq!(bridge.technology.as_deref(), Some("native_rtp"));
+        assert_eq!(bridge.channels.len(), 2);
+        assert!(bridge.channels.contains(&"PJSIP/a-00000001".to_string()));
+    }
+
+    #[test]
+    fn ep025_unit_ari_bridge_missing_optional_fields() {
+        let json = r#"{"id": "bridge-2"}"#;
+        let bridge: AriBridge = serde_json::from_str(json).unwrap();
+        assert_eq!(bridge.id, "bridge-2");
+        assert!(bridge.name.is_none());
+        assert!(bridge.channels.is_empty());
+    }
+
+    #[test]
+    fn ep025_unit_ari_endpoint_json_mapping() {
+        let json = r#"{
+            "technology": "PJSIP",
+            "resource": "endpoint-a",
+            "state": "online",
+            "channel_ids": []
+        }"#;
+        let endpoint: AriEndpoint = serde_json::from_str(json).unwrap();
+        assert_eq!(endpoint.resource, "endpoint-a");
+        assert_eq!(endpoint.state.as_deref(), Some("online"));
+    }
+
+    #[test]
+    fn ep025_unit_bridge_validation_before_transport() {
+        // Empty bridge type/name rejected before any HTTP call.
+        let transport = RestAriTransport::new(
+            "http://127.0.0.1:1",
+            "user",
+            "pass",
+            Duration::from_millis(500),
+        )
+        .unwrap();
+        let err = transport.create_bridge("", "nexus").unwrap_err();
+        assert_eq!(err.code, CallErrorCode::Validation);
+        let err = transport.create_bridge("mixing", "").unwrap_err();
         assert_eq!(err.code, CallErrorCode::Validation);
     }
 }

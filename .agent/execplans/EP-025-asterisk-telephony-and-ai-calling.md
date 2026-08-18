@@ -273,13 +273,23 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary (2026-08-17; gate `EP-025 M1: ok`)
 - [x] M2: Core behavior and deterministic invariants (2026-08-17; gate `EP-025 M2: ok`)
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration (2026-08-18; gate `EP-025 M3: ok`; real Asterisk 22.10.1 + real baresip + real RTP media + RFC4733 DTMF wire proof; commit `[EP-025][M3] real dependency and transport integration`)
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
+
+- 2026-08-18 | Asterisk 22.10.1 ARI returns HTTP 200 with an EMPTY body for `answer`, `bridge`, `continue`, `dtmf`, `moh`, `addChannel`, `redirect`. The transport's `post_json` demanded JSON, so `POST /ari/channels/{id}/answer` failed with "ari malformed JSON response". Fixed with a status-only `post` helper; all empty-body endpoints switched to it. Evidence: live gate run + `connectors/asterisk/src/transport.rs`.
+- 2026-08-18 | Asterisk 22 ARI channel GET does NOT serialize the `bridge` field. Bridge membership truth lives in the bridge resource (`GET /ari/bridges/{id}` -> channels array). `session_state`/`media_state` now derive Bridged/TransportActive from real bridge membership with a bounded retry, never from the unpopulated channel field. Evidence: live probe + `adapter.rs`.
+- 2026-08-18 | ARI-injected DTMF never emits `ChannelDtmfReceived` over the WS. The RFC4733 wire capture (tcpdump + decode_dtmf.py, ordered digits 5,3,9 at the receiving endpoint's RTP socket) is the authoritative DTMF evidence. Evidence: live pcap decode.
+- 2026-08-18 | ARI-injected RFC4733 telephone-events share the SAME SSRC as bridge audio but use a DISJOINT RTP sequence space (observed: audio seq 26365.., DTMF events seq 49517.. on SSRC 3365434088). libre's jbuf treats that as a forward sequence jump and rejects subsequent audio as "too late" (ETIMEDOUT). Fixture disables the endpoint jitter buffer (`jitter_buffer_delay 0 0`) and the journey captures media BEFORE sending DTMF. Evidence: live pcap + baresip log.
+- 2026-08-18 | The Asterisk mixing bridge takes over RTP with a NEW SSRC after one pre-bridge packet (observed: SSRC 1870905377 seq 37799 then SSRC 604022046 seq 22116 on the same socket). baresip's SSRC-change flush is gated on `jbuf_started` (false with a single pre-bridge packet), so `seq_put` stays poisoned and all bridge audio is dropped. Same fixture jbuf disable resolves it deterministically.
+- 2026-08-18 | baresip hangs up at canary EOF (~10s with the old 4s pad). Canary pad extended to 20s (~26s total) and ALWAYS regenerated; DTMF is sent while the call is alive, transcription only after hangup closes the capture files.
+- 2026-08-18 | `pjsip show contacts` global count is NOT a correct readiness model after `docker restart`: baresip briefly double-registers (one stale Unknown contact). The real invariant is per-AOR: exactly one usable current contact for endpoint-a AND endpoint-b, verified from `pjsip show aor <name>`. Fixed at the registrar (fixture AOR policy: `max_contacts=1`, `remove_existing=yes`, explicit test-only expiration bounds `minimum_expiration=3/default_expiration=30/maximum_expiration=60` - Asterisk defaults would clamp the 5s refresh up to 60s).
+- 2026-08-18 | libtest runs live-stack tests alphabetically; the restart test must sort LAST (`z_` prefix) and the suite must run serially (`--test-threads=1`), or the restart's `docker restart` tears down the journey's live call.
+- 2026-08-18 | `core show channels` guard must parse the numeric count, not `grep -c "active channels"` (the "0 active channels" line itself matches, so the old guard always failed).
 
 # 13. Decision Log
 
@@ -292,7 +302,34 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 - 2026-08-17 | ARI transport: real Asterisk 22 REST surface (health/info, channels CRUD, answer, bridge, dtmf, moh, redirect, continue) over reqwest blocking with bounded timeout; HTTP 401/403->Authorization, 404->NotFound, 500/502/503->Unavailable, 409->Conflict, silent peer->Timeout, malformed JSON->External. reqwest 0.13 requires the `query` feature for .query() (recorded pitfall). A fake Asterisk HTTP server may support parser-failure tests only (directive 2).
 - 2026-08-17 | M2 in-flight idempotency: same target + same command in flight -> Conflict; completion releases the entry so retry is not Conflict (M2/M4 precedent preserved; crash-durable NOT ASSERTED process-local). Evidence: ep025_unit_idempotency_duplicate_conflict.
 - 2026-08-17 | asterisk-diag status/recover: bounded actions only - health probe + fresh readback; NEVER originates/answers/hangs up/plays/DTMF (directive V). Evidence: connectors/asterisk/src/bin/asterisk-diag.rs.
+- 2026-08-18 | Fixture AOR policy is CONTROLLED_TEST_FIXTURE tuning, NOT production/provider-wide semantics: `max_contacts=1`, `remove_existing=yes`, and explicit expiration bounds (`minimum_expiration=3`, `default_expiration=30`, `maximum_expiration=60`) make a one-device baresip registration deterministically replace the old one after `docker restart`. Asterisk defaults (`minimum_expiration=60`) would clamp the client's 5s refresh upward, leaving a stale contact observable ~60s. Test fixture timing vs production deployment policy recorded separately; production recommended values are NOT altered. Evidence: pjsip.conf.tmpl + `pjsip show aor endpoint-a` (MaxContact=1, remove_existing=true).
+- 2026-08-18 | baresip is a CONTROLLED_TEST_FIXTURE; its jitter buffer is disabled (`jitter_buffer_delay 0 0`) because Asterisk 22.10.1's ARI-injected DTMF (disjoint RTP seq space on the same SSRC) and bridge SSRC takeover poison libre's jbuf sequence tracking, deterministically dropping all later audio. The M3 media proof (real RTP -> real PCMU decode -> whisper) and DTMF proof (RFC4733 wire capture) do not depend on the endpoint jitter buffer. Production receive-path semantics are unaffected. Evidence: pcap (seq 26365 vs 49517, SSRC 1870905377 vs 604022046), baresip logs, whisper readback of both directions.
+- 2026-08-18 | Restart readiness is per-AOR, not a global contact count: exactly one usable current contact for endpoint-a AND one for endpoint-b from `pjsip show aor <name>`, because a global count can be satisfied by a stale/Unknown contact on the wrong AOR (observed: INVITE routed to a dead registration). Evidence: z_ restart test + gate guard 2.
+- 2026-08-18 | Bounded asynchronous reconciliation for real Asterisk state: bridge membership and hangup destruction propagate asynchronously (ChannelEnteredBridge/ChannelDestroyed fire after the HTTP response), so verification polls real state with a bounded 8s deadline; only actual NotFound/channel disappearance satisfies. No fabricated terminal state; deadline expiry FAILS the test. Evidence: adapter.rs bridge/hangup verification + live gate runs.
+- 2026-08-18 | No blind retry doctrine: the stale-contact race is fixed at the registrar (replacement policy + expiration bounds), not by waiting longer for the count to fall; the restart test requires deterministic per-AOR convergence before originating the second call. Evidence: pjsip.conf.tmpl + z_ restart test.
+- 2026-08-18 | Template placeholder names use lowercase (`{{ari_password}}`) matching the reality-gate pattern exemption convention (HA fixture templates); rendered per-run with random values, never committed. Evidence: ari.conf.tmpl/pjsip.conf.tmpl + bootstrap render (`key.lower()`).
 
-# 14. Outcomes & Retrospective
+# 14. Certification Registry (M3, real evidence)
+
+Certification entries recorded ONLY where the M3 live-fire gate actually exercised the capability (directive: no certification without real proof; deferred items remain explicitly owned debts, not simulated success).
+
+- Asterisk 22.10.1 (pinned image, real container): **PROVIDER_CERTIFIED** - real registration, real ARI/Stasis, real mixing bridge, real RTP media, real DTMF wire capture, real restart/re-registration. Evidence: scripts/ep025-m3-tests.sh full gate + 4 live-stack integration tests.
+- PJSIP registration / digest auth: **PROVIDER_CERTIFIED** - real digest 401/200 exchange, per-AOR contact verification, wrong/cross credentials rejected (gate probes).
+- ARI / Stasis call control: **PROVIDER_CERTIFIED** - originate into real Stasis app, exact-target StasisStart, answer, hangup with bounded NotFound verification.
+- ARI mixing bridge: **PROVIDER_CERTIFIED** - real bridge resource membership, Bridged/TransportActive from real membership, channel removal verified.
+- Two-way RTP media: **PROVIDER_CERTIFIED** - real PCMU RTP both directions, whisper readback of decoded captures ("Alpha Econexus" / "Bravo ... Nexus" observed).
+- PCMU / ulaw: **MEDIA_CERTIFIED** - negotiated and carried in the real RTP stream (core show channel codec observed ulaw).
+- RFC4733 DTMF: **PROVIDER_CERTIFIED** - production ARI send_dtmf, telephone-event packets captured on the wire, ordered_digits 539 decoded from the pcap.
+- baresip (controlled SIP endpoints): **CONTROLLED_TEST_FIXTURE** - not a production provider; used to place/answer real calls under test.
+- Kokoro / whisper voice assets: reuse EP-021 certification (whisper-cli + ggml-tiny.en.bin used for transcription readback; not re-certified here).
+- Other codecs (G.722, Opus, etc.): **NOT ASSERTED** - configured on endpoints but not exercised as the negotiated in-call codec.
+- SIP TLS / SRTP: **NOT ASSERTED** - transport is plain UDP/TCP; no TLS/SRTP exercised.
+- Carrier / PSTN / external trunk: **NOT ASSERTED / DEFERRED** - no carrier connectivity in the controlled fixture.
+- Physical handset / mobile endpoint: **NOT ASSERTED** - baresip software endpoints only.
+
+Deferred certification debts (owned, not incomplete simulation):
+- OS-level sandbox for the telephony sidecar: DEFERRED to EP-040 / EP-043 (consistent with the skill-contract certification boundary).
+
+# 15. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.

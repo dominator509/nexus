@@ -22,6 +22,6 @@ pub mod transport;
 pub use adapter::{map_channel_state, session_from_channel, AsteriskAdapter};
 pub use observability::{TelephonyAuditEntry, TelephonyObservability};
 pub use transport::{
-    classify_status_pub, AriCallerId, AriChannel, AriDialplan, AriTransport, ChannelSelector,
-    RestAriTransport,
+    classify_status_pub, AriBridge, AriCallerId, AriChannel, AriDialplan, AriEndpoint,
+    AriTransport, ChannelSelector, RestAriTransport,
 };

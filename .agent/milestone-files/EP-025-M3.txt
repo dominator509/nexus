@@ -1,1 +1,5 @@
 infra/asterisk/
+connectors/asterisk/tests/
+scripts/ep025-m3-tests.sh
+scripts/nodes/EP-025.sh
+scripts/blueprint_validate.py

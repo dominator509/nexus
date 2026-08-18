@@ -1,0 +1,15 @@
+; EP-025 ARI (Asterisk REST Interface) configuration.
+;
+; ARI user/password rendered by the fixture bootstrap (random per
+; run) - NEVER committed.
+
+[general]
+enabled = yes
+pretty = yes
+allowed_origins = *
+
+[nexus]
+type = user
+read_only = no
+password = {{ari_password}}
+password_format = plain

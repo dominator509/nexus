@@ -68,6 +68,13 @@ ALLOW_DOUBLE_BRACE = {
     "connectors/appliances/fixture/config/configuration.yaml",
     "connectors/irrigation/fixture/config/configuration.yaml",
     "connectors/vacuum/fixture/config/configuration.yaml",
+    # EP-025 M3: ARI user/password template rendered per-run by the
+    # fixture bootstrap (random token_hex(16) password, never
+    # committed) - same class as the HA fixture template entities.
+    "infra/asterisk/config/ari.conf.tmpl",
+    # EP-025 M3: endpoint digest passwords rendered per-run by the
+    # same fixture bootstrap (never committed).
+    "infra/asterisk/config/pjsip.conf.tmpl",
 }
 
 for path in ROOT.rglob("*"):
