@@ -68,5 +68,17 @@ skip = [
   # Never linked on Linux; the two lines cannot be unified without
   # breaking pinned transitive pins.
   { name = "windows-sys", version = "0.52.0" },
+  # digest 0.10 crypto stack: sha1 0.10.6 (PINNED =0.10.6) is the
+  # RFC 6455 WebSocket handshake implementation used by the EP-025 M4
+  # ARI event-stream consumer; RustCrypto's sha1 line has not been
+  # released against digest 0.11, so its digest 0.10 / block-buffer
+  # 0.10 / cpufeatures 0.2 / crypto-common 0.1 transitive stack is
+  # unavoidable while the workspace's sha2 0.11 line uses the digest
+  # 0.11 stack. Exact-version targeted skips only; sha1 is used for
+  # the handshake digest, never for integrity or signing.
+  { name = "digest", version = "0.10.7" },
+  { name = "block-buffer", version = "0.10.4" },
+  { name = "cpufeatures", version = "0.2.17" },
+  { name = "crypto-common", version = "0.1.7" },
 ]
 skip-tree = []

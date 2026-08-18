@@ -78,10 +78,16 @@ pub fn map_channel_state(channel: &AriChannel) -> Result<CallState, CallError> {
 /// the real channel id - never enumeration order).
 pub fn session_from_channel(channel: &AriChannel) -> Result<CallSession, CallError> {
     let state = map_channel_state(channel)?;
+    // ARI serializes `connected.number` as "" for a channel that has
+    // NOT yet connected (the originate response returns before the
+    // INVITE completes). An empty peer number must fall back to the
+    // channel name - never feed "" into the typed endpoint id (that
+    // would be a spurious Validation failure, observed live).
     let peer_name = channel
         .connected
         .as_ref()
         .map(|c| c.number.clone())
+        .filter(|n| !n.is_empty())
         .unwrap_or_else(|| channel.name.clone());
     let peer = SipEndpointId::new(peer_name)?;
     let mut session = CallSession::new(
@@ -121,6 +127,11 @@ pub struct AsteriskAdapter {
     /// asynchronously). Unit tests shrink this to keep fail-closed
     /// paths fast.
     bridge_verify_timeout: Duration,
+    /// Real ARI WebSocket event store (M4): terminal CALL OUTCOMES
+    /// (BUSY/REJECTED/NO_ANSWER) are authoritative ONLY in the event
+    /// stream (`ChannelDestroyed.cause`); a 486/603 destroys the
+    /// channel before REST polling can observe any intermediate state.
+    events: Option<std::sync::Arc<std::sync::Mutex<crate::events::EventStore>>>,
 }
 
 impl AsteriskAdapter {
@@ -132,6 +143,7 @@ impl AsteriskAdapter {
             in_flight: Mutex::new(HashMap::new()),
             verifier: CallVerifier,
             bridge_verify_timeout: Duration::from_secs(8),
+            events: None,
         }
     }
 
@@ -155,7 +167,18 @@ impl AsteriskAdapter {
             in_flight: Mutex::new(HashMap::new()),
             verifier: CallVerifier,
             bridge_verify_timeout: Duration::from_secs(8),
+            events: None,
         }
+    }
+
+    /// Attach the real ARI event store (populated by the production
+    /// WebSocket consumer). Terminal classification consults it.
+    pub fn with_event_store(
+        mut self,
+        events: std::sync::Arc<std::sync::Mutex<crate::events::EventStore>>,
+    ) -> Self {
+        self.events = Some(events);
+        self
     }
 
     /// Real transport access (integration/live-fire suites read real
@@ -478,6 +501,83 @@ impl AsteriskAdapter {
                 obs.record_error(
                     &correlation,
                     "ORIGINATE_STASIS",
+                    e.code.as_str(),
+                    "stasis originate failed",
+                );
+                Err(e
+                    .with_correlation(correlation.clone())
+                    .with_resource(target))
+            }
+        }
+    }
+
+    /// Originate directly into a Stasis application with a REAL
+    /// provider-side call timeout (M4 directive E): the ARI originate
+    /// carries `timeout`, so NO_ANSWER classification is tied to the
+    /// real Asterisk call lifecycle (Asterisk destroys the ringing
+    /// channel when the timer expires; the event stream records the
+    /// Q.850 cause 102/19) instead of a local sleep.
+    pub fn originate_stasis_bounded(
+        &self,
+        endpoint: &SipEndpointId,
+        app: &str,
+        app_args: &str,
+        caller_id: Option<&str>,
+        timeout_secs: u64,
+    ) -> Result<CallSession, CallError> {
+        let mut obs = self.obs.lock().unwrap();
+        let correlation = obs.correlation();
+        let target = format!("originate-stasis-bounded:{}", endpoint.as_str());
+        self.check_capability(CallCommand::Dial, &target, &correlation)?;
+        let key = self.acquire_in_flight(&target, "DIAL").map_err(|e| {
+            obs.record_error(
+                &correlation,
+                "ORIGINATE_STASIS_BOUNDED",
+                e.code.as_str(),
+                "duplicate",
+            );
+            e.with_correlation(correlation.clone())
+                .with_resource(target.clone())
+        })?;
+        drop(obs);
+        let result = self.transport.originate_with_app_bounded(
+            endpoint,
+            app,
+            app_args,
+            caller_id,
+            timeout_secs,
+        );
+        self.release_in_flight(&key);
+        let mut obs = self.obs.lock().unwrap();
+        match result {
+            Ok(channel) => {
+                let session = session_from_channel(&channel).map_err(|e| {
+                    obs.record_error(
+                        &correlation,
+                        "ORIGINATE_STASIS_BOUNDED",
+                        e.code.as_str(),
+                        "channel mapping failed",
+                    );
+                    e.with_correlation(correlation.clone())
+                })?;
+                obs.record(
+                    &correlation,
+                    "ORIGINATE_STASIS_BOUNDED",
+                    "ok",
+                    &format!(
+                        "session {} channel {} in stasis app {} timeout {}s",
+                        session.id.as_str(),
+                        channel.id,
+                        app,
+                        timeout_secs
+                    ),
+                );
+                Ok(session)
+            }
+            Err(e) => {
+                obs.record_error(
+                    &correlation,
+                    "ORIGINATE_STASIS_BOUNDED",
                     e.code.as_str(),
                     "stasis originate failed",
                 );
@@ -832,6 +932,35 @@ impl AsteriskAdapter {
                     .with_resource(session.to_string())
             })?;
         drop(obs);
+        // Malformed/unsupported DTMF input fails BEFORE provider
+        // mutation (directive L/N): only canonical DTMF digits are
+        // accepted (0-9, A-D, *, #); empty, overlong (>64), or
+        // invalid strings are Validation errors with zero transport
+        // calls.
+        if digits.is_empty()
+            || digits.len() > 64
+            || !digits
+                .chars()
+                .all(|c| c.is_ascii_digit() || "ABCD*#".contains(c))
+        {
+            self.release_in_flight(&key);
+            let err = CallError::new(
+                CallErrorCode::Validation,
+                format!(
+                    "invalid DTMF digit string {:?} (empty/overlong/illegal chars)",
+                    digits.chars().take(72).collect::<String>()
+                ),
+                Some(correlation.clone()),
+                Some(session.to_string()),
+            );
+            self.obs.lock().unwrap().record_error(
+                &correlation,
+                "DTMF",
+                err.code.as_str(),
+                "invalid digit string rejected before transport",
+            );
+            return Err(err);
+        }
         let selector = match self.selector_for_session(session) {
             Ok(s) => s,
             Err(e) => {
@@ -943,6 +1072,234 @@ impl AsteriskAdapter {
                     .with_resource(session.to_string()))
             }
         }
+    }
+
+    /// M4 terminal classification (directive A/C): wait for a real
+    /// terminal CALL OUTCOME with a bounded deadline.
+    ///
+    /// Asterisk 22 delivers the typed outcome ONLY in the ARI event
+    /// stream: a 486/603 final response destroys the outbound channel
+    /// before REST polling can observe any intermediate state, and the
+    /// authoritative discriminator is `ChannelDestroyed.cause` (observed:
+    /// cause=17 "User busy" for 486, cause=21 for 603 Decline). This
+    /// method:
+    ///
+    ///   1. polls the real channel state (bounded);
+    ///   2. if the channel is still Ringing at the deadline -> NoAnswer
+    ///      (the Nexus-side bounded call timeout; directive C);
+    ///   3. if the channel disappears, consults the real event store for
+    ///      the terminal cause and maps it to the locked vocabulary;
+    ///   4. no cause recorded -> Verification failure (deadline expired
+    ///      without an observable typed outcome; directive H).
+    ///
+    /// Never fabricates a terminal state and never blind-retries.
+    pub fn wait_terminal(
+        &self,
+        session: &CallSessionId,
+        timeout: Duration,
+    ) -> Result<CallState, CallError> {
+        let mut obs = self.obs.lock().unwrap();
+        let correlation = obs.correlation();
+        let selector = match self.selector_for_session(session) {
+            Ok(s) => s,
+            Err(e) => {
+                obs.record_error(
+                    &correlation,
+                    "WAIT_TERMINAL",
+                    e.code.as_str(),
+                    "selector failed",
+                );
+                return Err(e.with_correlation(correlation.clone()));
+            }
+        };
+        drop(obs);
+        let deadline = Instant::now() + timeout;
+        let mut last_state: Option<CallState> = None;
+        loop {
+            match self.transport.channel_state(&selector) {
+                Ok(channel) => {
+                    last_state = map_channel_state(&channel).ok();
+                    if let Some(state) = &last_state {
+                        if state.is_terminal() {
+                            let mut obs = self.obs.lock().unwrap();
+                            obs.record(
+                                &correlation,
+                                "WAIT_TERMINAL",
+                                "ok",
+                                &format!("terminal state {}", state.as_str()),
+                            );
+                            return Ok(*state);
+                        }
+                    }
+                }
+                Err(e) if e.code == CallErrorCode::NotFound => {
+                    // Channel gone: the typed outcome is in the event
+                    // store (cause). Poll the store briefly for the
+                    // terminal cause to arrive (the 404 and the event
+                    // are near-simultaneous).
+                    let cause_deadline = Instant::now() + Duration::from_secs(3);
+                    loop {
+                        if let Some(state) =
+                            self.terminal_state_from_cause(session, &correlation)?
+                        {
+                            return Ok(state);
+                        }
+                        if Instant::now() >= cause_deadline {
+                            break;
+                        }
+                        std::thread::sleep(Duration::from_millis(100));
+                    }
+                    let err = CallError::new(
+                        CallErrorCode::Verification,
+                        format!(
+                            "channel disappeared with no typed cause recorded (last {:?})",
+                            last_state.map(|s| s.as_str())
+                        ),
+                        Some(correlation.clone()),
+                        Some(session.to_string()),
+                    );
+                    self.obs.lock().unwrap().record_error(
+                        &correlation,
+                        "WAIT_TERMINAL",
+                        "VERIFICATION",
+                        "no typed cause recorded",
+                    );
+                    return Err(err);
+                }
+                Err(e) => {
+                    let err = e.with_correlation(correlation.clone());
+                    self.obs.lock().unwrap().record_error(
+                        &correlation,
+                        "WAIT_TERMINAL",
+                        err.code.as_str(),
+                        "channel readback failed",
+                    );
+                    return Err(err);
+                }
+            }
+            if Instant::now() >= deadline {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(300));
+        }
+        // Deadline expired while the channel is still ringing: the
+        // endpoint never answered within the bounded call timeout.
+        let mut obs = self.obs.lock().unwrap();
+        obs.record(
+            &correlation,
+            "WAIT_TERMINAL",
+            "ok",
+            "no answer within bounded call timeout",
+        );
+        Ok(CallState::NoAnswer)
+    }
+
+    /// Map the real event-store terminal cause to the locked CallState
+    /// vocabulary. Q.850/SIP cause mapping (directive A):
+    ///
+    /// - 17 (User Busy)            -> Busy
+    /// - 21 (Call Rejected)        -> Rejected
+    /// - 18 (No User Responding)   -> NoAnswer
+    /// - 19 (No Answer)            -> NoAnswer
+    /// - 102 (Recovery on Timer Expire) -> NoAnswer
+    /// - 27/34/38/41/47/58         -> NetworkError
+    /// - everything else           -> Failed
+    fn terminal_state_from_cause(
+        &self,
+        session: &CallSessionId,
+        correlation: &str,
+    ) -> Result<Option<CallState>, CallError> {
+        let Some(events) = &self.events else {
+            return Ok(None);
+        };
+        let cause = {
+            let store = events.lock().unwrap();
+            store.causes.get(session.as_str()).cloned()
+        };
+        let Some((cause, cause_txt)) = cause else {
+            return Ok(None);
+        };
+        let state = match cause {
+            17 => CallState::Busy,
+            21 => CallState::Rejected,
+            18 | 19 | 102 => CallState::NoAnswer,
+            27 | 34 | 38 | 41 | 47 | 58 => CallState::NetworkError,
+            _ => CallState::Failed,
+        };
+        let mut obs = self.obs.lock().unwrap();
+        obs.record(
+            correlation,
+            "WAIT_TERMINAL",
+            "ok",
+            &format!("typed cause {cause} ({cause_txt}) -> {}", state.as_str()),
+        );
+        Ok(Some(state))
+    }
+
+    /// M4 ambiguous-originate reconciliation (directives O/P): when an
+    /// originate is SUBMITTED but the control/transport connection dies
+    /// before Nexus receives a trustworthy result, NEVER originate again
+    /// blindly. Instead reconcile through REAL Asterisk channel state:
+    /// if a channel with the same caller-id token exists, the call is
+    /// real (return its session, outcome AMBIGUOUS but observed); if no
+    /// matching channel exists after a bounded window, the original
+    /// error stands (no duplicate call was placed).
+    pub fn reconcile_originate(
+        &self,
+        caller_token: &str,
+        timeout: Duration,
+    ) -> Result<CallSession, CallError> {
+        let mut obs = self.obs.lock().unwrap();
+        let correlation = obs.correlation();
+        drop(obs);
+        let deadline = Instant::now() + timeout;
+        loop {
+            let channels = self
+                .transport
+                .list_channels()
+                .map_err(|e| e.with_correlation(correlation.clone()))?;
+            for channel in channels {
+                let caller_number = channel
+                    .caller
+                    .as_ref()
+                    .map(|c| c.number.clone())
+                    .unwrap_or_default();
+                if caller_number == caller_token {
+                    let session = session_from_channel(&channel)
+                        .map_err(|e| e.with_correlation(correlation.clone()))?;
+                    let mut obs = self.obs.lock().unwrap();
+                    obs.record(
+                        &correlation,
+                        "RECONCILE_ORIGINATE",
+                        "ok",
+                        &format!(
+                            "originate reconciled to real channel {} (no blind retry)",
+                            channel.id
+                        ),
+                    );
+                    return Ok(session);
+                }
+            }
+            if Instant::now() >= deadline {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(300));
+        }
+        let err = CallError::new(
+            CallErrorCode::Verification,
+            format!(
+                "originate outcome ambiguous and no matching real channel for token {caller_token:?}"
+            ),
+            Some(correlation.clone()),
+            None,
+        );
+        self.obs.lock().unwrap().record_error(
+            &correlation,
+            "RECONCILE_ORIGINATE",
+            "VERIFICATION",
+            "no matching channel; no blind retry",
+        );
+        Err(err)
     }
 }
 
@@ -1855,5 +2212,213 @@ mod tests {
         assert_eq!(endpoint.technology, "PJSIP");
         assert_eq!(endpoint.resource, "endpoint-a");
         assert_eq!(endpoint.state.as_deref(), Some("online"));
+    }
+
+    // ---- M4: typed terminal classification (directive A/C) ----
+
+    #[test]
+    fn ep025_unit_wait_terminal_busy_from_real_cause() {
+        let transport = ControlledTransport::default();
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dial]));
+        let sid = CallSessionId::new("ch-busy").unwrap();
+        let store = Arc::new(Mutex::new(crate::events::EventStore::new()));
+        store
+            .lock()
+            .unwrap()
+            .causes
+            .insert("ch-busy".to_string(), (17, "User busy".to_string()));
+        let adapter = adapter.with_event_store(store);
+        let state = adapter
+            .wait_terminal(&sid, Duration::from_millis(500))
+            .expect("cause 17 -> Busy");
+        assert_eq!(state, CallState::Busy);
+    }
+
+    #[test]
+    fn ep025_unit_wait_terminal_rejected_from_real_cause() {
+        let transport = ControlledTransport::default();
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dial]));
+        let sid = CallSessionId::new("ch-rej").unwrap();
+        let store = Arc::new(Mutex::new(crate::events::EventStore::new()));
+        store
+            .lock()
+            .unwrap()
+            .causes
+            .insert("ch-rej".to_string(), (21, "Call Rejected".to_string()));
+        let adapter = adapter.with_event_store(store);
+        let state = adapter
+            .wait_terminal(&sid, Duration::from_millis(500))
+            .expect("cause 21 -> Rejected");
+        assert_eq!(state, CallState::Rejected);
+    }
+
+    #[test]
+    fn ep025_unit_wait_terminal_no_cause_is_verification_failure() {
+        // Channel gone with NO typed cause: deadline -> Verification
+        // failure, never a fabricated state (directive H).
+        let transport = ControlledTransport::default();
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dial]));
+        let sid = CallSessionId::new("ch-unknown").unwrap();
+        let err = adapter
+            .wait_terminal(&sid, Duration::from_millis(400))
+            .expect_err("no cause -> verification failure");
+        assert_eq!(err.code, CallErrorCode::Verification);
+        assert_eq!(err.correlation.as_deref().map(|c| &c[..4]), Some("tel-"));
+    }
+
+    #[test]
+    fn ep025_unit_wait_terminal_ringing_deadline_is_no_answer() {
+        // Endpoint never answers within the bounded call timeout:
+        // channel still Ringing at the deadline -> NoAnswer (never a
+        // generic transport failure; directive C).
+        let transport = ControlledTransport::default();
+        transport
+            .channels
+            .lock()
+            .unwrap()
+            .push(channel("ringing-ch", "Ring", None));
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dial]));
+        let sid = CallSessionId::new("ringing-ch").unwrap();
+        let state = adapter
+            .wait_terminal(&sid, Duration::from_millis(600))
+            .expect("ringing past bound -> NoAnswer");
+        assert_eq!(state, CallState::NoAnswer);
+    }
+
+    #[test]
+    fn ep025_unit_wait_terminal_observable_busy_state() {
+        // When the ARI channel DOES expose a terminal state (Busy),
+        // it is returned directly from the real state mapping.
+        let transport = ControlledTransport::default();
+        transport
+            .channels
+            .lock()
+            .unwrap()
+            .push(channel("busy-ch", "Busy", None));
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dial]));
+        let sid = CallSessionId::new("busy-ch").unwrap();
+        let state = adapter
+            .wait_terminal(&sid, Duration::from_millis(800))
+            .expect("Busy state observed");
+        assert_eq!(state, CallState::Busy);
+    }
+
+    // ---- M4: ambiguous originate reconciliation (directives O/P) ----
+
+    #[test]
+    fn ep025_unit_reconcile_originate_finds_real_channel_no_blind_retry() {
+        let transport = ControlledTransport::default();
+        let calls = transport.calls.clone();
+        let mut ch = channel("ch-found", "Ring", None);
+        ch.caller = Some(AriCallerId {
+            name: "Nexus".to_string(),
+            number: "nx-token-1".to_string(),
+        });
+        transport.channels.lock().unwrap().push(ch);
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dial]));
+        let session = adapter
+            .reconcile_originate("nx-token-1", Duration::from_millis(800))
+            .expect("reconciled to the real channel");
+        assert_eq!(session.id.as_str(), "ch-found");
+        // The transport was NEVER asked to originate again.
+        assert!(
+            calls
+                .lock()
+                .unwrap()
+                .iter()
+                .all(|c| !c.starts_with("originate")),
+            "no blind retry: transport must not originate"
+        );
+    }
+
+    #[test]
+    fn ep025_unit_reconcile_originate_no_channel_is_verification_failure() {
+        let transport = ControlledTransport::default();
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dial]));
+        let err = adapter
+            .reconcile_originate("nx-token-missing", Duration::from_millis(400))
+            .expect_err("no matching channel -> verification failure");
+        assert_eq!(err.code, CallErrorCode::Verification);
+    }
+
+    // ---- M4: malformed DTMF fails BEFORE provider mutation ----
+
+    #[test]
+    fn ep025_unit_dtmf_validation_before_transport() {
+        let transport = ControlledTransport::default();
+        let calls = transport.calls.clone();
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dtmf]));
+        let sid = CallSessionId::new("ch-dtmf").unwrap();
+        let err = adapter
+            .send_dtmf(&sid, "12abc!")
+            .expect_err("invalid digits");
+        assert_eq!(err.code, CallErrorCode::Validation);
+        assert_eq!(calls.lock().unwrap().len(), 0, "zero transport calls");
+        let err2 = adapter.send_dtmf(&sid, "").expect_err("empty digits");
+        assert_eq!(err2.code, CallErrorCode::Validation);
+        assert_eq!(calls.lock().unwrap().len(), 0, "zero transport calls");
+    }
+
+    #[test]
+    fn ep025_unit_dtmf_valid_digits_reach_transport() {
+        let transport = ControlledTransport::default();
+        let calls = transport.calls.clone();
+        transport
+            .channels
+            .lock()
+            .unwrap()
+            .push(channel("ch-dtmf2", "Up", None));
+        let adapter =
+            AsteriskAdapter::new(Box::new(transport), policy_with(&[CallCapability::Dtmf]));
+        let sid = CallSessionId::new("ch-dtmf2").unwrap();
+        adapter.send_dtmf(&sid, "539*#").expect("valid digits");
+        assert!(
+            calls.lock().unwrap().iter().any(|c| c.starts_with("dtmf:")),
+            "valid digits must reach the transport"
+        );
+    }
+
+    // ---- M4: cause map -> typed state (directive A vocabulary) ----
+
+    #[test]
+    fn ep025_unit_cause_to_state_mapping_locked_vocabulary() {
+        // Direct mapping through the adapter's cause classifier.
+        let cases = [
+            (17u32, CallState::Busy),
+            (21, CallState::Rejected),
+            (18, CallState::NoAnswer),
+            (19, CallState::NoAnswer),
+            (102, CallState::NoAnswer),
+            (34, CallState::NetworkError),
+            (58, CallState::NetworkError),
+            (16, CallState::Failed),
+            (99, CallState::Failed),
+        ];
+        for (cause, expected) in cases {
+            let sid = CallSessionId::new(format!("ch-c-{cause}")).unwrap();
+            let store = Arc::new(Mutex::new(crate::events::EventStore::new()));
+            store
+                .lock()
+                .unwrap()
+                .causes
+                .insert(format!("ch-c-{cause}"), (cause, "txt".to_string()));
+            let adapter = AsteriskAdapter::new(
+                Box::new(ControlledTransport::default()),
+                policy_with(&[CallCapability::Dial]),
+            )
+            .with_event_store(store);
+            let state = adapter
+                .wait_terminal(&sid, Duration::from_millis(400))
+                .unwrap_or_else(|_| panic!("cause {cause} must classify"));
+            assert_eq!(state, expected, "cause {cause} -> {}", expected.as_str());
+        }
     }
 }

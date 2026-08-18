@@ -1,1 +1,5 @@
-tests/telephony/
+infra/asterisk/
+connectors/asterisk/tests/
+crates/nexus-telephony/tests/
+scripts/ep025-m4-tests.sh
+scripts/nodes/EP-025.sh

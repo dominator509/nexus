@@ -27,6 +27,12 @@ pub struct TelephonyAuditEntry {
     pub outcome: String,
     /// Redacted detail (secrets replaced with *** before storing).
     pub detail: String,
+    /// Structured SAFE fields (directive V): call/session fingerprint,
+    /// channel fingerprint, direction, state, codec, bridge state,
+    /// media verification state, DTMF count/type, latency, error class.
+    /// Never contains raw audio, credentials, Authorization headers, or
+    /// private transcripts. Redacted at insert like detail.
+    pub fields: BTreeMap<String, String>,
 }
 
 /// Bounded redacted audit ring + counters for the Asterisk adapter.
@@ -89,11 +95,27 @@ impl TelephonyObservability {
 
     /// Record an audited operation (outcome "ok" or an error code).
     pub fn record(&mut self, correlation: &str, operation: &str, outcome: &str, detail: &str) {
+        self.record_with_fields(correlation, operation, outcome, detail, BTreeMap::new());
+    }
+
+    /// Record an audited operation with structured SAFE fields.
+    pub fn record_with_fields(
+        &mut self,
+        correlation: &str,
+        operation: &str,
+        outcome: &str,
+        detail: &str,
+        fields: BTreeMap<String, String>,
+    ) {
         let entry = TelephonyAuditEntry {
             correlation: correlation.to_string(),
             operation: operation.to_string(),
             outcome: outcome.to_string(),
             detail: self.redact(detail),
+            fields: fields
+                .into_iter()
+                .map(|(k, v)| (k, self.redact(&v)))
+                .collect(),
         };
         if self.ring.len() >= self.max_entries {
             self.ring.pop_front();
@@ -171,5 +193,34 @@ mod tests {
         let b = obs.correlation();
         assert!(a.starts_with("tel-"));
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn ep025_unit_observability_safe_fields_redacted_and_bounded() {
+        let mut obs = TelephonyObservability::new(2, vec!["EP025_FIELD_CANARY".to_string()]);
+        let c = obs.correlation();
+        let mut fields = BTreeMap::new();
+        fields.insert("direction".to_string(), "OUTBOUND".to_string());
+        fields.insert("state".to_string(), "RINGING".to_string());
+        fields.insert("error_class".to_string(), "EP025_FIELD_CANARY".to_string());
+        obs.record_with_fields(&c, "ORIGINATE", "ok", "originated", fields);
+        let entry = &obs.audit()[0];
+        assert_eq!(
+            entry.fields.get("direction").map(|s| s.as_str()),
+            Some("OUTBOUND")
+        );
+        assert_eq!(
+            entry.fields.get("state").map(|s| s.as_str()),
+            Some("RINGING")
+        );
+        // The canary in a field is redacted at insert.
+        assert_eq!(
+            entry.fields.get("error_class").map(|s| s.as_str()),
+            Some("***")
+        );
+        // The ring stays bounded with the new field path.
+        obs.record_with_fields(&c, "ORIGINATE", "ok", "x", BTreeMap::new());
+        obs.record_with_fields(&c, "ORIGINATE", "ok", "y", BTreeMap::new());
+        assert_eq!(obs.audit().len(), 2);
     }
 }

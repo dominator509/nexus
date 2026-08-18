@@ -98,3 +98,253 @@ type=auth
 auth_type=userpass
 username=endpoint-b
 password={{endpoint_b_password}}
+
+; ---- endpoint-c (manual-answer controlled endpoint) --------------
+[endpoint-c]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-c
+aors=endpoint-c
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+identify_by=username
+
+[endpoint-c]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-c]
+type=auth
+auth_type=userpass
+username=endpoint-c
+password={{endpoint_c_password}}
+
+; ---- endpoint-d (second auto-answer controlled endpoint) ----------
+[endpoint-d]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-d
+aors=endpoint-d
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+identify_by=username
+
+[endpoint-d]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-d]
+type=auth
+auth_type=userpass
+username=endpoint-d
+password={{endpoint_d_password}}
+
+; ---- endpoint-x (wrong-credential probe target) -------------------
+; A dedicated AOR that the M4 wrong-credential probe tries to register
+; with a WRONG password: Asterisk's real digest challenge must deny it,
+; leaving zero contacts for this AOR. A separate AOR makes denial
+; unambiguous (an existing legit contact on the same AOR would mask
+; the denial from the contact table).
+[endpoint-x]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-x
+aors=endpoint-x
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+identify_by=username
+
+[endpoint-x]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-x]
+type=auth
+auth_type=userpass
+username=endpoint-x
+password={{endpoint_x_password}}
+
+; ---- endpoint-r (controlled 603 Decline responder) ----------------
+; A dedicated AOR for the M4 REJECTED proof: the reject_endpoint.py
+; fixture registers here with the real digest exchange, then answers
+; every INVITE with 603 Decline. Asterisk maps 603 -> ChannelDestroyed
+; cause 21 (Call Rejected), the typed REJECTED discriminator.
+[endpoint-r]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-r
+aors=endpoint-r
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+identify_by=username
+
+[endpoint-r]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-r]
+type=auth
+auth_type=userpass
+username=endpoint-r
+password={{endpoint_r_password}}
+
+; ---- endpoint-s (controlled silent-media responder) ---------------
+; A dedicated AOR for the M4 one-way media / mid-call media-loss
+; proofs: the reject_endpoint.py fixture registers here and answers
+; INVITEs with 200 OK (a=recvonly in silent mode: receives audio from
+; the bridge but sends NO RTP back -> one-way media; sender mode:
+; sends PCMU silence for a bounded window then goes silent -> mid-call
+; media loss). The production bridge stays real; only this peer is a
+; fixture.
+[endpoint-s]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-s
+aors=endpoint-s
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+identify_by=username
+
+[endpoint-s]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-s]
+type=auth
+auth_type=userpass
+username=endpoint-s
+password={{endpoint_s_password}}
+
+; ---- endpoint-t (controlled media-sender responder) ----------------
+; A dedicated AOR for the M4 mid-call media-loss proof: the
+; reject_endpoint.py fixture registers here in sender mode (answers
+; 200 OK, sends real PCMU silence RTP for a bounded window, then goes
+; silent while the call stays signaling-active).
+[endpoint-t]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-t
+aors=endpoint-t
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+identify_by=username
+
+[endpoint-t]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-t]
+type=auth
+auth_type=userpass
+username=endpoint-t
+password={{endpoint_t_password}}
+
+; ---- endpoint-u (dedicated one-way-media sender responder) ----------
+; A SECOND deterministic sender AOR for the M4 one-way media proof.
+; The mid-call-loss proof uses endpoint-t (RTP src port 12070); the
+; one-way proof uses endpoint-u (RTP src port 12120) so each wire
+; guard binds to its OWN stream identity (no cross-test RTP can
+; satisfy the wrong proof). reject_endpoint.py registers here in
+; sender mode.
+[endpoint-u]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-u
+aors=endpoint-u
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+identify_by=username
+
+[endpoint-u]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-u]
+type=auth
+auth_type=userpass
+username=endpoint-u
+password={{endpoint_u_password}}

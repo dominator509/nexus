@@ -84,6 +84,24 @@ fn status(adapter: &AsteriskAdapter) -> ExitCode {
                             session.legs.len()
                         );
                     }
+                    // M4: bounded provider surface (directive W) - real
+                    // PJSIP endpoint/contact state and bridge count from
+                    // Asterisk's own ARI state, safe telemetry only.
+                    for ep in ["endpoint-a", "endpoint-b", "endpoint-c", "endpoint-d"] {
+                        match adapter.endpoint_state(ep) {
+                            Ok(e) => println!(
+                                "endpoint {ep}: {}",
+                                e.state.as_deref().unwrap_or("unknown")
+                            ),
+                            Err(e) => {
+                                println!("endpoint {ep}: error {} {}", e.code.as_str(), e.message)
+                            }
+                        }
+                    }
+                    match adapter.transport().list_bridges() {
+                        Ok(bridges) => println!("bridges: {}", bridges.len()),
+                        Err(e) => println!("bridges: error {} {}", e.code.as_str(), e.message),
+                    }
                     ExitCode::SUCCESS
                 }
                 Err(e) => {

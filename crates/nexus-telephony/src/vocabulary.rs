@@ -532,6 +532,69 @@ impl TranscriptArtifact {
     }
 }
 
+/// M4 transcript/recording privacy gate (directive T).
+///
+/// Transcript creation MUST obey the call's DisclosurePolicy. When
+/// recording/transcription is NOT consented, no TranscriptArtifact is
+/// produced (the gate returns None). When enabled, the artifact carries
+/// the policy's privacy class and retention metadata. The gate is the
+/// orchestration boundary: spoken content (including hostile
+/// instructions, directive S) becomes DATA through this seam - it never
+/// alters tenant identity, auth strength, capabilities, or policy.
+pub struct TranscriptGate;
+
+impl TranscriptGate {
+    /// Whether transcript production is allowed for a disclosure policy.
+    pub fn should_produce(disclosure: &DisclosurePolicy) -> bool {
+        disclosure.recording_consented
+    }
+
+    /// Create a TranscriptArtifact ONLY when the policy allows it.
+    /// Returns None when recording/transcription is disabled. `text` is
+    /// only hashed here (sha256); the raw transcript is never stored in
+    /// the artifact and never enters telemetry (directive 24).
+    #[allow(clippy::too_many_arguments)]
+    pub fn create_if_allowed(
+        disclosure: &DisclosurePolicy,
+        session_id: &CallSessionId,
+        privacy_class: CallPrivacyClass,
+        text: &str,
+        word_count: u64,
+        duration_seconds: u64,
+        redacted: bool,
+    ) -> Result<Option<TranscriptArtifact>, CallError> {
+        if !Self::should_produce(disclosure) {
+            return Ok(None);
+        }
+        let digest = {
+            use sha2::Digest;
+            use std::fmt::Write;
+            let mut hasher = sha2::Sha256::new();
+            hasher.update(text.as_bytes());
+            let bytes = hasher.finalize();
+            let mut hex = String::with_capacity(64);
+            for b in bytes {
+                let _ = write!(hex, "{b:02x}");
+            }
+            hex
+        };
+        let artifact = TranscriptArtifact::new(
+            TranscriptId::new(format!(
+                "tx-{}",
+                &session_id.as_str()[..session_id.as_str().len().min(48)]
+            ))?,
+            session_id.clone(),
+            privacy_class,
+            digest,
+            word_count,
+            duration_seconds,
+            disclosure.retention_seconds,
+            redacted,
+        )?;
+        Ok(Some(artifact))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

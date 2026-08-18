@@ -196,6 +196,26 @@ pub trait AriTransport {
         ))
     }
 
+    /// Originate directly into a Stasis application with a REAL
+    /// provider-side call timeout (POST /ari/channels with app +
+    /// timeout, M4). The bounded timeout ties NO_ANSWER to the real
+    /// call lifecycle: Asterisk destroys the ringing channel when the
+    /// timer expires (Q.850 cause 102/19 recorded on the event
+    /// stream), instead of a local sleep pretending to be a call
+    /// outcome. Default: fall back to the unbounded originate (callers
+    /// that never exercise NO_ANSWER are unaffected).
+    fn originate_with_app_bounded(
+        &self,
+        endpoint: &SipEndpointId,
+        app: &str,
+        app_args: &str,
+        caller_id: Option<&str>,
+        timeout_secs: u64,
+    ) -> Result<AriChannel, CallError> {
+        let _ = timeout_secs;
+        self.originate_with_app(endpoint, app, app_args, caller_id)
+    }
+
     /// Create a real ARI bridge (POST /ari/bridges). `bridge_type`
     /// is the DOCUMENTED ARI bridge type (e.g. "mixing").
     fn create_bridge(&self, bridge_type: &str, name: &str) -> Result<AriBridge, CallError> {
@@ -562,6 +582,28 @@ impl AriTransport for RestAriTransport {
             ("endpoint", format!("PJSIP/{}", endpoint.as_str())),
             ("app", app.to_string()),
             ("appArgs", app_args.to_string()),
+        ];
+        if let Some(cid) = caller_id {
+            params.push(("callerId", cid.to_string()));
+        }
+        let value = self.post_json("/ari/channels", &params)?;
+        serde_json::from_value(value)
+            .map_err(|e| CallError::external(format!("ari originate schema invalid: {e}")))
+    }
+
+    fn originate_with_app_bounded(
+        &self,
+        endpoint: &SipEndpointId,
+        app: &str,
+        app_args: &str,
+        caller_id: Option<&str>,
+        timeout_secs: u64,
+    ) -> Result<AriChannel, CallError> {
+        let mut params: Vec<(&str, String)> = vec![
+            ("endpoint", format!("PJSIP/{}", endpoint.as_str())),
+            ("app", app.to_string()),
+            ("appArgs", app_args.to_string()),
+            ("timeout", timeout_secs.to_string()),
         ];
         if let Some(cid) = caller_id {
             params.push(("callerId", cid.to_string()));

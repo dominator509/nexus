@@ -15,3 +15,12 @@ serde_json.workspace = true
 # reqwest is the locked workspace dependency class (EP-011/EP-024
 # precedent).
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "query"] }
+# Real ARI WebSocket events consumer (M4): a minimal real RFC6455
+# client over std::net::TcpStream. sha1 + base64 are needed to compute
+# and validate the Sec-WebSocket-Accept handshake digest; rand provides
+# the 16 random bytes for the Sec-WebSocket-Key. All three are small,
+# permissively licensed (MIT/Apache-2.0), and audited by the locked
+# dependency gate.
+sha1 = "=0.10.6"
+base64 = "0.22"
+rand = "0.8"

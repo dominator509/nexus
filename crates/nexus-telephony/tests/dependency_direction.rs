@@ -23,7 +23,11 @@ fn ep025_unit_dependency_direction() {
         assert!(
             name.starts_with("nexus-domain")
                 || name.starts_with("serde")
-                || name.starts_with("serde_json"),
+                || name.starts_with("serde_json")
+                // M4 directive T/24: sha256 digest for TranscriptArtifact
+                // evidence (never raw transcripts). Recorded in the
+                // ExecPlan Decision Log; MIT/Apache-2.0, audit-gated.
+                || name.starts_with("sha2"),
             "unexpected dependency {name:?} in nexus-telephony"
         );
     }

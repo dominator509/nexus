@@ -2,11 +2,14 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-025.txt
 .agent/milestone-files/EP-025-M3.txt
+.agent/milestone-files/EP-025-M4.txt
 .agent/node-contracts/EP-025.md
+deny.toml
 scripts/nodes/EP-025.sh
 scripts/ep025-m1-tests.sh
 scripts/ep025-m2-tests.sh
 scripts/ep025-m3-tests.sh
+scripts/ep025-m4-tests.sh
 scripts/blueprint_validate.py
 Cargo.toml
 Cargo.lock

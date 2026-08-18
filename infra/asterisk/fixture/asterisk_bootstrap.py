@@ -48,7 +48,7 @@ ARI_BASE = "http://127.0.0.1:8088"
 CANARY_A = "/tmp/ep025-ast/audio-a/phrase_a_8k.wav"
 CANARY_B = "/tmp/ep025-ast/audio-b/phrase_b_8k.wav"
 
-GENERATED_STATE = [ETC, ENV_FILE, WORK / "baresip-a", WORK / "baresip-b"]
+GENERATED_STATE = [ETC, ENV_FILE, WORK / "baresip-a", WORK / "baresip-b", WORK / "baresip-c", WORK / "baresip-d"]
 
 
 def run(cmd, **kw):
@@ -140,7 +140,12 @@ def prepare_canaries(audio_a: pathlib.Path, audio_b: pathlib.Path) -> None:
 
 
 def write_baresip_config(
-    name: str, sip_name: str, sip_port: int, password: str, audio_dir: pathlib.Path
+    name: str,
+    sip_name: str,
+    sip_port: int,
+    password: str,
+    audio_dir: pathlib.Path,
+    answermode: str = "auto",
 ) -> None:
     cfg = WORK / f"baresip-{name}"
     cfg.mkdir(parents=True, exist_ok=True)
@@ -152,11 +157,14 @@ def write_baresip_config(
     (cfg / "config").write_text(
         f"""# EP-025 controlled SIP endpoint {sip_name} (baresip)
 module stdio.so
+module menu.so
+module ctrl_tcp.so
 module account.so
 module g711.so
 module aufile.so
 module ausine.so
 module sndfile.so
+ctrl_tcp_listen 127.0.0.1:{sip_port + 100}
 audio_player aufile
 audio_source aufile,{CANARY_A if name == "a" else CANARY_B}
 snd_path {audio_dir}
@@ -180,7 +188,7 @@ jitter_buffer_delay 0 0
     )
     (cfg / "accounts").write_text(
         f"# EP-025 controlled SIP endpoint {sip_name}\n"
-        f"<sip:{sip_name}@127.0.0.1:5060>;auth_user={sip_name};auth_pass={password};answermode=auto;regint=5\n"
+        f"<sip:{sip_name}@127.0.0.1:5060>;auth_user={sip_name};auth_pass={password};answermode={answermode};regint=5\n"
     )
 
 
@@ -208,6 +216,13 @@ def start() -> int:
         "ARI_PASSWORD": secrets.token_hex(16),
         "ENDPOINT_A_PASSWORD": secrets.token_hex(12),
         "ENDPOINT_B_PASSWORD": secrets.token_hex(12),
+        "ENDPOINT_C_PASSWORD": secrets.token_hex(12),
+        "ENDPOINT_D_PASSWORD": secrets.token_hex(12),
+        "ENDPOINT_X_PASSWORD": secrets.token_hex(12),
+        "ENDPOINT_R_PASSWORD": secrets.token_hex(12),
+        "ENDPOINT_S_PASSWORD": secrets.token_hex(12),
+        "ENDPOINT_T_PASSWORD": secrets.token_hex(12),
+        "ENDPOINT_U_PASSWORD": secrets.token_hex(12),
     }
     render_templates(env)
     prepare_canaries(WORK / "audio-a", WORK / "audio-b")
@@ -216,6 +231,13 @@ def start() -> int:
     # (observed on v1.0.0). Endpoint ports must therefore be spaced
     # apart by more than 1 to avoid cross-endpoint socket collisions.
     write_baresip_config("b", "endpoint-b", 5080, env["ENDPOINT_B_PASSWORD"], WORK / "audio-b")
+    # endpoint-c: MANUAL answer (the M4 NO_ANSWER / REJECT mechanisms
+    # need an endpoint that does not auto-answer; the test drives
+    # answer/reject through baresip's stdio commands).
+    write_baresip_config("c", "endpoint-c", 5090, env["ENDPOINT_C_PASSWORD"], WORK / "audio-c", answermode="manual")
+    # endpoint-d: second auto-answer endpoint (M4 exact-target /
+    # simultaneous-session tests need two independent calls).
+    write_baresip_config("d", "endpoint-d", 5100, env["ENDPOINT_D_PASSWORD"], WORK / "audio-d")
 
     # Remove any stale container from a previous run.
     docker("rm", "-f", NAME)
@@ -256,10 +278,21 @@ def start() -> int:
         f.write(f"NEXUS_EP025_AST_IMAGE={image_ref}\n")
         f.write(f"NEXUS_SIP_A_PASSWORD={env['ENDPOINT_A_PASSWORD']}\n")
         f.write(f"NEXUS_SIP_B_PASSWORD={env['ENDPOINT_B_PASSWORD']}\n")
+        f.write(f"NEXUS_SIP_C_PASSWORD={env['ENDPOINT_C_PASSWORD']}\n")
+        f.write(f"NEXUS_SIP_D_PASSWORD={env['ENDPOINT_D_PASSWORD']}\n")
+        f.write(f"NEXUS_SIP_X_PASSWORD={env['ENDPOINT_X_PASSWORD']}\n")
+        f.write(f"NEXUS_SIP_R_PASSWORD={env['ENDPOINT_R_PASSWORD']}\n")
+        f.write(f"NEXUS_SIP_S_PASSWORD={env['ENDPOINT_S_PASSWORD']}\n")
+        f.write(f"NEXUS_SIP_T_PASSWORD={env['ENDPOINT_T_PASSWORD']}\n")
+        f.write(f"NEXUS_SIP_U_PASSWORD={env['ENDPOINT_U_PASSWORD']}\n")
         f.write(f"NEXUS_BARESIP_A_DIR={WORK / 'baresip-a'}\n")
         f.write(f"NEXUS_BARESIP_B_DIR={WORK / 'baresip-b'}\n")
+        f.write(f"NEXUS_BARESIP_C_DIR={WORK / 'baresip-c'}\n")
+        f.write(f"NEXUS_BARESIP_D_DIR={WORK / 'baresip-d'}\n")
         f.write(f"NEXUS_EP025_AUDIO_A_DIR={WORK / 'audio-a'}\n")
         f.write(f"NEXUS_EP025_AUDIO_B_DIR={WORK / 'audio-b'}\n")
+        f.write(f"NEXUS_EP025_AUDIO_C_DIR={WORK / 'audio-c'}\n")
+        f.write(f"NEXUS_EP025_AUDIO_D_DIR={WORK / 'audio-d'}\n")
         f.write(f"NEXUS_EP025_EVENTS={WORK / 'ari-events.jsonl'}\n")
         f.write("NEXUS_WHISPER_CLI=/opt/nexus-whisper/build/bin/whisper-cli\n")
         f.write("NEXUS_WHISPER_MODEL=/opt/nexus-voice-models/ggml-tiny.en.bin\n")

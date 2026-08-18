@@ -16,6 +16,7 @@
 #![forbid(unsafe_code)]
 
 pub mod adapter;
+pub mod events;
 pub mod observability;
 pub mod transport;
 
