@@ -1,0 +1,18 @@
+[package]
+name = "nexus-opnsense-connector"
+version = "0.1.0"
+edition = "2021"
+description = "EP-030 M2 OPNsense adapter core: real OPNsense firewall automation API transport (Basic auth key/secret), governed preauthorized reversible containment, verify-by-readback, observability (SPEC-013)"
+license = "MIT"
+
+[dependencies]
+nexus-sentinel = { path = "../../crates/nexus-sentinel", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real OPNsense firewall automation API HTTP transport (OPNsense is the
+# primary serious firewall per SPEC-013 and COMPONENT_REGISTRY;
+# external-appliance integration mode; BSD-2-Clause). reqwest is the
+# locked workspace dependency class (EP-011/EP-024/EP-026/EP-027/EP-028/
+# EP-029 precedent).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }

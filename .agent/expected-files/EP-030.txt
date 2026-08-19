@@ -4,6 +4,7 @@
 .agent/node-contracts/EP-030.md
 scripts/nodes/EP-030.sh
 scripts/ep030-m1-tests.sh
+scripts/ep030-m2-tests.sh
 crates/nexus-sentinel/
 connectors/opnsense/
 connectors/openwrt/

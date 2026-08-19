@@ -57,6 +57,7 @@ members = [
     "connectors/hydra",
     "connectors/postiz",
     "connectors/social-direct",
+    "connectors/opnsense",
     "tests/audio",
     "tests/social",
     "tests/sentinel/core",
