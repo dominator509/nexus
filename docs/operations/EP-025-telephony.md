@@ -77,8 +77,8 @@ tcpdump -r /tmp/media.pcap 'src port 12140' | head   # caller phrase RTP
 tcpdump -r /tmp/media.pcap 'dst port 12140' | head   # TTS response RTP
 ```
 
-Decoded audio captures (baresip dump-*-dec.wav under
-/tmp/ep025-ast/audio-*) and whisper readback:
+Decoded audio captures (baresip `dump-*-dec.wav` under
+`/tmp/ep025-ast/audio-*`) and whisper readback:
 
 ```sh
 /opt/nexus-whisper/build/bin/whisper-cli -m /opt/nexus-voice-models/ggml-tiny.en.bin \
@@ -123,8 +123,8 @@ state (gap sessions surface as Verification/Unknown).
 - ARI events: /tmp/ep025-ast/ari-events.jsonl
 - RTP captures: /tmp/ep025-ast/ep025-m4-media.pcap,
   /tmp/ep025-m5/ep025-m5-media.pcap
-- Fixture logs: /tmp/ep025-ast/{baresip-*,responder-*,caller-*,orch-*}.log
-- Evidence (committed): .agent/state/evidence/EP-025-M5-LF-012-*.md/json
+- Fixture logs: `/tmp/ep025-ast/{baresip-*,responder-*,caller-*,orch-*}.log`
+- Evidence (committed): `.agent/state/evidence/EP-025-M5-LF-012-*.md/json`
 
 ## 11. Clean shutdown
 
