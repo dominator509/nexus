@@ -4,13 +4,16 @@
 .agent/node-contracts/EP-027.md
 .agent/milestone-files/EP-027-M1.txt
 .agent/milestone-files/EP-027-M2.txt
+.agent/milestone-files/EP-027-M3.txt
 scripts/nodes/EP-027.sh
 scripts/ep027-m1-tests.sh
 scripts/ep027-m2-tests.sh
+scripts/ep027-m3-tests.sh
 crates/nexus-fax/
 connectors/ictfax/
 connectors/hylafax/
 infra/fax/
+infra/hylafax/
 tests/fax/
 Cargo.toml
 Cargo.lock

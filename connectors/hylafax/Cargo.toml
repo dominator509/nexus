@@ -1,0 +1,19 @@
+[package]
+name = "nexus-hylafax"
+version = "0.1.0"
+edition = "2021"
+description = "EP-027 M3 HylaFAX adapter core: real hfaxd client-server protocol transport (FTP-like control channel + EPRT data channel + MODE Z zlib document transfer) against a real HylaFAX fixture, canonical mapping, governed submission, exact-target verification, ambiguity-safe idempotency, observability (SPEC-014)"
+license = "MIT"
+
+[dependencies]
+nexus-fax = { path = "../../crates/nexus-fax", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real HylaFAX MODE Z document transfer uses zlib compression on the
+# data channel (observed on the wire: zlib stream 78 9c ...). flate2 is
+# the standard Rust zlib binding; pinned to the 1.1 line used elsewhere
+# in the workspace (temporal core-bridge dep).
+flate2 = "1.1"
+# sha256 digest for FaxDocument artifact evidence (workspace sha2 0.11 line).
+sha2 = "0.11"

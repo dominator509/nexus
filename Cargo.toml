@@ -50,6 +50,7 @@ members = [
     "connectors/microsoft-mail",
     "connectors/imap-smtp",
     "connectors/ictfax",
+    "connectors/hylafax",
     "tests/audio",
     "tests/vision",
     "tests/devices",

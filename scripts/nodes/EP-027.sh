@@ -10,7 +10,7 @@ mode="${1:-verify}"
 case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-027 M1 && sh scripts/ep027-m1-tests.sh ;;
   M2) python3 scripts/node-artifact-check.py EP-027 M2 && sh scripts/ep027-m2-tests.sh ;;
-  M3) python3 scripts/node-artifact-check.py EP-027 M3; cargo test --locked -p nexus-fax ep027_integration ;;
+  M3) python3 scripts/node-artifact-check.py EP-027 M3 && sh scripts/ep027-m3-tests.sh ;;
   M4) python3 scripts/node-artifact-check.py EP-027 M4; cargo test --locked -p nexus-fax ep027_failure ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-027 M5
@@ -19,4 +19,8 @@ case "$mode" in
       ;;
   *) echo "EP-027: FAIL - unknown mode $mode" >&2; exit 2;;
 esac
-echo "EP-027 $mode: ok"
+rc=$?
+if [ "$rc" -eq 0 ]; then
+  echo "EP-027 $mode: ok"
+fi
+exit "$rc"
