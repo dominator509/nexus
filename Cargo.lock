@@ -1392,6 +1392,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-gmail"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "nexus-domain",
+ "nexus-email",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "nexus-harness-adapters"
 version = "0.1.0"
 dependencies = [

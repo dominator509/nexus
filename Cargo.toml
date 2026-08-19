@@ -45,6 +45,7 @@ members = [
     "connectors/irrigation",
     "connectors/vacuum",
     "connectors/asterisk",
+    "connectors/gmail",
     "tests/audio",
     "tests/vision",
     "tests/devices",

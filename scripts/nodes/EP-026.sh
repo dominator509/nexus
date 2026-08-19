@@ -9,7 +9,7 @@ export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
 case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-026 M1; sh scripts/ep026-m1-tests.sh ;;
-  M2) python3 scripts/node-artifact-check.py EP-026 M2; cargo test --locked -p nexus-email ep026_unit ;;
+  M2) python3 scripts/node-artifact-check.py EP-026 M2; sh scripts/ep026-m2-tests.sh ;;
   M3) python3 scripts/node-artifact-check.py EP-026 M3; cargo test --locked -p nexus-email ep026_integration ;;
   M4) python3 scripts/node-artifact-check.py EP-026 M4; cargo test --locked -p nexus-email ep026_failure ;;
   M5|verify)

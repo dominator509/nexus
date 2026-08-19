@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -319,6 +319,42 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 18 nexus-email ep026_unit tests + 4 nexus-email-e2e ep026_unit tests green;
   clippy -D warnings clean; fmt clean; scope audit EP-026: ok; reality gate:
   ok; security check: ok; license gate: ok; dependency audit: ok.
+
+## M2 detail
+
+- Created `connectors/gmail` (nexus-gmail) adapter crate: real production
+  behavior behind the nexus-email `EmailProvider` port.
+- `src/transport.rs`: GmailTransport port + HttpGmailTransport over the
+  DOCUMENTED Gmail REST surface (list/fetch/attachments/drafts/send/modify/
+  trash; OAuth bearer, reqwest bounded timeout 10s, 401/403->Authorization,
+  404->NotFound, 429->RateLimit, 500/502/503->Unavailable, silent peer->
+  Timeout, refused->Unavailable, malformed JSON->External fail closed);
+  GmailScope with SEPARATE ReadOnly/Send/Full (acceptance obligation 2);
+  GmailMessage/GmailDraft/GmailAttachmentMeta canonical shapes with serde
+  camelCase renames + defaults.
+- `src/adapter.rs`: GmailAdapter implements EmailProvider with canonical
+  mapping (Gmail labelIds -> MailState Delivered/Archived/Deleted, From
+  header extraction advisory, body sha256 digest), capability-gated dispatch
+  (MailPolicy + scope + approval BEFORE any provider mutation), in-flight
+  idempotency (duplicate same command+target -> Conflict, completion releases
+  entry), exact-target verification via MailVerifier, unknown mailbox/
+  message fail closed (NotFound), unknown mailbox never served, read-only
+  request can never send (Policy), correlation on every error path.
+- `src/observability.rs`: bounded redacted audit ring (256) + counters +
+  canonical `mail-<nanos>-<seq>` correlation; secrets and raw bodies
+  redacted at insert (poison-safe).
+- 14 nexus-gmail ep026_unit tests green (fetch canonical mapping, read-only
+  token cannot send, unknown message NotFound, send requires SEND scope,
+  archive gates+records, unknown mailbox fail-closed, display-name
+  extraction, base64url, scope separation, status mapping, message serde,
+  observability redaction/bound/counters).
+- `scripts/ep026-m2-tests.sh`: real gate with vacuity guards (EP-001 masking
+  class); node script M2 case wired to it.
+- clippy -D warnings clean (inspect_err + redundant-closure fixes); fmt
+  clean (blueprint non-ASCII §5 -> section 5); scope audit EP-026: ok;
+  security check: ok; license gate: ok; dependency audit: ok; reality gate:
+  ok. Cargo.toml/Cargo.lock updated with connectors/gmail; gate script
+  registered in expected-files fence.
 
 # 12. Surprises & Discoveries
 
