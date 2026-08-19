@@ -557,9 +557,9 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   lexical-core); API deltas: envelope fields are Option<Cow<[u8]>> (lossy_cow
   helper), feature renamed tls -> native-tls, append returns AppendCmd with
   .finish().
-- 2026-08-19 (M4): the gate's `docker ps --format '{{.Names}}'` triggered the
-  blueprint validator's double-brace placeholder check. Repo convention
-  (ep022-024 gates): `docker ps -aq --filter name=...`.
+- 2026-08-19 (M4): the gate's `docker ps --format` Go-template output
+  triggered the blueprint validator's double-brace placeholder check. Repo
+  convention (ep022-024 gates): `docker ps -aq --filter name=...`.
 - 2026-08-19 (M4): lettre 0.11.23 introduces webpki-roots (CDLA-Permissive-2.0
   license) and the nom 8 + base64 0.23 major splits; documented in deny.toml
   with targeted skips, same pattern as the existing pinned splits.
