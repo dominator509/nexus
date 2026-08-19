@@ -1,0 +1,13 @@
+[package]
+name = "nexus-hydra-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-028 M4 forced failures, abuse cases, and observability: real failure mechanisms against the production Hydra transport/adapter over real sockets, redaction canaries, policy denial, idempotency, bounded recovery (SPEC-015)"
+license = "MIT"
+
+[dependencies]
+nexus-hydra = { path = "../../crates/nexus-hydra", version = "0.1.0" }
+nexus-hydra-connector = { path = "../../connectors/hydra", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde = { workspace = true }
+serde_json.workspace = true

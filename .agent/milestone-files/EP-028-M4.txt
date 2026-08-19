@@ -1,1 +1,14 @@
-tests/hydra/
+.agent/execplans/EP-028-hydra-business-control-plane.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-028.txt
+.agent/node-contracts/EP-028.md
+.agent/milestone-files/EP-028-M4.txt
+scripts/nodes/EP-028.sh
+scripts/ep028-m4-tests.sh
+tests/hydra/ops/hydra-diag.sh
+tests/hydra/tests/failure_hydra.rs
+tests/hydra/Cargo.toml
+tests/hydra/src/lib.rs
+connectors/hydra/src/transport.rs
+Cargo.toml
+Cargo.lock

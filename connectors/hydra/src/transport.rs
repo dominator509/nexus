@@ -21,8 +21,8 @@
 use std::time::Duration;
 
 use nexus_hydra::{
-    BusinessContext, HydraCapabilityKind, HydraCapabilityMap, HydraContextProjection, HydraError,
-    HydraErrorCode,
+    BusinessContext, HydraActionState, HydraCapabilityKind, HydraCapabilityMap,
+    HydraContextProjection, HydraError, HydraErrorCode,
 };
 
 /// Canonical provider capability advertisement (documented Hydra
@@ -351,6 +351,19 @@ impl HydraTransport for HttpHydraTransport {
                 None,
             )
         })?;
+        // Vocabulary boundary: a provider state that is not canonical
+        // fails closed (External) - the provider cannot widen the
+        // contract with fabricated state.
+        env.state.parse::<HydraActionState>().map_err(|_| {
+            HydraError::new(
+                HydraErrorCode::ExternalProvider,
+                "hydra action returned an unknown state",
+                None,
+                None,
+                None,
+                None,
+            )
+        })?;
         Ok(env.state)
     }
 
@@ -408,6 +421,19 @@ impl HydraTransport for HttpHydraTransport {
             HydraError::new(
                 HydraErrorCode::ExternalProvider,
                 "hydra action readback payload malformed",
+                None,
+                None,
+                None,
+                None,
+            )
+        })?;
+        // Vocabulary boundary: fabricated readback state fails closed
+        // exactly like submit (External; provider cannot widen the
+        // contract).
+        env.state.parse::<HydraActionState>().map_err(|_| {
+            HydraError::new(
+                HydraErrorCode::ExternalProvider,
+                "hydra action readback returned an unknown state",
                 None,
                 None,
                 None,
