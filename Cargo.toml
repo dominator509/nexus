@@ -54,6 +54,7 @@ members = [
     "connectors/ictfax",
     "connectors/hylafax",
     "connectors/hydra",
+    "connectors/postiz",
     "tests/audio",
     "tests/vision",
     "tests/devices",

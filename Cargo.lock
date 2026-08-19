@@ -1928,6 +1928,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-postiz-connector"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-hydra",
+ "nexus-social",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-presence"
 version = "0.1.0"
 dependencies = [
