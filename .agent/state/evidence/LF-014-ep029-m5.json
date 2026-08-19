@@ -1,0 +1,31 @@
+{
+  "adapter": "PostizAdapter + DirectPlatformAdapter (dual authorization gates, poison-safe observability)",
+  "certification": {
+    "real_postiz_provider": "NOT_ASSERTED",
+    "real_x_provider": "NOT_ASSERTED"
+  },
+  "fixture": "CONTROLLED_TEST_FIXTURE",
+  "lifecycle": {
+    "accepted_never_published_without_readback": true,
+    "approval_granted": "GRANTED",
+    "approval_never_publishes": true,
+    "approval_zero_provider_calls": true,
+    "attributed_impressions": 40,
+    "attribution_campaign": "campaign-lf014",
+    "audit_correlation_present": true,
+    "credential_redaction": "ZERO_LEAKAGE",
+    "engagement_ingested": 1,
+    "publish_acceptance": "postiz:post-lf014-1",
+    "publish_provider_calls": 1,
+    "readback_published": true,
+    "schedule_acceptance_recorded": true,
+    "single_objective_invariant": true,
+    "variants_created": 2
+  },
+  "milestone": "M5",
+  "node": "EP-029",
+  "proof": "LF-014",
+  "run_id": "local-run",
+  "surface": "documented Postiz public API + documented X API v2",
+  "transport": "HttpPostizTransport + HttpDirectPlatformTransport (real reqwest, REAL std::net sockets)"
+}

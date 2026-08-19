@@ -2048,6 +2048,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-social-live-e2e"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-hydra",
+ "nexus-postiz-connector",
+ "nexus-social",
+ "nexus-social-direct-connector",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-telephony"
 version = "0.1.0"
 dependencies = [

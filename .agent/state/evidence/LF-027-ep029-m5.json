@@ -1,0 +1,32 @@
+{
+  "adapter": "DirectPlatformAdapter (dual authorization gates, poison-safe observability)",
+  "certification": {
+    "real_postiz_provider": "NOT_ASSERTED",
+    "real_x_provider": "NOT_ASSERTED"
+  },
+  "fixture": "CONTROLLED_TEST_FIXTURE",
+  "lifecycle": {
+    "attribution_preserved": true,
+    "audit_correlation_present": true,
+    "conversations_from_mentions": 2,
+    "credential_redaction": "ZERO_LEAKAGE",
+    "deterministic_link_available": true,
+    "governed_reply": "PROVIDER_ACCEPTED",
+    "hostile_content_ingested_as_data": true,
+    "hostile_publish_denied": "POLICY",
+    "hostile_publish_zero_provider_calls": true,
+    "hostile_spend_denied": true,
+    "inquiry_classified": true,
+    "lead_created": true,
+    "lead_never_links_from_content": true,
+    "lead_resolution": "UNLINKED",
+    "reply_provider_calls": 1,
+    "spend_requires_strong_human": true
+  },
+  "milestone": "M5",
+  "node": "EP-029",
+  "proof": "LF-027",
+  "run_id": "local-run",
+  "surface": "documented X API v2 (mentions, public_metrics, create tweet)",
+  "transport": "HttpDirectPlatformTransport (real reqwest, REAL std::net sockets)"
+}

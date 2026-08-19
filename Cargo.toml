@@ -57,6 +57,7 @@ members = [
     "connectors/postiz",
     "connectors/social-direct",
     "tests/audio",
+    "tests/social",
     "tests/vision",
     "tests/devices",
     "tests/email",

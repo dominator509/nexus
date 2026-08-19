@@ -7,6 +7,12 @@ scripts/ep029-m1-tests.sh
 scripts/ep029-m2-tests.sh
 scripts/ep029-m3-tests.sh
 scripts/ep029-m4-tests.sh
+scripts/ep029-m5-tests.sh
+scripts/live-fire/LF-014.sh
+scripts/live-fire/LF-027.sh
+docs/operations/EP-029-social.md
+.agent/state/evidence/LF-014-ep029-m5.json
+.agent/state/evidence/LF-027-ep029-m5.json
 crates/nexus-social/
 connectors/postiz/
 connectors/social-direct/
