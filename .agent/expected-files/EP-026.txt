@@ -6,8 +6,10 @@ scripts/nodes/EP-026.sh
 scripts/ep026-m1-tests.sh
 scripts/ep026-m2-tests.sh
 scripts/ep026-m3-tests.sh
+scripts/ep026-m4-tests.sh
 Cargo.toml
 Cargo.lock
+deny.toml
 crates/nexus-email/
 connectors/gmail/
 connectors/microsoft-mail/

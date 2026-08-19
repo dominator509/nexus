@@ -13,6 +13,7 @@ allow = [
   "ISC",
   "PostgreSQL",
   "PSF-2.0",
+  "CDLA-Permissive-2.0",
   "Unicode-3.0",
   "Unlicense",
   "0BSD",
@@ -68,6 +69,17 @@ skip = [
   # Never linked on Linux; the two lines cannot be unified without
   # breaking pinned transitive pins.
   { name = "windows-sys", version = "0.52.0" },
+  # nom 7 vs 8: major-version split. 7.1.3 is required by the
+  # pre-existing x509-parser 0.18.1 / asn1-rs 0.7.2 chain (nexus-pki,
+  # pinned); 8.0.0 is required by lettre 0.11.23 (EP-026 M4 SMTP
+  # transport, pinned). API-incompatible majors; cannot be unified.
+  { name = "nom", version = "8.0.0" },
+  # base64 0.22 vs 0.23: major-version split. 0.22.1 is required by
+  # async-nats 0.47 / hyper-util (pinned workspace chain); 0.23.1 is
+  # required by lettre 0.11.23 via email-encoding 0.4.2 (EP-026 M4
+  # SMTP transport, pinned). API-incompatible majors; cannot be
+  # unified without breaking the pinned lettre line.
+  { name = "base64", version = "0.23.1" },
   # digest 0.10 crypto stack: sha1 0.10.6 (PINNED =0.10.6) is the
   # RFC 6455 WebSocket handshake implementation used by the EP-025 M4
   # ARI event-stream consumer; RustCrypto's sha1 line has not been

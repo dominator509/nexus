@@ -47,6 +47,7 @@ members = [
     "connectors/asterisk",
     "connectors/gmail",
     "connectors/microsoft-mail",
+    "connectors/imap-smtp",
     "tests/audio",
     "tests/vision",
     "tests/devices",
