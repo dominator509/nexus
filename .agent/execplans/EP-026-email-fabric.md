@@ -276,7 +276,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -351,10 +351,74 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - `scripts/ep026-m2-tests.sh`: real gate with vacuity guards (EP-001 masking
   class); node script M2 case wired to it.
 - clippy -D warnings clean (inspect_err + redundant-closure fixes); fmt
-  clean (blueprint non-ASCII §5 -> section 5); scope audit EP-026: ok;
+  clean (blueprint non-ASCII section5 -> section 5); scope audit EP-026: ok;
   security check: ok; license gate: ok; dependency audit: ok; reality gate:
   ok. Cargo.toml/Cargo.lock updated with connectors/gmail; gate script
   registered in expected-files fence.
+
+## M3 detail
+
+- Created `connectors/microsoft-mail` (nexus-microsoft-mail) adapter crate:
+  real Microsoft Graph v1.0 mail transport + adapter behind the nexus-email
+  `EmailProvider` port (SPEC-014; M3 fence).
+- `src/transport.rs`: GraphTransport port (Send + Sync for shared adapter) +
+  HttpGraphTransport over the DOCUMENTED Graph REST surface (list/fetch/
+  attachments/create draft/sendMail/draft-send/reply/forward/PATCH/DELETE;
+  OAuth bearer only for the Authorization header, reqwest bounded timeout,
+  silent peer->Timeout, refused->Unavailable, malformed JSON->External fail
+  closed). GraphScope FOUR separate authorities (ReadOnly=Mail.Read,
+  ReadWrite=Mail.ReadWrite, Send=Mail.Send, Full); update/delete require
+  ReadWrite-class authority, never plain read (directive F). GraphMessage/
+  GraphRecipient/GraphEmailAddress model the REAL Graph object envelopes
+  (camelCase isRead/hasAttachments; plain-string from fails closed at serde).
+  Documented response semantics: sendMail/draft-send/reply/forward = 202
+  Accepted + NO body (status-only helper, JSON never parsed from a 202,
+  submission SENT not DELIVERED); update = 200 + structured message;
+  delete = 204 + empty body. send_draft returns the caller-owned draft id as
+  the message handle - a fabricated provider id is never invented. reply uses
+  the comment-only shape (comment OR message.body mutually exclusive);
+  forward puts toRecipients TOP-LEVEL (never message.toRecipients).
+- `src/adapter.rs`: MicrosoftGraphAdapter implements EmailProvider with
+  canonical mapping (Graph from/toRecipients object shapes -> canonical
+  addresses, categories -> Delivered/Archived, body sha256 digest), policy
+  gate BEFORE any provider mutation, attachment safety gate
+  (MailPolicy.attachment_allows size + ScanStatus CLEAN) BEFORE any draft/
+  reply/forward mutation, in-flight idempotency (duplicate same command+
+  target -> Conflict, Condvar-blocked concurrency proof), completed-send
+  ledger keyed by idempotency_key (replay returns SAME result, zero second
+  mutation; failed sends never enter the ledger), exact-target verification
+  via MailVerifier on archive/label PATCH readbacks (unrelated id ->
+  Verification), unknown mailbox/message fail closed, correlation on every
+  error path.
+- `src/observability.rs`: bounded redacted audit ring + counters + canonical
+  `mail-<nanos>-<seq>` correlation; body-shaped canary redaction proven.
+- `tests/ep026_m3_transport.rs`: 23 integration tests over REAL sockets -
+  the production HttpGraphTransport against a controlled local HTTP fixture
+  emitting REAL Graph-shaped responses (202 empty, 204 empty, 200 JSON, 401,
+  403, 404, 409, 429, 500/502/503/504, malformed JSON, silent peer, refused
+  port). Covers the full directive matrix: list/fetch canonical mapping,
+  sendMail 202 empty, reply success, forward success, PATCH 200 structured,
+  DELETE 204 empty, status matrix, malformed JSON fail closed, empty body
+  structured fail closed, empty body status-only accepted, scope separation
+  (ReadOnly cannot send/modify, Send cannot read, ReadWrite can modify but
+  not send), silent peer -> Timeout, refused -> Unavailable, policy denial
+  before mutation, in-flight duplicate Conflict (one provider mutation),
+  completed replay no second mutation, failed retry allowed, exact-target
+  unrelated never verifies, redaction canary zero leakage.
+- `scripts/ep026-m3-tests.sh`: real gate (cargo check + cargo test with 3
+  vacuity guards incl. integration-suite ran-and-passed guard); node script
+  M3 case wired to it (replaced the gate-masking `cargo test -p nexus-email
+  ep026_integration` line).
+- 16 lib unit tests + 23 integration tests green (39 total, zero filtered);
+  clippy -D warnings clean; fmt clean; scope audit EP-026: ok; reality gate:
+  ok; security check: ok; license gate: ok; dependency audit: ok; blueprint
+  validation: ok (non-ASCII section5 fixed in this ExecPlan); M1 regression
+  ok; M2 regression ok; expected-files: M3-owned paths registered and
+  present (full-node audit deferred to NODE_DONE for M4/M5 paths).
+- Certification boundary (directive M): Microsoft Graph adapter
+  IMPLEMENTED / TRANSPORT_CERTIFIED through real HTTP against controlled
+  fixtures; real Microsoft tenant/provider certification DEFERRED to the
+  live-fire owner (M5/LF-011).
 
 # 12. Surprises & Discoveries
 
@@ -367,6 +431,18 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-19: clippy `manual-contains` prefers `Vec::contains(&x)` over
   `.iter().any(|v| *v == x)` for Copy elements - applied to MailPolicy and
   SendRequest.
+- 2026-08-19 (M3): orphan rule - `impl GraphTransport for Arc<CountingStub>`
+  is illegal in the integration test crate (Arc is not #[fundamental] for a
+  foreign trait). Resolved by holding the stub state in an inner
+  `Arc<StubState>` and implementing GraphTransport on `CountingStub` itself.
+- 2026-08-19 (M3): the pre-created node script M3 case ran
+  `cargo test -p nexus-email ep026_integration` - the M1 CONTRACT crate
+  suite, certifying nothing about the Microsoft connector (EP-001 gate-masking
+  class). Replaced with `scripts/ep026-m3-tests.sh`.
+- 2026-08-19 (M3): GraphMail shapes must model the REAL Graph object
+  envelopes (from/toRecipients as recipient objects, isRead/hasAttachments
+  camelCase); a plain-string from field fails closed at serde, never
+  fabricating a sender.
 
 # 13. Decision Log
 
@@ -387,6 +463,64 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-19: M1 gate script scripts/ep026-m1-tests.sh registered in the
   expected-files fence alongside Cargo.toml/Cargo.lock (EP-024 precedent for
   workspace-root registration). Evidence: scope audit EP-026: ok.
+- 2026-08-19 (M3): Graph sendMail / draft-send / reply / forward return 202
+  Accepted with NO body. A status-only POST helper is used (JSON is NEVER
+  parsed from a 202); the empty-body doctrine pair is proven by tests
+  (status-only 202/204 accepted, structured endpoints fail closed on empty
+  bodies). Evidence: m3_transport_send_mail_202_empty_ok,
+  m3_transport_empty_body_status_only_accepted,
+  m3_transport_empty_body_structured_fails_closed.
+- 2026-08-19 (M3): Graph 202 proves SUBMISSION (SENT), never DELIVERY
+  (DELIVERED). send_draft returns the caller-owned draft id as the message
+  handle (Graph moves the draft to Sent Items with the same id); a
+  fabricated provider id is never invented. The adapter never claims
+  DELIVERED from a 202. Evidence: m3_transport_send_mail_202_empty_ok,
+  m3_adapter_completed_replay_no_second_mutation.
+- 2026-08-19 (M3): Graph delete is 204 No Content + empty body (status-only,
+  no JSON parse); Graph update is 200 OK + structured message object
+  (parsed; used for exact-target verification). Evidence:
+  m3_transport_delete_204_empty_ok, m3_transport_update_200_structured_ok.
+- 2026-08-19 (M3): Graph scopes map to FOUR separate authorities:
+  ReadOnly=Mail.Read, ReadWrite=Mail.ReadWrite, Send=Mail.Send, Full.
+  Read never implies send, send never implies read, and update/delete
+  require ReadWrite-class authority, NEVER plain read (directive F).
+  Evidence: m3_transport_scope_* tests + transport unit scope separation.
+- 2026-08-19 (M3): reply uses the comment-only documented shape (comment OR
+  message.body are mutually exclusive); forward puts toRecipients TOP-LEVEL
+  (never message.toRecipients) with comment content (directive E).
+- 2026-08-19 (M3): send idempotency - in-flight duplicate same draft ->
+  Conflict (proven with a Condvar-blocked transport, exactly ONE provider
+  mutation); completed sends enter a bounded process-local ledger keyed by
+  idempotency_key so a replay returns the SAME result with zero second
+  mutation; failed sends never enter the ledger so retry is a fresh attempt.
+  Durable idempotency is M5-owned. Evidence: m3_adapter_inflight_duplicate_*,
+  m3_adapter_completed_replay_*, m3_adapter_failed_send_retry_allowed.
+- 2026-08-19 (M3): attachment safety - every draft/reply/forward attachment
+  passes MailPolicy.attachment_allows (size + ScanStatus CLEAN) BEFORE any
+  provider mutation; unscanned/blocked attachments reject with zero provider
+  calls. Provider acceptance is never treated as malware scanning
+  (directive I). Evidence: m3_adapter_policy_denial_before_mutation,
+  ep026_unit_graph_attachment_gate_before_mutation.
+- 2026-08-19 (M3): exact-target verification - archive/label PATCH readbacks
+  are verified via MailVerifier; an unrelated message id NEVER verifies
+  (UnrelatedChange -> Verification error). Evidence:
+  m3_adapter_exact_target_unrelated_never_verifies.
+- 2026-08-19 (M3): redaction - the bearer token is held ONLY for the
+  Authorization header and never appears in errors or audit across every
+  failure class (401/403/404/429/500/503/silent-peer/refused); the audit
+  ring redacts secrets and body-shaped canaries at insert (directive J).
+  Evidence: m3_redaction_canary_zero_leakage,
+  ep026_unit_graph_observability_redacts_body_canary_at_insert.
+- 2026-08-19 (M3): Microsoft Graph adapter certification is
+  IMPLEMENTED / TRANSPORT_CERTIFIED through real HTTP against controlled
+  Graph-shaped fixtures; real Microsoft tenant/provider certification is
+  DEFERRED to the live-fire owner (M5/LF-011). Controlled fixtures never
+  certify a real Microsoft account (directive M).
+- 2026-08-19 (M3): expected-files gate at milestone time fails only on
+  future-node paths (connectors/imap-smtp/, infra/mail/) which are M4/M5
+  artifacts; M3-owned paths are registered and the M3 milestone-files audit
+  passes (node-artifact-check EP-026 M3: ok). The full-node expected-files
+  audit runs at NODE_DONE.
 
 # 14. Outcomes & Retrospective
 

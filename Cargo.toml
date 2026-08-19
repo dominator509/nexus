@@ -46,6 +46,7 @@ members = [
     "connectors/vacuum",
     "connectors/asterisk",
     "connectors/gmail",
+    "connectors/microsoft-mail",
     "tests/audio",
     "tests/vision",
     "tests/devices",

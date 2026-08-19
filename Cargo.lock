@@ -1537,6 +1537,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-microsoft-mail"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "nexus-domain",
+ "nexus-email",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "nexus-model-gateway"
 version = "0.1.0"
 dependencies = [

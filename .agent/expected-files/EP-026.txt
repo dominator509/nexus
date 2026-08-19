@@ -5,6 +5,7 @@
 scripts/nodes/EP-026.sh
 scripts/ep026-m1-tests.sh
 scripts/ep026-m2-tests.sh
+scripts/ep026-m3-tests.sh
 Cargo.toml
 Cargo.lock
 crates/nexus-email/

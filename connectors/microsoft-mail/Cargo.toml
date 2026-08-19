@@ -1,0 +1,28 @@
+[package]
+name = "nexus-microsoft-mail"
+version = "0.1.0"
+edition = "2021"
+description = "EP-026 M3 Microsoft Graph adapter core: real Graph REST HTTP transport against the DOCUMENTED Microsoft Graph mail surface, canonical mapping, capability-gated commands, exact-target verification, idempotency, observability (SPEC-014)"
+license = "MIT"
+
+[dependencies]
+nexus-email = { path = "../../crates/nexus-email", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real Microsoft Graph REST HTTP transport (Graph is the external
+# provider; Nexus normalizes provider payloads at the infrastructure
+# boundary). reqwest is the locked workspace dependency class
+# (EP-011/EP-024 precedent).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "query"] }
+# base64url encoding for Graph content bytes where required.
+base64 = "0.22"
+# sha256 digest for Attachment/body evidence (SPEC-014 inputs/outputs;
+# nexus-telephony precedent, workspace sha2 0.11 line).
+sha2 = "0.11"
+
+[dev-dependencies]
+# Integration tests build canonical vocabulary values (MailPolicy,
+# MailScope, Draft, SendRequest) directly.
+nexus-email = { path = "../../crates/nexus-email", version = "0.1.0" }
+serde_json.workspace = true
