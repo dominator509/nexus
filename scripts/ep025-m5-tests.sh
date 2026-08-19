@@ -54,6 +54,20 @@ for tool in docker ffmpeg tcpdump python3 cargo; do
   }
 done
 
+# Resolve a python3 with requests + websocket-client (EP-011 sidecar
+# precedent: `python3` runs repo test fixtures). Under scripts/env.sh
+# (sourced by node-verify.sh) the mise shim python3 shadows PATH and
+# lacks these modules, so probe explicitly instead of trusting PATH
+# (EP-001 gate-masking class; fail closed if none resolves).
+_py=""
+for _cand in /root/hermes-env/bin/python3 /usr/bin/python3 python3; do
+  if command -v "$_cand" >/dev/null 2>&1 && "$_cand" -c 'import requests, websocket' >/dev/null 2>&1; then
+    _py="$_cand"
+    break
+  fi
+done
+[ -n "$_py" ] || { echo "EP-025 M5: FAIL - no python3 with requests+websocket-client" >&2; exit 1; }
+
 # Vacuity guard 0b: real engines + models exist (EP-021 certified
 # artifacts; the Kokoro model digest is verified against the manifest).
 [ -x /opt/nexus-whisper/build/bin/whisper-cli ] || {
@@ -90,7 +104,7 @@ done
 # no network). Guards the fresh-dialog identity (REGISTER != INVITE),
 # the retry identity preservation, branch rotation, CSeq 1->2, and the
 # Authorization-before-body placement that PJSIP requires.
-python3 infra/asterisk/fixture/reject_endpoint.py \
+"$_py" infra/asterisk/fixture/reject_endpoint.py \
   --name endpoint-v --password selftest-password \
   --sip-port 12130 --rtp-port 12140 --mode selftest >>"$LOG" 2>&1 || {
   echo "EP-025 M5: FAIL - caller dialog selftest" >&2
@@ -108,7 +122,7 @@ cleanup() {
   [ -n "${ORCH_PID:-}" ] && kill "$ORCH_PID" 2>/dev/null || true
   [ -n "${TCPDUMP_PID:-}" ] && kill "$TCPDUMP_PID" 2>/dev/null || true
   sleep 1
-  python3 infra/asterisk/fixture/asterisk_bootstrap.py teardown >/dev/null 2>&1 || true
+  "$_py" infra/asterisk/fixture/asterisk_bootstrap.py teardown >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -121,7 +135,7 @@ pkill -9 -f "ari_observer.py" 2>/dev/null || true
 sleep 2
 
 # Vacuity guard 1: fresh fixture start must succeed.
-if ! python3 infra/asterisk/fixture/asterisk_bootstrap.py start >>"$LOG" 2>&1; then
+if ! "$_py" infra/asterisk/fixture/asterisk_bootstrap.py start >>"$LOG" 2>&1; then
   echo "EP-025 M5: FAIL - fixture bootstrap start" >&2
   tail -30 "$LOG" >&2
   exit 1
@@ -182,7 +196,7 @@ run_scenario() {
   # Orchestrator FIRST: it must be subscribed to the ARI WebSocket
   # before the caller dials, or StasisStart is missed (the caller's
   # INVITE completes quickly after registration).
-  python3 "$ORCH" \
+  "$_py" "$ORCH" \
     --env-file "$ENV_FILE" --work "$WORK" \
     --consented "$consented" --scenario "$scenario" \
     --phrase-sha256 "$phrase_sha" >"$WORK/orch-$scenario.log" 2>&1 &
@@ -208,7 +222,7 @@ run_scenario() {
   echo "EP-025 M5: $scenario orchestrator WS ready" | tee -a "$LOG"
 
   # Real caller: register + INVITE 110 + speak + record far-end.
-  python3 infra/asterisk/fixture/reject_endpoint.py \
+  "$_py" infra/asterisk/fixture/reject_endpoint.py \
     --name endpoint-v --password "$NEXUS_SIP_V_PASSWORD" \
     --sip-port 12130 --rtp-port 12140 --mode caller \
     --dial 110 --phrase-raw "$phrase_raw" \
@@ -297,7 +311,7 @@ echo "EP-025 M5: independent far-end readback (positive)" | tee -a "$LOG"
   echo "EP-025 M5: FAIL - far-end readback whisper" >&2
   exit 1
 }
-READBACK_POSITIVE=$(python3 -c "import json,sys; print(json.load(open('$WORK/readback-positive.json'))['transcript'])")
+READBACK_POSITIVE=$("$_py" -c "import json,sys; print(json.load(open('$WORK/readback-positive.json'))['transcript'])")
 echo "EP-025 M5: far-end readback (positive) = $READBACK_POSITIVE" | tee -a "$LOG"
 echo "$READBACK_POSITIVE" > "$WORK/readback-positive.txt"
 # The intended response was "Turning on the lights now."; the caller
