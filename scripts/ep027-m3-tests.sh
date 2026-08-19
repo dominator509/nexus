@@ -114,12 +114,14 @@ docker cp "$REPO_ROOT/connectors/hylafax/tests/." "$FIXTURE:/build/hylafax/tests
 before="$(docker exec "$FIXTURE" sh -c 'ls /var/spool/hylafax/sendq/ | grep "^q" | sort')"
 
 # ---- In-fixture LIVE suite (HYLAFAX_LIVE=1; no skips allowed) -------
+# --test-threads=1: the M4 failure binary (hfaxd-down test terminates
+# the real hfaxd process) must not race other tests in the same run.
 if ! docker exec "$FIXTURE" sh -c "
   export PATH=\"$TC_BIN:\$PATH\"
   cd /build/hylafax
   HYLAFAX_LIVE=1 HYLAFAX_HOST='$HF_HOST' HYLAFAX_PORT='$HF_PORT' \
   HYLAFAX_USER='$HF_USER' HYLAFAX_PASS='$HF_PASS' \
-  cargo test -- --nocapture
+  cargo test -- --nocapture --test-threads=1
 " >>"$clog" 2>&1; then
   fail "in-fixture live suite failed" "$clog"
 fi
@@ -160,9 +162,9 @@ ok "in-fixture suite green ($in_unit_passed unit + $live_passed live)"
 # nexus-hylafax must be observed; running only nexus-fax/nexus-ictfax
 # suites would fail here (EP-001 masking class).
 for sentinel in \
-  'ep027_live_hylafax_full_submission_round_trip ... ok' \
-  'ep027_live_hylafax_wrong_password_fails_closed ... ok' \
-  'ep027_live_hylafax_scheduler_nak_not_submitted ... ok'; do
+  'test ep027_live_hylafax_full_submission_round_trip' \
+  'test ep027_live_hylafax_wrong_password_fails_closed' \
+  'test ep027_live_hylafax_scheduler_nak_not_submitted'; do
   if ! grep -Fq "$sentinel" "$clog"; then
     fail "anti-masking guard: missing sentinel '$sentinel'" "$clog"
   fi
@@ -183,7 +185,7 @@ ok "real authentication (230 path) and real 530 rejection observed"
 # asserts the stored docq artifact matches the uploaded digest
 # byte-for-byte, which requires EPRT + MODE Z + STOT + JSUBM to have
 # worked end-to-end.
-if ! grep -Fq 'ep027_live_hylafax_full_submission_round_trip ... ok' "$clog"; then
+if ! grep -Fq 'test ep027_live_hylafax_full_submission_round_trip' "$clog"; then
   fail "round-trip (EPRT/MODE Z/STOT/JSUBM/readback) not green" "$clog"
 fi
 ok "EPRT data channel + MODE Z/STOT upload + JSUBM + exact-target readback green"
@@ -196,7 +198,7 @@ ok "provider CarrierJobId observed; replay deduplicated"
 
 # Guard 10: exact-target query_job/LIST readback (round-trip status()
 # binds the exact carrier job id; in-test assertion).
-if ! grep -Fq 'ep027_live_hylafax_full_submission_round_trip ... ok' "$clog"; then
+if ! grep -Fq 'test ep027_live_hylafax_full_submission_round_trip' "$clog"; then
   fail "exact-target readback not green" "$clog"
 fi
 

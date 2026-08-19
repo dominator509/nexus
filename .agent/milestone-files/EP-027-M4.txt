@@ -1,1 +1,12 @@
-infra/fax/
+.agent/execplans/EP-027-fax-fabric.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-027.txt
+.agent/node-contracts/EP-027.md
+.agent/milestone-files/EP-027-M4.txt
+scripts/nodes/EP-027.sh
+scripts/ep027-m4-tests.sh
+infra/fax/hylafax-diag.sh
+connectors/hylafax/src/adapter.rs
+connectors/hylafax/tests/failure_hylafax.rs
+Cargo.toml
+Cargo.lock

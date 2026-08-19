@@ -76,16 +76,22 @@ impl HylaFaxProvider {
         password: impl Into<String>,
         min_approval_class: u8,
     ) -> Self {
+        let host = host.into();
+        let username = username.into();
+        let password = password.into();
         Self {
             transport,
-            host: host.into(),
+            host,
             port,
-            username: username.into(),
-            password: password.into(),
+            username,
+            // The credential is registered as a redaction secret so any
+            // accidental embed in telemetry is replaced at insert
+            // (poison-safe observability, M4).
+            password: password.clone(),
             min_approval_class,
             in_flight: Mutex::new(HashMap::new()),
             completed: Mutex::new(HashMap::new()),
-            observability: Mutex::new(FaxObservability::default()),
+            observability: Mutex::new(FaxObservability::new(256, vec![password])),
         }
     }
 
@@ -649,5 +655,80 @@ mod tests {
         assert!(map_queue_state("6   127 X nexust 15551234567").is_err());
         assert!(map_queue_state("6").is_err());
         assert!(map_queue_state("").is_err());
+    }
+
+    #[test]
+    fn ep027_failure_cancel_unavailable() {
+        // Cancel is not implemented for the M3/M4 controlled fixture
+        // (no physical modem); it must fail closed, never fabricate.
+        let p = HylaFaxProvider::new(
+            Box::new(ScriptedTransport::default()),
+            "127.0.0.1",
+            4559,
+            "u",
+            "p",
+            1,
+        );
+        let err = p
+            .cancel(&FaxJobId::new("1").expect("id"))
+            .expect_err("cancel");
+        assert_eq!(err.code, nexus_fax::FaxErrorCode::Unavailable);
+    }
+
+    #[test]
+    fn ep027_failure_inflight_conflict() {
+        // A duplicate in-flight command for the same target is a
+        // Conflict; completing the first releases the entry so the
+        // next attempt is not a Conflict (bounded idempotency).
+        let p = HylaFaxProvider::new(
+            Box::new(ScriptedTransport::default()),
+            "127.0.0.1",
+            4559,
+            "u",
+            "p",
+            1,
+        );
+        let corr = "fax-1-1".to_string();
+        p.begin("SUBMIT", "job-x", &corr).expect("begin");
+        let err = p
+            .begin("SUBMIT", "job-x", &corr)
+            .expect_err("duplicate in-flight");
+        assert_eq!(err.code, nexus_fax::FaxErrorCode::Conflict);
+        p.end("SUBMIT", "job-x");
+        p.begin("SUBMIT", "job-x", &corr).expect("begin after end");
+        p.end("SUBMIT", "job-x");
+    }
+
+    #[test]
+    fn ep027_failure_observability_redacts_secret() {
+        // Poison-safe observability: a secret embedded in telemetry
+        // detail/fields is replaced at insert, never stored raw.
+        let mut obs = FaxObservability::new(8, vec!["pw123".to_string()]);
+        let mut fields = std::collections::BTreeMap::new();
+        fields.insert("credential".to_string(), "pw123".to_string());
+        obs.record(
+            "fax-1-1",
+            "SUBMIT",
+            "ok",
+            "authenticated with pw123",
+            fields,
+        );
+        let entries = obs.recent();
+        assert_eq!(entries.len(), 1);
+        assert!(
+            !entries[0].detail.contains("pw123"),
+            "secret leaked into detail: {}",
+            entries[0].detail
+        );
+        assert!(entries[0].detail.contains("***"));
+        assert!(
+            !entries[0]
+                .fields
+                .get("credential")
+                .map(|v| v.as_str())
+                .unwrap_or("")
+                .contains("pw123"),
+            "secret leaked into fields"
+        );
     }
 }
