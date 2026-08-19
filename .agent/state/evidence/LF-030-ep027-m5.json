@@ -21,8 +21,8 @@
     "readback_state": "SUBMITTED",
     "replay_dedup_same_id": true,
     "replay_zero_second_mutation": true,
-    "spool_sendq_file": "/var/spool/hylafax/sendq/q69",
-    "submitted_carrier_job_id": "69",
+    "spool_sendq_file": "/var/spool/hylafax/sendq/q78",
+    "submitted_carrier_job_id": "78",
     "wrong_password_530": {
       "canonical_code": "AUTHORIZATION",
       "zero_mutation": true
@@ -39,5 +39,5 @@
     "kind": "HYLA_FAX",
     "runtime_version": "3:6.0.6-8.1~ubuntu0.18.04.1"
   },
-  "run_id": "ep027-m5-1787157834-2101644"
+  "run_id": "ep027-m5-1787160074-2319572"
 }
