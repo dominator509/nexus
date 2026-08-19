@@ -1,0 +1,18 @@
+{
+  "$id": "https://schemas.nexus.local/hydra/capability-map/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HydraCapabilityMap",
+  "description": "Provider-neutral Hydra capability map (SPEC-015). An unadvertised capability is UNAVAILABLE; execution capabilities advertise certified availability only after real certification (node contract fallback: read-only context + proposal generation). Canonical wire contract of crates/nexus-hydra HydraCapabilityMap.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["capabilities"],
+  "properties": {
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["AVAILABLE", "DEGRADED", "UNAVAILABLE", "UNCERTIFIED"]
+      }
+    }
+  }
+}

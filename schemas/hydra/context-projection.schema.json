@@ -1,0 +1,57 @@
+{
+  "$id": "https://schemas.nexus.local/hydra/context-projection/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HydraContextProjection",
+  "description": "Cross-domain projection of Hydra context. A Nexus-side projection, never a second CRM: it carries customer references and campaign projections, not duplicated Hydra truth (SPEC-015 behavior 1). Canonical wire contract of crates/nexus-hydra HydraContextProjection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["binding_id", "business_id", "customers", "campaigns", "observed_at"],
+  "properties": {
+    "binding_id": { "type": "string" },
+    "business_id": { "type": "string", "format": "uuid" },
+    "customers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/customer_reference" }
+    },
+    "campaigns": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/campaign" }
+    },
+    "observed_at": { "type": "string" }
+  },
+  "$defs": {
+    "customer_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "customer_reference_id",
+        "business_id",
+        "hydra_person_id",
+        "resolution"
+      ],
+      "properties": {
+        "customer_reference_id": { "type": "string" },
+        "business_id": { "type": "string", "format": "uuid" },
+        "hydra_person_id": { "type": "string", "format": "uuid" },
+        "resolution": {
+          "type": "string",
+          "enum": ["DETERMINISTIC", "HUMAN_REVIEWED", "UNLINKED"]
+        }
+      }
+    },
+    "campaign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["campaign_id", "business_id", "name", "state"],
+      "properties": {
+        "campaign_id": { "type": "string" },
+        "business_id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "state": {
+          "type": "string",
+          "enum": ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"]
+        }
+      }
+    }
+  }
+}

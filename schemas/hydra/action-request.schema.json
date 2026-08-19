@@ -1,0 +1,44 @@
+{
+  "$id": "https://schemas.nexus.local/hydra/action-request/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HydraActionRequest",
+  "description": "Canonical Hydra action request (SPEC-015 behavior 8: paid-ad budget changes and public crisis responses require human approval; node contract acceptance obligation 4: dual authorization gates and end-to-end correlation). Canonical wire contract of crates/nexus-hydra HydraActionRequest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "action_id",
+    "tenant_id",
+    "principal_id",
+    "business_id",
+    "kind",
+    "idempotency_key",
+    "approval_class"
+  ],
+  "properties": {
+    "action_id": { "type": "string" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "principal_id": { "type": "string", "format": "uuid" },
+    "business_id": { "type": "string", "format": "uuid" },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "READ_CONTEXT",
+        "PROPOSE_UPDATE",
+        "EXECUTE_UPDATE",
+        "PAID_AD_BUDGET_CHANGE",
+        "PUBLIC_CRISIS_RESPONSE",
+        "SOCIAL_MESSAGE_PUBLISH",
+        "LEAD_HANDOFF"
+      ]
+    },
+    "idempotency_key": { "type": "string", "minLength": 16 },
+    "approval_class": {
+      "type": "string",
+      "enum": ["NONE", "POLICY", "HUMAN", "STRONG_HUMAN", "FOUR_EYES"]
+    },
+    "correlation": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    }
+  }
+}

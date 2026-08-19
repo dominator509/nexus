@@ -1,0 +1,28 @@
+{
+  "$id": "https://schemas.nexus.local/hydra/event-envelope/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HydraEventEnvelope",
+  "description": "Versioned durable event envelope from Hydra (SPEC-015 behavior 2: Nexus accesses Hydra through authenticated MCP, REST, and durable events). Payloads are referenced, never inlined as domain contracts. Canonical wire contract of crates/nexus-hydra HydraEventEnvelope.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "tenant_id",
+    "payload_ref",
+    "occurred_at",
+    "version"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "correlation": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "payload_ref": { "type": "string" },
+    "occurred_at": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 }
+  }
+}

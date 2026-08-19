@@ -1,0 +1,26 @@
+{
+  "$id": "https://schemas.nexus.local/hydra/business-context/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HydraBusinessContext",
+  "description": "Business context carried on every Hydra request (SPEC-015 behavior 3: a single business scope unless explicitly authorized for portfolio-level reads). Canonical wire contract of crates/nexus-hydra BusinessContext.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tenant_id", "principal_id", "scope"],
+  "properties": {
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "principal_id": { "type": "string", "format": "uuid" },
+    "scope": {
+      "type": "string",
+      "enum": ["SINGLE_BUSINESS", "PORTFOLIO"]
+    },
+    "business_id": {
+      "description": "Required for SINGLE_BUSINESS scope; must be absent for PORTFOLIO.",
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "correlation": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    }
+  }
+}

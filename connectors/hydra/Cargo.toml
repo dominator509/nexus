@@ -16,3 +16,9 @@ serde_json.workspace = true
 # locked workspace dependency class (EP-011/EP-024/EP-026/EP-027
 # precedent).
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }
+
+[dev-dependencies]
+# Real JSON Schema 2020-12 validation of the canonical schemas under
+# schemas/hydra/ against real Rust serialization output (EP-010/EP-018
+# M3 pattern; workspace jsonschema 0.49 class).
+jsonschema = { version = "0.49", default-features = false, features = ["resolve-file"] }

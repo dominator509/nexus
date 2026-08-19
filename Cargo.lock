@@ -1649,6 +1649,7 @@ dependencies = [
 name = "nexus-hydra-connector"
 version = "0.1.0"
 dependencies = [
+ "jsonschema",
  "nexus-domain",
  "nexus-hydra",
  "reqwest",
