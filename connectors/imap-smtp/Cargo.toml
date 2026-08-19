@@ -28,3 +28,7 @@ sha2 = "0.11"
 # Integration tests build canonical vocabulary values directly.
 nexus-email = { path = "../../crates/nexus-email", version = "0.1.0" }
 serde_json.workspace = true
+# sha256 digest for Attachment artifact evidence (SPEC-014 inputs/outputs:
+# artifacts carry a digest, never raw content). Aligned with the workspace
+# sha2 0.11 line.
+sha2 = "0.11"

@@ -11,10 +11,10 @@ case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-026 M1; sh scripts/ep026-m1-tests.sh ;;
   M2) python3 scripts/node-artifact-check.py EP-026 M2; sh scripts/ep026-m2-tests.sh ;;
   M3) python3 scripts/node-artifact-check.py EP-026 M3; sh scripts/ep026-m3-tests.sh ;;
-  M4) python3 scripts/node-artifact-check.py EP-026 M4; cargo test --locked -p nexus-email ep026_failure ;;
+  M4) python3 scripts/node-artifact-check.py EP-026 M4; sh scripts/ep026-m4-tests.sh ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-026 M5
-      cargo test --locked -p nexus-email
+      sh scripts/ep026-m5-tests.sh
       sh scripts/live-fire/LF-011.sh
       ;;
   *) echo "EP-026: FAIL - unknown mode $mode" >&2; exit 2;;

@@ -429,3 +429,65 @@ production_certification: DEFERRED
 certification_owner: EP-043 (production readiness and ship); physical vacuum hardware DEFERRED to its exact owner
 blocking_for_ship: false
 evidence_reference: connectors/vacuum; .agent/state/evidence/EP-024-M5-real-vacuum-provider-livefire.md; EP-024 M5 gate (scripts/ep024-m5-tests.sh); COMPONENT_REGISTRY.yaml home-assistant row; EP-020 M3/M5 evidence
+
+## Component: nexus-email contract (EP-026 M1)
+component_id: nexus-email
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (18 ep026_unit nexus-email tests + 4 nexus-email-e2e surface tests; canonical EmailProvider/Mailbox/Thread/Message/Attachment/Draft/SendRequest/MailChangeFeed/MailPolicy contracts; MailScope SEPARATE read/send scopes; MailState ladder SENT != DELIVERED; MailVerifier exact-target; enforce_mail_policy gates BEFORE provider mutation; M1 gate green)
+provider: none (contract crate)
+provider_certification: N/A
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: EP-043 (production readiness and ship)
+blocking_for_ship: false
+evidence_reference: crates/nexus-email; tests/email; scripts/ep026-m1-tests.sh; .agent/execplans/EP-026-email-fabric.md
+
+## Component: nexus-gmail (EP-026 M2 connector)
+component_id: nexus-gmail
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (14 ep026_unit gmail tests; real Gmail REST transport over the DOCUMENTED Gmail surface; 401/403->Authorization, 404->NotFound, 429->RateLimit, 5xx->Unavailable, silent peer->Timeout, malformed JSON->External fail closed; capability-gated dispatch; in-flight idempotency; exact-target verification; bounded redacted audit ring; M2 gate green)
+provider: none bound on this host (no Gmail OAuth credentials available in the environment)
+provider_certification: NOT ASSERTED (real Gmail provider live-fire DEFERRED to deployment/ship owner; a controlled fixture can never certify Gmail)
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: deployment/ship owner (real Gmail credentials + live-fire); EP-043 production readiness
+blocking_for_ship: false
+evidence_reference: connectors/gmail; scripts/ep026-m2-tests.sh; .agent/execplans/EP-026-email-fabric.md
+
+## Component: nexus-microsoft-mail (EP-026 M3 connector)
+component_id: nexus-microsoft-mail
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (16 unit + 23 integration tests; REAL Graph v1.0 mail REST transport over REAL sockets against controlled Graph-shaped HTTP fixtures: 202 empty (SENT not DELIVERED), 204 empty, 200 structured, 401/403/404/409/429/5xx, malformed JSON fail closed; GraphScope FOUR separate authorities ReadOnly=Mail.Read ReadWrite=Mail.ReadWrite Send=Mail.Send Full; reply comment-only shape; forward toRecipients top-level; exact-target verification on PATCH readbacks; M3 gate green)
+provider: none bound on this host (no Microsoft tenant credentials available in the environment)
+provider_certification: TRANSPORT_CERTIFIED against controlled Graph-shaped fixtures ONLY; real Microsoft tenant NOT ASSERTED (DEFERRED to deployment/ship owner; controlled fixtures never certify a real tenant)
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: deployment/ship owner (real tenant credentials + live-fire); EP-043 production readiness
+blocking_for_ship: false
+evidence_reference: connectors/microsoft-mail; scripts/ep026-m3-tests.sh; .agent/execplans/EP-026-email-fabric.md
+
+## Component: nexus-imap-smtp (EP-026 M4 connector)
+component_id: nexus-imap-smtp
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (12 unit + 26 integration tests over REAL sockets; real imap 3.0.0-alpha.15 + lettre 0.11.23; phase-exact SMTP AUTH->MAIL FROM->RCPT TO->DATA->message; ambiguous-after-DATA -> Verification, replay REFUSED, provider count exactly ONE; separate READ/SEND/MODIFY authorities; header injection rejected; attachment gate; bounded limiter; TLS positive custom CA + negative fail closed; restart/recovery; hostile content as data; redaction canary; M4 gate green)
+provider: GreenMail 2.1.0 standalone@sha256:308685b99ad840f05bd2dee43f47f7956f876adbf396523f68166f078300cd29 (CONTROLLED_TEST_FIXTURE)
+provider_certification: TRANSPORT_CERTIFIED / PROTOCOL_CERTIFIED against the controlled GreenMail server only; real external IMAP provider NOT ASSERTED; real external SMTP provider NOT ASSERTED
+hardware_certification: N/A
+production_certification: DEFERRED
+certification_owner: deployment/ship owner (real public IMAP/SMTP provider credentials + live-fire); EP-043 production readiness
+blocking_for_ship: false
+evidence_reference: connectors/imap-smtp; infra/mail; scripts/ep026-m4-tests.sh; scripts/ep026-m5-tests.sh; .agent/execplans/EP-026-email-fabric.md
+
+## Component: EP-026 email lifecycle live-fire (LF-011 M5)
+component_id: ep026-email-lifecycle
+implementation_status: IMPLEMENTED
+internal_proof: INTERNAL_CERTIFIED (LF-011 real lifecycle: receive, search, summarize, draft, approve, send, verify through the REAL production ImapSmtpAdapter over REAL sockets; approval class 0 denied with zero mutation; SENT from SMTP 250 never DELIVERED from a 250; independent tenant-b recipient-side readback + MailVerifier exact-target Verified; hostile content remains data; attachment gate zero mutation; redaction zero leakage; current-run evidence .agent/state/evidence/LF-011-ep026-m5.json; M5 gate green)
+provider: GreenMail 2.1.0 standalone (CONTROLLED_TEST_FIXTURE, pinned digest)
+provider_certification: external/public provider certification NOT ASSERTED (no credentials exist in this environment; Gmail/Graph/public IMAP-SMTP live-fire DEFERRED to deployment/ship owner per milestone text "real controlled dependencies" + node FALLBACK)
+fixture_certification: CONTROLLED_TEST_FIXTURE (real GreenMail server; never certifies Gmail/Outlook/public providers)
+hardware_certification: N/A
+recipient_delivery: DELIVERED supported at the controlled-provider boundary by independent recipient-side readback; arbitrary Internet delivery NOT ASSERTED
+production_certification: DEFERRED
+certification_owner: deployment/ship owner (real external provider credentials); EP-043 production readiness
+blocking_for_ship: false
+evidence_reference: connectors/imap-smtp/tests/ep026_m5_lf011.rs; scripts/ep026-m5-tests.sh; scripts/live-fire/LF-011.sh; .agent/state/evidence/LF-011-ep026-m5.json; docs/operations/EP-026-mail.md

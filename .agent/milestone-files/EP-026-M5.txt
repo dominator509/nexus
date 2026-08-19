@@ -1,1 +1,9 @@
+# EP-026 M5 owned paths (real email lifecycle live-fire + node closure).
 infra/mail/
+connectors/imap-smtp/tests/ep026_m5_lf011.rs
+scripts/ep026-m5-tests.sh
+scripts/live-fire/LF-011.sh
+scripts/nodes/EP-026.sh
+docs/operations/EP-026-mail.md
+.agent/execplans/EP-026-email-fabric.md
+.agent/state/evidence/

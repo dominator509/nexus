@@ -278,7 +278,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 ## M1 detail
 
@@ -502,6 +502,82 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   mailbox presence, and local provider queue state are never delivery
   proof).
 
+## M5 detail
+
+- Replaced the pre-created EP-001-masking LF-011 placeholder (dead
+  proof-runner delegation) with the REAL email-lifecycle live-fire:
+  `scripts/live-fire/LF-011.sh` now drives `scripts/ep026-m5-tests.sh`
+  (the M5 gate) and records the canonical sentinel.
+- `connectors/imap-smtp/tests/ep026_m5_lf011.rs`: 4 real-socket tests
+  driving the REAL production `ImapSmtpAdapter` (EmailProvider port)
+  through the FULL lifecycle against the certified controlled provider
+  (GreenMail 2.1.0, pinned digest):
+  - `lf011_full_lifecycle_real_provider`: receive (tenant-b INBOX
+    holds the real inbound message) -> search (exact-target
+    list_threads by runtime canary message id) -> summarize (canonical
+    digest-only summary of the REAL fetched message: subject/from/
+    body_sha256, never raw content) -> draft (real IMAP APPEND,
+    provider-side Drafts evidence) -> approve (approval class 0 denied
+    with ZERO provider mutation -> Policy; class 2 approved) -> send
+    (real SMTP submission -> SENT from 250, never DELIVERED from a
+    250) -> verify (INDEPENDENT recipient-side readback through
+    tenant-b's OWN adapter + MailVerifier exact-target Verified).
+  - `lf011_hostile_content_remains_data`: adversarial body ingested as
+    data, zero outbound mutation (directive O).
+  - `lf011_attachment_gate_no_mutation`: policy-denied (Pending scan)
+    attachment -> zero provider mutation (directive N).
+  - `lf011_redaction_evidence_no_leak`: fixture credentials never in
+    audit ring or evidence.
+- Machine-readable current-run evidence written to
+  `.agent/state/evidence/LF-011-ep026-m5.json` embedding the gate's
+  `EP026_M5_RUN_ID` (stale evidence can never satisfy the run) with
+  provider classification, account fingerprints, canary digest,
+  provider ids, state transitions, exact verification result, cleanup
+  result, and truthful `external_provider_certification: NOT ASSERTED`.
+- `scripts/ep026-m5-tests.sh`: real M5 gate with vacuity guards
+  (suite collected + 4 passed; lifecycle/hostile/attachment/redaction
+  proofs each observed; evidence exists + embeds CURRENT run id +
+  exact-target Verified + SENT (250) + recipient readback + NOT
+  ASSERTED boundary; fixture credential canary scan of log + evidence;
+  zero-orphan audit AFTER teardown). Emits `EP-026 M5: ok`.
+- Node script M5 case rewired to the real M5 gate (removed the
+  EP-001 gate-masking `cargo test --locked -p nexus-email` line that
+  ran the M1 contract crate); M4 case also rewired from
+  `cargo test --locked -p nexus-email ep026_failure` (same masking
+  class) to the real `scripts/ep026-m4-tests.sh`.
+- `docs/operations/EP-026-mail.md`: provider configuration, fixture
+  lifecycle, Gmail/Graph/IMAP-SMTP diagnostics, send-state
+  interpretation (SENT != DELIVERED), reconciliation for ambiguous
+  sends, auth failure, token refresh/recovery, exact-target lookup,
+  attachment troubleshooting, TLS troubleshooting, redacted logging,
+  shutdown/cleanup, known certification boundaries - every command
+  exercised by the owning milestones.
+- Fences: milestone-files/EP-026-M5.txt + expected-files/EP-026.txt
+  updated (M5 gate, LF-011, ops doc, lf011 test, evidence dir, all
+  milestone-files registered - scope audit requires them).
+- Observed: node M5 `EP-026 M5: ok` + `LF-011: ok`; M1/M2/M3/M4
+  regressions all ok (M4 through the REAL gate after rewiring);
+  fmt clean; clippy -D warnings clean; scope audit EP-026: ok;
+  expected-files EP-026: ok; security check: ok (no known
+  vulnerabilities); license gate: ok; reality gate: ok; dependency
+  audit: ok; blueprint validation: ok (non-ASCII em-dashes removed
+  from lf011 test comments); workspace battery green (1839 passed,
+  0 failed).
+- Certification boundary (directive U/AE): external provider
+  credentials are NOT available in this environment (exhaustive search
+  of env vars, .env, systemd, wrangler, n8n, hermes config, session
+  dumps; AGENTMAIL_API_KEY is a literal `***` placeholder). The graph
+  contract's M5 milestone text sanctions owned live-fire over "real
+  controlled dependencies", and the node-wide FALLBACK explicitly
+  permits generic IMAP+SMTP when provider webhooks are unavailable.
+  LF-011 therefore exercises the strongest honest owned lifecycle:
+  the REAL production adapter against the certified controlled
+  provider, with Gmail / Microsoft Graph / public-provider
+  certification recorded as NOT ASSERTED certification debt owned by
+  the deployment/ship owner (SPEC-008 pattern). LF-011 is NOT claimed
+  as external-provider live-fire; the evidence file states the exact
+  boundary.
+
 # 12. Surprises & Discoveries
 
 - 2026-08-19: `cargo fmt -p <crate>` is not a valid invocation (cargo fmt has
@@ -566,6 +642,32 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-19 (M4): clippy cloned-ref-to-slice-refs wants
   `std::slice::from_ref(&x)` instead of `&[x.clone()]` for single-element
   slices of Strings in test submissions.
+- 2026-08-19 (M5): the pre-created LF-011 live-fire was a DEAD
+  proof-runner delegation (`sh scripts/proof-runner.sh LF-011; echo
+  "LF-011: ok"`) - EP-001 masking class. Replaced with the real
+  lifecycle harness driving the production adapter.
+- 2026-08-19 (M5): the node script M5 case ran `cargo test --locked -p
+  nexus-email` (the M1 CONTRACT crate suite) - EP-001 gate-masking,
+  certifying nothing about the mail plane. Rewired to the real M5 gate.
+  The M4 case had the same class (`cargo test -p nexus-email
+  ep026_failure`) and was rewired to the real M4 gate in the same
+  milestone (node script is an M5-owned path).
+- 2026-08-19 (M5): the scope audit requires every milestone-files entry
+  to be registered in the expected-files fence (EP-025 precedent).
+  Added all five EP-026-M*.txt files.
+- 2026-08-19 (M5): external provider credentials are ABSENT from the
+  environment (env vars, .env, systemd, wrangler, n8n, hermes config,
+  session dumps; AGENTMAIL_API_KEY is a literal `***` placeholder).
+  Live-fire uses the certified controlled provider per the milestone
+  text ("real controlled dependencies"); external certification is a
+  recorded NOT ASSERTED debt with deployment/ship owner.
+- 2026-08-19 (M5): the Attachment struct fields are
+  filename/content_type/size_bytes/sha256/storage_ref/scan_status
+  (not a bare `name`); ScanStatus has Pending/Clean/Quarantined/Blocked
+  (no Unscanned variant). sha2 is a direct crate dependency (not a
+  workspace dependency) in nexus-email.
+- 2026-08-19 (M5): blueprint validator rejects em-dashes in Rust test
+  comments; use ASCII hyphens (repo convention).
 
 # 13. Decision Log
 
@@ -677,7 +779,80 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   restart via real IMAP CREATE, teardown removes every ep026-mail-* container,
   gate zero-orphan audit runs AFTER teardown, and docker output is captured
   so the gate sentinel lines stay greppable.
+- 2026-08-19 (M5): LF-011 live-fire provider decision (directive U) -
+  external provider credentials are absent from the environment
+  (exhaustive search; AGENTMAIL_API_KEY is a literal `***` placeholder).
+  The M5 milestone text ("Run every live-fire proof owned by this node
+  using real controlled dependencies") and the node-wide FALLBACK
+  ("Use generic IMAP and SMTP plus controlled polling when provider
+  webhooks are unavailable") authorize the strongest honest owned
+  lifecycle: the REAL production ImapSmtpAdapter over REAL sockets
+  against the certified controlled provider (GreenMail 2.1.0 pinned).
+  Gmail / Microsoft Graph / public-provider certification is recorded
+  as NOT ASSERTED certification debt owned by the deployment/ship
+  owner (SPEC-008 pattern; EP-018/EP-025 precedent). LF-011 evidence
+  explicitly states the boundary; it is never claimed as external
+  live-fire.
+- 2026-08-19 (M5): the LF-011 evidence file embeds the gate's
+  EP026_M5_RUN_ID so a stale or cached evidence file can never satisfy
+  the current run (directive W/X). The gate greps the evidence for the
+  exact run id before passing.
+- 2026-08-19 (M5): the node script M4/M5 cases are M5-owned rewires -
+  both previously ran the M1 contract crate suite (EP-001 gate-masking
+  class). The M4 case now calls the real M4 gate; the M5 case calls
+  the real M5 gate + LF-011 wrapper. Milestone regressions must run
+  through the node script so the rewired lines are proven.
+- 2026-08-19 (M5): recipient-side readback in LF-011 uses tenant-b's
+  OWN adapter (separate authority/session), not the sender adapter, so
+  the delivery evidence is INDEPENDENT of the sending authority
+  (directive G/H). DELIVERED at the controlled-provider boundary is
+  supported only by that independent readback; SMTP 250 alone maps to
+  SENT.
 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## M5 outcomes
+
+- EP-026 M5 complete: the REAL email lifecycle (receive, search,
+  summarize, draft, approve, send, verify) is proven end to end
+  through the REAL production `ImapSmtpAdapter` over REAL sockets
+  against the certified controlled provider (GreenMail 2.1.0 pinned,
+  CONTROLLED_TEST_FIXTURE).
+- Exact observed sentinels:
+  - `sh scripts/nodes/EP-026.sh M5` -> `EP-026 M5: ok` + `LF-011: ok`
+  - `sh scripts/live-fire/LF-011.sh` -> `LF-011: ok`
+  - `sh scripts/ep026-m5-tests.sh` -> `EP-026 M5: ok`
+  - M1/M2/M3 regressions -> `EP-026 M1: ok`, `EP-026 M2: ok`,
+    `EP-026 M3: ok`; M4 through the real gate -> `EP-026 M4: ok`
+  - workspace battery: 1839 passed, 0 failed
+  - scope audit EP-026: ok; expected-files EP-026: ok; security
+    check: ok; license gate: ok; reality gate: ok; dependency
+    audit: ok; blueprint validation: ok; fmt clean; clippy -D
+    warnings clean
+- Evidence: `.agent/state/evidence/LF-011-ep026-m5.json` (current-run
+  bound, exact-target Verified, SENT (250) vs recipient readback
+  DELIVERED, NOT ASSERTED external boundary).
+- Assumptions confirmed: the M5 milestone sanctions real controlled
+  dependencies for owned live-fire; the node FALLBACK permits generic
+  IMAP+SMTP. External provider credentials are absent, so Gmail /
+  Microsoft Graph / public-provider certification is NOT ASSERTED
+  certification debt owned by the deployment/ship owner.
+- Provider/hardware status: GreenMail 2.1.0 CONTROLLED_TEST_FIXTURE
+  (real SMTP+IMAP, real TLS, AUTH enforced); Gmail IMPLEMENTED
+  (external NOT ASSERTED); Microsoft Graph IMPLEMENTED /
+  TRANSPORT_CERTIFIED vs controlled fixtures (real tenant NOT
+  ASSERTED); IMAP/SMTP IMPLEMENTED / PROTOCOL_CERTIFIED /
+  TRANSPORT_CERTIFIED vs the controlled server; recipient delivery
+  supported at the controlled boundary by independent readback;
+  arbitrary Internet delivery NOT ASSERTED.
+- Remaining risks: real external provider certification (Gmail,
+  Graph, public IMAP/SMTP) requires deployment-owned credentials; the
+  controlled fixture proves protocol/transport and lifecycle but
+  never public routing. Attachment ArtifactStore materialization
+  remains digest-only until its owning node.
+- Green tag: `green/EP-026` at the M5 implementation commit (before
+  the ledger-only closure commit), per the EP-017/EP-025 convention.
+- Node closure: NODE_DONE appended once; ledger-only closure commit;
+  clean tree; graph-next dispatched.
