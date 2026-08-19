@@ -5,6 +5,7 @@
 scripts/nodes/EP-029.sh
 scripts/ep029-m1-tests.sh
 scripts/ep029-m2-tests.sh
+scripts/ep029-m3-tests.sh
 crates/nexus-social/
 connectors/postiz/
 connectors/social-direct/

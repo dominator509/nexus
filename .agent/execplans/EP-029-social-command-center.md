@@ -276,7 +276,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -290,6 +290,9 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - 2026-08-19: The DOCUMENTED Postiz public API (docs.postiz.com/public-api) was captured before writing the transport: base `https://api.postiz.com/public/v1`, `Authorization: <api-key>` (or `pos_` OAuth2 token), POST /posts with `type: draft|schedule|now` + `posts[].integration.id` + `posts[].value[].content` + `posts[].settings.__type`, GET /integrations, GET /posts, PUT /posts/change-status, POST /upload; documented rate limit 90 create-post requests/hour (API_LIMIT env); documented error classes 400/401/403/404/429. Anti-hallucination: no invented vendor endpoints.
 - 2026-08-19: The documented Postiz public API has NO inbox/conversation read surface and NO engagement analytics surface; the adapter fails closed (Unavailable) for list_conversations/list_metrics/list_leads rather than fabricating them (Reality rule). Community/analytics/lead surfaces are owned by the direct-platform connector (M3) where an official API exists.
 - 2026-08-19: `SocialMessageId::new` returns a nexus-hydra `HydraError` (typed-id macro lives in the vocabulary-locked crate); the adapter maps it onto the social error surface with a dedicated helper (no leak of the Hydra error type through the social port).
+- 2026-08-19: The DOCUMENTED X API v2 surface (docs.x.com/x-api) was captured before writing the direct transport: base `https://api.x.com/2`, `Authorization: Bearer-token header, GET /2/users/me, GET /2/users/{id}/mentions?max_results=100, GET /2/tweets/{id}?tweet.fields=public_metrics, POST /2/tweets with {"text": "..."}; documented public_metrics fields like_count/retweet_count/reply_count/quote_count/impression_count/bookmark_count. Anti-hallucination: no invented vendor endpoints.
+- 2026-08-19: reqwest sends header names lowercased over the wire (`authorization:` not `Authorization:`); the fixture assertion compares the header name case-insensitively while the token value stays case-sensitive. Found via a debug probe, not assumed.
+- 2026-08-19: The M3 fixture accepts up to 12 sequential connections because the adapter flow makes multiple calls (capabilities=me, conversations=me+mentions, metrics=me+mentions+tweet, leads=me+mentions); a 3-connection budget starved the flow (refused connection surfaced mid-test).
 
 # 13. Decision Log
 
@@ -302,6 +305,8 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 - 2026-08-19: The adapter enforces dual authorization gates (node contract obligation 3): (1) the PublishApproval must be GRANTED with the exact action kind, (2) the policy module's SEPARATE approval-class requirement must pass - both BEFORE any transport call; denial makes ZERO provider calls (proven via shared AtomicUsize counter). Evidence: `ep029_unit_publish_requires_granted_approval_zero_calls_on_denial`.
 - 2026-08-19: In-flight idempotency keys on business + variant/request id with the approval id as the idempotency key; release-after-end means retry after completion is not a Conflict. Evidence: `ep029_unit_publish_conflict_released_after_completion`.
 - 2026-08-19: list_conversations/list_metrics/list_leads fail closed (Unavailable) on the Postiz adapter because the documented public API has no such surface - honest NOT-ASSERTED boundary, no fabricated community/analytics/lead data (Reality rule). Direct-platform connector (M3) owns those surfaces when an official API exists.
+- 2026-08-19: DirectPlatformAdapter implements the strategic gaps over the DOCUMENTED X API v2 surface: conversations from real mentions (GET /2/users/{id}/mentions), metrics from real public_metrics (GET /2/tweets/{id}?tweet.fields=public_metrics) attributed to campaigns, leads from real mentions starting UNLINKED (deterministic/human-reviewed linking is an explicit later step, behavior 6). Capabilities advertise only when the transport answers (fail closed). Evidence: `ep029_integration_adapter_capabilities_and_strategic_gaps`.
+- 2026-08-19: execute_governed (spend/crisis) fails closed (Unavailable) on the direct connector because the documented X API v2 has no spend surface - the approved decision is recorded, the external action is never fabricated (Reality rule).
 
 # 14. Outcomes & Retrospective
 

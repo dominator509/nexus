@@ -1,0 +1,18 @@
+[package]
+name = "nexus-social-direct-connector"
+version = "0.1.0"
+edition = "2021"
+description = "EP-029 M3 direct official API connector: documented X API v2 transport, conversations, analytics, leads (SPEC-015 strategic gaps)"
+license = "MIT"
+
+[dependencies]
+nexus-social = { path = "../../crates/nexus-social", version = "0.1.0" }
+nexus-hydra = { path = "../../crates/nexus-hydra", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real official API HTTP transport (X API v2, documented; direct
+# official APIs implement strategic gaps per SPEC-015 behavior 4).
+# reqwest is the locked workspace dependency class (EP-011/EP-024/
+# EP-026/EP-027/EP-028 precedent).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }
