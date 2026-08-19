@@ -1,0 +1,18 @@
+[package]
+name = "nexus-openwrt-connector"
+version = "0.1.0"
+edition = "2021"
+description = "EP-030 M3 OpenWrt connector: real ubus JSON-RPC transport over REAL std::net sockets against controlled fixtures, session login, uci firewall rule management, firewall reload (SPEC-013)"
+license = "MIT"
+
+[dependencies]
+nexus-sentinel = { path = "../../crates/nexus-sentinel", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real OpenWrt ubus HTTP JSON-RPC transport (OpenWrt is supported for
+# embedded and consumer installations per SPEC-013 behavior 2 and
+# COMPONENT_REGISTRY; external-appliance integration mode; GPL-2.0).
+# reqwest is the locked workspace dependency class (EP-011/EP-024/
+# EP-026/EP-027/EP-028/EP-029/EP-030-M2 precedent).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }

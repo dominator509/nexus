@@ -58,6 +58,7 @@ members = [
     "connectors/postiz",
     "connectors/social-direct",
     "connectors/opnsense",
+    "connectors/openwrt",
     "tests/audio",
     "tests/social",
     "tests/sentinel/core",
