@@ -274,7 +274,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -284,9 +284,17 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-19: M1 node script used EP-001-masking `node-artifact-check.py` branch (artifact-only, no test execution) — same masking class found in every prior node; rewired M1 to `scripts/ep029-m1-tests.sh` real gate with 6 vacuity guards (contract crate + sources present, non-zero run, passing non-vacuous result, dependency-direction test, EP-029-owned sentinel, no-ignored/no-filtered).
+- 2026-08-19: `result_large_err` clippy failure on SocialError (5 String fields) — fixed with `Box<str>` context fields exactly as EP-028 M1 did for HydraError; dependency-direction test still permits only nexus-domain/nexus-hydra/serde/serde_json.
+- 2026-08-19: rtk-tee (shell alias wrapping cargo) collapses cargo test output to a one-line summary, defeating gate log parsing; gates must invoke the real binary at `$HOME/.cargo/bin/cargo` (gate script uses `CARGO_BIN` override).
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-19: M1 depends on nexus-hydra (contract crate) and imports its vocabulary-locked SPEC-015 types (Campaign, SocialAccount, SocialMessage, LeadHandoff, Attribution, CustomerReference, IdentityResolutionClass) rather than redefining them — a second definition would violate the SPEC-015 vocabulary lock and create a synonym. Evidence: dependency-direction test `ep029_unit_dependency_direction` allows only nexus-domain/nexus-hydra/serde/serde_json; EP-028 crate precedent. Alternatives considered: redefine Campaign locally (rejected: synonym), no dependency (rejected: cannot reuse locked terms). Consequence: nexus-social is the EP-029 contract crate and may not import provider/infra crates. Reversal: requires ADR + schema update. Security: no new surface. License: MIT, no new dependency. Compatibility: nexus-hydra remains unchanged.
+- 2026-08-19: Approval-class policy encodes SEPARATE classes per SPEC-015 behavior 5: Publish=HUMAN, Reply=POLICY, SpendChange=STRONG_HUMAN, CrisisStatement=FOUR_EYES, with behavior 8 requiring >= HUMAN for spend/crisis. Evidence: `ep029_unit_action_kinds_have_separate_approval_classes`, `ep029_unit_spend_and_crisis_require_human_approval`. Alternatives: single class for all (rejected: violates separation), only two classes (rejected: not separate per action kind). Consequence: M4 failure suite can prove policy-before-mutation with zero provider calls. Reversal: requires ADR + schema update.
+- 2026-08-19: SocialCapabilityMap is fail-closed empty by default (unbound/uncertified providers advertise nothing; unadvertised capability is UNAVAILABLE), mirroring EP-028 HydraCapabilityMap. Evidence: `ep029_unit_capability_map_fails_closed`.
 
 # 14. Outcomes & Retrospective
 

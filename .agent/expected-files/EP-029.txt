@@ -3,8 +3,11 @@
 .agent/expected-files/EP-029.txt
 .agent/node-contracts/EP-029.md
 scripts/nodes/EP-029.sh
+scripts/ep029-m1-tests.sh
 crates/nexus-social/
 connectors/postiz/
 connectors/social-direct/
 infra/postiz/
 tests/social/
+Cargo.toml
+Cargo.lock

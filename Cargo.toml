@@ -36,6 +36,7 @@ members = [
     "crates/nexus-email",
     "crates/nexus-fax",
     "crates/nexus-hydra",
+    "crates/nexus-social",
     "connectors/home-assistant",
     "connectors/assist-satellite",
     "connectors/bluetooth-audio",

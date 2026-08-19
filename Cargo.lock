@@ -2001,6 +2001,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-social"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-hydra",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-telephony"
 version = "0.1.0"
 dependencies = [

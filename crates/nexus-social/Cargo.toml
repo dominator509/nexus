@@ -1,0 +1,12 @@
+[package]
+name = "nexus-social"
+version = "0.1.0"
+edition = "2021"
+description = "EP-029 provider-neutral social command center contracts: SocialProvider, PostizProvider, DirectPlatformProvider, PlatformVariant, SocialConversation, SocialLead, SocialMetric, PublishApproval (SPEC-015)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-hydra = { path = "../../crates/nexus-hydra", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
