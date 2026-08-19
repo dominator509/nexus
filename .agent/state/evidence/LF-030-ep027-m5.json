@@ -1,0 +1,43 @@
+{
+  "certification": {
+    "active_eprt_data_channel": "PROTOCOL_CERTIFIED",
+    "container": "CONTROLLED_TEST_FIXTURE",
+    "delivered": "NOT_ASSERTED",
+    "document_transfer_integrity": "CERTIFIED_FOR_TESTED_PATH",
+    "exact_provider_query_readback": "PROVIDER_CERTIFIED",
+    "faxq_job_acceptance": "PROVIDER_CERTIFIED",
+    "hfaxd_control_protocol": "PROTOCOL_CERTIFIED",
+    "hylafax_6_0_6_8_1_fixture": "PROVIDER_CERTIFIED",
+    "mode_z_stot_upload": "PROTOCOL_CERTIFIED",
+    "nexus_hylafax": "IMPLEMENTED",
+    "physical_modem": "NOT_ASSERTED",
+    "pstn": "NOT_ASSERTED",
+    "remote_fax_receiver": "NOT_ASSERTED"
+  },
+  "lifecycle": {
+    "document_digest": "5f5d88e5816b3e89f2299b4a2bd9131a7ce0ae9154ec025832085df03fc15cb8",
+    "document_stored_byte_exact": true,
+    "readback_exact_target": true,
+    "readback_state": "SUBMITTED",
+    "replay_dedup_same_id": true,
+    "replay_zero_second_mutation": true,
+    "spool_sendq_file": "/var/spool/hylafax/sendq/q69",
+    "submitted_carrier_job_id": "69",
+    "wrong_password_530": {
+      "canonical_code": "AUTHORIZATION",
+      "zero_mutation": true
+    }
+  },
+  "milestone": "M5",
+  "node": "EP-027",
+  "proof": "LF-030",
+  "provider": {
+    "container": "CONTROLLED_TEST_FIXTURE",
+    "faxq_running": true,
+    "hfaxd_port": 4559,
+    "image_digest": "sha256:00decb6c89fb4337534e9b4e82ff279cb53a492124bd083015cf82c354111613",
+    "kind": "HYLA_FAX",
+    "runtime_version": "3:6.0.6-8.1~ubuntu0.18.04.1"
+  },
+  "run_id": "ep027-m5-1787157834-2101644"
+}

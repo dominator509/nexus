@@ -55,6 +55,7 @@ members = [
     "tests/vision",
     "tests/devices",
     "tests/email",
+    "tests/fax",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

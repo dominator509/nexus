@@ -4,6 +4,7 @@ members = [
     "nexus-fax",
     "nexus-domain",
     "hylafax",
+    "tests-fax",
 ]
 
 [workspace.package]

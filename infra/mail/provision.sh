@@ -35,6 +35,11 @@ openssl req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 1 -nodes \
   -addext "keyUsage=critical,digitalSignature,keyEncipherment" >/dev/null 2>&1
 openssl pkcs12 -export -in "$CERT" -inkey "$KEY" -out "$P12" \
   -passout pass:changeit -name greenmail >/dev/null 2>&1
+# The GreenMail process runs as uid 999 (greenmail); a bind-mounted
+# root-owned 600 keystore is unreadable (AccessDeniedException) and the
+# TLS endpoints never start. The keystore is a controlled fixture with
+# the known 'changeit' password, so world-readable is correct here.
+chmod 644 "$P12" "$CERT"
 
 # Hygiene: never leave a previous stack behind.
 for OLD in $(docker ps -aq --filter "name=ep026-mail-" || true); do

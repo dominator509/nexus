@@ -13,9 +13,9 @@ case "$mode" in
   M3) python3 scripts/node-artifact-check.py EP-027 M3 && sh scripts/ep027-m3-tests.sh ;;
   M4) python3 scripts/node-artifact-check.py EP-027 M4 && sh scripts/ep027-m4-tests.sh ;;
   M5|verify)
-      python3 scripts/node-artifact-check.py EP-027 M5
-      cargo test --locked -p nexus-fax
-      sh scripts/live-fire/LF-013.sh
+      python3 scripts/node-artifact-check.py EP-027 M5 && \
+      sh scripts/ep027-m5-tests.sh && \
+      sh scripts/live-fire/LF-030.sh
       ;;
   *) echo "EP-027: FAIL - unknown mode $mode" >&2; exit 2;;
 esac

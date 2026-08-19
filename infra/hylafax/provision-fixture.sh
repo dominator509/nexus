@@ -104,5 +104,12 @@ docker exec "$FIXTURE" sh -c "
   sed -i 's#../../crates/nexus-fax#../nexus-fax#' /build/hylafax/Cargo.toml
   sed -i 's#../../crates/nexus-domain#../nexus-domain#' /build/hylafax/Cargo.toml
 "
+# M5 live-fire E2E crate (LF-030): copy + rewrite path deps for the
+# in-container layout.
+docker cp "$REPO_ROOT/tests/fax/." "$FIXTURE:/build/tests-fax/" >/dev/null
+docker exec "$FIXTURE" sh -c "
+  sed -i 's#../../crates/nexus-fax#../nexus-fax#' /build/tests-fax/Cargo.toml
+  sed -i 's#../../connectors/hylafax#../hylafax#' /build/tests-fax/Cargo.toml
+"
 
 echo "provision-fixture: ok"

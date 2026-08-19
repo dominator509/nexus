@@ -1,0 +1,13 @@
+[package]
+name = "nexus-fax-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-027 M5 live-fire E2E: real fax lifecycle through the production nexus-hylafax connector against the real pinned HylaFAX fixture, writing current-run machine-readable evidence (LF-030; SPEC-014)"
+license = "MIT"
+
+[dependencies]
+nexus-fax = { path = "../../crates/nexus-fax", version = "0.1.0" }
+nexus-hylafax = { path = "../../connectors/hylafax", version = "0.1.0" }
+serde = { workspace = true }
+serde_json.workspace = true
+sha2 = "0.11"

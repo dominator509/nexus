@@ -1,1 +1,13 @@
+.agent/execplans/EP-027-fax-fabric.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-027.txt
+.agent/node-contracts/EP-027.md
+.agent/milestone-files/EP-027-M5.txt
+scripts/nodes/EP-027.sh
+scripts/ep027-m5-tests.sh
+scripts/live-fire/LF-030.sh
+docs/operations/EP-027-fax.md
 tests/fax/
+.agent/state/evidence/
+Cargo.toml
+Cargo.lock
