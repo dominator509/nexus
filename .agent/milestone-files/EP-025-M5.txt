@@ -1,1 +1,13 @@
-
+# EP-025 M5 owned paths (real governed phone call + node closure).
+infra/asterisk/fixture/lf012_orchestrator.py
+infra/asterisk/fixture/reject_endpoint.py
+infra/asterisk/fixture/asterisk_bootstrap.py
+infra/asterisk/config/extensions.conf
+infra/asterisk/config/pjsip.conf.tmpl
+connectors/asterisk/tests/ep025_governed_live.rs
+scripts/ep025-m5-tests.sh
+scripts/live-fire/LF-012.sh
+scripts/nodes/EP-025.sh
+.agent/execplans/EP-025-asterisk-telephony-and-ai-calling.md
+.agent/state/evidence/
+docs/operations/EP-025-telephony.md

@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants (2026-08-17; gate `EP-025 M2: ok`)
 - [x] M3: Real dependency and transport integration (2026-08-18; gate `EP-025 M3: ok`; real Asterisk 22.10.1 + real baresip + real RTP media + RFC4733 DTMF wire proof; commit `[EP-025][M3] real dependency and transport integration`)
 - [x] M4: Forced failures, abuse cases, and observability (2026-08-18; gate `EP-025 M4: ok`; 11 live-stack failure proofs + real 401/409/486/603/NO_ANSWER + one-way/mid-call/restart RTP wire proofs + redaction + zero-orphan; commit `[EP-025][M4] forced failures, abuse cases, and observability`)
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure (2026-08-19; gate `EP-025 M5: ok`; REAL inbound governed phone call: real digest caller endpoint-v -> real INVITE auth (fresh call dialog, PJSIP authenticator debug: Authorization MUST precede SDP body) -> dialplan -> Stasis(nexus-telephony) -> ARI answer 204 -> ARI channel record 201 (no mixing bridge: ARI cannot record a bridged channel) -> real whisper STT ("Turn on the lights please.") -> production DisclosurePolicy/TranscriptGate (positive digest-only artifact, negative fails closed, hostile speech is data) -> deterministic bounded response -> real Kokoro current-run TTS -> ARI play 201 through real media path -> far-end RTP drain (tight inner loop, G.711 ulaw decode fixed) -> independent whisper readback ("Turning on the lights now.") -> hangup 204 -> terminal channels=0 -> zero orphans -> redaction clean; 3 LF-012 scenarios + 5 governance tests (REAL TranscriptGate::create_if_allowed over live evidence) green; wire proof src/dst 12140; caller dialog selftest gate guard; ops runbook docs/operations/EP-025-telephony.md; commit `[EP-025][M5] live-fire, operations, and node closure`)
 
 # 12. Surprises & Discoveries
 
@@ -295,6 +295,13 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - 2026-08-18 | Restart media evidence must be scoped to the CURRENT restart call: the restart test now clears dump-*.wav captures after re-spawn/re-registration and before the new call (clear_audio_dumps), so stale pre-restart media artifacts cannot satisfy the post-restart proof. Evidence: gate guard 12.
 - 2026-08-18 | M4 redaction guard scope: the gate's guard 14 originally scanned `$WORK` recursively, which legitimately contains the fixture CONFIG state (rendered pjsip.conf/ari.conf, baresip accounts) holding the real credentials by design - always tripping. Scoped to produced log/event/capture artifacts only (gate log, *.log, ari-events.jsonl, pcap), matching M3's redaction scope. Evidence: gate guard 14 green with zero credential canaries in artifacts.
 - 2026-08-18 | Workspace crypto alignment: nexus-telephony's sha2 moved 0.10 -> 0.11 (already locked by nexus-skills/healing/sidecar) so the digest/block-buffer stack is not duplicated; sha1 0.10.6 (RFC 6455 handshake ONLY) keeps its pinned digest 0.10 transitive stack, recorded as exact-version targeted skips in deny.toml. Evidence: dependency-audit.sh ok.
+- 2026-08-19 | M5 caller INVITE endless 401 ROOT CAUSE: the digest response was mathematically correct on every attempt (independent MD5 recomputation matched the wire), yet PJSIP returned 401 forever. Enabling the real Asterisk file logger (`logger.conf` with `full => notice,warning,error,debug,verbose`) exposed the truth: `res_pjsip_authenticator_digest.c: No Authorization header found`. The caller fixture built the INVITE by appending the Authorization header AFTER the SDP body (`Content-Length` + `\r\n\r\n` + body), so PJSIP parsed it as part of the body and never saw the header. REGISTER worked because it has no body. Fix: emit Authorization BEFORE the header/body separator. Evidence: /var/log/asterisk/full authenticator DEBUG + sip wire capture + `--mode selftest` regression guard (Authorization BEFORE body separator).
+- 2026-08-19 | Asterisk 22.10.1 ARI returns HTTP 204 for `answer`, `addChannel`, `play`, and DELETE live-recording; `record` returns 201; create-bridge returns 200. The first orchestrator versions only accepted 200 and failed on the real codes. Fixed with (200, 201, 204) acceptance on the endpoints that legitimately return 201/204. Evidence: gate runs (answer 204, record 201, play 201, hangup 204 observed).
+- 2026-08-19 | ARI cannot record a channel while it is in a bridge: `ERROR res_stasis_recording.c: Cannot record channel while in bridge`. M5's governed call is a single caller -> Stasis channel whose own media path carries RTP both directions, so the mixing bridge is unnecessary and was removed (M4 two-way proof still exercises the bridge). Evidence: Asterisk full log + orchestrator.
+- 2026-08-19 | The Asterisk base image ships WITHOUT `/var/spool/asterisk/recording` (ARI channel-record ENOENT -> HTTP 500 `Unrecognized recording error: No such file or directory`) and WITHOUT `/var/lib/asterisk/sounds/en` (docker cp target for ARI play media). Bootstrap now provisions both (mkdir + chown asterisk:asterisk). Evidence: bootstrap + live gate.
+- 2026-08-19 | A channel recording auto-finalizes after a short audio gap (`Recording complete` ~6s after start, `No audio available` warning), so `DELETE /recordings/live/{name}` 404s when the file is already stored. The orchestrator treats 404 as success and fetches `/recordings/stored/{name}/file` (observed 200, 34604 bytes). Evidence: orchestrator + gate.
+- 2026-08-19 | Caller far-end RTP capture was starved by the receive loop shape: an alternating one-RTP-read / one-SIP-read loop only captured ~8 packets of the ~97-packet TTS burst (0.2s RTP + 0.5s SIP timeouts per iteration). Fixed with a tight inner drain loop for RTP + non-blocking SIP poll. Evidence: pcap (97 packets toward 12140) vs captured bytes before/after fix; far-end readback then transcribed the intended response.
+- 2026-08-19 | The fixture's G.711 ulaw decoder was wrong (sign bit mishandled -> OverflowError on valid bytes). Fixed with the canonical table (0xFF silence -> 0, sign branch 0x84 - t). Evidence: decoder sanity + live far-end WAV write.
 
 # 13. Decision Log
 
@@ -324,6 +331,10 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 |- 2026-08-18 | Restart during active call (M4 directive J): the call is honestly observed lost (no synthesized continuity), the consumer reconnects, controlled baresip endpoints DIE on mid-call provider restart (M3 observation) and are re-spawned by the test, per-AOR registration converges, and a new real call reaches bridged two-way media again. Evidence: live ep025_live_restart_during_active_call + gate post-restart media captures.
 |- 2026-08-18 | M4 observability semantics (directive V): EventStore/audit state is PROCESS_LOCAL and BOUNDED (FIFO-pruned causes, bounded ring); the `connected` flag is live observability of the WS subscription; no event history survives process restart (no persistence claimed). Evidence: events.rs.
 |- 2026-08-18 | M4 idempotency certification: in-process call idempotency PASS (same target + same command in flight -> Conflict; release on completion; contract suite ep025_failure_idempotency_in_process_conflict_and_release); crash-durable call idempotency NOT ASSERTED (no durable store implemented).
+- 2026-08-19 | M5 caller fixture dialog model: REGISTER and the call are DISTINCT SIP usages. The INVITE gets its own fresh Call-ID + From tag + Via branch + CSeq 1; the 401-authenticated retry preserves the INVITE dialog identity (same Call-ID, same From tag, new Via branch, CSeq 2, fresh Authorization). Enforced by `--mode selftest` (8 structural assertions) wired into the M5 gate as guard 0d. Evidence: selftest + wire capture (REGISTER Call-ID d59329aa... vs INVITE fa743ac5...).
+- 2026-08-19 | M5 governed-call orchestration is a test harness on system python3 (real ARI REST+WS, like ari_observer.py) because the production adapter does not expose play/record; governance assertions run through REAL production Rust TranscriptGate/DisclosurePolicy/CallPolicy in ep025_governed_live.rs. Orchestrator-first WS subscription ordering prevents the StasisStart race. Evidence: gate + orchestrator logs.
+- 2026-08-19 | M5 deterministic response path is bounded (no frontier model): recognized phrase -> fixed response text; hostile markers ("ignore the rules", "unlock the door") -> "I cannot help with that request." with command_recognized=false and hostile_content=true in evidence. Evidence: orchestrator + hostile evidence JSON.
+- 2026-08-19 | The custom SIP caller (reject_endpoint.py --mode caller) is a CONTROLLED_TEST_FIXTURE that implements just enough REAL RFC 3261 (digest REGISTER, authenticated INVITE, ACK, BYE, RTP) to exercise real Asterisk/Nexus; it is NOT a production SIP stack. Production SIP remains Asterisk/PJSIP. Evidence: fixture file + directive L.
 
 # 14. Certification Registry (M3+M4, real evidence)
 
@@ -353,6 +364,11 @@ Certification entries recorded ONLY where the M3/M4 live-fire gates actually exe
 - Carrier / PSTN / external trunk: **NOT ASSERTED / DEFERRED** - no carrier connectivity in the controlled fixture.
 - Physical handset / mobile endpoint: **NOT ASSERTED** - baresip software endpoints only.
 - Crash-durable call idempotency: **NOT ASSERTED** - in-process idempotency PASS (Conflict on in-flight duplicate, release on completion); no durable store, explicitly not claimed.
+- M5 governed inbound phone call (LF-012): **PROVIDER_CERTIFIED** - real digest caller endpoint-v -> real INVITE (fresh call dialog, authenticated retry accepted) -> real dialplan -> real Stasis(nexus-telephony) -> real ARI answer/record/play/hangup -> real RTP both directions -> real whisper.cpp STT -> production TranscriptGate digest-only artifact -> real Kokoro TTS -> independent far-end whisper readback ("Turning on the lights now."). Evidence: scripts/ep025-m5-tests.sh full gate + EP-025-M5-LF-012-{positive,negative-disclosure,hostile}.{json,md} + 5 governed live tests.
+- DisclosurePolicy enforcement: **INTERNAL_CERTIFIED (via REAL gate)** - consented -> TranscriptGate::create_if_allowed produces digest-only artifact; not consented -> fails closed (None); hostile speech transcribed as DATA, never authority (command_recognized=false). Evidence: ep025_governed_live.rs tests over live evidence JSON.
+- whisper.cpp STT: **PROVIDER_CERTIFIED** (reuse EP-021 certification; whisper-cli + ggml-tiny.en.bin sha256 921e4c...) - transcribed the real in-call recording "Turn on the lights please." Evidence: orchestrator + evidence JSON stt_transcript/stt_digest.
+- Kokoro TTS: **PROVIDER_CERTIFIED** (reuse EP-021 certification; engine venv /opt/nexus-voice-engines, model sha256 496dba...) - synthesized a NEW per-run waveform for the exact response, played through real Asterisk media path. Evidence: orchestrator + evidence JSON tts_wav_sha256 (per-run, never reused).
+- reject_endpoint.py --mode caller: **CONTROLLED_TEST_FIXTURE** - real digest REGISTER + authenticated INVITE + ACK/BYE + RTP streaming/capture; NOT a production SIP stack (directive L).
 
 Deferred certification debts (owned, not incomplete simulation):
 - OS-level sandbox for the telephony sidecar: DEFERRED to EP-040 / EP-043 (consistent with the skill-contract certification boundary).
@@ -360,3 +376,39 @@ Deferred certification debts (owned, not incomplete simulation):
 # 15. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## M5 Outcomes (2026-08-19)
+
+**Commands and observed sentinels:**
+- `sh scripts/ep025-m5-tests.sh` -> `EP-025 M5: ok` (GATE_EXIT=0), plus:
+  - `bootstrap: ok container=nexus-ep025-ast`
+  - `EP-025 M5: engines verified (whisper-cli, ggml-tiny.en.bin, Kokoro 496dba...)`
+  - `EP-025 M5: caller dialog selftest ok` (8 structural assertions, guard 0d)
+  - `EP-025 M5: caller phrases synthesized (ok=<sha> hostile=<sha>)` (fresh per-run Kokoro waveforms)
+  - `EP-025 M5: LF-012 positive call complete` / `negative-disclosure` / `hostile`
+  - `EP-025 M5: far-end readback (positive) = Turning on the lights now.` (independent whisper)
+  - `test result: ok. 5 passed; 0 failed` (governed live suite)
+  - `EP-025 M5: wire proof ok (caller src 12140 -> Asterisk; response -> caller)`
+  - `EP-025 M5: zero-orphan teardown ok (channels=0 bridges=0)`
+  - `EP-025 M5: redaction ok (zero credential canaries in artifacts)`
+- `sh scripts/nodes/EP-025.sh M5` -> `EP-025 M5: ok`
+- `sh scripts/nodes/EP-025.sh verify` -> `node verify EP-025: ok`
+
+**Owned live-fire proof LF-012 (governed-phone-call):** real inbound governed call through real Asterisk 22.10.1: real digest caller (endpoint-v, dedicated RTP src 12140) -> real authenticated INVITE (fresh call dialog; retry CSeq 1->2, new Via branch, same dialog identity) -> dialplan `_1XX` -> `Stasis(nexus-telephony)` -> ARI answer 204 -> ARI channel record 201 -> real caller RTP (Kokoro phrase, PCMU) -> whisper.cpp STT ("Turn on the lights please.") -> production DisclosurePolicy/TranscriptGate (consented -> digest-only artifact; not consented -> fails closed; hostile -> data, not authority) -> deterministic bounded response -> real Kokoro current-run TTS -> ARI play 201 through real Asterisk media path -> far-end RTP drain + G.711 decode -> independent whisper readback ("Turning on the lights now.") -> hangup 204 -> terminal channels=0 -> zero orphans -> redaction clean.
+
+**Changed files vs M5 manifest (`.agent/milestone-files/EP-025-M5.txt`):**
+- `infra/asterisk/fixture/lf012_orchestrator.py` (new, real ARI orchestrator)
+- `infra/asterisk/fixture/reject_endpoint.py` (caller mode + dialog selftest + RTP drain + ulaw decode)
+- `infra/asterisk/fixture/asterisk_bootstrap.py` (endpoint-v password, recording/sounds spool provisioning)
+- `infra/asterisk/config/extensions.conf` (Stasis app nexus-telephony), `pjsip.conf.tmpl` (endpoint-v AOR), `logger.conf` (new)
+- `connectors/asterisk/tests/ep025_governed_live.rs` (new, 5 governance tests)
+- `scripts/ep025-m5-tests.sh` (new gate), `scripts/live-fire/LF-012.sh` (real wrapper), `scripts/nodes/EP-025.sh` (M5|verify wiring)
+- `.agent/milestone-files/EP-025-M5.txt`, `.agent/expected-files/EP-025.txt`
+- `.agent/state/evidence/EP-025-M5-LF-012-{positive,negative-disclosure,hostile}.{json,md}` (new)
+- `docs/operations/EP-025-telephony.md` (new ops runbook)
+
+**Certification status:** LF-012 governed call PROVIDER_CERTIFIED; DisclosurePolicy/TranscriptGate INTERNAL_CERTIFIED via real gate; whisper/Kokoro reuse EP-021 (PROVIDER_CERTIFIED); caller fixture CONTROLLED_TEST_FIXTURE; OS-level sandbox DEFERRED to EP-040/EP-043; carrier/PSTN/TLS/SRTP/handset NOT ASSERTED.
+
+**Remaining risks:** PSTN/carrier integration not exercised; production SIP media security (TLS/SRTP) not certified; governed-call orchestration is a test harness (production adapter does not yet expose play/record); crash-durable idempotency NOT ASSERTED.
+
+**Green tag:** `green/EP-025` (after NODE_DONE).

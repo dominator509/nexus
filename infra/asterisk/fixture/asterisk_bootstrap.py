@@ -223,6 +223,7 @@ def start() -> int:
         "ENDPOINT_S_PASSWORD": secrets.token_hex(12),
         "ENDPOINT_T_PASSWORD": secrets.token_hex(12),
         "ENDPOINT_U_PASSWORD": secrets.token_hex(12),
+        "ENDPOINT_V_PASSWORD": secrets.token_hex(12),
     }
     render_templates(env)
     prepare_canaries(WORK / "audio-a", WORK / "audio-b")
@@ -270,6 +271,29 @@ def start() -> int:
         docker("rm", "-f", NAME)
         return 1
 
+    # ARI channel recording writes into the container's recording spool
+    # directory. The base image ships without it; create it now or the
+    # LF-012 record REST call fails with ENOENT -> 500.
+    res = docker("exec", NAME, "mkdir", "-p", "/var/spool/asterisk/recording")
+    if res.returncode != 0:
+        print(f"bootstrap: FAIL - create recording spool: {res.stderr.strip()}", file=sys.stderr)
+        docker("rm", "-f", NAME)
+        return 1
+    res = docker("exec", NAME, "chown", "asterisk:asterisk", "/var/spool/asterisk/recording")
+    if res.returncode != 0:
+        print(f"bootstrap: FAIL - chown recording spool: {res.stderr.strip()}", file=sys.stderr)
+        docker("rm", "-f", NAME)
+        return 1
+
+    # ARI playback of a sound file requires the language sounds dir to
+    # exist (docker cp needs a real target path); the base image ships
+    # without the en/ tree.
+    res = docker("exec", NAME, "mkdir", "-p", "/var/lib/asterisk/sounds/en")
+    if res.returncode != 0:
+        print(f"bootstrap: FAIL - create sounds dir: {res.stderr.strip()}", file=sys.stderr)
+        docker("rm", "-f", NAME)
+        return 1
+
     with ENV_FILE.open("w") as f:
         f.write(f"NEXUS_ARI_URL={ARI_BASE}\n")
         f.write(f"NEXUS_ARI_USER=nexus\n")
@@ -285,6 +309,7 @@ def start() -> int:
         f.write(f"NEXUS_SIP_S_PASSWORD={env['ENDPOINT_S_PASSWORD']}\n")
         f.write(f"NEXUS_SIP_T_PASSWORD={env['ENDPOINT_T_PASSWORD']}\n")
         f.write(f"NEXUS_SIP_U_PASSWORD={env['ENDPOINT_U_PASSWORD']}\n")
+        f.write(f"NEXUS_SIP_V_PASSWORD={env['ENDPOINT_V_PASSWORD']}\n")
         f.write(f"NEXUS_BARESIP_A_DIR={WORK / 'baresip-a'}\n")
         f.write(f"NEXUS_BARESIP_B_DIR={WORK / 'baresip-b'}\n")
         f.write(f"NEXUS_BARESIP_C_DIR={WORK / 'baresip-c'}\n")

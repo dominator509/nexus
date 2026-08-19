@@ -348,3 +348,43 @@ type=auth
 auth_type=userpass
 username=endpoint-u
 password={{endpoint_u_password}}
+
+; ---- endpoint-v (LF-012 governed-call caller) ----------------------
+; A dedicated AOR for the M5 LF-012 inbound governed-call proof: the
+; caller fixture registers here with the real digest exchange, then
+; dials a 1XX extension so the dialplan moves the call into the
+; canonical Stasis app (nexus-telephony). The orchestrator answers,
+; bridges, records the caller's real speech, plays the real Kokoro
+; response through the real Asterisk media path, and hangs up. Its RTP
+; source port (12140) is the wire stream identity for the LF-012 media
+; guard; no other fixture shares this port.
+[endpoint-v]
+type=endpoint
+context=internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=g722
+allow=opus
+auth=auth-v
+aors=endpoint-v
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+identify_by=username
+
+[endpoint-v]
+type=aor
+max_contacts=1
+remove_existing=yes
+minimum_expiration=3
+default_expiration=30
+maximum_expiration=60
+
+[auth-v]
+type=auth
+auth_type=userpass
+username=endpoint-v
+password={{endpoint_v_password}}

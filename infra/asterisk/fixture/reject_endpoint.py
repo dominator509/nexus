@@ -42,6 +42,7 @@ Digest flow (RFC 2617 with qop=auth, as Asterisk issues):
 
 import argparse
 import hashlib
+import os
 import secrets
 import socket
 import sys
@@ -171,7 +172,7 @@ class Responder:
             f"Content-Length: 0\r\n"
         )
         if auth and self.nonce:
-            nc = "00000001"
+            nc = self._next_nc()
             cnonce = secrets.token_hex(8)
             qop = "auth"
             resp = digest_response(
@@ -182,8 +183,7 @@ class Responder:
                 f"Authorization: Digest username=\"{self.name}\", "
                 f"realm=\"{self.realm}\", nonce=\"{self.nonce}\", "
                 f"uri=\"{self.auth_uri}\", response=\"{resp}\", "
-                f"algorithm=MD5, cnonce=\"{cnonce}\", "
-                f"nc={nc}, qop={qop}\r\n"
+                f"cnonce=\"{cnonce}\", qop={qop}, nc={nc}\r\n"
             )
         msg += "\r\n"
         return msg.encode()
@@ -309,6 +309,298 @@ class Responder:
             next_tick += 0.020
         print("MEDIA_STOP", flush=True)
 
+    # ---- outbound caller (LF-012 governed call) ---------------------
+    def build_invite(self, extension: str, with_auth: bool = False) -> bytes:
+        # The retry mirrors the proven REGISTER-retry pattern: a NEW
+        # Via branch (new transaction), stable Call-ID + From tag, and
+        # a bumped CSeq (REGISTER's build_register uses CSeq 2 on the
+        # authenticated retry and PJSIP accepts it).
+        call_id = getattr(self, "_invite_call_id", None) or f"{secrets.token_hex(12)}@{self.local_ip}"
+        from_tag = getattr(self, "_invite_from_tag", None) or secrets.token_hex(8)
+        branch = f"z9hG4bK-{secrets.token_hex(8)}"
+        cseq = "2" if with_auth else "1"
+        self._invite_call_id = call_id
+        self._invite_from_tag = from_tag
+        sdp = (
+            "v=0\r\n"
+            f"o=- {secrets.randbits(31)} {secrets.randbits(31)} IN IP4 {self.local_ip}\r\n"
+            "s=-\r\n"
+            f"c=IN IP4 {self.local_ip}\r\n"
+            "t=0 0\r\n"
+            f"m=audio {self.rtp_port} RTP/AVP 0 8\r\n"
+            "a=rtpmap:0 PCMU/8000\r\n"
+            "a=rtpmap:8 PCMA/8000\r\n"
+            "a=sendrecv\r\n"
+        )
+        # CRITICAL: the Authorization header must be emitted BEFORE the
+        # empty line that separates headers from the SDP body. PJSIP
+        # only parses headers up to that separator; an Authorization
+        # appended after the body is invisible to the authenticator
+        # ("No Authorization header found" -> endless 401).
+        auth_hdr = ""
+        if with_auth and self.nonce:
+            nc = self._next_nc()
+            cnonce = secrets.token_hex(8)
+            qop = "auth"
+            uri = f"sip:{extension}@{ASTERISK_HOST}"
+            resp = digest_response(
+                self.name, self.realm, self.password, self.nonce,
+                "INVITE", uri, qop, nc, cnonce,
+            )
+            # PJSIP challenges carry an opaque token; the reference
+            # client (baresip) echoes it in the Authorization header.
+            # Include it when the challenge provided one. Parameter
+            # order mirrors baresip's proven header exactly.
+            opaque = getattr(self, "_challenge_opaque", "")
+            opaque_part = f", opaque=\"{opaque}\"" if opaque else ""
+            auth_hdr = (
+                f"Authorization: Digest username=\"{self.name}\", "
+                f"realm=\"{self.realm}\", nonce=\"{self.nonce}\", "
+                f"uri=\"{uri}\", response=\"{resp}\", "
+                f"cnonce=\"{cnonce}\"{opaque_part}, qop={qop}, nc={nc}\r\n"
+            )
+        msg = (
+            f"INVITE sip:{extension}@{ASTERISK_HOST} SIP/2.0\r\n"
+            f"Via: SIP/2.0/UDP {self.local_ip}:{self.sip_port};branch={branch}\r\n"
+            "Max-Forwards: 70\r\n"
+            f"From: <sip:{self.name}@{ASTERISK_HOST}>;tag={from_tag}\r\n"
+            f"To: <sip:{extension}@{ASTERISK_HOST}>\r\n"
+            f"Call-ID: {call_id}\r\n"
+            f"CSeq: {cseq} INVITE\r\n"
+            f"Contact: {self.contact}\r\n"
+            "User-Agent: nexus-ep025-lf012-caller/1.0\r\n"
+            f"{auth_hdr}"
+            "Content-Type: application/sdp\r\n"
+            f"Content-Length: {len(sdp)}\r\n"
+            "\r\n"
+            f"{sdp}"
+        )
+        return msg.encode()
+
+    def _next_nc(self) -> str:
+        # PJSIP with qop=auth tracks the nonce count: every authorized
+        # request with the SAME nonce must use a strictly increasing
+        # nc, or the request is treated as a replay (401 loop). The
+        # REGISTER retry consumes nc=1; the INVITE retry on the same
+        # nonce must use nc=2+. Reset when Asterisk issues a new nonce.
+        if getattr(self, "_auth_nonce_seen", None) != self.nonce:
+            self._auth_nc = 0
+            self._auth_nonce_seen = self.nonce
+        self._auth_nc = getattr(self, "_auth_nc", 0) + 1
+        return f"{self._auth_nc:08x}"
+
+    def sdp_sendrecv(self) -> str:
+        return (
+            "v=0\r\n"
+            f"o=- {secrets.randbits(31)} {secrets.randbits(31)} IN IP4 {self.local_ip}\r\n"
+            "s=-\r\n"
+            f"c=IN IP4 {self.local_ip}\r\n"
+            "t=0 0\r\n"
+            f"m=audio {self.rtp_port} RTP/AVP 0 8\r\n"
+            "a=rtpmap:0 PCMU/8000\r\n"
+            "a=rtpmap:8 PCMA/8000\r\n"
+            "a=sendrecv\r\n"
+        )
+
+    def run_caller(self, extension: str, phrase_raw: str,
+                   recv_wav: str, go_file: str) -> None:
+        """LF-012 inbound governed-call caller.
+
+        Registers with real digest auth, dials a 1XX extension (the
+        dialplan moves the call into the canonical Stasis app), answers
+        media, waits for the orchestrator's GO flag, streams a REAL
+        speech phrase (8k PCMU raw) over RTP, then records the RTP it
+        receives back (the real TTS response) into a WAV.
+        """
+        import re
+        import wave
+
+        # 1. Register with the real digest exchange.
+        self.register_once(False)
+        deadline = time.monotonic() + 12
+        while time.monotonic() < deadline and not self.registered:
+            try:
+                data, source = self.sock.recvfrom(65535)
+            except socket.timeout:
+                continue
+            line, headers, _ = parse_message(data)
+            if line.startswith("SIP/2.0 401"):
+                auth = headers.get("www-authenticate", "")
+                params = parse_auth_params(auth)
+                self.nonce = params.get("nonce")
+                self.realm = params.get("realm", "asterisk")
+                self.register_once(True)
+            elif line.startswith("SIP/2.0 200") and "REGISTER" in headers.get("cseq", ""):
+                self.registered = True
+                print("REGISTERED", flush=True)
+        if not self.registered:
+            print("CALLER FAIL: registration timeout", flush=True)
+            return
+
+        # 2. Send the INVITE (digest-authenticated: PJSIP challenges
+        #    outbound INVITEs from an auth-protected endpoint) and
+        #    handle the 200 (media target learned).
+        # Brief pause: Asterisk's digest nonce embeds a timestamp, so an
+        # INVITE sent in the SAME second as the REGISTER gets the SAME
+        # nonce; PJSIP's nonce-count check then requires a strictly
+        # increasing nc across request types and rejects a mismatch.
+        # Waiting a second lets the challenge rotate to a fresh nonce
+        # (baresip's INVITE also uses a fresh nonce).
+        time.sleep(1.1)
+        invite = self.build_invite(extension)
+        self.sock.sendto(invite, (ASTERISK_HOST, ASTERISK_PORT))
+        print(f"CALLER INVITE sent to {extension}", flush=True)
+        answered = False
+        call_id = None
+        to_hdr = None
+        from_tag = getattr(self, "_invite_from_tag", None) or secrets.token_hex(8)
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline and not answered:
+            try:
+                data, source = self.sock.recvfrom(65535)
+            except socket.timeout:
+                continue
+            line, headers, body = parse_message(data)
+            if not line:
+                continue
+            call_id = headers.get("call-id", call_id)
+            if line.startswith("SIP/2.0 401") and "INVITE" in headers.get("cseq", ""):
+                auth = headers.get("www-authenticate", "")
+                params = parse_auth_params(auth)
+                self.nonce = params.get("nonce")
+                self.realm = params.get("realm", "asterisk")
+                self._challenge_opaque = params.get("opaque", "")
+                print("CALLER INVITE challenged (401)", flush=True)
+                self.sock.sendto(self.build_invite(extension, with_auth=True),
+                                 (ASTERISK_HOST, ASTERISK_PORT))
+            elif line.startswith("SIP/2.0 200") and "INVITE" in headers.get("cseq", ""):
+                to_hdr = headers.get("to", "")
+                # Learn the RTP target from Asterisk's SDP offer.
+                c_match = re.search(r"c=IN IP4 ([0-9.]+)", body)
+                m_match = re.search(r"m=audio (\d+)", body)
+                if c_match and m_match:
+                    self.rtp_target = (c_match.group(1), int(m_match.group(1)))
+                    print(f"CALLER RTP_TARGET {self.rtp_target[0]}:{self.rtp_target[1]}", flush=True)
+                ack = (
+                    f"ACK sip:{extension}@{ASTERISK_HOST} SIP/2.0\r\n"
+                    f"Via: SIP/2.0/UDP {self.local_ip}:{self.sip_port};branch=z9hG4bK-{secrets.token_hex(8)}\r\n"
+                    "Max-Forwards: 70\r\n"
+                    f"From: <sip:{self.name}@{ASTERISK_HOST}>;tag={from_tag}\r\n"
+                    f"To: {to_hdr}\r\n"
+                    f"Call-ID: {call_id}\r\n"
+                    "CSeq: 2 ACK\r\n"
+                    "Content-Length: 0\r\n\r\n"
+                )
+                self.sock.sendto(ack.encode(), (ASTERISK_HOST, ASTERISK_PORT))
+                answered = True
+                print("CALLER ANSWERED (200 OK, ACK sent)", flush=True)
+            elif line.startswith("SIP/2.0"):
+                code = line.split(" ")[1]
+                print(f"CALLER PROVISIONAL/RESPONSE {code}", flush=True)
+
+        if not answered:
+            print("CALLER FAIL: no 200 OK for INVITE", flush=True)
+            return
+
+        # 3. Wait for the orchestrator's GO flag (bridge + ARI record
+        #    are live before the caller speaks).
+        if go_file:
+            waited = 0
+            while waited < 15 and not os.path.exists(go_file):
+                time.sleep(0.2)
+                waited += 0.2
+            if not os.path.exists(go_file):
+                print("CALLER FAIL: GO flag timeout", flush=True)
+                return
+            print("CALLER GO received", flush=True)
+
+        # 4. Stream the real phrase (8k PCMU raw) over RTP.
+        phrase = b""
+        if phrase_raw and os.path.exists(phrase_raw):
+            with open(phrase_raw, "rb") as f:
+                phrase = f.read()
+        if not phrase:
+            print("CALLER FAIL: empty phrase raw", flush=True)
+            return
+        print(f"CALLER SPEAK phrase_bytes={len(phrase)}", flush=True)
+        ssrc = secrets.randbits(32)
+        seq = secrets.randbits(16)
+        ts = secrets.randbits(32)
+        i = 0
+        next_tick = time.monotonic()
+        while i + 160 <= len(phrase):
+            now = time.monotonic()
+            if now < next_tick:
+                time.sleep(min(0.005, next_tick - now))
+                continue
+            payload = phrase[i:i + 160]
+            header = bytes([0x80, 0x00]) + seq.to_bytes(2, "big") + ts.to_bytes(4, "big") + ssrc.to_bytes(4, "big")
+            self.rtp_sock.sendto(header + payload, self.rtp_target)
+            seq = (seq + 1) & 0xFFFF
+            ts = (ts + 160) & 0xFFFFFFFF
+            i += 160
+            next_tick += 0.020
+        print(f"CALLER SPOKE frames={i // 160}", flush=True)
+
+        # 5. Record received RTP (the real TTS response) until BYE.
+        # The orchestrator transcribes + synthesizes the response before
+        # playing it (whisper + Kokoro take tens of seconds), so the
+        # receive window must outlive the whole sequence; the call ends
+        # with a real BYE from Asterisk.
+        #
+        # The receive loop must DRAIN the RTP socket in a tight inner
+        # loop: the TTS playback arrives as a ~2s burst at 20ms cadence,
+        # and an alternating read (one RTP datagram then one SIP read)
+        # would only capture a few packets per burst. SIP is polled
+        # non-blockingly between RTP drains.
+        received = b""
+        start = time.monotonic()
+        bye_deadline = start + 150
+        sip_timeout = 0.2
+        self.sock.settimeout(sip_timeout)
+        while time.monotonic() < bye_deadline:
+            # Drain everything currently buffered on the RTP socket.
+            while True:
+                try:
+                    data, _ = self.rtp_sock.recvfrom(2048)
+                    if len(data) >= 12:
+                        received += data[12:]
+                except socket.timeout:
+                    break
+            try:
+                sdata, bye_source = self.sock.recvfrom(65535)
+            except socket.timeout:
+                continue
+            line, headers, _ = parse_message(sdata)
+            if line.startswith("BYE"):
+                print("CALLER BYE received", flush=True)
+                resp = self.build_response(line, headers, "200", "OK")
+                self.sock.sendto(resp, bye_source)
+                break
+        self.sock.settimeout(0.5)
+
+        # 6. Write the far-end WAV (PCMU -> 16-bit PCM).
+        if recv_wav and received:
+            # G.711 mu-law decode to signed 16-bit PCM (standard table).
+            ulaw = [0] * 256
+            for j in range(256):
+                u = ~j & 0xFF
+                t = ((u & 0x0F) << 3) + 0x84
+                t = t << ((u & 0x70) >> 4)
+                val = t - 0x84 if (u & 0x80) == 0 else 0x84 - t
+                ulaw[j] = val
+            samples = bytearray()
+            for b in received:
+                samples += int(ulaw[b]).to_bytes(2, "little", signed=True)
+            with wave.open(recv_wav, "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(8000)
+                w.writeframes(bytes(samples))
+            print(f"CALLER RECEIVED_WAV {recv_wav} bytes={len(received)}", flush=True)
+        else:
+            print(f"CALLER RECEIVED_WAV EMPTY {recv_wav} received={len(received)}", flush=True)
+
     # ---- main loop ----------------------------------------------------
     def run(self) -> None:
         if self.mode == "probe":
@@ -416,6 +708,82 @@ def code_of(resp: bytes) -> str:
     return resp.split(b" ")[1].decode()
 
 
+def self_test_dialog() -> int:
+    """Structural regression test for the LF-012 caller dialog model.
+
+    Proves, without any network:
+      - REGISTER Call-ID != INVITE Call-ID (separate SIP usages);
+      - REGISTER From tag  != INVITE From tag;
+      - INVITE #1 Call-ID  == authenticated INVITE Call-ID (same dialog);
+      - INVITE #1 From tag == authenticated INVITE From tag;
+      - INVITE #1 Via branch != authenticated retry Via branch
+        (new transaction, same dialog);
+      - INVITE CSeq 1 -> 2 on the authenticated retry;
+      - Authorization header appears BEFORE the header/body separator
+        (the PJSIP 'No Authorization header found' regression).
+    """
+    import re
+
+    # Pure message-shape test: construct without binding sockets
+    # (the caller fixture's wire sockets are not needed to prove the
+    # dialog identity contract).
+    r = Responder.__new__(Responder)
+    r.name = "endpoint-v"
+    r.password = "selftest-password"
+    r.sip_port = 12130
+    r.rtp_port = 12140
+    r.mode = "caller"
+    r.send_seconds = 8
+    r.local_ip = "172.17.0.1"
+    r.contact = f"<sip:endpoint-v@172.17.0.1:12130>"
+    r.auth_uri = f"sip:{ASTERISK_HOST}"
+    r.nonce = "1787000000/selftestnonce"
+    r.realm = "asterisk"
+    r._auth_nc = 0
+    r._auth_nonce_seen = None
+    r._invite_call_id = None
+    r._invite_from_tag = None
+    r._challenge_opaque = ""
+
+    reg = r.build_register(False).decode()
+    reg_auth = r.build_register(True).decode()
+    inv1 = r.build_invite("110", with_auth=False).decode()
+    inv2 = r.build_invite("110", with_auth=True).decode()
+
+    def grab(msg, key):
+        m = re.search(rf"^{key}: (.*)$", msg, re.M)
+        return m.group(1).strip() if m else None
+
+    reg_cid = grab(reg, "Call-ID")
+    reg_tag = grab(reg, "From")
+    inv_cid = grab(inv1, "Call-ID")
+    inv_tag = grab(inv1, "From")
+    inv2_cid = grab(inv2, "Call-ID")
+    inv2_tag = grab(inv2, "From")
+    br1 = grab(inv1, "Via")
+    br2 = grab(inv2, "Via")
+    cseq1 = grab(inv1, "CSeq")
+    cseq2 = grab(inv2, "CSeq")
+    auth_hdr = grab(inv2, "Authorization")
+
+    checks = [
+        ("REGISTER Call-ID != INVITE Call-ID", reg_cid != inv_cid),
+        ("REGISTER From tag != INVITE From tag", reg_tag != inv_tag),
+        ("INVITE #1 Call-ID == retry Call-ID", inv_cid == inv2_cid),
+        ("INVITE #1 From tag == retry From tag", inv_tag == inv2_tag),
+        ("INVITE #1 Via branch != retry Via branch", br1 != br2),
+        ("INVITE CSeq 1 -> 2", cseq1 == "1 INVITE" and cseq2 == "2 INVITE"),
+        ("Authorization present on retry", bool(auth_hdr)),
+        ("Authorization BEFORE body separator", inv2.find(auth_hdr) < inv2.find("\r\n\r\n") if auth_hdr else False),
+    ]
+    ok = True
+    for name, passed in checks:
+        print(f"SELFTEST {'ok' if passed else 'FAIL'} - {name}", flush=True)
+        ok = ok and passed
+    print(f"SELFTEST {'PASS' if ok else 'FAIL'}", flush=True)
+    return 0 if ok else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="EP-025 controlled SIP responder")
     ap.add_argument("--name", required=True)
@@ -423,14 +791,23 @@ def main() -> int:
     ap.add_argument("--sip-port", type=int, required=True)
     ap.add_argument("--rtp-port", type=int, required=True)
     ap.add_argument("--mode", required=True,
-                    choices=["603", "486", "hybrid", "ring", "silent", "sender", "probe"])
+                    choices=["603", "486", "hybrid", "ring", "silent", "sender", "probe", "caller", "selftest"])
     ap.add_argument("--send-seconds", type=int, default=8)
+    ap.add_argument("--dial", default="110", help="extension to dial (caller mode)")
+    ap.add_argument("--phrase-raw", default="", help="8k PCMU raw file to stream as caller speech (caller mode)")
+    ap.add_argument("--recv-wav", default="", help="WAV path for far-end received audio (caller mode)")
+    ap.add_argument("--go-file", default="", help="orchestrator GO flag; caller waits before speaking (caller mode)")
     args = ap.parse_args()
 
     responder = Responder(args.name, args.password, args.sip_port,
                           args.rtp_port, args.mode, args.send_seconds)
     try:
-        responder.run()
+        if args.mode == "selftest":
+            return self_test_dialog()
+        if args.mode == "caller":
+            responder.run_caller(args.dial, args.phrase_raw, args.recv_wav, args.go_file)
+        else:
+            responder.run()
     except KeyboardInterrupt:
         pass
     return 0
