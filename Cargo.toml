@@ -59,6 +59,7 @@ members = [
     "tests/email",
     "tests/fax",
     "tests/hydra",
+    "tests/hydra-live",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

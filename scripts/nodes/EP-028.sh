@@ -13,10 +13,7 @@ case "$mode" in
   M3) sh scripts/ep028-m3-tests.sh ;;
   M4) sh scripts/ep028-m4-tests.sh ;;
   M5|verify)
-      python3 scripts/node-artifact-check.py EP-028 M5
-      cargo test --locked -p nexus-hydra
-      sh scripts/live-fire/LF-015.sh
-      sh scripts/live-fire/LF-025.sh
+      sh scripts/ep028-m5-tests.sh
       ;;
   *) echo "EP-028: FAIL - unknown mode $mode" >&2; exit 2;;
 esac

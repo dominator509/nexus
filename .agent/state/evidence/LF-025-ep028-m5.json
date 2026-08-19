@@ -1,0 +1,33 @@
+{
+  "adapter": "HydraAdapter (dual authorization gates, poison-safe observability)",
+  "brief": {
+    "business_id": "018f0f6f-9c1e-7b6e-8000-000000000003",
+    "credential_redaction": "ZERO_LEAKAGE",
+    "data_freshness_timestamps": true,
+    "permission_filtered": true,
+    "serde_roundtrip": true,
+    "source_classes": [
+      "CRM",
+      "SOCIAL",
+      "COMMUNICATIONS",
+      "FINANCE",
+      "OPERATIONAL"
+    ],
+    "source_provenance": true
+  },
+  "certification": {
+    "direct_database": "NOT_A_SUPPORTED_CHANNEL",
+    "hydra_adapter": "IMPLEMENTED",
+    "hydra_contract": "INTERNAL_CERTIFIED",
+    "hydra_http_transport": "TRANSPORT_CERTIFIED_AGAINST_CONTROLLED_FIXTURES",
+    "real_hydra_provider": "NOT_ASSERTED",
+    "real_social_provider": "NOT_ASSERTED_EP029_OWNER"
+  },
+  "fixture": "CONTROLLED_TEST_FIXTURE",
+  "milestone": "M5",
+  "node": "EP-028",
+  "proof": "LF-025",
+  "run_id": "local-run",
+  "surface": "versioned canonical Hydra REST surface (schemas/hydra)",
+  "transport": "HttpHydraTransport (real reqwest, REAL std::net sockets)"
+}

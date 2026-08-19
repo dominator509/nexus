@@ -1,0 +1,35 @@
+{
+  "adapter": "HydraAdapter (dual authorization gates, in-flight idempotency, poison-safe observability)",
+  "certification": {
+    "direct_database": "NOT_A_SUPPORTED_CHANNEL",
+    "hydra_adapter": "IMPLEMENTED",
+    "hydra_contract": "INTERNAL_CERTIFIED",
+    "hydra_http_transport": "TRANSPORT_CERTIFIED_AGAINST_CONTROLLED_FIXTURES",
+    "postiz": "NOT_ASSERTED_EP029_OWNER",
+    "real_hydra_provider": "NOT_ASSERTED"
+  },
+  "fixture": "CONTROLLED_TEST_FIXTURE",
+  "lifecycle": {
+    "audit_correlation_present": true,
+    "capability_map_advertised": [
+      "READ_CONTEXT",
+      "PROPOSE_UPDATE",
+      "EXECUTE_UPDATE",
+      "CONSUME_EVENTS",
+      "CEO_BRIEF"
+    ],
+    "credential_redaction": "ZERO_LEAKAGE",
+    "event_consumed": true,
+    "event_payload_ref_not_inlined": true,
+    "governed_execute": "EXECUTED",
+    "governed_propose": "EXECUTED",
+    "hot_leads_received": 2,
+    "portfolio_context_read": true
+  },
+  "milestone": "M5",
+  "node": "EP-028",
+  "proof": "LF-015",
+  "run_id": "local-run",
+  "surface": "versioned canonical Hydra REST surface (schemas/hydra)",
+  "transport": "HttpHydraTransport (real reqwest, REAL std::net sockets)"
+}

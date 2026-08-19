@@ -1,0 +1,13 @@
+[package]
+name = "nexus-hydra-live-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-028 M5 live-fire evidence: LF-015 hydra-cross-crm-command and LF-025 ceo-business-brief over real sockets against controlled fixtures emitting REAL Hydra-shaped responses (SPEC-015)"
+license = "MIT"
+
+[dependencies]
+nexus-hydra = { path = "../../crates/nexus-hydra", version = "0.1.0" }
+nexus-hydra-connector = { path = "../../connectors/hydra", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde = { workspace = true }
+serde_json.workspace = true
