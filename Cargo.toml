@@ -49,6 +49,7 @@ members = [
     "connectors/gmail",
     "connectors/microsoft-mail",
     "connectors/imap-smtp",
+    "connectors/ictfax",
     "tests/audio",
     "tests/vision",
     "tests/devices",

@@ -3,8 +3,10 @@
 .agent/expected-files/EP-027.txt
 .agent/node-contracts/EP-027.md
 .agent/milestone-files/EP-027-M1.txt
+.agent/milestone-files/EP-027-M2.txt
 scripts/nodes/EP-027.sh
 scripts/ep027-m1-tests.sh
+scripts/ep027-m2-tests.sh
 crates/nexus-fax/
 connectors/ictfax/
 connectors/hylafax/

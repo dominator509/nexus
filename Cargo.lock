@@ -1591,6 +1591,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-ictfax"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-fax",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "nexus-identity"
 version = "0.1.0"
 dependencies = [

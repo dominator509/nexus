@@ -1,0 +1,21 @@
+[package]
+name = "nexus-ictfax"
+version = "0.1.0"
+edition = "2021"
+description = "EP-027 M2 ICTFax adapter core: real ICTFax REST HTTP transport against the DOCUMENTED ICTFax API surface, canonical mapping, governed submission, exact-target verification, idempotency, observability (SPEC-014)"
+license = "MIT"
+
+[dependencies]
+nexus-fax = { path = "../../crates/nexus-fax", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real ICTFax REST HTTP transport (ICTFax is the self-hosted primary
+# fax control sidecar; Nexus orchestrates its documented REST API and
+# normalizes provider payloads at the infrastructure boundary).
+# reqwest is the locked workspace dependency class (EP-011/EP-024
+# precedent).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }
+# sha256 digest for FaxDocument artifact evidence (SPEC-014 behavior 6;
+# workspace sha2 0.11 line, nexus-email/nexus-fax precedent).
+sha2 = "0.11"
