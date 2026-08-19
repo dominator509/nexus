@@ -1,0 +1,12 @@
+[package]
+name = "nexus-sentinel-core-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-030 sentinel core contract-composition tests: FirewallProvider, DnsSecurityProvider, NetworkInventory, DeviceFingerprint, BehaviorBaseline, NetworkFinding, QuarantineProposal (SPEC-013)"
+license = "MIT"
+
+[dependencies]
+nexus-sentinel = { path = "../../../crates/nexus-sentinel", version = "0.1.0" }
+nexus-domain = { path = "../../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

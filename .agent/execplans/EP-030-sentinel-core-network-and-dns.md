@@ -272,7 +272,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -282,9 +282,15 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-20 (M1): tests/sentinel/core is one directory deeper than tests/social; path deps must be `../../../crates/...` not `../../crates/...` (cargo manifest load failure observed and fixed).
+- 2026-08-20 (M1): gate display count pattern must be `ok\.` not `ok\\.` in grep -E through sh (double-escaped backslash matches a literal backslash, producing an empty count; vacuity guards unaffected).
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-20 (M1): Contract vocabulary mirrors the established typed-id + vocabulary-enum pattern (nexus-social/nexus-hydra precedent) but with SPEC-013-owned names only (Sentinel, DeviceFingerprint, Baseline, Quarantine, OPNsense, OpenWrt, AdGuard). Nexus-wide ids (TenantId, DeviceId, IncidentId, ApprovalId) and ApprovalClass are imported from nexus-domain, never redefined. Evidence: `ep030_unit_typed_ids_validate_and_reject`, `ep030_unit_segments_model_all_five_classes`. Alternatives: redefining TenantId/ApprovalClass locally (rejected: violates dependency-direction/vocabulary-lock), heavy SOC vocabulary (rejected: SPEC-013 non-goal). Consequence: EP-030 owns only sentinel-specific vocabulary; all five segments modeled. Reversal: requires ADR + schema update.
+- 2026-08-20 (M1): The seven node-contract public interfaces are split into provider ports (FirewallProvider, DnsSecurityProvider, NetworkInventory) + value objects (DeviceFingerprint, BehaviorBaseline, NetworkFinding, QuarantineProposal), matching the provider-neutral port pattern from EP-029/EP-024. OPNsense and OpenWrt share FirewallProvider (acceptance obligation 1); AdGuard Home maps to DnsSecurityProvider (obligation 2); segments are modeled in vocabulary (obligation 3); QuarantineProposal with the PROPOSED->APPROVED->APPLIED->VERIFIED ladder and is_auto_applicable() (preauthorized + reversible) encodes obligation 4 verified containment. Evidence: `ep030_unit_opnsense_and_openwrt_share_canonical_provider`, `ep030_unit_core_sentinel_proposes_verified_containment`. Alternatives: separate OPNsense/OpenWrt traits (rejected: obligation 1 requires shared canonical provider), proposal-as-executed-rule (rejected: SPEC-013 behavior 5/6). Consequence: contract encodes fail-closed containment; unbound providers never fabricate. Reversal: requires ADR + schema update.
 
 # 14. Outcomes & Retrospective
 

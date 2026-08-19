@@ -1993,6 +1993,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-sentinel"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-sentinel-core-e2e"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-sentinel",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-sidecar"
 version = "0.1.0"
 dependencies = [
