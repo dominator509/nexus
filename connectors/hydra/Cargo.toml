@@ -1,0 +1,18 @@
+[package]
+name = "nexus-hydra-connector"
+version = "0.1.0"
+edition = "2021"
+description = "EP-028 M2 Hydra adapter core: real authenticated Hydra HTTP transport, canonical mapping, governed dual-gate actions, exact-target verification, idempotency, observability (SPEC-015)"
+license = "MIT"
+
+[dependencies]
+nexus-hydra = { path = "../../crates/nexus-hydra", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real Hydra REST HTTP transport (Hydra is the CRM canonical source;
+# Nexus orchestrates its authenticated REST surface and normalizes
+# provider payloads at the infrastructure boundary). reqwest is the
+# locked workspace dependency class (EP-011/EP-024/EP-026/EP-027
+# precedent).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }
