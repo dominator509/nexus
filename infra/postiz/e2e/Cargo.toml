@@ -1,0 +1,15 @@
+[package]
+name = "nexus-postiz-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-029 M4 forced failures, abuse cases, and observability: real failure mechanisms against the production Postiz/direct adapters over real sockets, redaction canaries, policy denial, idempotency, bounded recovery (SPEC-015)"
+license = "MIT"
+
+[dependencies]
+nexus-social = { path = "../../../crates/nexus-social", version = "0.1.0" }
+nexus-hydra = { path = "../../../crates/nexus-hydra", version = "0.1.0" }
+nexus-postiz-connector = { path = "../../../connectors/postiz", version = "0.1.0" }
+nexus-social-direct-connector = { path = "../../../connectors/social-direct", version = "0.1.0" }
+nexus-domain = { path = "../../../crates/nexus-domain", version = "0.1.0" }
+serde = { workspace = true }
+serde_json.workspace = true

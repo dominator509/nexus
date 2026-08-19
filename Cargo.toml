@@ -63,6 +63,7 @@ members = [
     "tests/fax",
     "tests/hydra",
     "tests/hydra-live",
+    "infra/postiz/e2e",
     "infra/nats",
     "infra/keycloak",
     "infra/openfga",

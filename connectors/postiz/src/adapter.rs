@@ -164,6 +164,19 @@ impl PostizAdapter {
         // action kind must match; the policy module enforces the
         // SEPARATE approval class for PUBLISH.
         if approval.state != SocialApprovalState::Granted {
+            self.record(
+                &correlation,
+                "PUBLISH_VARIANT",
+                "POLICY",
+                "publish approval is not granted".into(),
+                std::collections::BTreeMap::from([
+                    (
+                        "action_kind".into(),
+                        SocialActionKind::Publish.as_str().into(),
+                    ),
+                    ("business".into(), self.business_id.to_string()),
+                ]),
+            );
             return Err(SocialError::new(
                 SocialErrorCode::Policy,
                 "publish approval is not granted",
@@ -174,6 +187,19 @@ impl PostizAdapter {
             ));
         }
         if approval.action_kind != SocialActionKind::Publish {
+            self.record(
+                &correlation,
+                "PUBLISH_VARIANT",
+                "POLICY",
+                "approval action kind does not match publish".into(),
+                std::collections::BTreeMap::from([
+                    (
+                        "action_kind".into(),
+                        SocialActionKind::Publish.as_str().into(),
+                    ),
+                    ("business".into(), self.business_id.to_string()),
+                ]),
+            );
             return Err(SocialError::new(
                 SocialErrorCode::Policy,
                 "approval action kind does not match publish",
@@ -183,15 +209,28 @@ impl PostizAdapter {
                 Some(variant.variant_id.to_string()),
             ));
         }
-        enforce_social_action_policy(
+        if let Err(e) = enforce_social_action_policy(
             SocialActionKind::Publish,
             required_approval_class(SocialActionKind::Publish),
-        )
-        .map_err(|e| {
-            e.with_correlation(correlation.clone())
+        ) {
+            self.record(
+                &correlation,
+                "PUBLISH_VARIANT",
+                "POLICY",
+                e.message.clone(),
+                std::collections::BTreeMap::from([
+                    (
+                        "action_kind".into(),
+                        SocialActionKind::Publish.as_str().into(),
+                    ),
+                    ("business".into(), self.business_id.to_string()),
+                ]),
+            );
+            return Err(e
+                .with_correlation(correlation.clone())
                 .with_tenant(self.tenant_id.to_string())
-                .with_resource(variant.variant_id.to_string())
-        })?;
+                .with_resource(variant.variant_id.to_string()));
+        }
 
         // In-flight idempotency: a duplicate in-flight publish is a
         // Conflict; completion/failure releases the entry.
@@ -280,6 +319,16 @@ impl PostizAdapter {
         // the SEPARATE required class (behavior 8: spend/crisis
         // require human approval).
         if approval.state != SocialApprovalState::Granted {
+            self.record(
+                &correlation,
+                "EXECUTE_GOVERNED",
+                "POLICY",
+                "governed action approval is not granted".into(),
+                std::collections::BTreeMap::from([
+                    ("action_kind".into(), kind.as_str().into()),
+                    ("business".into(), self.business_id.to_string()),
+                ]),
+            );
             return Err(SocialError::new(
                 SocialErrorCode::Policy,
                 "governed action approval is not granted",
@@ -290,6 +339,16 @@ impl PostizAdapter {
             ));
         }
         if approval.action_kind != kind {
+            self.record(
+                &correlation,
+                "EXECUTE_GOVERNED",
+                "POLICY",
+                "approval action kind does not match the governed action".into(),
+                std::collections::BTreeMap::from([
+                    ("action_kind".into(), kind.as_str().into()),
+                    ("business".into(), self.business_id.to_string()),
+                ]),
+            );
             return Err(SocialError::new(
                 SocialErrorCode::Policy,
                 "approval action kind does not match the governed action",
@@ -299,11 +358,22 @@ impl PostizAdapter {
                 Some(request_ref.to_string()),
             ));
         }
-        enforce_social_action_policy(kind, required_approval_class(kind)).map_err(|e| {
-            e.with_correlation(correlation.clone())
+        if let Err(e) = enforce_social_action_policy(kind, required_approval_class(kind)) {
+            self.record(
+                &correlation,
+                "EXECUTE_GOVERNED",
+                "POLICY",
+                e.message.clone(),
+                std::collections::BTreeMap::from([
+                    ("action_kind".into(), kind.as_str().into()),
+                    ("business".into(), self.business_id.to_string()),
+                ]),
+            );
+            return Err(e
+                .with_correlation(correlation.clone())
                 .with_tenant(self.tenant_id.to_string())
-                .with_resource(request_ref.to_string())
-        })?;
+                .with_resource(request_ref.to_string()));
+        }
 
         // Gate 2 (provider-side): the transport executes the governed
         // action. For spend/crisis the transport surface is the
@@ -442,6 +512,19 @@ impl SocialProvider for PostizAdapter {
         // class (separate from publish; blind auto-replies are a
         // non-goal).
         if approval.state != SocialApprovalState::Granted {
+            self.record(
+                &correlation,
+                "REPLY",
+                "POLICY",
+                "reply approval is not granted".into(),
+                std::collections::BTreeMap::from([
+                    (
+                        "action_kind".into(),
+                        SocialActionKind::Reply.as_str().into(),
+                    ),
+                    ("business".into(), self.business_id.to_string()),
+                ]),
+            );
             return Err(SocialError::new(
                 SocialErrorCode::Policy,
                 "reply approval is not granted",
@@ -452,6 +535,19 @@ impl SocialProvider for PostizAdapter {
             ));
         }
         if approval.action_kind != SocialActionKind::Reply {
+            self.record(
+                &correlation,
+                "REPLY",
+                "POLICY",
+                "approval action kind does not match reply".into(),
+                std::collections::BTreeMap::from([
+                    (
+                        "action_kind".into(),
+                        SocialActionKind::Reply.as_str().into(),
+                    ),
+                    ("business".into(), self.business_id.to_string()),
+                ]),
+            );
             return Err(SocialError::new(
                 SocialErrorCode::Policy,
                 "approval action kind does not match reply",
@@ -461,15 +557,28 @@ impl SocialProvider for PostizAdapter {
                 Some(conversation.conversation_id.to_string()),
             ));
         }
-        enforce_social_action_policy(
+        if let Err(e) = enforce_social_action_policy(
             SocialActionKind::Reply,
             required_approval_class(SocialActionKind::Reply),
-        )
-        .map_err(|e| {
-            e.with_correlation(correlation.clone())
+        ) {
+            self.record(
+                &correlation,
+                "REPLY",
+                "POLICY",
+                e.message.clone(),
+                std::collections::BTreeMap::from([
+                    (
+                        "action_kind".into(),
+                        SocialActionKind::Reply.as_str().into(),
+                    ),
+                    ("business".into(), self.business_id.to_string()),
+                ]),
+            );
+            return Err(e
+                .with_correlation(correlation.clone())
                 .with_tenant(self.tenant_id.to_string())
-                .with_resource(conversation.conversation_id.to_string())
-        })?;
+                .with_resource(conversation.conversation_id.to_string()));
+        }
 
         // The documented Postiz public API creates posts; a governed
         // reply is a create-post against the thread. The transport
