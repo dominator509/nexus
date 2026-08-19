@@ -12,6 +12,7 @@ scripts/ep025-m2-tests.sh
 scripts/ep025-m3-tests.sh
 scripts/ep025-m4-tests.sh
 scripts/ep025-m5-tests.sh
+scripts/live-fire/LF-012.sh
 scripts/blueprint_validate.py
 Cargo.toml
 Cargo.lock
