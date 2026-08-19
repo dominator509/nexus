@@ -2,8 +2,12 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-028.txt
 .agent/node-contracts/EP-028.md
+.agent/milestone-files/EP-028-M1.txt
 scripts/nodes/EP-028.sh
+scripts/ep028-m1-tests.sh
 crates/nexus-hydra/
 connectors/hydra/
 schemas/hydra/
 tests/hydra/
+Cargo.toml
+Cargo.lock

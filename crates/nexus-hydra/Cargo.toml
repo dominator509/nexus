@@ -1,0 +1,11 @@
+[package]
+name = "nexus-hydra"
+version = "0.1.0"
+edition = "2021"
+description = "EP-028 provider-neutral Hydra business-control contracts: HydraProvider, HydraBusinessBinding, HydraCapabilityMap, HydraContextProjection, HydraActionRequest, HydraEventConsumer (SPEC-015)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

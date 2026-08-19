@@ -1637,6 +1637,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-hydra"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-hylafax"
 version = "0.1.0"
 dependencies = [

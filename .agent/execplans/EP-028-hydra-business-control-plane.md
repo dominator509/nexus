@@ -270,7 +270,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary (2026-08-19; gate + node sentinels observed; commit pending)
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -280,10 +280,28 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-19 M1: the pre-created node M1 branch ran only `python3 scripts/node-artifact-check.py EP-028 M1` - the EP-001 gate-masking class (artifact check certifies nothing). Replaced with `sh scripts/ep028-m1-tests.sh` (real suite + vacuity + anti-masking sentinel guards).
+- 2026-08-19 M1: SPEC-015 behavior 2 (authenticated MCP/REST/durable events only) is encoded structurally: `HydraAccessChannel` has exactly MCP/REST/DURABLE_EVENT variants and no DIRECT_DATABASE variant; a fabricated direct-database channel is rejected at parse/serde. This makes the "no direct DB access" rule impossible to violate by construction.
+- 2026-08-19 M1: SPEC-015 behavior 6 (identity linking only through deterministic or human-reviewed resolution) is enforced by `SocialAccount::with_link` and `CustomerReference::mergeable`: UNLINKED (or any non-owned class) fails closed; `LLM_GUESS` is not even a valid vocabulary value.
+- 2026-08-19 M1: SPEC-015 behavior 8 (paid-ad budget changes and public crisis responses require human approval) is a deterministic gate in `enforce_hydra_action_policy`, proven with a tracking sink: denied requests make ZERO provider calls; human-approved requests reach the sink exactly once.
+- 2026-08-19 M1: `HydraError` with `Option<String>` context fields trips clippy `result_large_err` (Err variant >= 128 bytes). Switched correlation/actor/tenant/resource to `Option<Box<str>>` (nexus-capabilities precedent); clippy -D warnings clean.
+- 2026-08-19 M1: clippy also flagged an unused `request` parameter in the test TrackingSink impl (named `_request`).
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
 
+- 2026-08-19 M1 | Vocabulary-locked Hydra enums with explicit SCREAMING_SNAKE_CASE wire spellings (`HydraAccessChannel`, `BusinessScope`, `IdentityResolutionClass`, `HydraActionKind`, `HydraActionState`, `HydraCapabilityKind`, `SocialMessageState`, `CampaignState`, `CeoBriefSourceClass`, `LeadHandoffState`), each with FromStr + serde that reject unknown values (fail closed). Evidence: `ep028_unit_vocabulary_wire_spelling_locked`, `ep028_unit_vocabulary_rejects_unknown`, `ep028_unit_access_channels_have_no_direct_database_variant` green. Alternatives: serde default naming (rejected: accidental undocumented protocol), per-provider vocab (rejected: provider-neutral contract). Consequence: wire spelling changes require ADR + schema update. Security/license/compat: no new deps; crate is new.
+- 2026-08-19 M1 | Semantic boundary REFERENCE != TRUTH: `CustomerReference` and `HydraContextProjection` carry Hydra person/business references only, never duplicated CRM records (SPEC-015 behavior 1; non-goal: duplicating Hydra CDM). Evidence: `ep028_unit_customer_reference_is_reference_not_truth`, `ep028_unit_projection_carries_references_only` green. Consequence: later milestones cannot accidentally build a second CRM.
+- 2026-08-19 M1 | Semantic boundary SINGLE != PORTFOLIO: `BusinessContext` requires exactly one business for SINGLE_BUSINESS scope and forbids one for PORTFOLIO (SPEC-015 behavior 3). Evidence: `ep028_unit_business_context_single_requires_business` green. Consequence: cross-business isolation is explicit, never accidental.
+- 2026-08-19 M1 | Semantic boundary APPROVED != PUBLISHED: `SocialMessage` state ladder enforces Draft -> PendingApproval -> Approved -> Published; publish without approval fails closed (SPEC-015 behavior 5; non-goal: blind social auto-replies). Evidence: `ep028_unit_social_message_approval_ladder` green.
+- 2026-08-19 M1 | Policy before mutation: `hydra_action_governed` runs `enforce_hydra_action_policy` (validate + approval-class gate for PAID_AD_BUDGET_CHANGE / PUBLIC_CRISIS_RESPONSE) BEFORE any provider sink call; tracking-sink tests prove zero calls on denial and exactly one on approval (node contract acceptance obligation 4: dual authorization gates). Evidence: `ep028_unit_governed_action_denied_before_provider_zero_calls`, `ep028_unit_governed_action_human_approved_reaches_provider_once` green. Alternatives: validate after provider call (rejected: mutation before gate), per-provider gating (rejected: drift).
+- 2026-08-19 M1 | Fail-closed capability map: a fresh `HydraCapabilityMap` advertises nothing; unadvertised capabilities resolve UNAVAILABLE (node contract fallback: read-only context + proposal generation until execution capabilities advertise certified availability). Evidence: `ep028_unit_capability_map_fails_closed_when_empty` green.
+- 2026-08-19 M1 | Unbound provider fails closed: `UnboundHydraProvider` returns Unavailable for read_context/submit_action and advertises an empty capability map (reality rule: an interface is not operational merely because it compiles). Evidence: `ep028_unit_unbound_provider_fails_closed` green.
+- 2026-08-19 M1 | Typed ids + serde-proof validation: all nine Hydra ids (`HydraBindingId` ... `HydraActionId`) validate 1..=128 chars in both `new` and `Deserialize` (wire input cannot bypass the invariant). Evidence: `ep028_unit_typed_ids_validate_and_reject`, `ep028_unit_typed_ids_serde_cannot_bypass_validation` green.
+
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+- 2026-08-19 M1: Contract, vocabulary, and package boundary green. Changed files vs fence: crates/nexus-hydra/ (Cargo.toml, src/lib.rs, src/error.rs, src/vocabulary.rs, src/model.rs, src/capability.rs, src/action.rs, src/context.rs, src/events.rs, src/provider.rs, tests/dependency_direction.rs), scripts/ep028-m1-tests.sh (real gate), scripts/nodes/EP-028.sh (M1 branch rewired from the EP-001-masking artifact check), .agent/milestone-files/EP-028-M1.txt, .agent/expected-files/EP-028.txt (Cargo.toml/Cargo.lock/gate/fence registered), Cargo.toml (workspace member), Cargo.lock, ExecPlan. Commands + sentinels: `cargo test --locked -p nexus-hydra --all-targets` -> 27 passed 0 failed (25 unit + 2 dependency-direction; 2 suites); `sh scripts/ep028-m1-tests.sh` -> `EP-028 M1: ok`; `sh scripts/nodes/EP-028.sh M1` -> `EP-028 M1: ok` (RC=0); fmt clean; clippy -D warnings clean; scope audit EP-028: ok; security check: ok; license gate: ok; reality gate: ok; dependency audit: ok; blueprint validation: ok. Certification: M1 is INTERNAL CONTRACT CERTIFIED only (SPEC-015 behaviors 1,2,3,5,6,8 encoded structurally in the provider-neutral contract; no provider claimed). Assumptions: SPEC-015 vocabulary locked per node contract; M2 owns connectors/hydra, M3 schemas/hydra, M4 tests/hydra, M5 live-fire LF-015/LF-025. Remaining risks: provider transport, real Hydra/Postiz integration, live-fire owned by M2-M5; Postiz AGPL sidecar boundary deferred to M3.
