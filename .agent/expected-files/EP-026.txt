@@ -3,6 +3,9 @@
 .agent/expected-files/EP-026.txt
 .agent/node-contracts/EP-026.md
 scripts/nodes/EP-026.sh
+scripts/ep026-m1-tests.sh
+Cargo.toml
+Cargo.lock
 crates/nexus-email/
 connectors/gmail/
 connectors/microsoft-mail/

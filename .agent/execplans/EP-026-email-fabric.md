@@ -274,19 +274,83 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
+## M1 detail
+
+- Created `crates/nexus-email` (nexus-email) contract crate: SPEC-014 vocabulary
+  locked (Mailbox, Thread, Message, Draft, DeliveryReceipt, DisclosurePolicy
+  boundary), typed ids (MailboxId/ThreadId/MessageId/AttachmentId/DraftId/
+  DeliveryReceiptId), EmailAddress validation, MailScope with SEPARATE
+  Read/Send/Draft/Reply/Forward/Archive/Label/Attachments scopes (acceptance
+  obligation 2), MailCommand with required_scope mapping, MailState ladder
+  DRAFT<QUEUED<SENDING<SENT<DELIVERED + terminal Failed/Archived/Deleted
+  (SENT != DELIVERED: DeliveryReceipt is the only delivery authority),
+  MailPrivacyClass, Attachment with sha256 digest + ScanStatus gate
+  (only CLEAN deliverable - acceptance obligation 3), Message/Draft/SendRequest
+  (idempotency key + has_send_scope), DeliveryReceipt, MailPolicy
+  (allowed scopes/commands, approval threshold, retention bound, attachment
+  bounds), MailChange/MailChangeKind (provider-neutral change feed shape).
+- `crates/nexus-email/src/error.rs`: MailError with SPEC-006 codes
+  (Validation/Authorization/Policy/NotFound/Conflict/Unavailable/Timeout/
+  Verification/Vocabulary/External/RateLimit/Internal), correlation + resource,
+  redacted surface.
+- `crates/nexus-email/src/provider.rs`: EmailProvider fail-closed port
+  (list_mailboxes/list_threads/fetch_message/list_attachments/save_draft/send/
+  reply/forward/archive/label/delete/message_state/changes) + enforce_mail_policy
+  (command + scope + approval gates BEFORE any provider mutation - SPEC-014
+  behavior 8).
+- `crates/nexus-email/src/verifier.rs`: MailVerifier exact-target
+  (Verified/Mismatch/Unknown/UnrelatedChange; unrelated message never verifies
+  the target).
+- `crates/nexus-email/tests/dependency_direction.rs`: contract crate depends
+  only on nexus-domain + serde + serde_json + sha2.
+- `tests/email` (nexus-email-e2e): M1 surface tests compose the public
+  contracts (canonical message serde, draft/send separation, unbound provider
+  fails closed, attachment digest never raw content).
+- `scripts/ep026-m1-tests.sh`: real gate with vacuity guards (EP-001 masking
+  class); pre-created node script M1 case ran only the artifact check.
+- Workspace: crates/nexus-email + tests/email registered in Cargo.toml;
+  Cargo.lock updated; both registered in the expected-files fence.
+- 18 nexus-email ep026_unit tests + 4 nexus-email-e2e ep026_unit tests green;
+  clippy -D warnings clean; fmt clean; scope audit EP-026: ok; reality gate:
+  ok; security check: ok; license gate: ok; dependency audit: ok.
+
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-19: `cargo fmt -p <crate>` is not a valid invocation (cargo fmt has
+  no -p); format via `rustfmt --edition 2021 crates/nexus-email/src/*.rs`.
+- 2026-08-19: `cargo test <filter>` under the rtk-tee wrapper compresses the
+  stream in interactive mode; appending to a log file (the gate pattern)
+  preserves the raw `running N tests` / `test result: ok` sentinels the
+  vacuity guards require.
+- 2026-08-19: clippy `manual-contains` prefers `Vec::contains(&x)` over
+  `.iter().any(|v| *v == x)` for Copy elements - applied to MailPolicy and
+  SendRequest.
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-19: nexus-email contract crate depends on nexus-domain + serde +
+  serde_json + sha2 (sha256 for Attachment digest evidence, SPEC-014
+  inputs/outputs; nexus-telephony precedent). Alternatives: raw attachment
+  content in domain - rejected (SPEC-014 says artifacts carry a digest, never
+  raw content; SECURITY.md data classification). Consequence: attachments are
+  referenced by storage_ref + digest until ArtifactStore materialization in
+  M2/M3. Reversal: ADR + schema update. Security: digest-only keeps private
+  content out of domain/telemetry. License: MIT/Apache-2.0 audit-gated.
+- 2026-08-19: MailScope is an explicit enum with one authority per variant
+  (Read/Send/Draft/Reply/Forward/Archive/Label/Attachments) instead of a
+  boolean read/send pair. Evidence: acceptance obligation 2 (read and send
+  scopes separate) + SPEC-014 behavior 2 (draft/reply/forward/archive/label
+  have separate scopes). Alternatives: single read_write flag - rejected
+  (would widen authority). Reversal: ADR + schema update.
+- 2026-08-19: M1 gate script scripts/ep026-m1-tests.sh registered in the
+  expected-files fence alongside Cargo.toml/Cargo.lock (EP-024 precedent for
+  workspace-root registration). Evidence: scope audit EP-026: ok.
 
 # 14. Outcomes & Retrospective
 

@@ -1,0 +1,11 @@
+[package]
+name = "nexus-email-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-026 M1 cross-component E2E: compose nexus-email contracts proving acceptance obligations (SPEC-014); provider adapters land in M2+"
+license = "MIT"
+
+[dependencies]
+nexus-email = { path = "../../crates/nexus-email", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde_json.workspace = true
