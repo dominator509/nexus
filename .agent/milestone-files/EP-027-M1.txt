@@ -2,5 +2,14 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-027.txt
 .agent/node-contracts/EP-027.md
+.agent/milestone-files/EP-027-M1.txt
 scripts/nodes/EP-027.sh
-crates/nexus-fax/
+scripts/ep027-m1-tests.sh
+crates/nexus-fax/Cargo.toml
+crates/nexus-fax/src/error.rs
+crates/nexus-fax/src/vocabulary.rs
+crates/nexus-fax/src/provider.rs
+crates/nexus-fax/src/lib.rs
+crates/nexus-fax/tests/dependency_direction.rs
+Cargo.toml
+Cargo.lock

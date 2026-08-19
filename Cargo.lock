@@ -1492,6 +1492,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-fax"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "nexus-frigate"
 version = "0.1.0"
 dependencies = [

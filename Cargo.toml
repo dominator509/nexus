@@ -34,6 +34,7 @@ members = [
     "crates/nexus-devices",
     "crates/nexus-telephony",
     "crates/nexus-email",
+    "crates/nexus-fax",
     "connectors/home-assistant",
     "connectors/assist-satellite",
     "connectors/bluetooth-audio",

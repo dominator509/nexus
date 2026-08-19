@@ -272,7 +272,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary (2026-08-19; gate + node sentinels observed; commit pending)
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -282,10 +282,25 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-19 M1: The pre-created EP-027 M1 test for unknown vocabulary fed a JSON object (`{"kind":"ICT_FAX"}`) to a bare-string enum. serde treats `kind` as a variant name and rejects it with `unknown variant \`kind\``. The wire vocabulary is SCREAMING_SNAKE_CASE (`ICT_FAX`/`HYLA_FAX`/`CLOUD_FAX`), confirmed by the actual serde error message. Fixed the test to use bare strings and added explicit serde rename attributes so the wire spelling is vocabulary-locked, not serde-default accidental.
+- 2026-08-19 M1: `FaxNumber` and the typed ids derived `Deserialize`, which bypassed the `new()` contract checks: an invalid number or empty id could be constructed from the wire. Added custom `Deserialize` impls that run the same normalization/validation (fail closed, never bypass). Tests prove invalid wire values are rejected and valid ones round-trip.
+- 2026-08-19 M1: `validate_send_request` accepted a request whose `approval_class` was below the job requirement (the field existed but was ignored). Added the policy check; test proves `Policy` error before any provider call.
+- 2026-08-19 M1: There was no seam proving "no provider mutation after denial". Added `submit_governed` (validate -> policy -> provider.submit) and `verify_delivery` (exact-target, SUBMITTED never verifies). A tracking provider test proves denied sends make zero `submit` calls and approved sends make exactly one.
+- 2026-08-19 M1: The write/read tool redacts phone-like literals at the display layer (`+15551234567` shown as `+155****4567`); grep/od confirm the file bytes are correct. Tests use split literals where a canonical dial string is needed so file bytes are never masked.
+- 2026-08-19 M1: `cargo test` splits the suite across two binaries (15 unit + 1 dependency-direction = 16); the gate floor guard must sum passed counts across binaries, not match a single result line.
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
 
+- 2026-08-19 M1 | Canonical provider-kind wire representation: explicit serde renames `ICT_FAX`/`HYLA_FAX`/`CLOUD_FAX` (SCREAMING_SNAKE_CASE), vocabulary-locked; internal `as_str()` keeps domain constants (`ICTFAX`, ...) distinct from wire spelling. Evidence: `ep027_unit_provider_kind_wire_vocabulary` + `ep027_unit_unknown_vocabulary_rejected` green. Alternatives: serde default naming (rejected: accidental undocumented protocol), object-tagged wire form (rejected: not the enum's serde shape). Consequence: changing a wire spelling is a schema change requiring ADR + ledger entry. Reversal: revert enum renames to `rename_all` if the blueprint mandates it. Security/license/compat: no new deps; no compat impact (crate is new).
+- 2026-08-19 M1 | Fax-number normalization: E.164-ish canonical form (strip space/dash/dot/paren, single leading `+`, 7..=16 digits, deterministic output), rejecting letters, empty, too-short/too-long, embedded/repeated `+`, and any non-canonical residue. Evidence: `ep027_unit_fax_number_normalization` green. Alternatives: store raw dial strings (rejected: domain never compares raw dial strings per SPEC-014). Consequence: providers carry carrier-specific rendering; the domain compares normalized numbers only. Reversal: adjust normalization per SPEC-014 schema update.
+- 2026-08-19 M1 | State-ladder semantics: DRAFT < QUEUED < SUBMITTING < SUBMITTED < DELIVERED plus terminal FAILED/CANCELLED/ARCHIVED; SUBMITTED is carrier acceptance, DELIVERED requires independent recipient/carrier evidence. Evidence: `ep027_unit_submitted_is_not_delivered` + `verify_delivery` exact-target tests green. Alternatives: treat carrier 200/acceptance as delivery (rejected: would fabricate delivery, Reality rule). Consequence: later provider milestones must carry delivery evidence, never infer it from submission.
+- 2026-08-19 M1 | Pre-mutation gates: `submit_governed` runs `validate_send_request` (job match, idempotency key, approval class) then `enforce_fax_policy` (approval minimum, scan CLEAN, sender != recipient) BEFORE any `provider.submit`; denied sends never reach the carrier. Evidence: `ep027_unit_governed_submit_denies_before_provider_mutation` (tracking provider: zero submits on every denial, exactly one on approval). Alternatives: validate inside providers (rejected: per-provider drift, no central proof). Consequence: adapters must call `submit_governed`, not bare `submit`. Reversal: none without ADR.
+- 2026-08-19 M1 | Serde must not bypass contract checks: `FaxNumber` and typed ids implement custom `Deserialize` running the same validation as `new()`. Evidence: `ep027_unit_number_and_ids_fail_closed_via_serde` green. Alternatives: derive `Deserialize` (rejected: invalid numbers/empty ids constructible from wire). Consequence: wire payloads are validated at the boundary; malformed values fail closed. Reversal: derive again only with a schema change.
+
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+- 2026-08-19 M1: Contract crate green and gate replacement complete. Changed files vs fence: all M1-owned paths only (crates/nexus-fax/, scripts/ep027-m1-tests.sh, scripts/nodes/EP-027.sh M1 branch, .agent/milestone-files/EP-027-M1.txt, .agent/expected-files/EP-027.txt Cargo.toml/Cargo.lock registration, ExecPlan). Commands + sentinels: `cargo test -p nexus-fax --all-targets` -> 15 unit + 1 dependency-direction, 0 failed; `sh scripts/ep027-m1-tests.sh` -> `EP-027 M1: ok`; `sh scripts/nodes/EP-027.sh M1` -> `EP-027 M1: ok`; scope audit EP-027: ok; security check: ok; license gate: ok; reality gate: ok; blueprint validation: ok; dependency audit: ok. Certification: M1 is INTERNAL CONTRACT CERTIFIED only; no fax provider claimed. Assumptions: SPEC-014 vocabulary locked per node contract. Remaining risks: provider transport, delivery evidence, and live-fire owned by M2-M5.

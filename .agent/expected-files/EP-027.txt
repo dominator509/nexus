@@ -2,9 +2,13 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-027.txt
 .agent/node-contracts/EP-027.md
+.agent/milestone-files/EP-027-M1.txt
 scripts/nodes/EP-027.sh
+scripts/ep027-m1-tests.sh
 crates/nexus-fax/
 connectors/ictfax/
 connectors/hylafax/
 infra/fax/
 tests/fax/
+Cargo.toml
+Cargo.lock

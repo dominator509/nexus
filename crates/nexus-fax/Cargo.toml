@@ -1,0 +1,17 @@
+[package]
+name = "nexus-fax"
+version = "0.1.0"
+edition = "2021"
+description = "EP-027 provider-neutral fax contracts: FaxProvider, IctFaxProvider, HylaFaxProvider, CloudFaxProvider, FaxJob, FaxDocument, FaxStatus, InboundFaxRoute (SPEC-014)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# sha256 digest for FaxDocument artifact evidence (SPEC-014 behavior 6:
+# fax jobs preserve source artifact hash; artifacts carry a digest,
+# never raw content). Aligned with the workspace sha2 0.11 line
+# (nexus-email precedent); MIT/Apache-2.0, audited by the dependency
+# gate.
+sha2 = "0.11"
