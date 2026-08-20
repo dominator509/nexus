@@ -2045,6 +2045,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-sentinel-advanced-e2e"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-sentinel",
+ "nexus-sentinel-advanced",
+ "nexus-zeek-connector",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-sentinel-core-e2e"
 version = "0.1.0"
 dependencies = [
@@ -2195,6 +2207,17 @@ dependencies = [
  "nexus-frigate",
  "nexus-roku-home",
  "nexus-vision",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-zeek-connector"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-sentinel",
+ "nexus-sentinel-advanced",
+ "serde",
  "serde_json",
 ]
 

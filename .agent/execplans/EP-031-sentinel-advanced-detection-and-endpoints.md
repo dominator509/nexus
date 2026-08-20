@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -321,6 +321,44 @@ security check: ok; license gate: ok; reality gate: ok; dependency audit:
 ok (cargo-deny 0.20.2); workspace battery 2131 passed 0 failed (2109 prior
 + 22 new EP-031 tests; docker volume prune reclaimed 63.31GB, 100%->70%
 disk).
+
+## M2 completion (2026-08-20)
+
+Gate: `sh scripts/ep031-m2-tests.sh` -> `EP-031 M2: ok` (7 Zeek adapter +
+6 advanced e2e + M1 regression; 4 vacuity guards + anti-masking
+ep031_unit_* sentinels, zero ignored/filtered).
+Node: `sh scripts/nodes/EP-031.sh M2` -> `EP-031 M2: ok` (RC=0).
+
+Created:
+- `connectors/zeek/` crate `nexus-zeek-connector`: real Zeek adapter
+  behind the NetworkDetectionProvider port. Transport (documented Zeek
+  JSON Streaming Logs surface, docs.zeek.org log-formats): reads
+  newline-delimited JSON notice records (ts/uid/id.orig_h/id.orig_p/
+  id.resp_h/id.resp_p/proto/note/msg/sub/src/dst/p/n/actions/dropped),
+  skips the leading `_path` header record, fails closed on malformed
+  JSON (SPEC-006 ExternalProvider). Adapter: capabilities advertise
+  ReadFindings ONLY when a transport is bound (Reality rule); unbound
+  fails closed Unavailable; normalization maps ONLY documented Zeek
+  notice classes (Scan::* -> ScanDetected/Medium, Weird::* ->
+  BaselineViolation/Low, DNS::* -> DnsAnomaly/Low); unknown note
+  classes are observed but never fabricated into canonical findings.
+  7 tests: transport parses documented notice, skips header/blank
+  lines, fails closed on malformed + missing fields; adapter unbound
+  fail-closed, classification table, notices->events normalization
+  with evidence_ref/correlation.
+- `tests/sentinel/advanced/` crate `nexus-sentinel-advanced-e2e`:
+  contract-composition proofs of all 4 acceptance obligations at the
+  contract level: optional profiles distinct + unbound fail closed,
+  alerts correlate into incidents not floods (duplicate never
+  re-added), high-confidence bounded quarantine preauthorized
+  (Quarantine/Block/IsolateEndpoint), destructive response never
+  preauthorized (Wipe/FactoryReset/BroadLockout/CredentialRotation
+  require human), Zeek live detection over real JSON-lines surface,
+  services fail closed when unbound. 6 tests.
+
+Side gates: scope audit EP-031: ok; fmt clean; clippy -D warnings clean
+(RefCell interior mutability for &self port contract; unit transport for
+unbound case); workspace battery green (0 failed).
 
 # 12. Surprises & Discoveries
 
