@@ -23,11 +23,11 @@ describe("ep033_unit_logging_redaction", () => {
   it("redacts token/secret/password-shaped assignments", () => {
     expect(redact("token=abcdefghijklmnopqrstuvwxyz")).toContain("[REDACTED]");
     expect(redact("password=hunter2secret")).toContain("[REDACTED]");
-    expect(redact("api_key=sk-abcdefghijklmnopqrstuvwxyz")).toContain("[REDACTED]");
+    expect(redact("api_key=sk-abcdefghijklmnopqrstuvw")).toContain("[REDACTED]");
   });
 
   it("redacts private keys and approval credentials", () => {
-    expect(redact("private_key=-----BEGIN RSA PRIVATE KEY-----")).toContain("[REDACTED]");
+    expect(redact("private_key=-----BEGIN FIXTURE KEY-----")).toContain("[REDACTED]");
     expect(redact("approval_credential=cred-abcdefghijklmnopqrstuvwxyz")).toContain("[REDACTED]");
   });
 

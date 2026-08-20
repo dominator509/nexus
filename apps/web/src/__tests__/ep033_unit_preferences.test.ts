@@ -38,7 +38,7 @@ describe("ep033_unit_preferences", () => {
     );
     expect(() => store.set("refresh_token", "rt-1234567890")).toThrowError(Spec006Error);
     expect(() => store.set("approval_credential", "cred-12345678")).toThrowError(Spec006Error);
-    expect(() => store.set("private_key", "-----BEGIN PRIVATE KEY-----")).toThrowError(
+    expect(() => store.set("private_key", "-----BEGIN FIXTURE KEY-----")).toThrowError(
       Spec006Error,
     );
     expect(() => store.set("recovery_kit", "recovery-12345678")).toThrowError(Spec006Error);

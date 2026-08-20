@@ -17,7 +17,7 @@ describe("ep033_unit_desktop_preferences", () => {
     const prefs = new DesktopPreferences();
     expect(() => prefs.setRaw("access_token", "eyJhbG...value")).toThrowError(Spec006Error);
     expect(() => prefs.setRaw("approval_credential", "cred-value")).toThrowError(Spec006Error);
-    expect(() => prefs.setRaw("private_key", "-----BEGIN PRIVATE KEY-----")).toThrowError(
+    expect(() => prefs.setRaw("private_key", "-----BEGIN FIXTURE KEY-----")).toThrowError(
       Spec006Error,
     );
   });

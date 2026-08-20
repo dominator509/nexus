@@ -9,3 +9,6 @@ pnpm-lock.yaml
 pnpm-workspace.yaml
 scripts/ep033-m1-tests.sh
 scripts/ep033-m2-tests.sh
+packages/ui/
+COMPONENT_REGISTRY.yaml
+scripts/ep033-m3-tests.sh

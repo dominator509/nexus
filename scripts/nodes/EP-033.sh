@@ -10,7 +10,7 @@ mode="${1:-verify}"
 case "$mode" in
   M1) python3 scripts/node-artifact-check.py EP-033 M1 && sh scripts/ep033-m1-tests.sh ;;
   M2) python3 scripts/node-artifact-check.py EP-033 M2 && sh scripts/ep033-m2-tests.sh ;;
-  M3) python3 scripts/node-artifact-check.py EP-033 M3; pnpm --filter @nexus/web exec vitest run -t ep033_integration ;;
+  M3) python3 scripts/node-artifact-check.py EP-033 M3 && sh scripts/ep033-m3-tests.sh ;;
   M4) python3 scripts/node-artifact-check.py EP-033 M4; pnpm --filter @nexus/web exec vitest run -t ep033_failure ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-033 M5

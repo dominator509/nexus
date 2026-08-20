@@ -351,3 +351,19 @@ components:
     carrier: "NOT ASSERTED"
     real_handset: "NOT ASSERTED"
     rationale: "EP-032 M3 SMS channel: real self-hosted SMS daemon with documented send/status/delivery-report workflow"
+  - id: react
+    capability: ui.rendering
+    implementation: "React 19.2.8 (react + react-dom; react-jsx transform)"
+    license: "MIT"
+    integration_mode: embedded
+    replacement_contract: "UI component contract; server-renderable components over @nexus/web contracts; authority/state semantics come from @nexus/web, never from the component layer"
+    commercial_review: "MIT; commercial use permitted"
+    status: ep033-m3
+    owner: "EP-033"
+    upstream_software: "React 19.2.8"
+    tested_package: "19.2.8 (react + react-dom via pnpm lockfile)"
+    integrity: "sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw=="
+    docs: "https://react.dev/"
+    fixture: "real React 19 server rendering via react-dom/server renderToString in ep033_integration_* tests (real markup output; no browser/jsdom in M3)"
+    browser_runtime: "NOT ASSERTED in M3 (Playwright e2e owned by M4/M5)"
+    rationale: "EP-033 M3 shared UI components (SPEC-017 behavior 1: React PWA is the shared web surface)"

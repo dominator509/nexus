@@ -1,0 +1,29 @@
+{
+  "name": "@nexus/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus shared UI components (EP-033 M3): real React 19 component integration over the @nexus/web contracts. Server-renderable components for the web PWA and desktop shell; authority/state semantics come from @nexus/web, never from the component layer.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/contracts": "workspace:*",
+    "@nexus/web": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0"
+  }
+}
