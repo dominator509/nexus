@@ -62,6 +62,7 @@ members = [
     "connectors/adguard-home",
     "connectors/suricata",
     "connectors/zeek",
+    "connectors/crowdsec",
     "infra/sentinel/core",
     "infra/sentinel/advanced",
     "tests/audio",

@@ -276,7 +276,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -359,6 +359,48 @@ Created:
 Side gates: scope audit EP-031: ok; fmt clean; clippy -D warnings clean
 (RefCell interior mutability for &self port contract; unit transport for
 unbound case); workspace battery green (0 failed).
+
+## M3 completion (2026-08-20)
+
+Gate: `sh scripts/ep031-m3-tests.sh` -> `EP-031 M3: ok` (10 CrowdSec
+tests + M1 + M2 regressions; 6 vacuity guards incl. real-socket
+anti-masking sentinels, zero ignored/filtered).
+Node: `sh scripts/nodes/EP-031.sh M3` -> `EP-031 M3: ok` (RC=0).
+
+Created:
+- `connectors/crowdsec/` crate `nexus-crowdsec-connector`: real CrowdSec
+  adapter behind the ThreatIntelProvider port (CrowdSec optional
+  reputation enforcement - SPEC-013 behavior 3; COMPONENT_REGISTRY
+  external sensor MIT). Transport (documented CrowdSec Local API /
+  LAPI surface, doc.crowdsec.net/docs/local_api + upstream apiserver
+  source): POST /v1/watchers/login (machine_id/password -> JWT token),
+  GET /v1/decisions?ip=<addr> with Bearer auth (decisions[].id/origin/
+  type/scope/value/duration/scenario/action/created_at); SPEC-006
+  mapping (400->Validation, 401/403->Authorization incl. bounded
+  single re-login on expired token - never an unbounded retry loop,
+  404->NotFound, 429->RateLimit, 5xx->Unavailable, refused->
+  Unavailable, malformed JSON->External fail closed); credentials used
+  ONLY for the login exchange, never logged/embedded in errors.
+  Adapter: capabilities advertise ReadFindings ONLY when a transport
+  is bound (Reality rule); unbound -> Unavailable; empty indicator ->
+  Validation BEFORE transport; normalization maps ONLY the documented
+  `ban` decision action to a canonical SecurityEvent (ScanDetected/
+  Medium, evidence crowdsec:<scenario>:<value>, correlation
+  origin=<origin>); non-ban actions and clean reputation are OBSERVED
+  absence of evidence, never fabricated verdicts.
+  10 tests green: 6 unit (decision parse, missing fields fail closed,
+  unbound fail closed, empty indicator Validation, ban normalized,
+  non-ban returns None) + 4 REAL std::net socket integration tests
+  against controlled local fixtures emitting REAL LAPI-shaped
+  responses (full login+ban decision lifecycle, clean reputation empty
+  decisions, login rejected 401 -> Authorization fail closed, refused
+  port -> Unavailable fail closed); production transport never mocked.
+  COMPONENT_REGISTRY entry (crowdsec external sensor, MIT) recorded in
+  the registry for the advanced profile.
+- M1/M2 regressions green in the gate.
+
+Side gates: scope audit EP-031: ok; fmt clean; clippy -D warnings clean;
+workspace battery green (0 failed).
 
 # 12. Surprises & Discoveries
 

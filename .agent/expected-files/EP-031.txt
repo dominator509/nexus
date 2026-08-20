@@ -5,8 +5,10 @@
 scripts/nodes/EP-031.sh
 scripts/ep031-m1-tests.sh
 scripts/ep031-m2-tests.sh
+scripts/ep031-m3-tests.sh
 connectors/suricata/
 connectors/zeek/
+connectors/crowdsec/
 infra/sentinel/advanced/
 tests/sentinel/advanced/
 Cargo.toml

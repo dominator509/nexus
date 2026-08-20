@@ -1,0 +1,18 @@
+[package]
+name = "nexus-crowdsec-connector"
+version = "0.1.0"
+edition = "2021"
+description = "EP-031 CrowdSec connector: optional reputation enforcement adapter behind the nexus-sentinel-advanced ThreatIntelProvider port (SPEC-013)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-sentinel = { path = "../../crates/nexus-sentinel", version = "0.1.0" }
+nexus-sentinel-advanced = { path = "../../infra/sentinel/advanced", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real CrowdSec Local API (LAPI) HTTP transport (SPEC-013: CrowdSec is
+# optional reputation enforcement; COMPONENT_REGISTRY external sensor,
+# MIT). reqwest is the locked workspace dependency class (EP-011/EP-024/
+# EP-026/EP-027/EP-028/EP-029/EP-030 precedent).
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json"] }

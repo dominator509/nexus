@@ -1461,6 +1461,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-crowdsec-connector"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-sentinel",
+ "nexus-sentinel-advanced",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-data"
 version = "0.1.0"
 dependencies = [
