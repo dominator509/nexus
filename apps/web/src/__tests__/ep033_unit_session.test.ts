@@ -12,7 +12,9 @@ function uuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
 
-function sessionWire(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function sessionWire(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     session_id: uuid(1),
     principal_id: uuid(2),
@@ -28,7 +30,9 @@ function sessionWire(overrides: Record<string, unknown> = {}): Record<string, un
   };
 }
 
-function businessWire(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function businessWire(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     tenant_id: uuid(3),
     principal_id: uuid(2),
@@ -51,7 +55,9 @@ describe("ep033_unit_session", () => {
 
   it("rejects unknown fields (deny-unknown, canonical schema semantics)", () => {
     const wire = sessionWire({ injected: "x" });
-    expect(() => AuthenticatedSession.fromWire(wire)).toThrowError(Spec006Error);
+    expect(() => AuthenticatedSession.fromWire(wire)).toThrowError(
+      Spec006Error,
+    );
     try {
       AuthenticatedSession.fromWire(wire);
       expect.unreachable();
@@ -61,12 +67,12 @@ describe("ep033_unit_session", () => {
   });
 
   it("rejects invalid enum values and malformed uuids", () => {
-    expect(() => AuthenticatedSession.fromWire(sessionWire({ grant_flow: "MAGIC" }))).toThrowError(
-      Spec006Error,
-    );
-    expect(() => AuthenticatedSession.fromWire(sessionWire({ session_id: "not-a-uuid" }))).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      AuthenticatedSession.fromWire(sessionWire({ grant_flow: "MAGIC" })),
+    ).toThrowError(Spec006Error);
+    expect(() =>
+      AuthenticatedSession.fromWire(sessionWire({ session_id: "not-a-uuid" })),
+    ).toThrowError(Spec006Error);
   });
 
   it("computes EXPIRED from authoritative expiry, not cached state", () => {
@@ -75,7 +81,9 @@ describe("ep033_unit_session", () => {
   });
 
   it("computes REVOKED before expiry", () => {
-    const session = AuthenticatedSession.fromWire(sessionWire({ revoked: true }));
+    const session = AuthenticatedSession.fromWire(
+      sessionWire({ revoked: true }),
+    );
     expect(session.statusAt(1_700_000_001)).toBe(SessionStatus.REVOKED);
   });
 
@@ -98,17 +106,23 @@ describe("ep033_unit_session", () => {
 
   it("refuses binding a business context from another principal", () => {
     const session = AuthenticatedSession.fromWire(sessionWire());
-    const other = BusinessContext.fromWire(businessWire({ principal_id: uuid(9) }));
+    const other = BusinessContext.fromWire(
+      businessWire({ principal_id: uuid(9) }),
+    );
     expect(() => BoundContext.bind(session, other)).toThrowError(Spec006Error);
   });
 
   it("invalidates prior-context projections on business switch", () => {
     const session = AuthenticatedSession.fromWire(sessionWire());
-    const businessA = BusinessContext.fromWire(businessWire({ business_id: uuid(6) }));
+    const businessA = BusinessContext.fromWire(
+      businessWire({ business_id: uuid(6) }),
+    );
     const boundA = BoundContext.bind(session, businessA);
     const projectionA = new ContextProjection<string>(boundA, "A-only data");
 
-    const businessB = BusinessContext.fromWire(businessWire({ business_id: uuid(10) }));
+    const businessB = BusinessContext.fromWire(
+      businessWire({ business_id: uuid(10) }),
+    );
     const boundB = boundA.switchBusiness(businessB);
     projectionA.invalidate();
 
@@ -124,11 +138,15 @@ describe("ep033_unit_session", () => {
 
   it("refuses using a projection bound to a different business context", () => {
     const session = AuthenticatedSession.fromWire(sessionWire());
-    const businessA = BusinessContext.fromWire(businessWire({ business_id: uuid(6) }));
+    const businessA = BusinessContext.fromWire(
+      businessWire({ business_id: uuid(6) }),
+    );
     const boundA = BoundContext.bind(session, businessA);
     const projectionA = new ContextProjection<string>(boundA, "A-only data");
 
-    const businessB = BusinessContext.fromWire(businessWire({ business_id: uuid(10) }));
+    const businessB = BusinessContext.fromWire(
+      businessWire({ business_id: uuid(10) }),
+    );
     const boundB = BoundContext.bind(session, businessB);
     // Without explicit invalidation, context mismatch alone refuses use.
     expect(() => projectionA.requireCurrent(boundB)).toThrowError(Spec006Error);
@@ -136,7 +154,9 @@ describe("ep033_unit_session", () => {
 
   it("allows use of a projection while its context is current", () => {
     const session = AuthenticatedSession.fromWire(sessionWire());
-    const businessA = BusinessContext.fromWire(businessWire({ business_id: uuid(6) }));
+    const businessA = BusinessContext.fromWire(
+      businessWire({ business_id: uuid(6) }),
+    );
     const boundA = BoundContext.bind(session, businessA);
     const projectionA = new ContextProjection<string>(boundA, "A-only data");
     expect(projectionA.requireCurrent(boundA)).toBe("A-only data");

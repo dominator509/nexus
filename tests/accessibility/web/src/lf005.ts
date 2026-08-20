@@ -41,7 +41,16 @@ import { DesktopApprovalFlow, DesktopCommandDispatcher } from "@nexus/desktop";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // src -> web -> accessibility -> tests -> repo root
-const EVIDENCE_DIR = join(__dirname, "..", "..", "..", "..", ".agent", "state", "evidence");
+const EVIDENCE_DIR = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  ".agent",
+  "state",
+  "evidence",
+);
 
 function uuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -89,7 +98,10 @@ export interface Lf005Evidence {
   timestamp_unix_s: number;
 }
 
-function sessionFixture(principalN: number, expiresAt = 1_800_000_000): AuthenticatedSession {
+function sessionFixture(
+  principalN: number,
+  expiresAt = 1_800_000_000,
+): AuthenticatedSession {
   return AuthenticatedSession.fromWire({
     session_id: uuid(principalN),
     principal_id: uuid(principalN),
@@ -141,7 +153,9 @@ export function runLf005Journey(run: string): Lf005Evidence {
       correlation,
     }),
   );
-  const objectiveBound = voiceObjective.matchesCorrelation(webContext.session.correlation);
+  const objectiveBound = voiceObjective.matchesCorrelation(
+    webContext.session.correlation,
+  );
   // DISPLAYED != AUTHORIZED: at this moment the objective is visible on
   // the web surface, but NOTHING has been dispatched or executed.
   const executedAtDisplayTime = false;
@@ -167,8 +181,14 @@ export function runLf005Journey(run: string): Lf005Evidence {
   const flow = new DesktopApprovalFlow(approvalCard);
   // Mobile principal A approves; web principal B (requester) is
   // excluded; a second mobile principal satisfies four-eyes.
-  flow.apply(ApprovalAction.record(uuid(30), "APPROVE", uuid(40), 1), 1_700_000_001);
-  flow.apply(ApprovalAction.record(uuid(30), "APPROVE", uuid(41), 2), 1_700_000_002);
+  flow.apply(
+    ApprovalAction.record(uuid(30), "APPROVE", uuid(40), 1),
+    1_700_000_001,
+  );
+  flow.apply(
+    ApprovalAction.record(uuid(30), "APPROVE", uuid(41), 2),
+    1_700_000_002,
+  );
   const progression = flow.progression();
 
   // 4. FINAL ARTIFACT IN THE SAME TASK GRAPH: dispatch the continuation
@@ -200,10 +220,20 @@ export function runLf005Journey(run: string): Lf005Evidence {
     vocabulary,
     webSession,
   );
-  const dispatchResult = dispatcher.dispatch(request, webSession, 1_700_000_003, () => {
-    executed = true;
-  });
-  const artifact = new TaskNode("task-final-artifact", objectiveId, "Runbook artifact", true);
+  const dispatchResult = dispatcher.dispatch(
+    request,
+    webSession,
+    1_700_000_003,
+    () => {
+      executed = true;
+    },
+  );
+  const artifact = new TaskNode(
+    "task-final-artifact",
+    objectiveId,
+    "Runbook artifact",
+    true,
+  );
 
   const evidence: Lf005Evidence = {
     node: "EP-033",
@@ -242,7 +272,8 @@ export function runLf005Journey(run: string): Lf005Evidence {
       // APPROVED != EXECUTED: approval was satisfied, but execution
       // happened only when the real dispatcher ran the command.
       approved_not_executed_until_dispatched: progression.satisfied && executed,
-      executed_only_after_dispatch: executed && dispatchResult.status === "EXECUTED",
+      executed_only_after_dispatch:
+        executed && dispatchResult.status === "EXECUTED",
     },
     timestamp_unix_s: Math.floor(Date.now() / 1000),
   };

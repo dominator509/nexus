@@ -45,7 +45,9 @@ function bound(): BoundContext {
 
 describe("ep033_integration_status", () => {
   it("renders connectivity verbatim with a status role", () => {
-    const html = renderToString(<StatusBadge connectivity="OFFLINE" freshness="STALE" />);
+    const html = renderToString(
+      <StatusBadge connectivity="OFFLINE" freshness="STALE" />,
+    );
     expect(html).toContain('role="status"');
     expect(html).toContain('data-connectivity="OFFLINE"');
     expect(html).toContain('data-freshness="STALE"');
@@ -54,19 +56,25 @@ describe("ep033_integration_status", () => {
   });
 
   it("labels stale data explicitly, never as live", () => {
-    const html = renderToString(<StatusBadge connectivity="CONNECTED" freshness="STALE" />);
+    const html = renderToString(
+      <StatusBadge connectivity="CONNECTED" freshness="STALE" />,
+    );
     expect(html).toContain("(stale)");
     expect(html).not.toContain("CONNECTED</span>");
   });
 
   it("renders fresh connected state without a stale label", () => {
-    const html = renderToString(<StatusBadge connectivity="CONNECTED" freshness="FRESH" />);
+    const html = renderToString(
+      <StatusBadge connectivity="CONNECTED" freshness="FRESH" />,
+    );
     expect(html).toContain("CONNECTED");
     expect(html).not.toContain("stale");
   });
 
   it("conveys state by text, not color alone (non-color status)", () => {
-    const html = renderToString(<StatusBadge connectivity="AUTH_EXPIRED" freshness="STALE" />);
+    const html = renderToString(
+      <StatusBadge connectivity="AUTH_EXPIRED" freshness="STALE" />,
+    );
     expect(html).toContain("AUTH_EXPIRED");
     // No color-only encoding exists in the rendered output.
     expect(html).not.toContain("style=");
@@ -76,9 +84,18 @@ describe("ep033_integration_status", () => {
 describe("ep033_integration_shell", () => {
   it("binds tenant/principal/business from the session context, not a label", () => {
     const context = bound();
-    const shell = DashboardShell.create("approvals", "approvals", "CONNECTED", context);
+    const shell = DashboardShell.create(
+      "approvals",
+      "approvals",
+      "CONNECTED",
+      context,
+    );
     const html = renderToString(
-      <DashboardShellView shell={shell} context={context} connectivity="CONNECTED" />,
+      <DashboardShellView
+        shell={shell}
+        context={context}
+        connectivity="CONNECTED"
+      />,
     );
     expect(html).toContain(`data-tenant-id="${uuid(3)}"`);
     expect(html).toContain(`data-principal-id="${uuid(2)}"`);
@@ -87,9 +104,18 @@ describe("ep033_integration_shell", () => {
 
   it("renders the current route and surface", () => {
     const context = bound();
-    const shell = DashboardShell.create("security", "security", "CONNECTED", context);
+    const shell = DashboardShell.create(
+      "security",
+      "security",
+      "CONNECTED",
+      context,
+    );
     const html = renderToString(
-      <DashboardShellView shell={shell} context={context} connectivity="DEGRADED" />,
+      <DashboardShellView
+        shell={shell}
+        context={context}
+        connectivity="DEGRADED"
+      />,
     );
     expect(html).toContain('data-route="security"');
     expect(html).toContain('data-surface="security"');
@@ -98,9 +124,18 @@ describe("ep033_integration_shell", () => {
 
   it("renders primary navigation landmarks", () => {
     const context = bound();
-    const shell = DashboardShell.create("home", "dashboard", "CONNECTED", context);
+    const shell = DashboardShell.create(
+      "home",
+      "dashboard",
+      "CONNECTED",
+      context,
+    );
     const html = renderToString(
-      <DashboardShellView shell={shell} context={context} connectivity="CONNECTED" />,
+      <DashboardShellView
+        shell={shell}
+        context={context}
+        connectivity="CONNECTED"
+      />,
     );
     expect(html).toContain('role="navigation"');
     expect(html).toContain("Approvals");

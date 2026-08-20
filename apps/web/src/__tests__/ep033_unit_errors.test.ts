@@ -36,7 +36,11 @@ describe("ep033_unit_errors_vocabulary", () => {
   });
 
   it("produces RFC 9457-compatible problem details with stable codes", () => {
-    const error = new Spec006Error(ErrorCode.Policy, "policy rejected", "corr-0001");
+    const error = new Spec006Error(
+      ErrorCode.Policy,
+      "policy rejected",
+      "corr-0001",
+    );
     const details = error.toProblemDetails();
     expect(details.code).toBe(ErrorCode.Policy);
     expect(details.type).toBe("https://schemas.nexus.local/problems/policy");
@@ -45,12 +49,24 @@ describe("ep033_unit_errors_vocabulary", () => {
   });
 
   it("maps each error class to a stable HTTP status", () => {
-    expect(new Spec006Error(ErrorCode.Authentication, "x").toProblemDetails().status).toBe(401);
-    expect(new Spec006Error(ErrorCode.Authorization, "x").toProblemDetails().status).toBe(403);
-    expect(new Spec006Error(ErrorCode.NotFound, "x").toProblemDetails().status).toBe(404);
-    expect(new Spec006Error(ErrorCode.Unavailable, "x").toProblemDetails().status).toBe(503);
-    expect(new Spec006Error(ErrorCode.Timeout, "x").toProblemDetails().status).toBe(504);
-    expect(new Spec006Error(ErrorCode.RateLimit, "x").toProblemDetails().status).toBe(429);
+    expect(
+      new Spec006Error(ErrorCode.Authentication, "x").toProblemDetails().status,
+    ).toBe(401);
+    expect(
+      new Spec006Error(ErrorCode.Authorization, "x").toProblemDetails().status,
+    ).toBe(403);
+    expect(
+      new Spec006Error(ErrorCode.NotFound, "x").toProblemDetails().status,
+    ).toBe(404);
+    expect(
+      new Spec006Error(ErrorCode.Unavailable, "x").toProblemDetails().status,
+    ).toBe(503);
+    expect(
+      new Spec006Error(ErrorCode.Timeout, "x").toProblemDetails().status,
+    ).toBe(504);
+    expect(
+      new Spec006Error(ErrorCode.RateLimit, "x").toProblemDetails().status,
+    ).toBe(429);
   });
 
   it("classifies unknown thrown values into the internal class, never success", () => {
@@ -65,10 +81,7 @@ describe("ep033_unit_errors_vocabulary", () => {
   });
 
   it("never embeds secrets in problem details", () => {
-    const error = new Spec006Error(
-      ErrorCode.Authorization,
-      "token invalid",
-    );
+    const error = new Spec006Error(ErrorCode.Authorization, "token invalid");
     const details = error.toProblemDetails();
     expect(details.detail).not.toMatch(/eyJ[a-zA-Z0-9_-]{10,}/);
   });

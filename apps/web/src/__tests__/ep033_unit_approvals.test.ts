@@ -13,7 +13,9 @@ function uuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
 
-function cardWire(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function cardWire(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     approval_id: uuid(30),
     action_id: uuid(31),
@@ -56,8 +58,12 @@ describe("ep033_unit_approval_center", () => {
 
   it("never collapses approval class into a boolean (class preserved verbatim)", () => {
     const human = ApprovalCard.fromWire(cardWire({ approval_class: "HUMAN" }));
-    const strong = ApprovalCard.fromWire(cardWire({ approval_class: "STRONG_HUMAN" }));
-    const fourEyes = ApprovalCard.fromWire(cardWire({ approval_class: "FOUR_EYES" }));
+    const strong = ApprovalCard.fromWire(
+      cardWire({ approval_class: "STRONG_HUMAN" }),
+    );
+    const fourEyes = ApprovalCard.fromWire(
+      cardWire({ approval_class: "FOUR_EYES" }),
+    );
     expect(human.approval_class).toBe("HUMAN");
     expect(strong.approval_class).toBe("STRONG_HUMAN");
     expect(fourEyes.approval_class).toBe("FOUR_EYES");
@@ -66,9 +72,9 @@ describe("ep033_unit_approval_center", () => {
   });
 
   it("rejects unknown approval classes", () => {
-    expect(() => ApprovalCard.fromWire(cardWire({ approval_class: "GENERIC_APPROVE" }))).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      ApprovalCard.fromWire(cardWire({ approval_class: "GENERIC_APPROVE" })),
+    ).toThrowError(Spec006Error);
   });
 
   it("four-eyes requires two distinct principals", () => {
@@ -78,7 +84,9 @@ describe("ep033_unit_approval_center", () => {
 
     // Same principal approves again: still not satisfied (one account
     // can never satisfy FOUR_EYES).
-    expect(() => fourEyes.requireNewPrincipal(uuid(40))).toThrowError(Spec006Error);
+    expect(() => fourEyes.requireNewPrincipal(uuid(40))).toThrowError(
+      Spec006Error,
+    );
     fourEyes.apply(ApprovalAction.record(uuid(30), "APPROVE", uuid(40), 2));
     expect(fourEyes.isSatisfied(uuid(32))).toBe(false);
     expect(fourEyes.distinctApprovers()).toEqual([uuid(40)]);
@@ -89,7 +97,9 @@ describe("ep033_unit_approval_center", () => {
     fourEyes.apply(ApprovalAction.record(uuid(30), "APPROVE", uuid(40), 1));
     fourEyes.apply(ApprovalAction.record(uuid(30), "APPROVE", uuid(41), 2));
     expect(fourEyes.isSatisfied(uuid(32))).toBe(true);
-    expect([...fourEyes.distinctApprovers()].sort()).toEqual([uuid(40), uuid(41)].sort());
+    expect([...fourEyes.distinctApprovers()].sort()).toEqual(
+      [uuid(40), uuid(41)].sort(),
+    );
   });
 
   it("excludes the requester from satisfying four-eyes", () => {
@@ -102,13 +112,19 @@ describe("ep033_unit_approval_center", () => {
 
   it("refuses actions targeting a different approval", () => {
     const fourEyes = new FourEyesRecord(uuid(30));
-    expect(() => fourEyes.apply(ApprovalAction.record(uuid(99), "APPROVE", uuid(40), 1))).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      fourEyes.apply(ApprovalAction.record(uuid(99), "APPROVE", uuid(40), 1)),
+    ).toThrowError(Spec006Error);
   });
 
   it("exposes the canonical approval states and actions", () => {
-    expect([...APPROVAL_STATES]).toEqual(["PENDING", "APPROVED", "DENIED", "EXPIRED", "REVOKED"]);
+    expect([...APPROVAL_STATES]).toEqual([
+      "PENDING",
+      "APPROVED",
+      "DENIED",
+      "EXPIRED",
+      "REVOKED",
+    ]);
     expect([...APPROVAL_ACTIONS]).toEqual(["APPROVE", "DENY"]);
   });
 

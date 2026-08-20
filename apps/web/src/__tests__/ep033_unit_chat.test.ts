@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { ChatMessage, ChatWorkspace, CHAT_ORIGINS, MESSAGE_DIRECTIONS } from "../contracts/chat-workspace";
+import {
+  ChatMessage,
+  ChatWorkspace,
+  CHAT_ORIGINS,
+  MESSAGE_DIRECTIONS,
+} from "../contracts/chat-workspace";
 import { ErrorCode, Spec006Error } from "../contracts/errors";
 
-function messageWire(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function messageWire(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     message_id: "msg-0001",
     conversation_id: "conv-0001",
@@ -30,22 +37,24 @@ describe("ep033_unit_chat_workspace", () => {
   });
 
   it("rejects empty or oversized message text", () => {
-    expect(() => ChatMessage.fromWire(messageWire({ text: "" }))).toThrowError(Spec006Error);
-    expect(() => ChatMessage.fromWire(messageWire({ text: "x".repeat(4001) }))).toThrowError(
+    expect(() => ChatMessage.fromWire(messageWire({ text: "" }))).toThrowError(
       Spec006Error,
     );
+    expect(() =>
+      ChatMessage.fromWire(messageWire({ text: "x".repeat(4001) })),
+    ).toThrowError(Spec006Error);
   });
 
   it("rejects short idempotency keys", () => {
-    expect(() => ChatMessage.fromWire(messageWire({ idempotency_key: "tiny" }))).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      ChatMessage.fromWire(messageWire({ idempotency_key: "tiny" })),
+    ).toThrowError(Spec006Error);
   });
 
   it("rejects unknown fields", () => {
-    expect(() => ChatMessage.fromWire(messageWire({ action_name: "lights-off" }))).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      ChatMessage.fromWire(messageWire({ action_name: "lights-off" })),
+    ).toThrowError(Spec006Error);
   });
 
   it("treats message text as data, never as command authority", () => {
@@ -76,7 +85,12 @@ describe("ep033_unit_chat_workspace", () => {
     const workspace = new ChatWorkspace("conv-0001", "corr-0001");
     workspace.append(ChatMessage.fromWire(messageWire()));
     workspace.append(
-      ChatMessage.fromWire(messageWire({ message_id: "msg-0002", idempotency_key: "send-00000002" })),
+      ChatMessage.fromWire(
+        messageWire({
+          message_id: "msg-0002",
+          idempotency_key: "send-00000002",
+        }),
+      ),
     );
     expect(workspace.messages()).toHaveLength(2);
   });
@@ -85,7 +99,9 @@ describe("ep033_unit_chat_workspace", () => {
     // SPEC-004 acceptance: web dashboard supports chat. The contract
     // surface is origin-neutral: HUMAN or AGENT messages flow through
     // the same typed envelope regardless of device.
-    const agent = ChatMessage.fromWire(messageWire({ origin: "AGENT", direction: "INBOUND" }));
+    const agent = ChatMessage.fromWire(
+      messageWire({ origin: "AGENT", direction: "INBOUND" }),
+    );
     expect(agent.origin).toBe("AGENT");
   });
 });

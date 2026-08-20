@@ -7,7 +7,12 @@
  * and approval contracts, never through the console rendering layer.
  */
 
-import { assertEnum, assertObject, assertString, rejectUnknownFields } from "./validate";
+import {
+  assertEnum,
+  assertObject,
+  assertString,
+  rejectUnknownFields,
+} from "./validate";
 import { ErrorCode, Spec006Error } from "./errors";
 
 export const SEVERITY_LEVELS = [
@@ -64,13 +69,24 @@ export class SecurityIncident {
     rejectUnknownFields(obj, INCIDENT_FIELDS, "SecurityIncident");
     const incidentId = assertString(obj.incident_id, "incident_id");
     if (incidentId.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "incident_id must not be empty");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "incident_id must not be empty",
+      );
     }
     return new SecurityIncident({
       incident_id: incidentId,
       title: assertString(obj.title, "title"),
-      severity: assertEnum(obj.severity, new Set<SeverityLevel>(SEVERITY_LEVELS), "severity"),
-      status: assertEnum(obj.status, new Set<IncidentStatus>(INCIDENT_STATUSES), "status"),
+      severity: assertEnum(
+        obj.severity,
+        new Set<SeverityLevel>(SEVERITY_LEVELS),
+        "severity",
+      ),
+      status: assertEnum(
+        obj.status,
+        new Set<IncidentStatus>(INCIDENT_STATUSES),
+        "status",
+      ),
       correlation_id: assertString(obj.correlation_id, "correlation_id"),
     });
   }

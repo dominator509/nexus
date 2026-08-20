@@ -39,10 +39,16 @@ describe("ep033_unit_events_subscription", () => {
       correlation: "corr-0001",
     });
     expect(filter.matches(envelope())).toBe(true);
-    expect(filter.matches(envelope({ event_type: "objective.created" }))).toBe(false);
+    expect(filter.matches(envelope({ event_type: "objective.created" }))).toBe(
+      false,
+    );
     expect(filter.matches(envelope({ source: "memory" }))).toBe(false);
     expect(
-      filter.matches(envelope({ schema_version: "2.0.0" } as unknown as Partial<EventEnvelope>)),
+      filter.matches(
+        envelope({
+          schema_version: "2.0.0",
+        } as unknown as Partial<EventEnvelope>),
+      ),
     ).toBe(false);
   });
 
@@ -80,6 +86,8 @@ describe("ep033_unit_events_subscription", () => {
       "corr-0001",
     );
     expect(subscription.accept(envelope())).toBe(true);
-    expect(subscription.accept(envelope({ event_type: "unrelated.event" }))).toBe(false);
+    expect(
+      subscription.accept(envelope({ event_type: "unrelated.event" })),
+    ).toBe(false);
   });
 });

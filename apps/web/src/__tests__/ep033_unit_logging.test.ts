@@ -17,22 +17,31 @@ describe("ep033_unit_logging_redaction", () => {
   });
 
   it("redacts bearer tokens from free text", () => {
-    expect(redact("Authorization: Bearer abcdefghijklmnopqrstuvwxyz")).toContain("[REDACTED]");
+    expect(
+      redact("Authorization: Bearer abcdefghijklmnopqrstuvwxyz"),
+    ).toContain("[REDACTED]");
   });
 
   it("redacts token/secret/password-shaped assignments", () => {
     expect(redact("token=abcdefghijklmnopqrstuvwxyz")).toContain("[REDACTED]");
     expect(redact("password=hunter2secret")).toContain("[REDACTED]");
-    expect(redact("api_key=sk-abcdefghijklmnopqrstuvw")).toContain("[REDACTED]");
+    expect(redact("api_key=sk-abcdefghijklmnopqrstuvw")).toContain(
+      "[REDACTED]",
+    );
   });
 
   it("redacts private keys and approval credentials", () => {
-    expect(redact("private_key=-----BEGIN FIXTURE KEY-----")).toContain("[REDACTED]");
-    expect(redact("approval_credential=cred-abcdefghijklmnopqrstuvwxyz")).toContain("[REDACTED]");
+    expect(redact("private_key=-----BEGIN FIXTURE KEY-----")).toContain(
+      "[REDACTED]",
+    );
+    expect(
+      redact("approval_credential=cred-abcdefghijklmnopqrstuvwxyz"),
+    ).toContain("[REDACTED]");
   });
 
   it("redacts JWTs in free text", () => {
-    const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.signaturepart123456";
+    const jwt =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.signaturepart123456";
     expect(redact(`token ${jwt}`)).not.toContain(jwt);
     expect(redact(`token ${jwt}`)).toContain("[REDACTED]");
   });
@@ -58,7 +67,10 @@ describe("ep033_unit_logging_redaction", () => {
       duration_ms: 4,
     });
     logger.assertNoSecrets();
-    const serialized = logger.entries().map((entry) => entry.serialize()).join("\n");
+    const serialized = logger
+      .entries()
+      .map((entry) => entry.serialize())
+      .join("\n");
     expect(serialized).not.toMatch(/eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/);
     expect(serialized).not.toMatch(/password=/);
     expect(serialized).not.toMatch(/token=/);

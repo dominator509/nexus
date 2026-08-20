@@ -13,9 +13,15 @@ import { join } from "node:path";
 
 const SCHEMAS = join(process.cwd(), "..", "..", "schemas");
 
-function loadSchema(rel: string): { properties: Record<string, unknown>; required?: Array<string> } {
+function loadSchema(rel: string): {
+  properties: Record<string, unknown>;
+  required?: Array<string>;
+} {
   const raw = readFileSync(join(SCHEMAS, rel), "utf8");
-  return JSON.parse(raw) as { properties: Record<string, unknown>; required?: Array<string> };
+  return JSON.parse(raw) as {
+    properties: Record<string, unknown>;
+    required?: Array<string>;
+  };
 }
 
 describe("ep033_unit_schema_parity", () => {
@@ -42,14 +48,25 @@ describe("ep033_unit_schema_parity", () => {
 
   it("grant_flow enum matches the canonical auth-session schema", () => {
     const schema = loadSchema("auth/auth-session.schema.json");
-    const grantFlow = schema.properties["grant_flow"] as { enum?: Array<string> };
-    expect(grantFlow.enum).toEqual(["AUTHORIZATION_CODE", "REFRESH_TOKEN", "CLIENT_CREDENTIALS"]);
+    const grantFlow = schema.properties["grant_flow"] as {
+      enum?: Array<string>;
+    };
+    expect(grantFlow.enum).toEqual([
+      "AUTHORIZATION_CODE",
+      "REFRESH_TOKEN",
+      "CLIENT_CREDENTIALS",
+    ]);
   });
 
   it("strength enum matches the canonical auth-session schema", () => {
     const schema = loadSchema("auth/auth-session.schema.json");
     const strength = schema.properties["strength"] as { enum?: Array<string> };
-    expect(strength.enum).toEqual(["NONE", "SINGLE_FACTOR", "MULTI_FACTOR", "STEP_UP"]);
+    expect(strength.enum).toEqual([
+      "NONE",
+      "SINGLE_FACTOR",
+      "MULTI_FACTOR",
+      "STEP_UP",
+    ]);
   });
 
   it("command contract matches the canonical action-request schema fields", () => {
@@ -83,25 +100,52 @@ describe("ep033_unit_schema_parity", () => {
   it("capability approval enum matches the canonical capability-descriptor schema", () => {
     const schema = loadSchema("capability-descriptor.schema.json");
     const approval = schema.properties["approval"] as { enum?: Array<string> };
-    expect(approval.enum).toEqual(["NONE", "POLICY", "HUMAN", "STRONG_HUMAN", "FOUR_EYES"]);
+    expect(approval.enum).toEqual([
+      "NONE",
+      "POLICY",
+      "HUMAN",
+      "STRONG_HUMAN",
+      "FOUR_EYES",
+    ]);
   });
 
   it("capability class enum matches the canonical capability-descriptor schema", () => {
     const schema = loadSchema("capability-descriptor.schema.json");
     const klass = schema.properties["class"] as { enum?: Array<string> };
-    expect(klass.enum).toEqual(["QUERY", "COMMAND", "WORKFLOW", "STREAM", "ADMINISTRATIVE"]);
+    expect(klass.enum).toEqual([
+      "QUERY",
+      "COMMAND",
+      "WORKFLOW",
+      "STREAM",
+      "ADMINISTRATIVE",
+    ]);
   });
 
   it("capability availability enum matches the canonical capability-descriptor schema", () => {
     const schema = loadSchema("capability-descriptor.schema.json");
-    const availability = schema.properties["availability"] as { enum?: Array<string> };
-    expect(availability.enum).toEqual(["AVAILABLE", "DEGRADED", "UNAVAILABLE", "UNCERTIFIED"]);
+    const availability = schema.properties["availability"] as {
+      enum?: Array<string>;
+    };
+    expect(availability.enum).toEqual([
+      "AVAILABLE",
+      "DEGRADED",
+      "UNAVAILABLE",
+      "UNCERTIFIED",
+    ]);
   });
 
   it("business context contract matches the canonical hydra schema fields", () => {
     const schema = loadSchema("hydra/business-context.schema.json");
     const expected = Object.keys(schema.properties).sort();
-    expect(expected).toEqual(["tenant_id", "principal_id", "scope", "business_id", "correlation"].sort());
+    expect(expected).toEqual(
+      [
+        "tenant_id",
+        "principal_id",
+        "scope",
+        "business_id",
+        "correlation",
+      ].sort(),
+    );
     expect(schema.required).toEqual(["tenant_id", "principal_id", "scope"]);
   });
 

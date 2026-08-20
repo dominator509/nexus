@@ -8,7 +8,12 @@
  * activates a provider itself.
  */
 
-import { assertEnum, assertObject, assertString, rejectUnknownFields } from "./validate";
+import {
+  assertEnum,
+  assertObject,
+  assertString,
+  rejectUnknownFields,
+} from "./validate";
 import { ErrorCode, Spec006Error } from "./errors";
 
 export const PROVIDER_ROUTES = ["SELF_HOSTED", "API", "HYBRID"] as const;
@@ -78,7 +83,11 @@ export class ProviderDisclosure {
     return new ProviderDisclosure({
       provider_id: assertString(obj.provider_id, "provider_id"),
       display_name: assertString(obj.display_name, "display_name"),
-      route: assertEnum(obj.route, new Set<ProviderRoute>(PROVIDER_ROUTES), "route"),
+      route: assertEnum(
+        obj.route,
+        new Set<ProviderRoute>(PROVIDER_ROUTES),
+        "route",
+      ),
       certification: assertEnum(
         obj.certification,
         new Set<ProviderCertification>(PROVIDER_CERTIFICATION),
@@ -86,7 +95,10 @@ export class ProviderDisclosure {
       ),
       cost_description: assertString(obj.cost_description, "cost_description"),
       privacy_class: assertString(obj.privacy_class, "privacy_class"),
-      egress_description: assertString(obj.egress_description, "egress_description"),
+      egress_description: assertString(
+        obj.egress_description,
+        "egress_description",
+      ),
       correlation: assertString(obj.correlation, "correlation"),
     });
   }
@@ -115,11 +127,17 @@ export class ProviderSettings {
   readonly providers: ReadonlyArray<ProviderDisclosure>;
   readonly correlation: string;
 
-  constructor(providers: ReadonlyArray<ProviderDisclosure>, correlation: string) {
+  constructor(
+    providers: ReadonlyArray<ProviderDisclosure>,
+    correlation: string,
+  ) {
     const ids = new Set<string>();
     for (const provider of providers) {
       if (ids.has(provider.provider_id)) {
-        throw new Spec006Error(ErrorCode.Conflict, `Duplicate provider '${provider.provider_id}'`);
+        throw new Spec006Error(
+          ErrorCode.Conflict,
+          `Duplicate provider '${provider.provider_id}'`,
+        );
       }
       ids.add(provider.provider_id);
     }

@@ -12,7 +12,9 @@ import { renderToString } from "react-dom/server";
 import { PresentedCapability } from "@nexus/web";
 import { CapabilityButton } from "../components/capability-button";
 
-function capability(overrides: Record<string, unknown> = {}): PresentedCapability {
+function capability(
+  overrides: Record<string, unknown> = {},
+): PresentedCapability {
   return PresentedCapability.fromWire({
     capability_id: "home.lights.set",
     class: "COMMAND",
@@ -49,7 +51,10 @@ describe("ep033_integration_capability_gate", () => {
 
   it("renders NOTHING for an invisible capability (fail closed)", () => {
     const html = renderToString(
-      <CapabilityButton capability={capability({ visible: false })} label="Hidden" />,
+      <CapabilityButton
+        capability={capability({ visible: false })}
+        label="Hidden"
+      />,
     );
     expect(html).toBe("");
   });

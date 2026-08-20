@@ -8,7 +8,11 @@
  * typed command/approval contracts.
  */
 
-import type { BoundContext, DashboardShell, ConnectivityState } from "@nexus/web";
+import type {
+  BoundContext,
+  DashboardShell,
+  ConnectivityState,
+} from "@nexus/web";
 
 export interface DashboardShellViewProps {
   shell: DashboardShell;
@@ -16,7 +20,9 @@ export interface DashboardShellViewProps {
   connectivity: ConnectivityState;
 }
 
-export function DashboardShellView(props: DashboardShellViewProps): React.ReactElement {
+export function DashboardShellView(
+  props: DashboardShellViewProps,
+): React.ReactElement {
   const { shell, context, connectivity } = props;
   return (
     <div

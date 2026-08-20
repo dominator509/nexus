@@ -9,7 +9,12 @@
  * (directive D).
  */
 
-import { assertEnum, assertObject, assertString, rejectUnknownFields } from "./validate";
+import {
+  assertEnum,
+  assertObject,
+  assertString,
+  rejectUnknownFields,
+} from "./validate";
 import { ErrorCode, Spec006Error } from "./errors";
 
 export const CHAT_ORIGINS = ["HUMAN", "AGENT"] as const;
@@ -71,14 +76,22 @@ export class ChatMessage {
     rejectUnknownFields(obj, CHAT_MESSAGE_FIELDS, "ChatMessage");
     const text = assertString(obj.text, "text");
     if (text.length === 0 || text.length > 4000) {
-      throw new Spec006Error(ErrorCode.Validation, "message text must be 1..=4000 characters");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "message text must be 1..=4000 characters",
+      );
     }
     const messageId = assertString(obj.message_id, "message_id");
     if (messageId.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "message_id must not be empty");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "message_id must not be empty",
+      );
     }
     const idempotencyKey =
-      obj.idempotency_key === undefined ? undefined : assertString(obj.idempotency_key, "idempotency_key");
+      obj.idempotency_key === undefined
+        ? undefined
+        : assertString(obj.idempotency_key, "idempotency_key");
     if (idempotencyKey !== undefined && idempotencyKey.length < 8) {
       throw new Spec006Error(
         ErrorCode.Validation,
@@ -93,18 +106,27 @@ export class ChatMessage {
         new Set<MessageDirection>(MESSAGE_DIRECTIONS),
         "direction",
       ),
-      origin: assertEnum(obj.origin, new Set<ChatOrigin>(CHAT_ORIGINS), "origin"),
+      origin: assertEnum(
+        obj.origin,
+        new Set<ChatOrigin>(CHAT_ORIGINS),
+        "origin",
+      ),
       text,
       correlation_id: assertString(obj.correlation_id, "correlation_id"),
       idempotency_key: idempotencyKey,
       sent_at_unix_ms:
-        typeof obj.sent_at_unix_ms === "number" ? obj.sent_at_unix_ms : Date.now(),
+        typeof obj.sent_at_unix_ms === "number"
+          ? obj.sent_at_unix_ms
+          : Date.now(),
     });
   }
 
   /** Deduplicate by idempotency key: same key + same text is one send. */
   sameIntent(other: ChatMessage): boolean {
-    if (this.idempotency_key === undefined || other.idempotency_key === undefined) {
+    if (
+      this.idempotency_key === undefined ||
+      other.idempotency_key === undefined
+    ) {
       return false;
     }
     return (
@@ -123,7 +145,10 @@ export class ChatWorkspace {
 
   constructor(conversationId: string, correlationId: string) {
     if (conversationId.length === 0 || correlationId.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "conversation and correlation ids required");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "conversation and correlation ids required",
+      );
     }
     this.conversation_id = conversationId;
     this.correlation_id = correlationId;

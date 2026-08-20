@@ -166,7 +166,8 @@ export class DesktopTelemetry {
 
   assertNoSecrets(): void {
     const serialized = JSON.stringify(this.#entries);
-    const secretPattern = /\b(?:bearer|authorization|token|secret|password|api[_-]?key)\b/i;
+    const secretPattern =
+      /\b(?:bearer|authorization|token|secret|password|api[_-]?key)\b/i;
     if (secretPattern.test(serialized)) {
       throw new Spec006Error(
         ErrorCode.Internal,

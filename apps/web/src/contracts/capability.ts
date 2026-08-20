@@ -88,10 +88,18 @@ export class PresentedCapability {
 
   static fromWire(value: unknown): PresentedCapability {
     const obj = assertObject(value, "PresentedCapability");
-    rejectUnknownFields(obj, PRESENTED_CAPABILITY_FIELDS, "PresentedCapability");
+    rejectUnknownFields(
+      obj,
+      PRESENTED_CAPABILITY_FIELDS,
+      "PresentedCapability",
+    );
     return new PresentedCapability({
       capability_id: assertString(obj.capability_id, "capability_id"),
-      class: assertEnum(obj.class, new Set<CapabilityClass>(CAPABILITY_CLASSES), "class"),
+      class: assertEnum(
+        obj.class,
+        new Set<CapabilityClass>(CAPABILITY_CLASSES),
+        "class",
+      ),
       availability: assertEnum(
         obj.availability,
         new Set<CapabilityAvailability>(CAPABILITY_AVAILABILITY),
@@ -99,7 +107,10 @@ export class PresentedCapability {
       ),
       visible: obj.visible === true,
       authorized: obj.authorized === true,
-      required_approval: assertString(obj.required_approval, "required_approval"),
+      required_approval: assertString(
+        obj.required_approval,
+        "required_approval",
+      ),
     });
   }
 
@@ -110,7 +121,9 @@ export class PresentedCapability {
 
   /** An unavailable or uncertified capability is never presented as live. */
   get operational(): boolean {
-    return this.availability === "AVAILABLE" || this.availability === "DEGRADED";
+    return (
+      this.availability === "AVAILABLE" || this.availability === "DEGRADED"
+    );
   }
 }
 

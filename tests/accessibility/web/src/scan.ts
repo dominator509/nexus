@@ -19,7 +19,16 @@ import { fileURLToPath } from "node:url";
 import { renderOwnedSurfacesHtml } from "./harness.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const EVIDENCE_DIR = join(__dirname, "..", "..", "..", "..", ".agent", "state", "evidence");
+const EVIDENCE_DIR = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  ".agent",
+  "state",
+  "evidence",
+);
 
 export interface AccessibilityEvidence {
   node: string;
@@ -66,7 +75,9 @@ export async function runAccessibilityScan(
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
   try {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    const page = await browser.newPage({
+      viewport: { width: 1280, height: 900 },
+    });
     await page.setContent(html, { waitUntil: "load" });
 
     // Inject the real axe-core engine source into the real page.
@@ -78,9 +89,11 @@ export async function runAccessibilityScan(
 
     // Run the WCAG 2.2 A/AA tag set (axe-core tag vocabulary).
     const axeResult = await page.evaluate(async () => {
-      const globalAxe = (window as unknown as {
-        axe: { run: (context: unknown, opts: unknown) => Promise<unknown> };
-      }).axe;
+      const globalAxe = (
+        window as unknown as {
+          axe: { run: (context: unknown, opts: unknown) => Promise<unknown> };
+        }
+      ).axe;
       return globalAxe.run(document, {
         runOnly: {
           type: "tag",
@@ -94,7 +107,11 @@ export async function runAccessibilityScan(
         id: string;
         impact: string;
         description: string;
-        nodes: Array<{ target: Array<string>; html: string; failureSummary: string }>;
+        nodes: Array<{
+          target: Array<string>;
+          html: string;
+          failureSummary: string;
+        }>;
       }>;
       passes: Array<unknown>;
       incomplete: Array<unknown>;
@@ -106,7 +123,8 @@ export async function runAccessibilityScan(
       proof: "LF-005 accessibility-scan",
       run_id: run,
       standard: "WCAG 2.2 A/AA (axe-core rule set)",
-      scope: "Owned surfaces: DashboardShellView, ApprovalCardView, StatusBadge, CapabilityButton, ChatComposer rendered by react-dom/server",
+      scope:
+        "Owned surfaces: DashboardShellView, ApprovalCardView, StatusBadge, CapabilityButton, ChatComposer rendered by react-dom/server",
       tool: {
         engine: "axe-core",
         version: axe.version ?? "unknown",
@@ -157,11 +175,15 @@ export async function main(): Promise<number> {
   const html = renderOwnedSurfacesHtml();
   const evidence = await runAccessibilityScan(chromePath, run, html);
   const path = writeEvidence(evidence);
-  console.log(`LF-005 accessibility scan: ${evidence.results.violations.length} violations, ${evidence.results.passes} passes`);
+  console.log(
+    `LF-005 accessibility scan: ${evidence.results.violations.length} violations, ${evidence.results.passes} passes`,
+  );
   console.log(`evidence: ${path}`);
   if (evidence.results.violations.length > 0) {
     for (const v of evidence.results.violations) {
-      console.log(`  violation: ${v.id} (${v.impact}) - ${v.nodes.length} nodes`);
+      console.log(
+        `  violation: ${v.id} (${v.impact}) - ${v.nodes.length} nodes`,
+      );
     }
     return 2;
   }

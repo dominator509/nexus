@@ -35,7 +35,13 @@ export {
   AUTH_STRENGTHS,
   BUSINESS_SCOPES,
 } from "./contracts/session";
-export type { AuthSessionShape, BusinessContextShape, GrantFlow, AuthStrength, BusinessScope } from "./contracts/session";
+export type {
+  AuthSessionShape,
+  BusinessContextShape,
+  GrantFlow,
+  AuthStrength,
+  BusinessScope,
+} from "./contracts/session";
 
 // UI state vocabulary.
 export {
@@ -45,7 +51,11 @@ export {
   CONNECTIVITY_STATES,
   DATA_FRESHNESS,
 } from "./contracts/state";
-export type { UiStateKind, ConnectivityState, DataFreshness } from "./contracts/state";
+export type {
+  UiStateKind,
+  ConnectivityState,
+  DataFreshness,
+} from "./contracts/state";
 
 // Capability presentation.
 export {
@@ -55,7 +65,11 @@ export {
   CAPABILITY_CLASSES,
   CAPABILITY_AVAILABILITY,
 } from "./contracts/capability";
-export type { PresentedCapabilityShape, CapabilityClass, CapabilityAvailability } from "./contracts/capability";
+export type {
+  PresentedCapabilityShape,
+  CapabilityClass,
+  CapabilityAvailability,
+} from "./contracts/capability";
 
 // Typed command dispatch.
 export {
@@ -68,7 +82,13 @@ export {
   APPROVAL_CLASSES,
   ACTION_LIFECYCLE,
 } from "./contracts/command";
-export type { RiskClass, ApprovalClass, ActionLifecycleStage, CommandRequestShape, MutationRefusal } from "./contracts/command";
+export type {
+  RiskClass,
+  ApprovalClass,
+  ActionLifecycleStage,
+  CommandRequestShape,
+  MutationRefusal,
+} from "./contracts/command";
 
 // Approvals.
 export {
@@ -78,7 +98,11 @@ export {
   APPROVAL_STATES,
   APPROVAL_ACTIONS,
 } from "./contracts/approval-center";
-export type { ApprovalState, ApprovalActionKind, ApprovalCardShape } from "./contracts/approval-center";
+export type {
+  ApprovalState,
+  ApprovalActionKind,
+  ApprovalCardShape,
+} from "./contracts/approval-center";
 
 // Event subscriptions.
 export { EventFilter, EventSubscription } from "./contracts/events";
@@ -114,15 +138,39 @@ export {
   DASHBOARD_ROUTES,
   DASHBOARD_SURFACES,
 } from "./contracts/dashboard-shell";
-export type { DashboardRoute, DashboardSurface, DashboardShellShape } from "./contracts/dashboard-shell";
+export type {
+  DashboardRoute,
+  DashboardSurface,
+  DashboardShellShape,
+} from "./contracts/dashboard-shell";
 
-export { ChatMessage, ChatWorkspace, CHAT_ORIGINS, MESSAGE_DIRECTIONS } from "./contracts/chat-workspace";
-export type { ChatMessageShape, ChatOrigin, MessageDirection } from "./contracts/chat-workspace";
+export {
+  ChatMessage,
+  ChatWorkspace,
+  CHAT_ORIGINS,
+  MESSAGE_DIRECTIONS,
+} from "./contracts/chat-workspace";
+export type {
+  ChatMessageShape,
+  ChatOrigin,
+  MessageDirection,
+} from "./contracts/chat-workspace";
 
-export { ObjectiveView, TaskNode, OBJECTIVE_STAGES } from "./contracts/objective-view";
-export type { ObjectiveStage, ObjectiveShape } from "./contracts/objective-view";
+export {
+  ObjectiveView,
+  TaskNode,
+  OBJECTIVE_STAGES,
+} from "./contracts/objective-view";
+export type {
+  ObjectiveStage,
+  ObjectiveShape,
+} from "./contracts/objective-view";
 
-export { FleetDevice, FleetView, DEVICE_STATUSES } from "./contracts/fleet-view";
+export {
+  FleetDevice,
+  FleetView,
+  DEVICE_STATUSES,
+} from "./contracts/fleet-view";
 export type { DeviceStatus, FleetDeviceShape } from "./contracts/fleet-view";
 
 export {
@@ -131,7 +179,11 @@ export {
   SEVERITY_LEVELS,
   INCIDENT_STATUSES,
 } from "./contracts/security-console";
-export type { SeverityLevel, IncidentStatus, IncidentShape } from "./contracts/security-console";
+export type {
+  SeverityLevel,
+  IncidentStatus,
+  IncidentShape,
+} from "./contracts/security-console";
 
 export {
   ProviderDisclosure,
@@ -139,7 +191,15 @@ export {
   PROVIDER_ROUTES,
   PROVIDER_CERTIFICATION,
 } from "./contracts/provider-settings";
-export type { ProviderRoute, ProviderCertification, ProviderDisclosureShape } from "./contracts/provider-settings";
+export type {
+  ProviderRoute,
+  ProviderCertification,
+  ProviderDisclosureShape,
+} from "./contracts/provider-settings";
 
-export { AuditRecord, AuditFilter, AuditExplorer } from "./contracts/audit-explorer";
+export {
+  AuditRecord,
+  AuditFilter,
+  AuditExplorer,
+} from "./contracts/audit-explorer";
 export type { AuditRecordShape } from "./contracts/audit-explorer";

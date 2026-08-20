@@ -35,11 +35,18 @@ describe("ep033_unit_ui_dependency_direction", () => {
   });
 
   it("UI sources import only react, react-dom, @nexus/web, @nexus/contracts, or relative modules", () => {
-    const allowed = new Set(["react", "react-dom", "@nexus/web", "@nexus/contracts", "react/jsx-runtime"]);
+    const allowed = new Set([
+      "react",
+      "react-dom",
+      "@nexus/web",
+      "@nexus/contracts",
+      "react/jsx-runtime",
+    ]);
     for (const file of files) {
       const source = readFileSync(file, "utf8");
       for (const line of source.split("\n")) {
-        const match = /^\s*import\s+(?:type\s+)?.*?from\s+["']([^"']+)["']/.exec(line);
+        const match =
+          /^\s*import\s+(?:type\s+)?.*?from\s+["']([^"']+)["']/.exec(line);
         if (!match || match[1] === undefined) {
           continue;
         }
@@ -70,7 +77,8 @@ describe("ep033_unit_ui_dependency_direction", () => {
       const source = readFileSync(file, "utf8");
       for (const specifier of forbidden) {
         expect(
-          source.includes(`from "${specifier}"`) || source.includes(`from '${specifier}'`),
+          source.includes(`from "${specifier}"`) ||
+            source.includes(`from '${specifier}'`),
           `${file} must not import '${specifier}'`,
         ).toBe(false);
       }

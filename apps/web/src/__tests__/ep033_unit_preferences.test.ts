@@ -33,25 +33,33 @@ describe("ep033_unit_preferences", () => {
 
   it("refuses bearer tokens and secrets at the persistence boundary", () => {
     const store = new PreferencePersistence();
-    expect(() => store.set("access_token", "eyJhbGciOiJIUzI1NiJ9.xxxx.yyyy")).toThrowError(
+    expect(() =>
+      store.set("access_token", "eyJhbGciOiJIUzI1NiJ9.xxxx.yyyy"),
+    ).toThrowError(Spec006Error);
+    expect(() => store.set("refresh_token", "rt-1234567890")).toThrowError(
       Spec006Error,
     );
-    expect(() => store.set("refresh_token", "rt-1234567890")).toThrowError(Spec006Error);
-    expect(() => store.set("approval_credential", "cred-12345678")).toThrowError(Spec006Error);
-    expect(() => store.set("private_key", "-----BEGIN FIXTURE KEY-----")).toThrowError(
+    expect(() =>
+      store.set("approval_credential", "cred-12345678"),
+    ).toThrowError(Spec006Error);
+    expect(() =>
+      store.set("private_key", "-----BEGIN FIXTURE KEY-----"),
+    ).toThrowError(Spec006Error);
+    expect(() => store.set("recovery_kit", "recovery-12345678")).toThrowError(
       Spec006Error,
     );
-    expect(() => store.set("recovery_kit", "recovery-12345678")).toThrowError(Spec006Error);
   });
 
   it("refuses secret-shaped values even under allowlisted keys", () => {
     const store = new PreferencePersistence();
     // Defense in depth: a token-shaped value must not be stored even
     // under an innocent key.
-    expect(() => store.set("layout", "Bearer eyJhbGciOiJIUzI1NiJ9.xxxx.yyyy")).toThrowError(
+    expect(() =>
+      store.set("layout", "Bearer eyJhbGciOiJIUzI1NiJ9.xxxx.yyyy"),
+    ).toThrowError(Spec006Error);
+    expect(() => store.set("theme", "password=hunter2")).toThrowError(
       Spec006Error,
     );
-    expect(() => store.set("theme", "password=hunter2")).toThrowError(Spec006Error);
   });
 
   it("exposes the forbidden key allowlist for canary auditing", () => {
@@ -75,7 +83,9 @@ describe("ep033_unit_preferences", () => {
   });
 
   it("rejects unsupported theme modes", () => {
-    expect(() => new ThemePreference("NEON" as never, false, "corr-1")).toThrowError(Spec006Error);
+    expect(
+      () => new ThemePreference("NEON" as never, false, "corr-1"),
+    ).toThrowError(Spec006Error);
   });
 
   it("keeps preference state structurally separate from security state", () => {

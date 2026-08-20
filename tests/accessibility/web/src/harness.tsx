@@ -130,7 +130,11 @@ export function renderOwnedSurfacesHtml(): string {
   const capabilities = capabilitiesFixture();
   const body = renderToString(
     <main id="main">
-      <DashboardShellView shell={shell} context={context} connectivity="CONNECTED" />
+      <DashboardShellView
+        shell={shell}
+        context={context}
+        connectivity="CONNECTED"
+      />
       <section aria-label="Capabilities">
         {capabilities.map((capability) => (
           <CapabilityButton
@@ -140,7 +144,11 @@ export function renderOwnedSurfacesHtml(): string {
           />
         ))}
       </section>
-      <ApprovalCardView card={card} state="PENDING" distinctApprovers={[uuid(40)]} />
+      <ApprovalCardView
+        card={card}
+        state="PENDING"
+        distinctApprovers={[uuid(40)]}
+      />
       <StatusBadge connectivity="CONNECTED" freshness="FRESH" />
       <StatusBadge connectivity="OFFLINE" freshness="STALE" />
       <ChatComposer

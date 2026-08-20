@@ -1,13 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { FleetDevice, FleetView, DEVICE_STATUSES } from "../contracts/fleet-view";
-import { SecurityIncident, SecurityConsole, SEVERITY_LEVELS, INCIDENT_STATUSES } from "../contracts/security-console";
+import {
+  FleetDevice,
+  FleetView,
+  DEVICE_STATUSES,
+} from "../contracts/fleet-view";
+import {
+  SecurityIncident,
+  SecurityConsole,
+  SEVERITY_LEVELS,
+  INCIDENT_STATUSES,
+} from "../contracts/security-console";
 import {
   ProviderDisclosure,
   ProviderSettings,
   PROVIDER_ROUTES,
   PROVIDER_CERTIFICATION,
 } from "../contracts/provider-settings";
-import { AuditFilter, AuditRecord, AuditExplorer } from "../contracts/audit-explorer";
+import {
+  AuditFilter,
+  AuditRecord,
+  AuditExplorer,
+} from "../contracts/audit-explorer";
 import { ErrorCode, Spec006Error } from "../contracts/errors";
 
 const PRINCIPAL = "00000000-0000-4000-8000-000000000002";
@@ -21,7 +34,12 @@ describe("ep033_unit_fleet_view", () => {
       correlation: "corr-1",
     });
     expect(device.status).toBe("ONLINE");
-    expect([...DEVICE_STATUSES]).toEqual(["ONLINE", "OFFLINE", "DEGRADED", "UNPROVISIONED"]);
+    expect([...DEVICE_STATUSES]).toEqual([
+      "ONLINE",
+      "OFFLINE",
+      "DEGRADED",
+      "UNPROVISIONED",
+    ]);
   });
 
   it("rejects duplicate device ids in a fleet", () => {
@@ -31,14 +49,26 @@ describe("ep033_unit_fleet_view", () => {
       status: "ONLINE",
       correlation: "corr-1",
     });
-    expect(() => new FleetView([device, device], "corr-1")).toThrowError(Spec006Error);
+    expect(() => new FleetView([device, device], "corr-1")).toThrowError(
+      Spec006Error,
+    );
   });
 
   it("counts online devices", () => {
     const fleet = new FleetView(
       [
-        FleetDevice.fromWire({ device_id: "a", name: "a", status: "ONLINE", correlation: "c" }),
-        FleetDevice.fromWire({ device_id: "b", name: "b", status: "OFFLINE", correlation: "c" }),
+        FleetDevice.fromWire({
+          device_id: "a",
+          name: "a",
+          status: "ONLINE",
+          correlation: "c",
+        }),
+        FleetDevice.fromWire({
+          device_id: "b",
+          name: "b",
+          status: "OFFLINE",
+          correlation: "c",
+        }),
       ],
       "corr-1",
     );
@@ -56,7 +86,13 @@ describe("ep033_unit_security_console", () => {
       correlation_id: "corr-1",
     });
     expect(incident.severity).toBe("HIGH");
-    expect([...SEVERITY_LEVELS]).toEqual(["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+    expect([...SEVERITY_LEVELS]).toEqual([
+      "INFO",
+      "LOW",
+      "MEDIUM",
+      "HIGH",
+      "CRITICAL",
+    ]);
     expect([...INCIDENT_STATUSES]).toEqual([
       "OPEN",
       "TRIAGED",
@@ -81,8 +117,20 @@ describe("ep033_unit_security_console", () => {
   it("counts critical incidents for triage presentation", () => {
     const console = new SecurityConsole(
       [
-        SecurityIncident.fromWire({ incident_id: "a", title: "a", severity: "CRITICAL", status: "OPEN", correlation_id: "c" }),
-        SecurityIncident.fromWire({ incident_id: "b", title: "b", severity: "LOW", status: "OPEN", correlation_id: "c" }),
+        SecurityIncident.fromWire({
+          incident_id: "a",
+          title: "a",
+          severity: "CRITICAL",
+          status: "OPEN",
+          correlation_id: "c",
+        }),
+        SecurityIncident.fromWire({
+          incident_id: "b",
+          title: "b",
+          severity: "LOW",
+          status: "OPEN",
+          correlation_id: "c",
+        }),
       ],
       "corr-1",
     );
@@ -144,7 +192,9 @@ describe("ep033_unit_provider_settings", () => {
       egress_description: "unknown",
       correlation: "c",
     });
-    expect(() => new ProviderSettings([disclosure, disclosure], "corr-1")).toThrowError(Spec006Error);
+    expect(
+      () => new ProviderSettings([disclosure, disclosure], "corr-1"),
+    ).toThrowError(Spec006Error);
   });
 });
 
@@ -169,13 +219,21 @@ describe("ep033_unit_audit_explorer", () => {
       recorded_at_unix_ms: 1,
     });
     const explorer = new AuditExplorer([record], "corr-1");
-    expect(explorer.filter(new AuditFilter({ event_type: "approval.approved" }))).toHaveLength(1);
-    expect(explorer.filter(new AuditFilter({ event_type: "approval.denied" }))).toHaveLength(0);
-    expect(explorer.filter(new AuditFilter({ correlation_id: "corr-1" }))).toHaveLength(1);
+    expect(
+      explorer.filter(new AuditFilter({ event_type: "approval.approved" })),
+    ).toHaveLength(1);
+    expect(
+      explorer.filter(new AuditFilter({ event_type: "approval.denied" })),
+    ).toHaveLength(0);
+    expect(
+      explorer.filter(new AuditFilter({ correlation_id: "corr-1" })),
+    ).toHaveLength(1);
   });
 
   it("rejects empty event-type filters", () => {
-    expect(() => new AuditFilter({ event_type: "" })).toThrowError(Spec006Error);
+    expect(() => new AuditFilter({ event_type: "" })).toThrowError(
+      Spec006Error,
+    );
   });
 
   it("rejects duplicate audit ids", () => {
@@ -186,6 +244,8 @@ describe("ep033_unit_audit_explorer", () => {
       correlation_id: "c",
       recorded_at_unix_ms: 1,
     });
-    expect(() => new AuditExplorer([record, record], "corr-1")).toThrowError(Spec006Error);
+    expect(() => new AuditExplorer([record, record], "corr-1")).toThrowError(
+      Spec006Error,
+    );
   });
 });

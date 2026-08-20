@@ -13,7 +13,10 @@ function uuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
 
-function session(expiresAt = 1_800_000_000, revoked = false): AuthenticatedSession {
+function session(
+  expiresAt = 1_800_000_000,
+  revoked = false,
+): AuthenticatedSession {
   return AuthenticatedSession.fromWire({
     session_id: uuid(1),
     principal_id: uuid(2),
@@ -71,7 +74,9 @@ describe("ep033_unit_desktop_runtime", () => {
     const nextBusiness = business(uuid(10));
     const next = runtime.switchBusiness(nextBusiness);
     expect(next.business.business_id).toBe(uuid(10));
-    expect(() => projection.requireCurrent(runtime.context)).toThrowError(Spec006Error);
+    expect(() => projection.requireCurrent(runtime.context)).toThrowError(
+      Spec006Error,
+    );
   });
 
   it("refuses consequential actions under an expired session", () => {
@@ -97,7 +102,9 @@ describe("ep033_unit_desktop_runtime", () => {
 
   it("permits consequential actions with active session and connectivity", () => {
     const runtime = new DesktopShellRuntime(bound());
-    expect(() => runtime.requireConsequential(1_700_000_001, "send-command")).not.toThrow();
+    expect(() =>
+      runtime.requireConsequential(1_700_000_001, "send-command"),
+    ).not.toThrow();
   });
 
   it("labels offline-fetched payloads as stale, never actionable", () => {

@@ -45,7 +45,10 @@ export class AuditRecord {
     rejectUnknownFields(obj, AUDIT_RECORD_FIELDS, "AuditRecord");
     const auditId = assertString(obj.audit_id, "audit_id");
     if (auditId.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "audit_id must not be empty");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "audit_id must not be empty",
+      );
     }
     return new AuditRecord({
       audit_id: auditId,
@@ -53,7 +56,9 @@ export class AuditRecord {
       source: assertString(obj.source, "source"),
       correlation_id: assertString(obj.correlation_id, "correlation_id"),
       recorded_at_unix_ms:
-        typeof obj.recorded_at_unix_ms === "number" ? obj.recorded_at_unix_ms : 0,
+        typeof obj.recorded_at_unix_ms === "number"
+          ? obj.recorded_at_unix_ms
+          : 0,
     });
   }
 }
@@ -65,17 +70,26 @@ export class AuditFilter {
 
   constructor(opts: { event_type?: string; correlation_id?: string } = {}) {
     if (opts.event_type !== undefined && opts.event_type.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "event_type filter must not be empty");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "event_type filter must not be empty",
+      );
     }
     this.event_type = opts.event_type;
     this.correlation_id = opts.correlation_id;
   }
 
   matches(record: AuditRecord): boolean {
-    if (this.event_type !== undefined && record.event_type !== this.event_type) {
+    if (
+      this.event_type !== undefined &&
+      record.event_type !== this.event_type
+    ) {
       return false;
     }
-    if (this.correlation_id !== undefined && record.correlation_id !== this.correlation_id) {
+    if (
+      this.correlation_id !== undefined &&
+      record.correlation_id !== this.correlation_id
+    ) {
       return false;
     }
     return true;
@@ -90,7 +104,10 @@ export class AuditExplorer {
     const ids = new Set<string>();
     for (const record of records) {
       if (ids.has(record.audit_id)) {
-        throw new Spec006Error(ErrorCode.Conflict, `Duplicate audit record '${record.audit_id}'`);
+        throw new Spec006Error(
+          ErrorCode.Conflict,
+          `Duplicate audit record '${record.audit_id}'`,
+        );
       }
       ids.add(record.audit_id);
     }

@@ -51,7 +51,9 @@ describe("ep033_lf005_continuity", () => {
     const evidence = runLf005Journey("test-run-1");
     expect(evidence.journey.voice_start.transcript_origin).toBe("AGENT");
     expect(evidence.journey.web_dashboard_continue.objective_bound).toBe(true);
-    expect(evidence.journey.web_dashboard_continue.rendered_surface).toBe("objectives");
+    expect(evidence.journey.web_dashboard_continue.rendered_surface).toBe(
+      "objectives",
+    );
   });
 
   it("satisfies mobile FOUR_EYES approval with two distinct principals", () => {
@@ -64,16 +66,26 @@ describe("ep033_lf005_continuity", () => {
 
   it("delivers the final artifact in the same task graph", () => {
     const evidence = runLf005Journey("test-run-3");
-    expect(evidence.journey.final_artifact_same_graph.objective_ids_consistent).toBe(true);
-    expect(evidence.journey.final_artifact_same_graph.correlation_consistent).toBe(true);
-    expect(evidence.journey.final_artifact_same_graph.artifact_task_done).toBe(true);
+    expect(
+      evidence.journey.final_artifact_same_graph.objective_ids_consistent,
+    ).toBe(true);
+    expect(
+      evidence.journey.final_artifact_same_graph.correlation_consistent,
+    ).toBe(true);
+    expect(evidence.journey.final_artifact_same_graph.artifact_task_done).toBe(
+      true,
+    );
   });
 
   it("preserves the UI authority distinctions", () => {
     const evidence = runLf005Journey("test-run-4");
     expect(evidence.authority_distinctions.displayed_not_authorized).toBe(true);
-    expect(evidence.authority_distinctions.approved_not_executed_until_dispatched).toBe(true);
-    expect(evidence.authority_distinctions.executed_only_after_dispatch).toBe(true);
+    expect(
+      evidence.authority_distinctions.approved_not_executed_until_dispatched,
+    ).toBe(true);
+    expect(evidence.authority_distinctions.executed_only_after_dispatch).toBe(
+      true,
+    );
   });
 
   it("binds a current-run identity to every journey", () => {
@@ -86,14 +98,17 @@ describe("ep033_lf005_continuity", () => {
 
 describe("ep033_a11y_dependency_direction", () => {
   it("imports only @nexus packages, react, and the scan toolchain", () => {
-    const files = [
-      "src/harness.tsx",
-      "src/scan.ts",
-      "src/lf005.ts",
-    ];
+    const files = ["src/harness.tsx", "src/scan.ts", "src/lf005.ts"];
     for (const file of files) {
-      const source = readFileSync(join(process.cwd(), "src", file.replace(/^src\//, "")), "utf8");
-      const lines = source.split("\n").filter((line: string) => line.includes("from \"") || line.includes("from '"));
+      const source = readFileSync(
+        join(process.cwd(), "src", file.replace(/^src\//, "")),
+        "utf8",
+      );
+      const lines = source
+        .split("\n")
+        .filter(
+          (line: string) => line.includes('from "') || line.includes("from '"),
+        );
       for (const line of lines) {
         const match = line.match(/from ["']([^"']+)["']/);
         if (!match || !match[1]) continue;
@@ -107,7 +122,10 @@ describe("ep033_a11y_dependency_direction", () => {
           spec === "axe-core" ||
           spec.startsWith("@nexus/") ||
           spec.startsWith("node:");
-        expect(allowed, `${file}: import "${spec}" violates dependency direction`).toBe(true);
+        expect(
+          allowed,
+          `${file}: import "${spec}" violates dependency direction`,
+        ).toBe(true);
       }
     }
   });

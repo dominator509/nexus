@@ -15,11 +15,15 @@ describe("ep033_unit_desktop_preferences", () => {
 
   it("refuses tokens and secrets at the desktop persistence boundary", () => {
     const prefs = new DesktopPreferences();
-    expect(() => prefs.setRaw("access_token", "eyJhbG...value")).toThrowError(Spec006Error);
-    expect(() => prefs.setRaw("approval_credential", "cred-value")).toThrowError(Spec006Error);
-    expect(() => prefs.setRaw("private_key", "-----BEGIN FIXTURE KEY-----")).toThrowError(
+    expect(() => prefs.setRaw("access_token", "eyJhbG...value")).toThrowError(
       Spec006Error,
     );
+    expect(() =>
+      prefs.setRaw("approval_credential", "cred-value"),
+    ).toThrowError(Spec006Error);
+    expect(() =>
+      prefs.setRaw("private_key", "-----BEGIN FIXTURE KEY-----"),
+    ).toThrowError(Spec006Error);
   });
 
   it("refuses unknown preference keys", () => {

@@ -8,7 +8,12 @@
  */
 
 import { useState } from "react";
-import { ChatMessage, ErrorCode, Spec006Error, type ChatOrigin } from "@nexus/web";
+import {
+  ChatMessage,
+  ErrorCode,
+  Spec006Error,
+  type ChatOrigin,
+} from "@nexus/web";
 
 export interface ChatComposerProps {
   conversationId: string;
@@ -43,7 +48,12 @@ export function ChatComposer(props: ChatComposerProps): React.ReactElement {
         onError?.(error);
         return;
       }
-      onError?.(new Spec006Error(ErrorCode.Internal, "Unexpected chat composer failure"));
+      onError?.(
+        new Spec006Error(
+          ErrorCode.Internal,
+          "Unexpected chat composer failure",
+        ),
+      );
     }
   }
 

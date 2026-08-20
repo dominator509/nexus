@@ -39,7 +39,8 @@ describe("ep033_unit_dependency_direction", () => {
     for (const file of files) {
       const source = readFileSync(file, "utf8");
       for (const line of source.split("\n")) {
-        const match = /^\s*import\s+(?:type\s+)?.*?from\s+["']([^"']+)["']/.exec(line);
+        const match =
+          /^\s*import\s+(?:type\s+)?.*?from\s+["']([^"']+)["']/.exec(line);
         if (!match || match[1] === undefined) {
           continue;
         }
@@ -75,7 +76,8 @@ describe("ep033_unit_dependency_direction", () => {
       const source = readFileSync(file, "utf8");
       for (const specifier of forbidden) {
         expect(
-          source.includes(`from "${specifier}"`) || source.includes(`from '${specifier}'`),
+          source.includes(`from "${specifier}"`) ||
+            source.includes(`from '${specifier}'`),
           `${file} must not import '${specifier}'`,
         ).toBe(false);
       }
@@ -87,7 +89,13 @@ describe("ep033_unit_dependency_direction", () => {
     // The index re-exports only relative contract modules and never
     // imports framework or backend-client packages itself.
     expect(index).toContain('from "./contracts/');
-    for (const specifier of ["react", "react-dom", "axios", "ws", "socket.io"]) {
+    for (const specifier of [
+      "react",
+      "react-dom",
+      "axios",
+      "ws",
+      "socket.io",
+    ]) {
       expect(index).not.toContain(`from "${specifier}"`);
     }
   });

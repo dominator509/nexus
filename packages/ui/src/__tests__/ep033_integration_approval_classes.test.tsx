@@ -36,7 +36,11 @@ describe("ep033_integration_approval_classes", () => {
   it("renders the approval class verbatim, never a boolean", () => {
     for (const klass of ["POLICY", "HUMAN", "STRONG_HUMAN", "FOUR_EYES"]) {
       const html = renderToString(
-        <ApprovalCardView card={card(klass)} state="PENDING" distinctApprovers={[]} />,
+        <ApprovalCardView
+          card={card(klass)}
+          state="PENDING"
+          distinctApprovers={[]}
+        />,
       );
       expect(html).toContain(`data-approval-class="${klass}"`);
       expect(html).toContain(klass);
@@ -45,7 +49,11 @@ describe("ep033_integration_approval_classes", () => {
 
   it("renders the full SPEC-017 disclosure fields", () => {
     const html = renderToString(
-      <ApprovalCardView card={card("HUMAN")} state="PENDING" distinctApprovers={[]} />,
+      <ApprovalCardView
+        card={card("HUMAN")}
+        state="PENDING"
+        distinctApprovers={[]}
+      />,
     );
     expect(html).toContain("Quarantine host");
     expect(html).toContain("host:edge-01");
@@ -56,13 +64,21 @@ describe("ep033_integration_approval_classes", () => {
 
   it("renders the four-eyes two-principal requirement only for FOUR_EYES", () => {
     const fourEyes = renderToString(
-      <ApprovalCardView card={card("FOUR_EYES")} state="PENDING" distinctApprovers={[]} />,
+      <ApprovalCardView
+        card={card("FOUR_EYES")}
+        state="PENDING"
+        distinctApprovers={[]}
+      />,
     );
     expect(fourEyes).toContain('data-four-eyes="true"');
     expect(fourEyes).toContain("two distinct principals");
 
     const human = renderToString(
-      <ApprovalCardView card={card("HUMAN")} state="PENDING" distinctApprovers={[]} />,
+      <ApprovalCardView
+        card={card("HUMAN")}
+        state="PENDING"
+        distinctApprovers={[]}
+      />,
     );
     expect(human).not.toContain('data-four-eyes="true"');
   });
@@ -80,7 +96,11 @@ describe("ep033_integration_approval_classes", () => {
 
   it("renders the live state as a status region", () => {
     const html = renderToString(
-      <ApprovalCardView card={card("HUMAN")} state="APPROVED" distinctApprovers={[]} />,
+      <ApprovalCardView
+        card={card("HUMAN")}
+        state="APPROVED"
+        distinctApprovers={[]}
+      />,
     );
     expect(html).toContain('role="status"');
     expect(html).toContain("APPROVED");

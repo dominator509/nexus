@@ -6,7 +6,12 @@
  * never claims a device capability the backend has not certified.
  */
 
-import { assertEnum, assertObject, assertString, rejectUnknownFields } from "./validate";
+import {
+  assertEnum,
+  assertObject,
+  assertString,
+  rejectUnknownFields,
+} from "./validate";
 import { ErrorCode, Spec006Error } from "./errors";
 
 export const DEVICE_STATUSES = [
@@ -49,12 +54,19 @@ export class FleetDevice {
     rejectUnknownFields(obj, FLEET_DEVICE_FIELDS, "FleetDevice");
     const deviceId = assertString(obj.device_id, "device_id");
     if (deviceId.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "device_id must not be empty");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "device_id must not be empty",
+      );
     }
     return new FleetDevice({
       device_id: deviceId,
       name: assertString(obj.name, "name"),
-      status: assertEnum(obj.status, new Set<DeviceStatus>(DEVICE_STATUSES), "status"),
+      status: assertEnum(
+        obj.status,
+        new Set<DeviceStatus>(DEVICE_STATUSES),
+        "status",
+      ),
       correlation: assertString(obj.correlation, "correlation"),
     });
   }
@@ -68,7 +80,10 @@ export class FleetView {
     const ids = new Set<string>();
     for (const device of devices) {
       if (ids.has(device.device_id)) {
-        throw new Spec006Error(ErrorCode.Conflict, `Duplicate device '${device.device_id}'`);
+        throw new Spec006Error(
+          ErrorCode.Conflict,
+          `Duplicate device '${device.device_id}'`,
+        );
       }
       ids.add(device.device_id);
     }

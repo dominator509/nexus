@@ -1,11 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { ViewState, revalidated, UI_STATE_KINDS, CONNECTIVITY_STATES } from "../contracts/state";
+import {
+  ViewState,
+  revalidated,
+  UI_STATE_KINDS,
+  CONNECTIVITY_STATES,
+} from "../contracts/state";
 import { ErrorCode, Spec006Error } from "../contracts/errors";
 
 describe("ep033_unit_state_vocabulary", () => {
   it("covers every SPEC-004 UI state kind", () => {
     expect([...UI_STATE_KINDS].sort()).toEqual(
-      ["LOADING", "EMPTY", "ERROR", "DEGRADED", "PERMISSION_DENIED", "SUCCESS"].sort(),
+      [
+        "LOADING",
+        "EMPTY",
+        "ERROR",
+        "DEGRADED",
+        "PERMISSION_DENIED",
+        "SUCCESS",
+      ].sort(),
     );
   });
 

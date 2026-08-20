@@ -81,7 +81,11 @@ export class PreferencePersistence {
     const lower = value.toLowerCase();
     for (const marker of SECRET_MARKERS) {
       if (lower.includes(marker)) {
-        return { allowed: false, key, reason: `value contains secret marker '${marker}'` };
+        return {
+          allowed: false,
+          key,
+          reason: `value contains secret marker '${marker}'`,
+        };
       }
     }
     return { allowed: true, key, reason: "allowed" };
@@ -123,7 +127,10 @@ export class ThemePreference {
 
   constructor(mode: ThemeMode, reducedMotion: boolean, correlation: string) {
     if (!THEME_MODES.includes(mode)) {
-      throw new Spec006Error(ErrorCode.Vocabulary, `Unsupported theme mode '${mode}'`);
+      throw new Spec006Error(
+        ErrorCode.Vocabulary,
+        `Unsupported theme mode '${mode}'`,
+      );
     }
     this.mode = mode;
     this.reduced_motion = reducedMotion;

@@ -53,20 +53,36 @@ export class DesktopApprovalFlow {
     if (this.#state === "EXPIRED") {
       throw new Spec006Error(ErrorCode.Conflict, "Approval already expired");
     }
-    if (this.#state === "APPROVED" || this.#state === "DENIED" || this.#state === "REVOKED") {
-      throw new Spec006Error(ErrorCode.Conflict, `Approval already ${this.#state.toLowerCase()}`);
+    if (
+      this.#state === "APPROVED" ||
+      this.#state === "DENIED" ||
+      this.#state === "REVOKED"
+    ) {
+      throw new Spec006Error(
+        ErrorCode.Conflict,
+        `Approval already ${this.#state.toLowerCase()}`,
+      );
     }
     if (this.card.isExpired(nowUnixS)) {
       this.#state = "EXPIRED";
-      throw new Spec006Error(ErrorCode.Conflict, "Approval expired before action");
+      throw new Spec006Error(
+        ErrorCode.Conflict,
+        "Approval expired before action",
+      );
     }
     if (action.approval_id !== this.card.approval_id) {
-      throw new Spec006Error(ErrorCode.Conflict, "Approval action targets a different card");
+      throw new Spec006Error(
+        ErrorCode.Conflict,
+        "Approval action targets a different card",
+      );
     }
 
     if (this.card.requiresTwoPrincipals()) {
       if (action.action === "APPROVE") {
-        if (this.#requesterExcluded && action.principal_id === this.card.requester_id) {
+        if (
+          this.#requesterExcluded &&
+          action.principal_id === this.card.requester_id
+        ) {
           // Requester approval is recorded for visibility but can
           // never satisfy four-eyes; state stays PENDING.
           this.#fourEyes.apply(action);
@@ -88,7 +104,10 @@ export class DesktopApprovalFlow {
 
     // Non-four-eyes classes: a single APPROVE satisfies the class.
     if (action.action === "APPROVE") {
-      if (this.#requesterExcluded && action.principal_id === this.card.requester_id) {
+      if (
+        this.#requesterExcluded &&
+        action.principal_id === this.card.requester_id
+      ) {
         throw new Spec006Error(
           ErrorCode.Policy,
           "Requester cannot approve their own action",

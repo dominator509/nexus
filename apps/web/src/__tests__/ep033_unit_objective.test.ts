@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ObjectiveView, TaskNode, OBJECTIVE_STAGES } from "../contracts/objective-view";
+import {
+  ObjectiveView,
+  TaskNode,
+  OBJECTIVE_STAGES,
+} from "../contracts/objective-view";
 import { ErrorCode, Spec006Error } from "../contracts/errors";
 
 describe("ep033_unit_objective_view", () => {
@@ -85,6 +89,8 @@ describe("ep033_unit_objective_view", () => {
   });
 
   it("rejects task nodes with empty ids", () => {
-    expect(() => new TaskNode("", "obj-0001", "Draft outline", false)).toThrowError(Spec006Error);
+    expect(
+      () => new TaskNode("", "obj-0001", "Draft outline", false),
+    ).toThrowError(Spec006Error);
   });
 });

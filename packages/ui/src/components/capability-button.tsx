@@ -17,7 +17,9 @@ export interface CapabilityButtonProps {
   disabledReason?: string;
 }
 
-export function CapabilityButton(props: CapabilityButtonProps): React.ReactElement | null {
+export function CapabilityButton(
+  props: CapabilityButtonProps,
+): React.ReactElement | null {
   const { capability, label, disabledReason } = props;
   if (!capability.visible) {
     return null;

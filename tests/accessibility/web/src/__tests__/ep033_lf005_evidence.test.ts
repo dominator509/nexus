@@ -26,7 +26,10 @@ describe("ep033_lf005_evidence", () => {
       journey: {
         web_dashboard_continue: { objective_bound: boolean };
         mobile_approval: { satisfied: boolean };
-        final_artifact_same_graph: { objective_ids_consistent: boolean; correlation_consistent: boolean };
+        final_artifact_same_graph: {
+          objective_ids_consistent: boolean;
+          correlation_consistent: boolean;
+        };
       };
       authority_distinctions: { executed_only_after_dispatch: boolean };
     };
@@ -36,9 +39,15 @@ describe("ep033_lf005_evidence", () => {
     expect(onDisk.milestone).toBe("M5");
     expect(onDisk.journey.web_dashboard_continue.objective_bound).toBe(true);
     expect(onDisk.journey.mobile_approval.satisfied).toBe(true);
-    expect(onDisk.journey.final_artifact_same_graph.objective_ids_consistent).toBe(true);
-    expect(onDisk.journey.final_artifact_same_graph.correlation_consistent).toBe(true);
-    expect(onDisk.authority_distinctions.executed_only_after_dispatch).toBe(true);
+    expect(
+      onDisk.journey.final_artifact_same_graph.objective_ids_consistent,
+    ).toBe(true);
+    expect(
+      onDisk.journey.final_artifact_same_graph.correlation_consistent,
+    ).toBe(true);
+    expect(onDisk.authority_distinctions.executed_only_after_dispatch).toBe(
+      true,
+    );
     console.log(`[ep033_lf005_evidence] run=${run} evidence=${path}`);
   });
 });

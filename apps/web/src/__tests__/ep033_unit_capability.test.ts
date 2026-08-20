@@ -7,7 +7,9 @@ import {
 import { ErrorCode, Spec006Error } from "../contracts/errors";
 import type { CapabilityDescriptor } from "@nexus/contracts";
 
-function descriptor(overrides: Partial<CapabilityDescriptor> = {}): CapabilityDescriptor {
+function descriptor(
+  overrides: Partial<CapabilityDescriptor> = {},
+): CapabilityDescriptor {
   return {
     id: "home.lights.query",
     version: "1.0.0",
@@ -28,13 +30,17 @@ function descriptor(overrides: Partial<CapabilityDescriptor> = {}): CapabilityDe
 describe("ep033_unit_capability_presentation", () => {
   it("renders known capabilities", () => {
     const vocabulary = new KnownCapabilityVocabulary(["home.lights.query"]);
-    expect(vocabulary.resolve(descriptor())).toBe(CapabilityPresentation.RENDER);
+    expect(vocabulary.resolve(descriptor())).toBe(
+      CapabilityPresentation.RENDER,
+    );
   });
 
   it("fails closed on unknown capabilities (never fabricated)", () => {
     const vocabulary = new KnownCapabilityVocabulary(["home.lights.query"]);
     const unknown = descriptor({ id: "home.lights.hack" });
-    expect(vocabulary.resolve(unknown)).toBe(CapabilityPresentation.UNSUPPORTED);
+    expect(vocabulary.resolve(unknown)).toBe(
+      CapabilityPresentation.UNSUPPORTED,
+    );
   });
 
   it("hides known but unavailable capabilities", () => {

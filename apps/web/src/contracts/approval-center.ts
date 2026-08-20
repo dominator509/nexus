@@ -170,7 +170,10 @@ export class ApprovalAction {
     recordedAt: number,
   ): ApprovalAction {
     if (typeof approvalId !== "string" || typeof principalId !== "string") {
-      throw new Spec006Error(ErrorCode.Validation, "approval id and principal id are required");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "approval id and principal id are required",
+      );
     }
     return new ApprovalAction(approvalId, action, principalId, recordedAt);
   }
@@ -213,7 +216,9 @@ export class FourEyesRecord {
    * Two clicks from one account never satisfy FOUR_EYES.
    */
   isSatisfied(requesterId: string): boolean {
-    const approvers = [...this.#approves.keys()].filter((p) => p !== requesterId);
+    const approvers = [...this.#approves.keys()].filter(
+      (p) => p !== requesterId,
+    );
     return approvers.length >= 2;
   }
 

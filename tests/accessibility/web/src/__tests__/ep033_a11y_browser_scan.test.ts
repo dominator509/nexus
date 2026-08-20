@@ -18,7 +18,17 @@ import { renderOwnedSurfacesHtml } from "../harness.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // __tests__ -> src -> web -> accessibility -> tests -> repo root
-const EVIDENCE_DIR = join(__dirname, "..", "..", "..", "..", "..", ".agent", "state", "evidence");
+const EVIDENCE_DIR = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  ".agent",
+  "state",
+  "evidence",
+);
 
 interface AxeViolation {
   id: string;
@@ -48,7 +58,9 @@ describe("ep033_browser_scan", () => {
         args: ["--no-sandbox", "--disable-dev-shm-usage"],
       });
       try {
-        const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+        const page = await browser.newPage({
+          viewport: { width: 1280, height: 900 },
+        });
         await page.setContent(html, { waitUntil: "load" });
 
         // Inject the real axe-core engine source into the real page.
@@ -60,9 +72,13 @@ describe("ep033_browser_scan", () => {
 
         // Run the WCAG 2.2 A/AA tag set.
         const result = (await page.evaluate(async () => {
-          const globalAxe = (window as unknown as {
-            axe: { run: (context: unknown, opts: unknown) => Promise<unknown> };
-          }).axe;
+          const globalAxe = (
+            window as unknown as {
+              axe: {
+                run: (context: unknown, opts: unknown) => Promise<unknown>;
+              };
+            }
+          ).axe;
           return globalAxe.run(document, {
             runOnly: {
               type: "tag",
@@ -85,7 +101,8 @@ describe("ep033_browser_scan", () => {
           proof: "LF-005 accessibility-scan",
           run_id: runId,
           standard: "WCAG 2.2 A/AA (axe-core rule set)",
-          scope: "Owned surfaces: DashboardShellView, ApprovalCardView, StatusBadge, CapabilityButton, ChatComposer rendered by react-dom/server",
+          scope:
+            "Owned surfaces: DashboardShellView, ApprovalCardView, StatusBadge, CapabilityButton, ChatComposer rendered by react-dom/server",
           tool: {
             engine: "axe-core",
             version: axe.version,
@@ -111,7 +128,11 @@ describe("ep033_browser_scan", () => {
 
         mkdirSync(EVIDENCE_DIR, { recursive: true });
         const evidencePath = join(EVIDENCE_DIR, "LF-005-ep033-m5.json");
-        writeFileSync(evidencePath, JSON.stringify(evidence, null, 2) + "\n", "utf8");
+        writeFileSync(
+          evidencePath,
+          JSON.stringify(evidence, null, 2) + "\n",
+          "utf8",
+        );
 
         // Machine-observed result: the scan RAN in a real browser and
         // produced a current-run evidence file. WCAG 2.2 A/AA violations

@@ -21,7 +21,10 @@ function uuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
 
-function session(expiresAt = 1_800_000_000, revoked = false): AuthenticatedSession {
+function session(
+  expiresAt = 1_800_000_000,
+  revoked = false,
+): AuthenticatedSession {
   return AuthenticatedSession.fromWire({
     session_id: uuid(1),
     principal_id: uuid(2),
@@ -36,7 +39,9 @@ function session(expiresAt = 1_800_000_000, revoked = false): AuthenticatedSessi
   });
 }
 
-function requestWire(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function requestWire(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     action_id: uuid(20),
     tenant_id: uuid(3),
@@ -101,7 +106,11 @@ describe("ep033_failure_denied_policy", () => {
 
   it("refuses dispatch under a revoked session (authorization denied)", () => {
     const revoked = session(1_800_000_000, true);
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, revoked);
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      revoked,
+    );
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
     try {
       dispatcher.dispatch(request, revoked, 1_700_000_001, () => {
@@ -115,16 +124,20 @@ describe("ep033_failure_denied_policy", () => {
 
   it("refuses dispatch under an expired session and never replays", () => {
     const expired = session(1_000_000_000);
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, expired);
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      expired,
+    );
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
     // First attempt: refused.
-    expect(() => dispatcher.dispatch(request, expired, 1_700_000_001, () => {})).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      dispatcher.dispatch(request, expired, 1_700_000_001, () => {}),
+    ).toThrowError(Spec006Error);
     // Second attempt without re-authentication: refused again - no
     // blind replay queue exists.
-    expect(() => dispatcher.dispatch(request, expired, 1_700_000_002, () => {})).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      dispatcher.dispatch(request, expired, 1_700_000_002, () => {}),
+    ).toThrowError(Spec006Error);
   });
 });

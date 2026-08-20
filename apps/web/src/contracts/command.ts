@@ -138,7 +138,10 @@ export class TypedCommandRequest {
     const tenantId = assertUuid(obj.tenant_id, "tenant_id");
     const principalId = assertUuid(obj.principal_id, "principal_id");
 
-    if (tenantId !== session.tenant_id || principalId !== session.principal_id) {
+    if (
+      tenantId !== session.tenant_id ||
+      principalId !== session.principal_id
+    ) {
       throw new Spec006Error(
         ErrorCode.Authorization,
         "Command tenant/principal does not match session",
@@ -155,8 +158,16 @@ export class TypedCommandRequest {
       );
     }
 
-    if (typeof obj.arguments !== "object" || obj.arguments === null || Array.isArray(obj.arguments)) {
-      throw new Spec006Error(ErrorCode.Validation, "arguments must be an object", session.correlation);
+    if (
+      typeof obj.arguments !== "object" ||
+      obj.arguments === null ||
+      Array.isArray(obj.arguments)
+    ) {
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "arguments must be an object",
+        session.correlation,
+      );
     }
     if (
       typeof obj.expected_state !== "object" ||
@@ -170,7 +181,11 @@ export class TypedCommandRequest {
       );
     }
     if (typeof obj.invocation !== "object" || obj.invocation === null) {
-      throw new Spec006Error(ErrorCode.Validation, "invocation must be an object", session.correlation);
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "invocation must be an object",
+        session.correlation,
+      );
     }
     const invocation = obj.invocation as InvocationContext;
     if (
@@ -187,8 +202,15 @@ export class TypedCommandRequest {
     }
 
     const risk = obj.risk;
-    if (typeof risk !== "string" || !(RISK_CLASSES as readonly string[]).includes(risk)) {
-      throw new Spec006Error(ErrorCode.Vocabulary, `Unsupported risk '${String(risk)}'`, session.correlation);
+    if (
+      typeof risk !== "string" ||
+      !(RISK_CLASSES as readonly string[]).includes(risk)
+    ) {
+      throw new Spec006Error(
+        ErrorCode.Vocabulary,
+        `Unsupported risk '${String(risk)}'`,
+        session.correlation,
+      );
     }
     const approvalClass = obj.approval_class;
     if (
@@ -247,8 +269,15 @@ export class DispatchGate {
    * @throws Authentication/Authorization when the session is not
    *         active; the caller must not queue the request.
    */
-  authorize(request: TypedCommandRequest, session: AuthenticatedSession, nowUnixS: number): TypedCommandRequest {
-    session.requireActive(nowUnixS, request.invocation.correlation_id ?? session.correlation);
+  authorize(
+    request: TypedCommandRequest,
+    session: AuthenticatedSession,
+    nowUnixS: number,
+  ): TypedCommandRequest {
+    session.requireActive(
+      nowUnixS,
+      request.invocation.correlation_id ?? session.correlation,
+    );
     return request;
   }
 }
@@ -270,7 +299,10 @@ export function refuseOrPass(
 ): { request: TypedCommandRequest; refusal: MutationRefusal } {
   const status = session.statusAt(nowUnixS);
   if (status === "ACTIVE") {
-    return { request, refusal: { code: "SESSION_ACTIVE", correlation: session.correlation } };
+    return {
+      request,
+      refusal: { code: "SESSION_ACTIVE", correlation: session.correlation },
+    };
   }
   return {
     request,
@@ -299,7 +331,8 @@ export function lifecycleClaims(stage: ActionLifecycleStage): {
       stage === "SUCCEEDED" ||
       stage === "COMPENSATING" ||
       stage === "COMPENSATED",
-    verified: stage === "VERIFYING" || stage === "SUCCEEDED" || stage === "COMPENSATED",
+    verified:
+      stage === "VERIFYING" || stage === "SUCCEEDED" || stage === "COMPENSATED",
   };
 }
 

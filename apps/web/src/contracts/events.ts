@@ -8,11 +8,7 @@
  */
 
 import type { EventEnvelope } from "@nexus/contracts";
-import {
-  assertObject,
-  assertString,
-  rejectUnknownFields,
-} from "./validate";
+import { assertObject, assertString, rejectUnknownFields } from "./validate";
 import { ErrorCode, Spec006Error } from "./errors";
 
 export const EVENT_FILTER_FIELDS = new Set<string>([
@@ -49,7 +45,10 @@ export class EventFilter {
     const eventType = assertString(obj.event_type, "event_type");
     const source = assertString(obj.source, "source");
     if (eventType.length === 0 || source.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "event_type and source must not be empty");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "event_type and source must not be empty",
+      );
     }
     return new EventFilter({
       event_type: eventType,

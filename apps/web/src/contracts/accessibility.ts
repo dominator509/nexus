@@ -9,7 +9,13 @@
  * (Playwright/axe in EP-033 M3/M5) and is NOT claimed here.
  */
 
-import { assertBool, assertEnum, assertObject, assertString, rejectUnknownFields } from "./validate";
+import {
+  assertBool,
+  assertEnum,
+  assertObject,
+  assertString,
+  rejectUnknownFields,
+} from "./validate";
 import { ErrorCode, Spec006Error } from "./errors";
 
 export const A11Y_ROLES = [
@@ -88,7 +94,10 @@ export class A11ySurface {
     const name = assertString(obj.name, "name");
     const label = assertString(obj.label, "label");
     if (name.length === 0 || label.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "a11y surface requires a name and label");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "a11y surface requires a name and label",
+      );
     }
     return new A11ySurface({
       name,
@@ -97,7 +106,10 @@ export class A11ySurface {
       focusable: assertBool(obj.focusable, "focusable"),
       keyboard_operable: assertBool(obj.keyboard_operable, "keyboard_operable"),
       focus_order: typeof obj.focus_order === "number" ? obj.focus_order : 0,
-      reduced_motion_safe: assertBool(obj.reduced_motion_safe, "reduced_motion_safe"),
+      reduced_motion_safe: assertBool(
+        obj.reduced_motion_safe,
+        "reduced_motion_safe",
+      ),
       non_color_status: assertBool(obj.non_color_status, "non_color_status"),
     });
   }
@@ -122,11 +134,17 @@ export class FocusOrder {
 
   register(name: string, order: number): void {
     if (!Number.isInteger(order) || order <= 0) {
-      throw new Spec006Error(ErrorCode.Validation, `Focus order for '${name}' must be a positive integer`);
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        `Focus order for '${name}' must be a positive integer`,
+      );
     }
     for (const existing of this.#orders.values()) {
       if (existing === order) {
-        throw new Spec006Error(ErrorCode.Conflict, `Duplicate focus order ${order}`);
+        throw new Spec006Error(
+          ErrorCode.Conflict,
+          `Duplicate focus order ${order}`,
+        );
       }
     }
     this.#orders.set(name, order);

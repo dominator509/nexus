@@ -11,7 +11,11 @@ import { ChatComposer } from "../components/chat-composer";
 describe("ep033_integration_chat_composer", () => {
   it("renders a labeled chat form", () => {
     const html = renderToString(
-      <ChatComposer conversationId="conv-1" correlationId="corr-1" onSend={() => {}} />,
+      <ChatComposer
+        conversationId="conv-1"
+        correlationId="corr-1"
+        onSend={() => {}}
+      />,
     );
     expect(html).toContain('role="form"');
     expect(html).toContain('aria-label="Chat message composer"');
@@ -20,7 +24,11 @@ describe("ep033_integration_chat_composer", () => {
 
   it("renders a send button bound to the form", () => {
     const html = renderToString(
-      <ChatComposer conversationId="conv-1" correlationId="corr-1" onSend={() => {}} />,
+      <ChatComposer
+        conversationId="conv-1"
+        correlationId="corr-1"
+        onSend={() => {}}
+      />,
     );
     expect(html).toContain("<button");
     expect(html).toContain("Send");

@@ -9,7 +9,12 @@
  * optimistic state without revalidation.
  */
 
-import { assertEnum, assertInt, assertObject, rejectUnknownFields } from "./validate";
+import {
+  assertEnum,
+  assertInt,
+  assertObject,
+  rejectUnknownFields,
+} from "./validate";
 import { ErrorCode, Spec006Error } from "./errors";
 
 export const UI_STATE_KINDS = [
@@ -76,13 +81,25 @@ export class ViewState<T> {
   }
 
   static loading(correlation: string): ViewState<never> {
-    return new ViewState<never>("LOADING", "CONNECTED", "STALE", 0, 0, correlation, undefined);
+    return new ViewState<never>(
+      "LOADING",
+      "CONNECTED",
+      "STALE",
+      0,
+      0,
+      correlation,
+      undefined,
+    );
   }
 
   static success<T>(
     payload: T,
     correlation: string,
-    opts: { observedAt?: number; revision?: number; connectivity?: ConnectivityState } = {},
+    opts: {
+      observedAt?: number;
+      revision?: number;
+      connectivity?: ConnectivityState;
+    } = {},
   ): ViewState<T> {
     return new ViewState<T>(
       "SUCCESS",
@@ -95,8 +112,19 @@ export class ViewState<T> {
     );
   }
 
-  static empty(correlation: string, connectivity: ConnectivityState = "CONNECTED"): ViewState<never> {
-    return new ViewState<never>("EMPTY", connectivity, "FRESH", Date.now(), 1, correlation, undefined);
+  static empty(
+    correlation: string,
+    connectivity: ConnectivityState = "CONNECTED",
+  ): ViewState<never> {
+    return new ViewState<never>(
+      "EMPTY",
+      connectivity,
+      "FRESH",
+      Date.now(),
+      1,
+      correlation,
+      undefined,
+    );
   }
 
   static error(
@@ -108,7 +136,15 @@ export class ViewState<T> {
       error.code === ErrorCode.Authorization || error.code === ErrorCode.Policy
         ? "PERMISSION_DENIED"
         : "ERROR";
-    return new ViewState<never>(kind, connectivity, "STALE", Date.now(), 0, correlation, undefined);
+    return new ViewState<never>(
+      kind,
+      connectivity,
+      "STALE",
+      Date.now(),
+      0,
+      correlation,
+      undefined,
+    );
   }
 
   static degraded(
@@ -116,7 +152,15 @@ export class ViewState<T> {
     connectivity: ConnectivityState,
     observedAt: number,
   ): ViewState<never> {
-    return new ViewState<never>("DEGRADED", connectivity, "STALE", observedAt, 0, correlation, undefined);
+    return new ViewState<never>(
+      "DEGRADED",
+      connectivity,
+      "STALE",
+      observedAt,
+      0,
+      correlation,
+      undefined,
+    );
   }
 
   static fromWire(value: unknown): ViewState<unknown> {
@@ -124,8 +168,16 @@ export class ViewState<T> {
     rejectUnknownFields(obj, VIEW_STATE_FIELDS, "ViewState");
     return new ViewState<unknown>(
       assertEnum(obj.kind, new Set<UiStateKind>(UI_STATE_KINDS), "kind"),
-      assertEnum(obj.connectivity, new Set<ConnectivityState>(CONNECTIVITY_STATES), "connectivity"),
-      assertEnum(obj.freshness, new Set<DataFreshness>(DATA_FRESHNESS), "freshness"),
+      assertEnum(
+        obj.connectivity,
+        new Set<ConnectivityState>(CONNECTIVITY_STATES),
+        "connectivity",
+      ),
+      assertEnum(
+        obj.freshness,
+        new Set<DataFreshness>(DATA_FRESHNESS),
+        "freshness",
+      ),
       assertInt(obj.observed_at_unix_ms, "observed_at_unix_ms"),
       assertInt(obj.revision, "revision"),
       typeof obj.correlation === "string" ? obj.correlation : "",
@@ -158,7 +210,10 @@ export class ViewState<T> {
  * fresh with a new revision. Revisions are monotonic; a lower revision
  * can never overwrite a higher one (directive J).
  */
-export function revalidated<T>(previous: ViewState<T>, next: ViewState<T>): ViewState<T> {
+export function revalidated<T>(
+  previous: ViewState<T>,
+  next: ViewState<T>,
+): ViewState<T> {
   if (next.revision < previous.revision) {
     throw new Spec006Error(
       ErrorCode.Conflict,

@@ -9,15 +9,10 @@
  * shell (EP-033 fallback).
  */
 
-export {
-  DesktopShellRuntime,
-} from "./runtime";
+export { DesktopShellRuntime } from "./runtime";
 export type { DesktopRuntimeSnapshot } from "./runtime";
 
-export {
-  DesktopCommandDispatcher,
-  DesktopTelemetry,
-} from "./dispatcher";
+export { DesktopCommandDispatcher, DesktopTelemetry } from "./dispatcher";
 export type { DispatchResult, DesktopTelemetryEntry } from "./dispatcher";
 
 export { DesktopApprovalFlow } from "./approvals";

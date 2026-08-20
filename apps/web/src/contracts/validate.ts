@@ -12,7 +12,10 @@
 
 import { Spec006Error, ErrorCode } from "./errors";
 
-export function assertObject(value: unknown, what: string): Record<string, unknown> {
+export function assertObject(
+  value: unknown,
+  what: string,
+): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Spec006Error(ErrorCode.Validation, `${what} must be an object`);
   }
@@ -26,7 +29,10 @@ export function rejectUnknownFields(
 ): void {
   for (const key of Object.keys(value)) {
     if (!allowed.has(key)) {
-      throw new Spec006Error(ErrorCode.Validation, `${what} has unknown field '${key}'`);
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        `${what} has unknown field '${key}'`,
+      );
     }
   }
 }
@@ -46,7 +52,8 @@ export function assertUuid(value: unknown, what: string): string {
   return s;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export function assertEnum<T extends string>(
   value: unknown,
@@ -96,10 +103,16 @@ export function assertStringSet(
   for (const entry of value) {
     const s = assertString(entry, `${what} entry`);
     if (s.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, `${what} entry must not be empty`);
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        `${what} entry must not be empty`,
+      );
     }
     if (out.has(s)) {
-      throw new Spec006Error(ErrorCode.Validation, `${what} contains duplicate '${s}'`);
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        `${what} contains duplicate '${s}'`,
+      );
     }
     out.add(s);
   }

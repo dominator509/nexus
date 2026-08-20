@@ -35,7 +35,12 @@ export const GRANT_FLOWS = [
 ] as const;
 export type GrantFlow = (typeof GRANT_FLOWS)[number];
 
-export const AUTH_STRENGTHS = ["NONE", "SINGLE_FACTOR", "MULTI_FACTOR", "STEP_UP"] as const;
+export const AUTH_STRENGTHS = [
+  "NONE",
+  "SINGLE_FACTOR",
+  "MULTI_FACTOR",
+  "STEP_UP",
+] as const;
 export type AuthStrength = (typeof AUTH_STRENGTHS)[number];
 
 const SESSION_FIELDS = new Set<string>([
@@ -104,8 +109,16 @@ export class AuthenticatedSession {
       principal_id: assertUuid(obj.principal_id, "principal_id"),
       tenant_id: assertUuid(obj.tenant_id, "tenant_id"),
       device_id: assertUuid(obj.device_id, "device_id"),
-      grant_flow: assertEnum(obj.grant_flow, new Set<GrantFlow>(GRANT_FLOWS), "grant_flow"),
-      strength: assertEnum(obj.strength, new Set<AuthStrength>(AUTH_STRENGTHS), "strength"),
+      grant_flow: assertEnum(
+        obj.grant_flow,
+        new Set<GrantFlow>(GRANT_FLOWS),
+        "grant_flow",
+      ),
+      strength: assertEnum(
+        obj.strength,
+        new Set<AuthStrength>(AUTH_STRENGTHS),
+        "strength",
+      ),
       created_at_unix_s: assertInt(obj.created_at_unix_s, "created_at_unix_s"),
       expires_at_unix_s: assertInt(obj.expires_at_unix_s, "expires_at_unix_s"),
       revoked: assertBool(obj.revoked, "revoked"),
@@ -190,18 +203,29 @@ export class BusinessContext {
   static fromWire(value: unknown): BusinessContext {
     const obj = assertObject(value, "BusinessContext");
     rejectUnknownFields(obj, BUSINESS_CONTEXT_FIELDS, "BusinessContext");
-    const businessId = obj.business_id === undefined ? undefined : assertUuid(obj.business_id, "business_id");
+    const businessId =
+      obj.business_id === undefined
+        ? undefined
+        : assertUuid(obj.business_id, "business_id");
     return new BusinessContext({
       tenant_id: assertUuid(obj.tenant_id, "tenant_id"),
       principal_id: assertUuid(obj.principal_id, "principal_id"),
-      scope: assertEnum(obj.scope, new Set<BusinessScope>(BUSINESS_SCOPES), "scope"),
+      scope: assertEnum(
+        obj.scope,
+        new Set<BusinessScope>(BUSINESS_SCOPES),
+        "scope",
+      ),
       business_id: businessId as string | undefined,
       correlation: assertUuid(obj.correlation, "correlation"),
     });
   }
 
   /** A projection is valid only when bound to this exact context. */
-  binds(tenantId: string, principalId: string, businessId: string | undefined): boolean {
+  binds(
+    tenantId: string,
+    principalId: string,
+    businessId: string | undefined,
+  ): boolean {
     if (this.tenant_id !== tenantId || this.principal_id !== principalId) {
       return false;
     }
@@ -222,12 +246,18 @@ export class BoundContext {
   readonly session: AuthenticatedSession;
   readonly business: BusinessContext;
 
-  private constructor(session: AuthenticatedSession, business: BusinessContext) {
+  private constructor(
+    session: AuthenticatedSession,
+    business: BusinessContext,
+  ) {
     this.session = session;
     this.business = business;
   }
 
-  static bind(session: AuthenticatedSession, business: BusinessContext): BoundContext {
+  static bind(
+    session: AuthenticatedSession,
+    business: BusinessContext,
+  ): BoundContext {
     if (session.principal_id !== business.principal_id) {
       throw new Spec006Error(
         ErrorCode.Authorization,

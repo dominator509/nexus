@@ -16,11 +16,16 @@ export interface ApprovalCardViewProps {
   distinctApprovers: ReadonlyArray<string>;
 }
 
-export function ApprovalCardView(props: ApprovalCardViewProps): React.ReactElement {
+export function ApprovalCardView(
+  props: ApprovalCardViewProps,
+): React.ReactElement {
   const { card, state, distinctApprovers } = props;
   const fourEyes = card.requiresTwoPrincipals();
   return (
-    <section aria-label={`Approval ${card.approval_id}`} data-approval-id={card.approval_id}>
+    <section
+      aria-label={`Approval ${card.approval_id}`}
+      data-approval-id={card.approval_id}
+    >
       <h3>{card.action_label}</h3>
       <dl>
         <dt>Class</dt>

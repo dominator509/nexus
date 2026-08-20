@@ -8,7 +8,9 @@ import {
 } from "../contracts/accessibility";
 import { ErrorCode, Spec006Error } from "../contracts/errors";
 
-function surface(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function surface(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     name: "approve-button",
     label: "Approve quarantine",
@@ -39,18 +41,22 @@ describe("ep033_unit_accessibility_contracts", () => {
   });
 
   it("fails closed on surfaces without a label", () => {
-    expect(() => A11ySurface.fromWire(surface({ label: "" }))).toThrowError(Spec006Error);
+    expect(() => A11ySurface.fromWire(surface({ label: "" }))).toThrowError(
+      Spec006Error,
+    );
   });
 
   it("fails closed on interactive surfaces without keyboard operability", () => {
-    const unkeyboardable = A11ySurface.fromWire(surface({ keyboard_operable: false }));
+    const unkeyboardable = A11ySurface.fromWire(
+      surface({ keyboard_operable: false }),
+    );
     expect(() => unkeyboardable.assertInteractive()).toThrowError(Spec006Error);
   });
 
   it("rejects unsupported roles", () => {
-    expect(() => A11ySurface.fromWire(surface({ role: "magic-widget" }))).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      A11ySurface.fromWire(surface({ role: "magic-widget" })),
+    ).toThrowError(Spec006Error);
   });
 
   it("enforces unique positive focus orders", () => {
@@ -62,21 +68,29 @@ describe("ep033_unit_accessibility_contracts", () => {
   });
 
   it("requires reduced-motion safety for motion surfaces", () => {
-    const motionSurface = A11ySurface.fromWire(surface({ name: "carousel", reduced_motion_safe: false }));
-    expect(() => assertReducedMotionSafe(motionSurface)).toThrowError(Spec006Error);
+    const motionSurface = A11ySurface.fromWire(
+      surface({ name: "carousel", reduced_motion_safe: false }),
+    );
+    expect(() => assertReducedMotionSafe(motionSurface)).toThrowError(
+      Spec006Error,
+    );
     const safe = A11ySurface.fromWire(surface());
     expect(() => assertReducedMotionSafe(safe)).not.toThrow();
   });
 
   it("requires non-color status signaling", () => {
-    const colorOnly = A11ySurface.fromWire(surface({ name: "status-dot", non_color_status: false }));
+    const colorOnly = A11ySurface.fromWire(
+      surface({ name: "status-dot", non_color_status: false }),
+    );
     expect(() => assertNonColorStatus(colorOnly)).toThrowError(Spec006Error);
     const accessible = A11ySurface.fromWire(surface());
     expect(() => assertNonColorStatus(accessible)).not.toThrow();
   });
 
   it("rejects unknown fields", () => {
-    expect(() => A11ySurface.fromWire(surface({ onclick: "evil()" }))).toThrowError(Spec006Error);
+    expect(() =>
+      A11ySurface.fromWire(surface({ onclick: "evil()" })),
+    ).toThrowError(Spec006Error);
   });
 
   it("does not claim WCAG conformance (owned by later milestones)", () => {

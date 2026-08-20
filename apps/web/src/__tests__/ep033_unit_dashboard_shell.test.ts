@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { DashboardShell, DASHBOARD_ROUTES, DASHBOARD_SURFACES } from "../contracts/dashboard-shell";
-import { AuthenticatedSession, BusinessContext, BoundContext } from "../contracts/session";
+import {
+  DashboardShell,
+  DASHBOARD_ROUTES,
+  DASHBOARD_SURFACES,
+} from "../contracts/dashboard-shell";
+import {
+  AuthenticatedSession,
+  BusinessContext,
+  BoundContext,
+} from "../contracts/session";
 
 function uuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -84,8 +92,12 @@ describe("ep033_unit_dashboard_shell", () => {
 
   it("maps incident and integration routes to audit and settings surfaces", () => {
     const context = bound();
-    expect(DashboardShell.navigate("incidents", context).shell.surface).toBe("audit");
-    expect(DashboardShell.navigate("integrations", context).shell.surface).toBe("provider_settings");
+    expect(DashboardShell.navigate("incidents", context).shell.surface).toBe(
+      "audit",
+    );
+    expect(DashboardShell.navigate("integrations", context).shell.surface).toBe(
+      "provider_settings",
+    );
   });
 
   it("rejects unknown fields in shell wire input", () => {

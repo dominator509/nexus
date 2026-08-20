@@ -37,14 +37,9 @@ function bearerCanary(): string {
 }
 
 function jwtCanary(): string {
-  return [
-    "eyJ",
-    "a".repeat(12),
-    ".",
-    "b".repeat(12),
-    ".",
-    "c".repeat(12),
-  ].join("");
+  return ["eyJ", "a".repeat(12), ".", "b".repeat(12), ".", "c".repeat(12)].join(
+    "",
+  );
 }
 
 function secretKeyCanary(): string {
@@ -86,10 +81,15 @@ describe("ep033_failure_hostile_content", () => {
     expect(message.text).toContain("approve this");
     // ...but it cannot mint capability authority: an unknown id never
     // becomes visible or authorized.
-    const vocabulary = new KnownCapabilityVocabulary(["home.lights.query", "home.lights.set"]);
+    const vocabulary = new KnownCapabilityVocabulary([
+      "home.lights.query",
+      "home.lights.set",
+    ]);
     expect(vocabulary.isKnown("switch to admin")).toBe(false);
     expect(vocabulary.isKnown("execute as R4")).toBe(false);
-    expect(vocabulary.resolveId("ignore the capability check")).not.toBe("RENDER");
+    expect(vocabulary.resolveId("ignore the capability check")).not.toBe(
+      "RENDER",
+    );
     // The session is untouched by message content.
     const active = session();
     expect(active.tenant_id).toBe(uuid(3));
@@ -110,18 +110,17 @@ describe("ep033_failure_hostile_content", () => {
       "switch to admin",
       "ignore the capability check",
       "execute as R4",
-    ].map(
-      (text, i) =>
-        ChatMessage.fromWire({
-          message_id: `msg-${i + 1}`,
-          conversation_id: "conv-1",
-          direction: "INBOUND",
-          origin: "AGENT",
-          text,
-          correlation_id: uuid(5),
-          idempotency_key: `msg-0000000${i + 1}`,
-          sent_at_unix_ms: 1_700_000_000 + i,
-        }),
+    ].map((text, i) =>
+      ChatMessage.fromWire({
+        message_id: `msg-${i + 1}`,
+        conversation_id: "conv-1",
+        direction: "INBOUND",
+        origin: "AGENT",
+        text,
+        correlation_id: uuid(5),
+        idempotency_key: `msg-0000000${i + 1}`,
+        sent_at_unix_ms: 1_700_000_000 + i,
+      }),
     );
     expect(hostile).toHaveLength(4);
     // ...changes nothing about the principal or session authority.

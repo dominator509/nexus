@@ -31,7 +31,10 @@ function uuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
 
-function session(expiresAt = 1_800_000_000, revoked = false): AuthenticatedSession {
+function session(
+  expiresAt = 1_800_000_000,
+  revoked = false,
+): AuthenticatedSession {
   return AuthenticatedSession.fromWire({
     session_id: uuid(1),
     principal_id: uuid(2),
@@ -46,7 +49,10 @@ function session(expiresAt = 1_800_000_000, revoked = false): AuthenticatedSessi
   });
 }
 
-function business(businessId: string | undefined, correlation: string): BusinessContext {
+function business(
+  businessId: string | undefined,
+  correlation: string,
+): BusinessContext {
   return BusinessContext.fromWire({
     tenant_id: uuid(3),
     principal_id: uuid(2),
@@ -56,7 +62,9 @@ function business(businessId: string | undefined, correlation: string): Business
   });
 }
 
-function requestWire(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function requestWire(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     action_id: uuid(20),
     tenant_id: uuid(3),
@@ -87,10 +95,14 @@ const VOCABULARY = new KnownCapabilityVocabulary([
 
 describe("ep033_failure_state_authority", () => {
   it("invalidates a business-A projection after switching to business B (stale handle)", () => {
-    const runtime = new DesktopShellRuntime(BoundContext.bind(session(), business(uuid(10), uuid(5))));
+    const runtime = new DesktopShellRuntime(
+      BoundContext.bind(session(), business(uuid(10), uuid(5))),
+    );
     const projection = runtime.project({ host: "edge-01" });
     // Business A data is current before the switch.
-    expect(projection.requireCurrent(runtime.context)).toEqual({ host: "edge-01" });
+    expect(projection.requireCurrent(runtime.context)).toEqual({
+      host: "edge-01",
+    });
     // Switch to business B: the old projection must become non-actionable.
     runtime.switchBusiness(business(uuid(11), uuid(5)));
     try {
@@ -102,7 +114,9 @@ describe("ep033_failure_state_authority", () => {
   });
 
   it("refuses a consequential action while the backend is unavailable", () => {
-    const runtime = new DesktopShellRuntime(BoundContext.bind(session(), business(uuid(10), uuid(5))));
+    const runtime = new DesktopShellRuntime(
+      BoundContext.bind(session(), business(uuid(10), uuid(5))),
+    );
     runtime.setConnectivity("BACKEND_UNAVAILABLE");
     try {
       runtime.requireConsequential(1_700_000_001, "quarantine");
@@ -113,7 +127,9 @@ describe("ep033_failure_state_authority", () => {
   });
 
   it("refuses a consequential action while offline", () => {
-    const runtime = new DesktopShellRuntime(BoundContext.bind(session(), business(uuid(10), uuid(5))));
+    const runtime = new DesktopShellRuntime(
+      BoundContext.bind(session(), business(uuid(10), uuid(5))),
+    );
     runtime.setConnectivity("OFFLINE");
     try {
       runtime.requireConsequential(1_700_000_001, "quarantine");
@@ -124,7 +140,9 @@ describe("ep033_failure_state_authority", () => {
   });
 
   it("never presents an offline payload as live: stale is not actionable", () => {
-    const runtime = new DesktopShellRuntime(BoundContext.bind(session(), business(uuid(10), uuid(5))));
+    const runtime = new DesktopShellRuntime(
+      BoundContext.bind(session(), business(uuid(10), uuid(5))),
+    );
     runtime.setConnectivity("OFFLINE");
     const labeled = runtime.labelPayload({ host: "edge-01" }, uuid(5));
     expect(labeled.freshness).toBe("STALE");
@@ -134,7 +152,11 @@ describe("ep033_failure_state_authority", () => {
     } catch (error) {
       expect((error as Spec006Error).code).toBe(ErrorCode.Conflict);
     }
-    const composition = DesktopViewState.compose({ host: "edge-01" }, uuid(5), "BACKEND_UNAVAILABLE");
+    const composition = DesktopViewState.compose(
+      { host: "edge-01" },
+      uuid(5),
+      "BACKEND_UNAVAILABLE",
+    );
     expect(composition.actionable).toBe(false);
     expect(composition.view.freshness).toBe("STALE");
     try {
@@ -147,22 +169,35 @@ describe("ep033_failure_state_authority", () => {
 
   it("executes a duplicate request exactly once (idempotency ring)", () => {
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, session());
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      session(),
+    );
     let executions = 0;
     dispatcher.dispatch(request, session(), 1_700_000_001, () => {
       executions += 1;
     });
     // Same key, same action: deduplicated, never a second dispatch.
-    const duplicate = dispatcher.dispatch(request, session(), 1_700_000_002, () => {
-      executions += 1;
-    });
+    const duplicate = dispatcher.dispatch(
+      request,
+      session(),
+      1_700_000_002,
+      () => {
+        executions += 1;
+      },
+    );
     expect(duplicate.status).toBe("EXECUTED");
     expect(executions).toBe(1);
   });
 
   it("rejects a reused idempotency key for a different request (conflict, no dispatch)", () => {
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
-    const first = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, session());
+    const first = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      session(),
+    );
     dispatcher.dispatch(first, session(), 1_700_000_001, () => {});
     const second = TypedCommandRequest.fromWire(
       requestWire({ action_id: uuid(21) }),
@@ -196,12 +231,18 @@ describe("ep033_failure_state_authority", () => {
       correlation: uuid(33),
     });
     const flow = new DesktopApprovalFlow(card);
-    flow.apply(ApprovalAction.record(uuid(30), "APPROVE", uuid(40), 1), 1_700_000_000);
+    flow.apply(
+      ApprovalAction.record(uuid(30), "APPROVE", uuid(40), 1),
+      1_700_000_000,
+    );
     expect(flow.state).toBe("PENDING");
     // A second click by the SAME principal is a conflict, never a second
     // approval: two clicks by one account cannot equal two approvals.
     try {
-      flow.apply(ApprovalAction.record(uuid(30), "APPROVE", uuid(40), 2), 1_700_000_001);
+      flow.apply(
+        ApprovalAction.record(uuid(30), "APPROVE", uuid(40), 2),
+        1_700_000_001,
+      );
       expect.unreachable();
     } catch (error) {
       expect((error as Spec006Error).code).toBe(ErrorCode.Conflict);

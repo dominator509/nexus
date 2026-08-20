@@ -36,7 +36,10 @@ function session(): AuthenticatedSession {
   });
 }
 
-const VOCABULARY = new KnownCapabilityVocabulary(["home.lights.query", "home.lights.set"]);
+const VOCABULARY = new KnownCapabilityVocabulary([
+  "home.lights.query",
+  "home.lights.set",
+]);
 
 describe("ep033_failure_malformed_input", () => {
   it("rejects a session with unknown fields (deny-unknown fail closed)", () => {
@@ -53,7 +56,9 @@ describe("ep033_failure_malformed_input", () => {
       correlation: uuid(5),
       superuser: true,
     };
-    expect(() => AuthenticatedSession.fromWire(corrupted)).toThrowError(Spec006Error);
+    expect(() => AuthenticatedSession.fromWire(corrupted)).toThrowError(
+      Spec006Error,
+    );
   });
 
   it("rejects a session with a corrupted enum", () => {
@@ -140,8 +145,8 @@ describe("ep033_failure_malformed_input", () => {
         external_actor_type: "principal",
       },
     };
-    expect(() => TypedCommandRequest.fromWire(malformed, VOCABULARY, active)).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      TypedCommandRequest.fromWire(malformed, VOCABULARY, active),
+    ).toThrowError(Spec006Error);
   });
 });

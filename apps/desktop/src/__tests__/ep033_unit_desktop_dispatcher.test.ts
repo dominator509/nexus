@@ -27,7 +27,9 @@ function session(expiresAt = 1_800_000_000): AuthenticatedSession {
   });
 }
 
-function requestWire(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function requestWire(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     action_id: uuid(20),
     tenant_id: uuid(3),
@@ -50,16 +52,29 @@ function requestWire(overrides: Record<string, unknown> = {}): Record<string, un
   };
 }
 
-const VOCABULARY = new KnownCapabilityVocabulary(["home.lights.query", "home.lights.set", "sentinel.contain.quarantine"]);
+const VOCABULARY = new KnownCapabilityVocabulary([
+  "home.lights.query",
+  "home.lights.set",
+  "sentinel.contain.quarantine",
+]);
 
 describe("ep033_unit_desktop_dispatcher", () => {
   it("dispatches a validated command exactly once and returns EXECUTED", () => {
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, session());
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      session(),
+    );
     let executions = 0;
-    const result = dispatcher.dispatch(request, session(), 1_700_000_001, () => {
-      executions += 1;
-    });
+    const result = dispatcher.dispatch(
+      request,
+      session(),
+      1_700_000_001,
+      () => {
+        executions += 1;
+      },
+    );
     expect(result.status).toBe("EXECUTED");
     expect(result.capability_id).toBe("home.lights.set");
     expect(executions).toBe(1);
@@ -68,7 +83,11 @@ describe("ep033_unit_desktop_dispatcher", () => {
   it("refuses dispatch under an expired session (fail closed)", () => {
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
     const expired = session(1_000_000_000);
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, expired);
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      expired,
+    );
     expect(() =>
       dispatcher.dispatch(request, expired, 1_700_000_001, () => {
         expect.unreachable();
@@ -79,12 +98,20 @@ describe("ep033_unit_desktop_dispatcher", () => {
   it("never double-executes a duplicate idempotency key", () => {
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
     const active = session();
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, active);
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      active,
+    );
     let executions = 0;
     dispatcher.dispatch(request, active, 1_700_000_001, () => {
       executions += 1;
     });
-    const duplicate = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, active);
+    const duplicate = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      active,
+    );
     const result = dispatcher.dispatch(duplicate, active, 1_700_000_001, () => {
       executions += 1;
     });
@@ -95,7 +122,11 @@ describe("ep033_unit_desktop_dispatcher", () => {
   it("rejects an idempotency key reused for a different request", () => {
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
     const active = session();
-    const first = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, active);
+    const first = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      active,
+    );
     dispatcher.dispatch(first, active, 1_700_000_001, () => {});
     const different = TypedCommandRequest.fromWire(
       requestWire({ action_id: uuid(21) }),
@@ -154,7 +185,11 @@ describe("ep033_unit_desktop_dispatcher", () => {
   it("propagates execute failures as errors, never as success", () => {
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
     const active = session();
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, active);
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      active,
+    );
     expect(() =>
       dispatcher.dispatch(request, active, 1_700_000_001, () => {
         throw new Spec006Error(ErrorCode.Unavailable, "backend refused");

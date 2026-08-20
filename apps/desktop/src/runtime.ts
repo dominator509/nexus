@@ -30,7 +30,12 @@ import {
 } from "@nexus/web";
 
 export interface DesktopRuntimeSnapshot {
-  status: "ACTIVE" | "DEGRADED" | "OFFLINE" | "AUTH_EXPIRED" | "BACKEND_UNAVAILABLE";
+  status:
+    | "ACTIVE"
+    | "DEGRADED"
+    | "OFFLINE"
+    | "AUTH_EXPIRED"
+    | "BACKEND_UNAVAILABLE";
   connectivity: ConnectivityState;
   correlation: string;
 }
@@ -132,7 +137,10 @@ export class DesktopShellRuntime {
         this.#context.session.correlation,
       );
     }
-    if (this.#connectivity === "BACKEND_UNAVAILABLE" || this.#connectivity === "OFFLINE") {
+    if (
+      this.#connectivity === "BACKEND_UNAVAILABLE" ||
+      this.#connectivity === "OFFLINE"
+    ) {
       throw new Spec006Error(
         ErrorCode.Unavailable,
         `${action} refused: backend unavailable; revalidate before acting`,
@@ -150,7 +158,8 @@ export class DesktopShellRuntime {
     correlation: string,
     opts: { observedAt?: number; revision?: number } = {},
   ): ViewState<T> {
-    const fresh = this.#connectivity === "CONNECTED" || this.#connectivity === "DEGRADED";
+    const fresh =
+      this.#connectivity === "CONNECTED" || this.#connectivity === "DEGRADED";
     const view = ViewState.success(payload, correlation, {
       observedAt: opts.observedAt ?? Date.now(),
       revision: opts.revision ?? 1,

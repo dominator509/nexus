@@ -15,7 +15,10 @@ function uuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
 
-function session(expiresAt = 1_800_000_000, revoked = false): AuthenticatedSession {
+function session(
+  expiresAt = 1_800_000_000,
+  revoked = false,
+): AuthenticatedSession {
   return AuthenticatedSession.fromWire({
     session_id: uuid(1),
     principal_id: uuid(2),
@@ -30,7 +33,9 @@ function session(expiresAt = 1_800_000_000, revoked = false): AuthenticatedSessi
   });
 }
 
-function requestWire(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function requestWire(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     action_id: uuid(20),
     tenant_id: uuid(3),
@@ -53,11 +58,18 @@ function requestWire(overrides: Record<string, unknown> = {}): Record<string, un
   };
 }
 
-const VOCABULARY = new KnownCapabilityVocabulary(["home.lights.query", "home.lights.set"]);
+const VOCABULARY = new KnownCapabilityVocabulary([
+  "home.lights.query",
+  "home.lights.set",
+]);
 
 describe("ep033_unit_command_typed_dispatch", () => {
   it("constructs a valid typed command from canonical ActionRequest shape", () => {
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, session());
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      session(),
+    );
     expect(request.capability_id).toBe("home.lights.set");
     expect(request.risk).toBe("R1");
     expect(request.invocation.correlation_id).toBe(uuid(5));
@@ -108,7 +120,11 @@ describe("ep033_unit_command_typed_dispatch", () => {
 
   it("rejects unsupported risk and approval classes", () => {
     expect(() =>
-      TypedCommandRequest.fromWire(requestWire({ risk: "R9" }), VOCABULARY, session()),
+      TypedCommandRequest.fromWire(
+        requestWire({ risk: "R9" }),
+        VOCABULARY,
+        session(),
+      ),
     ).toThrowError(Spec006Error);
     expect(() =>
       TypedCommandRequest.fromWire(
@@ -132,13 +148,17 @@ describe("ep033_unit_command_typed_dispatch", () => {
   it("rejects incomplete invocation context", () => {
     const wire = requestWire();
     (wire.invocation as Record<string, unknown>).request_id = undefined;
-    expect(() => TypedCommandRequest.fromWire(wire, VOCABULARY, session())).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      TypedCommandRequest.fromWire(wire, VOCABULARY, session()),
+    ).toThrowError(Spec006Error);
   });
 
   it("serializes back to the canonical ActionRequest wire shape", () => {
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, session());
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      session(),
+    );
     const wire = request.toWire();
     expect(wire.action_id).toBe(uuid(20));
     expect(wire.capability_id).toBe("home.lights.set");
@@ -147,21 +167,36 @@ describe("ep033_unit_command_typed_dispatch", () => {
 
   it("gate refuses dispatch under an expired session (fail closed)", () => {
     const expired = session(1_000_000_000);
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, expired);
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      expired,
+    );
     const gate = new DispatchGate();
-    expect(() => gate.authorize(request, expired, 1_700_000_001)).toThrowError(Spec006Error);
+    expect(() => gate.authorize(request, expired, 1_700_000_001)).toThrowError(
+      Spec006Error,
+    );
   });
 
   it("expiry refusal is terminal: never queued for blind replay", () => {
     const expired = session(1_000_000_000);
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, expired);
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      expired,
+    );
     const outcome = refuseOrPass(request, expired, 1_700_000_001);
     expect(outcome.refusal.code).toBe("AUTH_EXPIRED");
     // The contract's terminal semantics: the caller re-authenticates
     // and re-issues a fresh request; no replay queue exists.
-    expect(() => DispatchGate.prototype.authorize.call(gate(), request, expired, 1_700_000_001)).toThrowError(
-      Spec006Error,
-    );
+    expect(() =>
+      DispatchGate.prototype.authorize.call(
+        gate(),
+        request,
+        expired,
+        1_700_000_001,
+      ),
+    ).toThrowError(Spec006Error);
     function gate(): DispatchGate {
       return new DispatchGate();
     }
@@ -169,7 +204,11 @@ describe("ep033_unit_command_typed_dispatch", () => {
 
   it("gate permits dispatch under an active session", () => {
     const active = session();
-    const request = TypedCommandRequest.fromWire(requestWire(), VOCABULARY, active);
+    const request = TypedCommandRequest.fromWire(
+      requestWire(),
+      VOCABULARY,
+      active,
+    );
     const gate = new DispatchGate();
     expect(gate.authorize(request, active, 1_700_000_001)).toBe(request);
   });
@@ -186,7 +225,11 @@ describe("ep033_unit_command_typed_dispatch", () => {
   });
 
   it("lifecycle claims never assert executed/verified for a mere request", () => {
-    expect(lifecycleClaims("REQUESTED")).toEqual({ requested: true, executed: false, verified: false });
+    expect(lifecycleClaims("REQUESTED")).toEqual({
+      requested: true,
+      executed: false,
+      verified: false,
+    });
     expect(lifecycleClaims("SUCCEEDED").executed).toBe(true);
     expect(lifecycleClaims("SUCCEEDED").verified).toBe(true);
     expect(lifecycleClaims("AWAITING_APPROVAL").verified).toBe(false);

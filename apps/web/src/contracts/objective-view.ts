@@ -56,19 +56,31 @@ export class ObjectiveView {
     const obj = assertObject(value, "ObjectiveView");
     rejectUnknownFields(obj, OBJECTIVE_FIELDS, "ObjectiveView");
     const stage = obj.stage;
-    if (typeof stage !== "string" || !(OBJECTIVE_STAGES as readonly string[]).includes(stage)) {
-      throw new Spec006Error(ErrorCode.Vocabulary, `Unsupported objective stage '${String(stage)}'`);
+    if (
+      typeof stage !== "string" ||
+      !(OBJECTIVE_STAGES as readonly string[]).includes(stage)
+    ) {
+      throw new Spec006Error(
+        ErrorCode.Vocabulary,
+        `Unsupported objective stage '${String(stage)}'`,
+      );
     }
     const objectiveId = assertString(obj.objective_id, "objective_id");
     if (objectiveId.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "objective_id must not be empty");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "objective_id must not be empty",
+      );
     }
     return new ObjectiveView({
       objective_id: objectiveId,
       title: assertString(obj.title, "title"),
       stage: stage as ObjectiveStage,
       correlation_id: assertString(obj.correlation_id, "correlation_id"),
-      owner_principal_id: assertString(obj.owner_principal_id, "owner_principal_id"),
+      owner_principal_id: assertString(
+        obj.owner_principal_id,
+        "owner_principal_id",
+      ),
     });
   }
 
@@ -90,9 +102,17 @@ export class TaskNode {
   readonly label: string;
   readonly done: boolean;
 
-  constructor(taskId: string, objectiveId: string, label: string, done: boolean) {
+  constructor(
+    taskId: string,
+    objectiveId: string,
+    label: string,
+    done: boolean,
+  ) {
     if (taskId.length === 0 || objectiveId.length === 0 || label.length === 0) {
-      throw new Spec006Error(ErrorCode.Validation, "task ids and label are required");
+      throw new Spec006Error(
+        ErrorCode.Validation,
+        "task ids and label are required",
+      );
     }
     this.task_id = taskId;
     this.objective_id = objectiveId;

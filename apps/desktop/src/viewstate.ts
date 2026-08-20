@@ -39,7 +39,8 @@ export class DesktopViewState {
       revision: opts.revision ?? 1,
       connectivity,
     });
-    const actionable = connectivity === "CONNECTED" || connectivity === "DEGRADED";
+    const actionable =
+      connectivity === "CONNECTED" || connectivity === "DEGRADED";
     if (actionable) {
       return { view, connectivity, actionable: true };
     }
@@ -58,7 +59,10 @@ export class DesktopViewState {
    * Consequential-action gate on a composed view: requires FRESH data
    * and CONNECTED/DEGRADED connectivity.
    */
-  static requireActionable<T>(composition: DesktopViewComposition<T>, action: string): T {
+  static requireActionable<T>(
+    composition: DesktopViewComposition<T>,
+    action: string,
+  ): T {
     if (!composition.actionable) {
       throw new Spec006Error(
         ErrorCode.Unavailable,
@@ -70,7 +74,10 @@ export class DesktopViewState {
   }
 
   /** Monotonic revalidation: newer revision required. */
-  static revalidate<T>(previous: ViewState<T>, next: ViewState<T>): ViewState<T> {
+  static revalidate<T>(
+    previous: ViewState<T>,
+    next: ViewState<T>,
+  ): ViewState<T> {
     return revalidated(previous, next);
   }
 }

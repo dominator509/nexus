@@ -88,12 +88,23 @@ export class Spec006Error extends Error {
 }
 
 /** Categorize an unknown thrown value into a stable SPEC-006 class. */
-export function classifyError(value: unknown, correlationId?: string): Spec006Error {
+export function classifyError(
+  value: unknown,
+  correlationId?: string,
+): Spec006Error {
   if (value instanceof Spec006Error) {
     return value;
   }
   if (value instanceof Error) {
-    return new Spec006Error(ErrorCode.Internal, "Unexpected internal failure", correlationId);
+    return new Spec006Error(
+      ErrorCode.Internal,
+      "Unexpected internal failure",
+      correlationId,
+    );
   }
-  return new Spec006Error(ErrorCode.Internal, "Unexpected non-error failure", correlationId);
+  return new Spec006Error(
+    ErrorCode.Internal,
+    "Unexpected non-error failure",
+    correlationId,
+  );
 }
