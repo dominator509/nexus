@@ -274,10 +274,24 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+### M2 completion (2026-08-20)
+
+- `apps/desktop/` @nexus/desktop shell core-behavior package created (TypeScript, framework-neutral; deps only @nexus/web + @nexus/contracts + typescript/vitest; pnpm-workspace.yaml gained `apps/desktop` importer, pnpm-lock.yaml updated). Acceptance obligation 2 (PWA and Tauri share contracts without duplicating business logic): every desktop module imports the @nexus/web contract vocabulary; no domain logic re-implemented.
+- `DesktopShellRuntime` deterministic state machine: BoundContext binding, connectivity transitions (CONNECTED/DEGRADED/OFFLINE/AUTH_EXPIRED/BACKEND_UNAVAILABLE), business-switch projection invalidation (directive G), consequential-action gates (session not active -> Authentication; backend unavailable -> Unavailable; never queued for blind replay - directive N), stale labeling of offline-fetched payloads (directive J), monotonic revalidation, appearance/authority isolation (directive R).
+- `DesktopCommandDispatcher` typed pipeline: session gate -> bounded idempotency ring (same key+same action = replay-safe no re-execution; same key+different action = Conflict) -> SPEC-006 risk fail-closed (R3/R4 require HUMAN/STRONG_HUMAN/FOUR_EYES else Policy) -> execute exactly once -> EXECUTED only after execute returns; execute failures propagate, never reported as success.
+- `DesktopApprovalFlow` deterministic approval progression: canonical classes preserved, FOUR_EYES two distinct principals (duplicate principal Conflict; requester excluded), expiry/deny/revoke transitions, action-mismatch rejection.
+- `DesktopViewState` composition: connected/degraded payloads FRESH+actionable; offline/backend-unavailable payloads STALE and never actionable; monotonic revalidation.
+- `DesktopPreferences` over the shared PreferencePersistence boundary (allowlist only; tokens/secrets/approval credentials refused; theme never mutates authority).
+- `DesktopTelemetry` safe-fields-only diagnostics with redaction canary (directive P).
+- Tests: 42 ep033_unit_desktop tests across 6 files (runtime 11, dispatcher 9 + telemetry 2, approvals 8, viewstate 6, prefs 4, dependency-direction 2) exercising construction, boundary values, idempotency, unauthorized states, and dependency direction (desktop imports only @nexus/web/@nexus/contracts; never React/DOM/backend clients).
+- Node script M2 rewired from the masking `pnpm --filter @nexus/web vitest -t ep033_unit` branch to the real gate `scripts/ep033-m2-tests.sh` (guards: package+sources present, tsc --noEmit clean, non-zero 42 passing, zero failures, zero skipped, desktop dependency-direction observed, anti-masking ep033_unit_desktop_runtime + ep033_unit_desktop_dispatcher sentinels, M1 regression, fence artifacts).
+- Side gates: scope audit EP-033: ok; expected files EP-033: ok (fence gained apps/desktop/, pnpm-workspace.yaml, scripts/ep033-m2-tests.sh); pnpm -r typecheck: ok; pnpm -r test:unit: ok (web 143 + desktop 42 + prior packages).
+- Commands + sentinels: `sh scripts/ep033-m2-tests.sh` -> EP-033 M2: ok (42 tests); `sh scripts/nodes/EP-033.sh M2` -> EP-033 M2: ok (RC=0).
 
 ### M1 completion (2026-08-20)
 
@@ -301,6 +315,9 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - 2026-08-20 M1: `EventEnvelope.schema_version` generated type is the literal `"1.0.0"`; event filter version is a string, not a number.
 - 2026-08-20 M1: pre-scaffolded `.agent/expected-files/EP-033.txt` listed all milestone dirs (apps/desktop/, packages/ui/, tests/e2e/web/, tests/accessibility/web/); trimmed to M1 scope following the EP-032 per-milestone fence-growth pattern (directive Y: no empty M2-M5 placeholders).
 - 2026-08-20 M1: `pnpm` shell shim is wrapped by rtk-tee which collapses output/fails; use the real binary `/root/.local/share/mise/installs/pnpm/11.17.0/pnpm` (or PNPM_BIN) with output redirected to a file.
+- 2026-08-20 M2: pnpm-workspace.yaml did NOT pre-register `apps/desktop` (only apps/web); the importer had to be added before pnpm would link @nexus/web into the desktop package. Fence updated per EP-006 precedent (workspace manifest joins the fence when a package is added).
+- 2026-08-20 M2: FourEyesRecord.requireNewPrincipal must be checked BEFORE apply() records the approval; the initial implementation recorded first and the first approval itself failed. Guard-before-record is the correct fail-closed ordering (also keeps state clean on rejection).
+- 2026-08-20 M2: The node script M2 branch was masking-class (it ran the @nexus/web suite for M2); rewired to scripts/ep033-m2-tests.sh which runs the desktop suite AND the M1 regression.
 - 2026-08-20 M1: LF-005 (cross-device continuity) remains M5-owned; its runner `scripts/live-fire/LF-005.sh` currently delegates to `proof-runner.sh` which requires a `nexus-cli`/`nexusctl` proof registry that does not exist in this repo (no crate named nexus-cli) - the M5 milestone must rewire LF-005 to a real gate and create the proof, mirroring EP-031 LF-009 precedent.
 
 # 13. Decision Log
@@ -311,6 +328,9 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 - 2026-08-20 M1: Contract validation uses deny-unknown + typed enums mirroring the canonical schema `additionalProperties: false` and the Rust serde deny_unknown_fields pattern (EP-002/EP-032 precedent), so raw wire input can never fabricate vocabulary or authority. Evidence: 143 tests incl. vocabulary-rejection and schema-parity suites; alternatives: permissive validation (rejected: fail-closed doctrine); reversal: none; security: fail-closed by construction.
 - 2026-08-20 M1: Session/business context is bound explicitly (AuthenticatedSession + BusinessContext + BoundContext) and context switch invalidates old projections (ContextProjection.requireCurrent fails closed). Evidence: ep033_unit_session tests (switch invalidation, cross-context refusal); alternatives: deriving context from a screen label (rejected: directive F/G); reversal: none.
 - 2026-08-20 M1: M1 certification remains INTERNAL CONTRACT CERTIFIED; no provider, hardware, or deployment certification claimed (no React runtime, no browser, no WCAG scan in M1). WCAG 2.2 AA checks are owned by M3/M5 (Playwright + axe per SPEC-004 required tests); accessibility contracts in M1 are executable labels/roles/keyboard/focus/reduced-motion/non-color contracts only.
+- 2026-08-20 M2: M2 package boundary = `apps/desktop/` deterministic shell core (framework-neutral TypeScript over @nexus/web). No Tauri/Rust wrapper yet (fallback keeps Tauri a thin signed shell; actual packaging/transport integration is M3 packages/ui + later milestones). Evidence: 42 ep033_unit_desktop tests + M1 regression; alternatives: scaffolding a real Tauri app in M2 (rejected: requires Rust/tauri dependency chain and webview runtime not owned by M2, and would violate the deterministic-core scope); consequence: desktop and web share contracts by construction; reversal: none; security: no secrets held by any desktop module (redaction canary-tested); license: none (typescript/vitest already in workspace); compatibility: pnpm-workspace.yaml + pnpm-lock.yaml updated for apps/desktop importer.
+- 2026-08-20 M2: Dispatcher idempotency semantics: same key + same action_id = replay-safe dedupe (returns EXECUTED without re-execution); same key + different action_id = Conflict. This mirrors SPEC-006 behavior 2/3 (reuse returns original result; conflicting reuse returns deterministic conflict) at the desktop shell boundary.
+- 2026-08-20 M2: R3/R4 risk fail-closed: commands at R3/R4 require HUMAN/STRONG_HUMAN/FOUR_EYES approval_class; NONE/POLICY are refused before execution (SPEC-006 behavior 6).
 
 # 14. Outcomes & Retrospective
 

@@ -1,0 +1,25 @@
+{
+  "name": "@nexus/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus desktop shell core behavior (EP-033 M2): deterministic runtime, command dispatch, approval flow, view state, telemetry, and preferences over the shared @nexus/web contracts. No duplicated business logic: the desktop imports the web contract vocabulary; the Tauri wrapper remains a thin signed shell (EP-033 fallback).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/contracts": "workspace:*",
+    "@nexus/web": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}

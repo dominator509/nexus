@@ -3,6 +3,7 @@ packages:
   - "infra/*"
   - "tests/workflows"
   - "apps/web"
+  - "apps/desktop"
 # protobufjs is pulled transitively by @temporalio/proto@1.17.2; the
 # resolved 7.5.5 carries 11 advisories (GHSA-66ff-xgx4-vchm,
 # GHSA-75px-5xx7-5xc7, GHSA-jvwf-75h9-cwgg, GHSA-685m-2w69-288q,
