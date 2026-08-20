@@ -1,1 +1,9 @@
+.agent/execplans/EP-031-sentinel-advanced-detection-and-endpoints.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-031.txt
+.agent/node-contracts/EP-031.md
+.agent/milestone-files/EP-031-M4.txt
+scripts/nodes/EP-031.sh
+scripts/ep031-m4-tests.sh
+scripts/wazuh-diag.sh
 connectors/wazuh/

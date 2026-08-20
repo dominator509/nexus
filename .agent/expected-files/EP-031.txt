@@ -2,13 +2,17 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-031.txt
 .agent/node-contracts/EP-031.md
+.agent/milestone-files/EP-031-M4.txt
 scripts/nodes/EP-031.sh
 scripts/ep031-m1-tests.sh
 scripts/ep031-m2-tests.sh
 scripts/ep031-m3-tests.sh
+scripts/ep031-m4-tests.sh
+scripts/wazuh-diag.sh
 connectors/suricata/
 connectors/zeek/
 connectors/crowdsec/
+connectors/wazuh/
 infra/sentinel/advanced/
 tests/sentinel/advanced/
 Cargo.toml

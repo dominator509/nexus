@@ -63,6 +63,7 @@ members = [
     "connectors/suricata",
     "connectors/zeek",
     "connectors/crowdsec",
+    "connectors/wazuh",
     "infra/sentinel/core",
     "infra/sentinel/advanced",
     "tests/audio",

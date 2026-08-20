@@ -277,7 +277,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 ## M1 completion (2026-08-20)
@@ -402,13 +402,133 @@ Created:
 Side gates: scope audit EP-031: ok; fmt clean; clippy -D warnings clean;
 workspace battery green (0 failed).
 
+## M4 completion (2026-08-20)
+
+Gate: `sh scripts/ep031-m4-tests.sh` -> `EP-031 M4: ok` (14 Wazuh tests
+[8 unit + 6 real-socket forced-failure] + M1/M2/M3 regressions +
+wazuh-diag fail-closed proof rc=3; 10 reality guards + anti-masking
+ep031_unit_wazuh_* sentinels, zero ignored/filtered).
+Node: `sh scripts/nodes/EP-031.sh M4` -> `EP-031 M4: ok` (RC=0), real
+gate wired (no masking branch).
+
+Created:
+- `connectors/wazuh/` crate `nexus-wazuh-connector`: real Wazuh adapter
+  behind the EndpointTelemetryProvider port (Wazuh Endpoint profile -
+  SPEC-013 behavior 3; COMPONENT_REGISTRY external sensor GPL-2.0).
+  Transport (documented Wazuh server API surface, documentation.
+  wazuh.com/current/user-manual/api): POST /security/user/authenticate
+  (Basic auth -> JWT token), GET /alerts?limit=N (Bearer auth);
+  SPEC-006 mapping (400->Validation, 401/403->Authorization incl.
+  bounded single re-authenticate on expired token - never an unbounded
+  credential-refresh loop, 404->NotFound, 409->Conflict, 429->
+  RateLimit, 5xx->Unavailable, refused connect->Unavailable,
+  timeout->Timeout, malformed JSON->ExternalProvider fail closed);
+  credentials used ONLY for the authenticate exchange, registered as
+  redaction secrets, never logged/embedded in errors. Alert
+  normalization from the documented affected_items wire shape (id,
+  rule.level, rule.description, agent.id/name/ip, timestamp); partial
+  agent fields default; severity comes ONLY from observed rule.level
+  0..=15 mapped to canonical severity, never inferred from prose/
+  agent/source. Empty affected_items -> successful empty observation
+  (absence of evidence, never an error, never fabricated).
+  Adapter: capabilities advertise ReadFindings ONLY when a transport
+  is bound (Reality rule); unbound -> Unavailable with audit;
+  observability audit ring bounded 256 entries, redacted (operation,
+  correlation id, provider/result class, alert count, severity
+  summary, duration, auth/re-auth outcome; never Basic credential,
+  JWT, Authorization header, or sensitive payloads).
+- `scripts/wazuh-diag.sh`: fail-closed operations diagnostic and
+  bounded recovery (one re-probe after 2s, never a loop); unreachable
+  -> rc=3 reachable=no; configured != healthy; credentials never
+  echoed. Fixed `wazhu-diag` typo in the FAIL sentinel.
+- 14 tests green: 8 unit (documented alert shape parse, partial agent
+  fields default, level classification bounded, alerts normalized
+  with audit, unbound fail-closed with audit, observability redacts
+  secret-like tokens, ring bounded, entries carry correlation) + 6
+  REAL std::net socket forced-failure tests (`ep031_failure_*`):
+  unreachable/refused port -> Unavailable, silent accepted peer ->
+  Timeout, denied permission 401 -> Authorization, malformed JSON ->
+  External fail closed, clean/empty alert window -> observed not
+  fabricated, audit never leaks credentials (redaction canary scans
+  actual diagnostics). Production transport never mocked.
+
+Clippy fixes in M4: needless_borrow `&format!(...)` -> owned format in
+adapter audit record; doc_overindented_list_items (4 JSON example
+lines reindented to 2-space list continuation); unused WazuhTransport
+import in tests/failure.rs removed. No lint suppressed.
+
+Side gates: scope audit EP-031: ok (after adding
+.agent/milestone-files/EP-031-M4.txt to expected-files per EP-023/
+EP-044 convention); fmt clean; clippy --workspace -D warnings clean;
+security check: ok (0 advisories); license gate: ok; reality gate: ok;
+dependency audit: ok; blueprint validation: ok; expected files
+EP-031: ok; workspace battery 2168 passed 0 failed (2154 + 14 new);
+orphan audit: no wazuh/ep031 processes, no listeners, no scratch
+files beyond /tmp gate logs.
+
+Certification boundary:
+- Wazuh connector: IMPLEMENTED
+- Wazuh HTTP transport: TRANSPORT_CERTIFIED against controlled
+  real-socket fixtures (all failure classifications proven over real
+  sockets)
+- real Wazuh server/provider: NOT ASSERTED (no real Wazuh deployment
+  exercised)
+- Wazuh alert semantics: CERTIFIED for documented/observed fields
+  exercised by tests (id, rule.level, rule.description, agent.id/
+  name/ip, timestamp, affected_items envelope)
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-20 M4: clippy surfaced 5 findings after the first two known
+  ones were fixed (needless_borrow `&format!`, 4 doc_overindented
+  list lines) plus an unused `WazuhTransport` import in
+  tests/failure.rs; all fixed, none suppressed. The wazuh-diag FAIL
+  sentinel had a typo (`wazhu-diag`); fixed to `wazuh-diag` so the
+  fail-closed sentinel greps match. Scope audit requires
+  .agent/milestone-files/EP-031-M4.txt to be listed in expected-files
+  (EP-023/EP-044 convention); M1-M3 fence files predate the node
+  baseline so only new milestone-files entries surface.
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-20 M4: Wazuh auth/re-auth semantics - POST /security/user/
+  authenticate (Basic) issues the JWT used as Bearer on GET /alerts;
+  a 401/403 on alerts triggers ONE bounded re-authenticate then a
+  single retry; a second failure returns the canonical Authorization
+  error. Never an unbounded credential-refresh loop. Evidence:
+  transport.rs read_alerts match arm. Alternatives: token refresh
+  endpoint (not documented on the consumed surface), unbounded retry
+  (rejected: credential loop). Consequence: expired-token recovery is
+  real and bounded. Reversal: return Authorization immediately on 401.
+  Security: credentials exist only for the authenticate exchange and
+  are redaction-registered.
+- 2026-08-20 M4: rule-level severity mapping - canonical severity is
+  derived ONLY from the observed Wazuh rule.level (documented 0..=15,
+  bounded); prose/agent/source never influence severity. Unknown/
+  malformed level fails closed per canonical error policy. Evidence:
+  adapter.rs level classification + bounded test. Alternatives:
+  NLP on rule.description (rejected: invented derivation).
+- 2026-08-20 M4: empty alert window semantics - a valid provider
+  response with zero affected_items maps to a successful empty
+  observation (absence of evidence), never Unavailable/External and
+  never fabricated. Evidence: clean_telemetry_is_observed_not_
+  fabricated test. Alternatives: error on empty (rejected: false
+  positives in detection).
+- 2026-08-20 M4: redaction policy - the bounded 256-entry audit ring
+  records operation, correlation id, provider/result class, alert
+  count, severity summary, duration, auth/re-auth outcome; Basic
+  credential, JWT, Authorization header, and sensitive payloads are
+  never recorded. Canary test scans actual diagnostics for zero
+  leakage. Evidence: observability.rs + audit_never_leaks_credentials.
+- 2026-08-20 M4: fail-closed diagnostics - scripts/wazuh-diag.sh
+  treats configuration as NOT health: unreachable endpoint reports
+  rc=3 reachable=no after one bounded re-probe; healthy is reported
+  only when the real authenticate endpoint answers. Evidence: gate
+  diag proof (rc=3).
 
 # 14. Outcomes & Retrospective
 

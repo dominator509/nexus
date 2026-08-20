@@ -2223,6 +2223,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-wazuh-connector"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-sentinel",
+ "nexus-sentinel-advanced",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-zeek-connector"
 version = "0.1.0"
 dependencies = [
