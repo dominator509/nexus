@@ -278,7 +278,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 ## M1 completion (2026-08-20)
 
@@ -490,6 +490,23 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   .agent/milestone-files/EP-031-M4.txt to be listed in expected-files
   (EP-023/EP-044 convention); M1-M3 fence files predate the node
   baseline so only new milestone-files entries surface.
+- 2026-08-20 M5: the osquery connector is a SELF-HOSTED COLLECTOR -
+  the documented osquery TLS remote API is server-side
+  (enroll/distributed_read/distributed_write are POST endpoints the
+  osqueryd NODE calls), so HttpOsqueryEndpoint implements the server
+  surface over REAL std::net sockets; the LF-009 test plays the
+  enrolled node. nexus-domain IncidentId requires UUIDv7 (typed_id
+  macro); IncidentCorrelationId (advanced crate) accepts 1..=128
+  strings. ApprovalClass variants are None/Policy/Human/StrongHuman/
+  FourEyes (initial planner match arms referenced nonexistent
+  variants; fixed before commit). SentinelVerificationService holds
+  Arc<dyn FirewallProvider + Send + Sync> because
+  OpnsenseFirewallProvider is not Clone (a clone/panicking stub was
+  removed). COMPONENT_REGISTRY.yaml had NO advanced-sensor entries
+  despite the M3 ledger claim; the five entries are now recorded
+  (ledger correction noted in M5 entry). node verify requires the
+  EP-044 control plane on 127.0.0.1:8443 (NEXUS_SMOKE_URL) and
+  readiness can take >2 minutes after container start.
 
 # 13. Decision Log
 
@@ -529,6 +546,148 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   rc=3 reachable=no after one bounded re-probe; healthy is reported
   only when the real authenticate endpoint answers. Evidence: gate
   diag proof (rc=3).
+- 2026-08-20 M5: osquery connector shape - Nexus is the self-hosted
+  collector implementing the DOCUMENTED server surface (enroll /
+  distributed_read / distributed_write); a client-side /query
+  endpoint was rejected as not part of the documented remote.md
+  surface (anti-hallucination). Evidence: osquery transport.rs +
+  real-socket lifecycle test. Consequence: a real osqueryd node can
+  enroll and report to Nexus. Reversal: implement a fleet client if a
+  managed Fleet server is adopted.
+- 2026-08-20 M5: correlation rule (directive X) - incidents correlate
+  over compatible observed facts: a shared observed IPv4 source
+  indicator; confidence is High when >=2 INDEPENDENT observation
+  planes (network/reputation/endpoint) corroborate the SAME
+  indicator. Raw sensor count never inflates confidence; no shared
+  indicator -> correlation refused (Validation). Evidence:
+  SentinelTriageService + LF-009 evidence correlation_rule.
+  Alternatives: count-based voting (rejected: violates SPEC-013
+  evidence semantics).
+- 2026-08-20 M5: destructive response denial - ResponsePlanner fails
+  closed for destructive kinds under ApprovalClass None/Policy;
+  under Human/StrongHuman/FourEyes the plan is allowed but NEVER
+  preauthorized (preauthorized = is_bounded_containment only). No
+  threat score may mint authorization. Evidence:
+  SentinelResponsePlanner + LF-009 destructive-denial assertions.
+- 2026-08-20 M5: verification semantics - a response is Verified only
+  when independent exact-target readback (OPNsense searchRule by
+  nexus-quarantine-<proposal_id>) proves the effect; the
+  VerificationRecord state is set from the readback result, never
+  assumed. Evidence: SentinelVerificationService + LF-009 journey.
+- 2026-08-20 M5: COMPONENT_REGISTRY correction - the M3 MILESTONE_PASS
+  claimed a crowdsec registry entry that was never recorded; the five
+  advanced sensors (suricata GPL-2.0, zeek BSD-3-Clause, crowdsec
+  MIT, wazuh GPL-2.0, osquery Apache-2.0) are now recorded as
+  sentinel-profile components. Evidence: COMPONENT_REGISTRY.yaml diff.
+
+## M5 completion (2026-08-20)
+
+Gate: `sh scripts/ep031-m5-tests.sh` -> `EP-031 M5: ok` (19 tests total
+[18 osquery: 11 unit + 7 real-socket forced-failure] + LF-009 journey +
+M1/M2/M3/M4 regressions; 10 reality guards incl. LF-009 anti-masking
+sentinel, osquery anti-masking sentinel, current-run evidence run_id
+match, redaction scan, JSON journey validation, zero ignored).
+Node: `sh scripts/nodes/EP-031.sh M5` -> `EP-031 M5: ok` + `LF-009:
+ok` (RC=0), LF-009 rewired from the EP-001-masking proof-runner
+delegation to the real live-fire gate.
+
+Created:
+- `connectors/osquery/` crate `nexus-osquery-connector`: Endpoint
+  profile sensor (SPEC-013 behavior 3). Nexus is the SELF-HOSTED
+  COLLECTOR: `HttpOsqueryEndpoint` implements the DOCUMENTED osquery
+  TLS remote API server surface (osquery.readthedocs.io/en/stable/
+  deployment/remote; anti-hallucination - no invented endpoints):
+  POST /enroll (enroll_secret + host_identifier -> node_key;
+  node_invalid true on rejected secret), POST /distributed_read
+  (node_key -> owned queries), POST /distributed_write (node_key +
+  queries rows + statuses -> observed results; statuses are SQLite
+  error codes, non-0 = OBSERVED query execution failure). Real
+  std::net server with bounded capacity, malformed requests fail
+  closed (400). OsqueryEndpointTelemetryProvider: capabilities
+  advertise ReadFindings ONLY when a transport is bound (Reality
+  rule); unbound -> Unavailable with audit; normalization maps ONLY
+  the documented owned rule: wildcard listening socket (0.0.0.0/::)
+  in the documented listening_ports table -> BaselineViolation/Low;
+  non-wildcard rows OBSERVED but never fabricated into findings;
+  non-zero distributed status -> ExternalProvider fail closed
+  (never fabricates rows for a failed query); empty/clean telemetry
+  -> successful empty observation. Observability bounded 256-entry
+  redacted audit ring (enroll secret + node_key never recorded;
+  canary-tested). 18 tests green: 11 unit + 7 ep031_failure_* over
+  REAL std::net sockets against the production server (full
+  enroll/read/write lifecycle over real sockets, enroll secret
+  rejected, unknown node_key rejected, malformed request 400,
+  query failure observed not fabricated, clean telemetry observed
+  not fabricated, audit never leaks secret).
+- `infra/sentinel/advanced-live-fire/` crate
+  `nexus-sentinel-advanced-live-fire`: LF-009 sentinel-quarantine
+  live-fire. Real port implementations: SentinelTriageService
+  (correlation over COMPATIBLE OBSERVED FACTS - a shared observed
+  IPv4 source indicator corroborated by >=2 independent observation
+  planes (network/reputation/endpoint) -> High confidence; raw
+  sensor count NEVER inflates confidence; no shared indicator ->
+  correlation refused Validation), SentinelInvestigationService
+  (evidence references preserved), SentinelResponsePlanner
+  (bounded containment may be preauthorized; destructive kinds
+  require ApprovalClass Human/StrongHuman/FourEyes and are NEVER
+  preauthorized - Policy/None fails closed), SentinelVerificationService
+  (independent exact-target readback through the OPNsense firewall
+  containment engine; Verified only when readback proves the effect).
+  LF-009 journey test over REAL std::net sockets against controlled
+  fixtures emitting REAL Zeek notice.log JSON, REAL CrowdSec LAPI,
+  REAL Wazuh API, REAL osquery TLS remote API (test plays the
+  enrolled node), REAL OPNsense firewall automation responses;
+  production transports never mocked. Full state separation:
+  RAW sensor events (Zeek Scan::Portscan from 192.168.40.77 +
+  CrowdSec ban + Wazuh rule level 12 + osquery wildcard listener)
+  -> SECURITY EVENTS with provenance -> CORRELATED incident (HIGH
+  confidence over the shared indicator) -> TRIAGED (CRITICAL) ->
+  INVESTIGATED (evidence preserved) -> RECOMMENDED quarantine
+  (DATA, zero mutation) -> destructive denial (Wipe under Policy
+  fails closed; Wipe under Human allowed but never preauthorized)
+  -> AUTHORIZED (approved + reversible) -> EXECUTED (real OPNsense
+  addRule + apply, rule_ref) -> VERIFIED (independent exact-target
+  readback) -> REVOKED (toggleRule 0 + apply; verify fails after).
+  Redaction canaries scanned across all audit rings (ZERO_LEAKAGE).
+  Current-run evidence .agent/state/evidence/LF-009-ep031-m5.json
+  embedding EP031_M5_RUN_ID (stale never satisfies) with sensor
+  observations + provenance, normalized facts, incident, triage,
+  response, execution, verification, rollback, correlation rule,
+  redaction, certification boundary.
+- `scripts/live-fire/LF-009.sh` rewired from proof-runner delegation
+  (EP-001-masking class) to `sh scripts/ep031-m5-tests.sh`; node M5
+  branch runs the real gate + LF-009.
+- `docs/operations/EP-031-sentinel.md`: ops runbook (component map,
+  health/readiness, diagnostics, auth/secrets, correlation/triage,
+  containment/rollback, zero-orphan cleanup, evidence, certification
+  boundary, recovery).
+- COMPONENT_REGISTRY.yaml: added suricata (GPL-2.0), zeek
+  (BSD-3-Clause), crowdsec (MIT), wazuh (GPL-2.0), osquery
+  (Apache-2.0) sentinel-profile entries. CORRECTS a ledger
+  inaccuracy: the M3 MILESTONE_PASS entry claimed the crowdsec
+  registry entry was recorded, but no EP-031 commit had touched
+  COMPONENT_REGISTRY.yaml - now actually recorded.
+
+Side gates: scope audit EP-031: ok; fmt clean; clippy --workspace -D
+warnings clean; security check: ok; license gate: ok; reality gate:
+ok; dependency audit: ok; blueprint validation: ok; expected files
+EP-031: ok; node verify EP-031: ok (expected files EP-031: ok, verify:
+ok, runtime smoke: ok on EP-044 control plane 127.0.0.1:8443, node M5
+ok); workspace battery 2187 passed 0 failed (2168 + 18 osquery + 1
+LF-009); orphan check: no wazuh/ep031 processes, no listeners beyond
+the control plane, fixture threads joined.
+
+Certification boundary:
+- Advanced contract (nexus-sentinel-advanced): INTERNAL_CERTIFIED
+- Connector transports (zeek/crowdsec/wazuh/osquery): TRANSPORT_
+  CERTIFIED against controlled real-socket fixtures (production
+  transports never mocked; mocks control the peer only)
+- OPNsense containment engine (EP-030): TRANSPORT_CERTIFIED over
+  real sockets vs controlled fixtures (LF-009 executes real addRule +
+  apply + readback + revoke through the production connector)
+- Real Suricata/Zeek/CrowdSec/Wazuh/osquery sensors: NOT ASSERTED
+- Real OPNsense/OpenWrt firewall appliances: NOT ASSERTED
+- Certification debt owned by deployment/ship review (EP-040/EP-043)
 
 # 14. Outcomes & Retrospective
 

@@ -1946,6 +1946,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-osquery-connector"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-sentinel",
+ "nexus-sentinel-advanced",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-pki"
 version = "0.1.0"
 dependencies = [
@@ -2063,6 +2074,22 @@ dependencies = [
  "nexus-domain",
  "nexus-sentinel",
  "nexus-sentinel-advanced",
+ "nexus-zeek-connector",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-sentinel-advanced-live-fire"
+version = "0.1.0"
+dependencies = [
+ "nexus-crowdsec-connector",
+ "nexus-domain",
+ "nexus-opnsense-connector",
+ "nexus-osquery-connector",
+ "nexus-sentinel",
+ "nexus-sentinel-advanced",
+ "nexus-wazuh-connector",
  "nexus-zeek-connector",
  "serde",
  "serde_json",

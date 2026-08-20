@@ -1,0 +1,22 @@
+[package]
+name = "nexus-sentinel-advanced-live-fire"
+version = "0.1.0"
+edition = "2021"
+description = "EP-031 M5 LF-009 sentinel-quarantine live-fire evidence crate: composes the production advanced connectors (Zeek/CrowdSec/Wazuh/osquery) with the OPNsense containment engine over REAL std::net sockets"
+publish = false
+
+[dependencies]
+nexus-domain = { path = "../../../crates/nexus-domain", version = "0.1.0" }
+nexus-sentinel = { path = "../../../crates/nexus-sentinel", version = "0.1.0" }
+nexus-sentinel-advanced = { path = "../../../infra/sentinel/advanced", version = "0.1.0" }
+nexus-zeek-connector = { path = "../../../connectors/zeek", version = "0.1.0" }
+nexus-crowdsec-connector = { path = "../../../connectors/crowdsec", version = "0.1.0" }
+nexus-wazuh-connector = { path = "../../../connectors/wazuh", version = "0.1.0" }
+nexus-osquery-connector = { path = "../../../connectors/osquery", version = "0.1.0" }
+nexus-opnsense-connector = { path = "../../../connectors/opnsense", version = "0.1.0" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[test]]
+name = "lf009_sentinel_quarantine"
+path = "tests/lf009_sentinel_quarantine.rs"

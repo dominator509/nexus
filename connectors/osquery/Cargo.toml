@@ -1,0 +1,13 @@
+[package]
+name = "nexus-osquery-connector"
+version = "0.1.0"
+edition = "2021"
+description = "EP-031 osquery connector: endpoint-profile telemetry collector behind the nexus-sentinel-advanced EndpointTelemetryProvider port, implementing the DOCUMENTED osquery TLS remote API (enroll/distributed_read/distributed_write) as the self-hosted collector (SPEC-013)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-sentinel = { path = "../../crates/nexus-sentinel", version = "0.1.0" }
+nexus-sentinel-advanced = { path = "../../infra/sentinel/advanced", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

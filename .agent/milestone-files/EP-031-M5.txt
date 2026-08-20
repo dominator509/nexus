@@ -1,1 +1,12 @@
+.agent/execplans/EP-031-sentinel-advanced-detection-and-endpoints.md
+.agent/state/LEDGER.md
+.agent/expected-files/EP-031.txt
+.agent/node-contracts/EP-031.md
+.agent/milestone-files/EP-031-M5.txt
+scripts/nodes/EP-031.sh
+scripts/ep031-m5-tests.sh
+scripts/live-fire/LF-009.sh
+docs/operations/EP-031-sentinel.md
+COMPONENT_REGISTRY.yaml
 connectors/osquery/
+infra/sentinel/advanced-live-fire/

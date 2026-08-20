@@ -260,6 +260,51 @@ components:
     commercial_review: "GPL-3.0; isolated-sidecar process boundary required"
     status: sentinel-profile
     rationale: "DNS security default"
+  - id: suricata
+    capability: network.detection
+    implementation: "Suricata"
+    license: "GPL-2.0"
+    integration_mode: external-sensor
+    replacement_contract: "NetworkDetectionProvider contract; Zeek alternate advanced sensor"
+    commercial_review: "GPL-2.0; external sensor boundary required"
+    status: sentinel-profile
+    rationale: "Enhanced profile network detection (SPEC-013 behavior 3)"
+  - id: zeek
+    capability: network.detection
+    implementation: "Zeek"
+    license: "BSD-3-Clause"
+    integration_mode: external-sensor
+    replacement_contract: "NetworkDetectionProvider contract; Suricata alternate enhanced sensor"
+    commercial_review: "BSD-3-Clause; commercial use permitted"
+    status: sentinel-profile
+    rationale: "Advanced profile network detection (SPEC-013 behavior 3)"
+  - id: crowdsec
+    capability: threat.reputation
+    implementation: "CrowdSec"
+    license: "MIT"
+    integration_mode: external-sensor
+    replacement_contract: "ThreatIntelProvider contract; optional reputation enforcement"
+    commercial_review: "MIT; commercial use permitted"
+    status: sentinel-profile
+    rationale: "Optional reputation enforcement (SPEC-013 behavior 3)"
+  - id: wazuh
+    capability: endpoint.telemetry
+    implementation: "Wazuh"
+    license: "GPL-2.0"
+    integration_mode: external-sensor
+    replacement_contract: "EndpointTelemetryProvider contract; osquery alternate endpoint sensor"
+    commercial_review: "GPL-2.0; external sensor boundary required"
+    status: sentinel-profile
+    rationale: "Endpoint profile security alerts (SPEC-013 behavior 3)"
+  - id: osquery
+    capability: endpoint.telemetry
+    implementation: "osquery"
+    license: "Apache-2.0"
+    integration_mode: external-sensor
+    replacement_contract: "EndpointTelemetryProvider contract; Wazuh alternate endpoint sensor; self-hosted collector over the documented TLS remote API"
+    commercial_review: "Apache-2.0; commercial use permitted"
+    status: sentinel-profile
+    rationale: "Endpoint profile telemetry via self-hosted collector (SPEC-013 behavior 3)"
   - id: glitchtip
     capability: observability.incidents
     implementation: "GlitchTip"

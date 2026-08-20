@@ -1,0 +1,110 @@
+{
+  "certification": {
+    "advanced_contract": "INTERNAL_CERTIFIED",
+    "crowdsec_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
+    "opnsense_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
+    "osquery_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixture node",
+    "real_firewall_appliance": "NOT_ASSERTED",
+    "real_sensors": "NOT_ASSERTED",
+    "wazuh_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
+    "zeek_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures"
+  },
+  "correlation_rule": "incident confidence derives from independent observation planes corroborating the SAME observed source indicator; raw sensor count never inflates confidence",
+  "execution": {
+    "rule_ref": "rule-1",
+    "state": "APPLIED"
+  },
+  "incident": {
+    "confidence": "HIGH",
+    "correlation_id": "corr-lf009",
+    "event_count": 4,
+    "severity": "HIGH",
+    "summary": "observed source 192.168.40.77 corroborated across 3 independent plane(s) (network+reputation+endpoint), severity HIGH, 4 event(s) correlated"
+  },
+  "investigation": {
+    "evidence_refs": 4
+  },
+  "milestone": "M5",
+  "node": "EP-031",
+  "normalized_facts": [
+    {
+      "event_id": "zeek-C1",
+      "fact": "Scan::Portscan from 192.168.40.77 to 192.168.40.1:22 (src=192.168.40.77)",
+      "observed": true,
+      "profile": "ZEEK",
+      "provider": "ZeekNetworkDetectionProvider",
+      "resource": "C1",
+      "source": "zeek"
+    },
+    {
+      "event_id": "crowdsec-1",
+      "fact": "ban decision crowdsecurity/port-scan for 192.168.40.77",
+      "observed": true,
+      "profile": "CROWDSEC",
+      "provider": "CrowdSecThreatIntelProvider",
+      "resource": "192.168.40.77",
+      "source": "crowdsec"
+    },
+    {
+      "event_id": "wazuh-alert-1",
+      "fact": "rule level 12 alert Host brute force attack on 192.168.40.1",
+      "observed": true,
+      "profile": "WAZUH",
+      "provider": "WazuhEndpointTelemetryProvider",
+      "resource": "srv-lab-1",
+      "source": "wazuh"
+    },
+    {
+      "event_id": "osquery-listening_ports-0",
+      "fact": "wildcard listening socket 0.0.0.0:8443 observed via listening_ports",
+      "observed": true,
+      "profile": "OSQUERY",
+      "provider": "OsqueryEndpointTelemetryProvider",
+      "resource": "srv-lab-1",
+      "source": "osquery"
+    }
+  ],
+  "proof": "LF-009",
+  "redaction": "ZERO_LEAKAGE",
+  "response": {
+    "destructive_denied": true,
+    "destructive_never_preauthorized": true,
+    "kind": "QUARANTINE",
+    "preauthorized": true,
+    "state": "PROPOSED"
+  },
+  "rollback": {
+    "state": "REVOKED",
+    "verify_after_revoke": false
+  },
+  "run_id": "run-20260820140039-ep031m5",
+  "sensors": {
+    "crowdsec": {
+      "action": "ban",
+      "event": true,
+      "indicator": "192.168.40.77"
+    },
+    "osquery": {
+      "events": 1,
+      "wildcard_listener": "0.0.0.0:8443"
+    },
+    "wazuh": {
+      "alerts": 1,
+      "rule_level": 12,
+      "severity": "HIGH"
+    },
+    "zeek": {
+      "events": 1,
+      "kind": "ScanDetected",
+      "source": "192.168.40.77"
+    }
+  },
+  "surface": "documented Zeek JSON Streaming Logs + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
+  "transport": "JsonLinesZeekTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
+  "triage": {
+    "priority": "CRITICAL"
+  },
+  "verification": {
+    "state": "VERIFIED"
+  }
+}
