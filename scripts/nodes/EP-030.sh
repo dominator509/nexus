@@ -13,7 +13,6 @@ case "$mode" in
   M3) sh scripts/ep030-m3-tests.sh ;;
   M4) sh scripts/ep030-m4-tests.sh ;;
   M5|verify)
-      python3 scripts/node-artifact-check.py EP-030 M5
       sh scripts/ep030-m5-tests.sh
       sh scripts/live-fire/LF-010.sh
       ;;

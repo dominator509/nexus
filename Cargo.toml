@@ -60,6 +60,7 @@ members = [
     "connectors/opnsense",
     "connectors/openwrt",
     "connectors/adguard-home",
+    "infra/sentinel/core",
     "tests/audio",
     "tests/social",
     "tests/sentinel/core",

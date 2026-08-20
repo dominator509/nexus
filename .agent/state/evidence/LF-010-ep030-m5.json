@@ -1,0 +1,104 @@
+{
+  "authorization": {
+    "approval_class": "HUMAN",
+    "policy_check": "permitted",
+    "preauthorized": true,
+    "reversible": true,
+    "state": "APPROVED"
+  },
+  "certification": {
+    "adguard_connector": "IMPLEMENTED / TRANSPORT_CERTIFIED against controlled real-socket fixtures",
+    "lf010": "PROVEN over canonical production Sentinel surfaces",
+    "nexus_sentinel": "INTERNAL CONTRACT CERTIFIED",
+    "openwrt_connector": "IMPLEMENTED / TRANSPORT_CERTIFIED against controlled real-socket fixtures",
+    "opnsense_connector": "IMPLEMENTED / TRANSPORT_CERTIFIED against controlled real-socket fixtures",
+    "real_adguard_instance": "NOT_ASSERTED",
+    "real_home_network": "NOT_ASSERTED",
+    "real_openwrt_router": "NOT_ASSERTED",
+    "real_opnsense_appliance": "NOT_ASSERTED"
+  },
+  "cleanup": "fixtures joined; no orphan containers or processes",
+  "correlation": {
+    "blocklist_domains": 1,
+    "dns_blocked": 2,
+    "dns_total": 5,
+    "openwrt_findings": 1,
+    "opnsense_findings": 1
+  },
+  "diagnosis": {
+    "class": "DNS_ANOMALY",
+    "client_ip": "192.168.30.10",
+    "confidence": "MEDIUM",
+    "device": "cam-iot-1",
+    "observed_domain": "evil.example.com",
+    "segment": "IOT",
+    "summary": "IOT device 192.168.30.10 generated DNS queries to a domain the filter blocks (observed FilteredBlackList); consistent with a quarantine-worthy DNS anomaly."
+  },
+  "execution": {
+    "mutation": "OPNsense addRule + apply",
+    "provider_acceptance": "rule-2",
+    "state": "APPLIED"
+  },
+  "fixture": "CONTROLLED_TEST_FIXTURE",
+  "milestone": "M5",
+  "node": "EP-030",
+  "normalized_facts": [
+    {
+      "fact": "existing quarantine rule nexus-quarantine-thermostat-1 enabled block",
+      "observed": true,
+      "provider": "OpnsenseFirewallProvider",
+      "resource": "rule-1",
+      "segment": "QUARANTINE",
+      "source": "opnsense"
+    },
+    {
+      "fact": "existing DROP rule nexus-quarantine-thermostat-1 src 192.168.30.20",
+      "observed": true,
+      "provider": "OpenWrtFirewallProvider",
+      "resource": "cfg1",
+      "segment": "QUARANTINE",
+      "source": "openwrt"
+    },
+    {
+      "fact": "5 queries, 2 blocked, ratio 0.40",
+      "observed": true,
+      "provider": "AdGuardDnsSecurityProvider",
+      "resource": "192.168.30.10",
+      "segment": "IOT",
+      "source": "adguard"
+    },
+    {
+      "fact": "observed FilteredBlackList blocklist entry",
+      "observed": true,
+      "provider": "AdGuardDnsSecurityProvider",
+      "resource": "evil.example.com",
+      "segment": "IOT",
+      "source": "adguard"
+    }
+  ],
+  "proof": "LF-010",
+  "providers_exercised": [
+    "opnsense",
+    "openwrt",
+    "adguard"
+  ],
+  "recommended_action": "quarantine cam-iot-1 via reversible OPNsense rule",
+  "redaction": "ZERO_LEAKAGE",
+  "rollback": {
+    "mutation": "OPNsense toggleRule 0 + apply",
+    "state": "REVOKED",
+    "verify_after_revoke": false
+  },
+  "run_id": "run-20260820014302",
+  "segments_observed": [
+    "IOT",
+    "QUARANTINE"
+  ],
+  "surface": "documented OPNsense firewall automation API + documented OpenWrt ubus JSON-RPC + documented AdGuard Home control API",
+  "transport": "HttpOpnsenseTransport + HttpOpenWrtTransport + HttpAdGuardTransport (real reqwest, REAL std::net sockets)",
+  "verification": {
+    "exact_target": true,
+    "readback": "OPNsense searchRule by nexus-quarantine-<proposal_id>",
+    "state": "VERIFIED"
+  }
+}

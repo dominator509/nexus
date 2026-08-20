@@ -1,0 +1,23 @@
+{
+  "case": "partial-data-firewall-unavailable",
+  "certification": {
+    "real_adguard_instance": "NOT_ASSERTED",
+    "real_openwrt_router": "NOT_ASSERTED",
+    "real_opnsense_appliance": "NOT_ASSERTED"
+  },
+  "diagnosis": {
+    "class": "DNS_ANOMALY_PARTIAL",
+    "confidence": "LOW",
+    "device": "cam-iot-1",
+    "dns_evidence": "AVAILABLE",
+    "firewall_evidence": "UNAVAILABLE",
+    "router_evidence": "AVAILABLE",
+    "segment": "IOT",
+    "summary": "DNS filter and router signals observed; firewall evidence unavailable (refused socket) - no healthy-firewall claim made."
+  },
+  "milestone": "M5",
+  "node": "EP-030",
+  "proof": "LF-010",
+  "redaction": "ZERO_LEAKAGE",
+  "run_id": "run-20260820014302"
+}

@@ -1,0 +1,19 @@
+[package]
+name = "nexus-sentinel-live-fire"
+version = "0.1.0"
+edition = "2021"
+description = "EP-030 M5 LF-010 network-diagnosis live-fire evidence crate"
+publish = false
+
+[dependencies]
+nexus-domain = { path = "../../../crates/nexus-domain", version = "0.1.0" }
+nexus-sentinel = { path = "../../../crates/nexus-sentinel", version = "0.1.0" }
+nexus-opnsense-connector = { path = "../../../connectors/opnsense", version = "0.1.0" }
+nexus-openwrt-connector = { path = "../../../connectors/openwrt", version = "0.1.0" }
+nexus-adguard-connector = { path = "../../../connectors/adguard-home", version = "0.1.0" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[test]]
+name = "lf010_network_diagnosis"
+path = "tests/lf010_network_diagnosis.rs"

@@ -2045,6 +2045,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-sentinel-live-fire"
+version = "0.1.0"
+dependencies = [
+ "nexus-adguard-connector",
+ "nexus-domain",
+ "nexus-openwrt-connector",
+ "nexus-opnsense-connector",
+ "nexus-sentinel",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-sidecar"
 version = "0.1.0"
 dependencies = [

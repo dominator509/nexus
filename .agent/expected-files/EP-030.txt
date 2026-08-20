@@ -7,11 +7,16 @@ scripts/ep030-m1-tests.sh
 scripts/ep030-m2-tests.sh
 scripts/ep030-m3-tests.sh
 scripts/ep030-m4-tests.sh
+scripts/ep030-m5-tests.sh
+scripts/live-fire/LF-010.sh
+docs/operations/EP-030-sentinel.md
 crates/nexus-sentinel/
 connectors/opnsense/
 connectors/openwrt/
 connectors/adguard-home/
 infra/sentinel/core/
 tests/sentinel/core/
+.agent/state/evidence/LF-010-ep030-m5.json
+.agent/state/evidence/LF-010-ep030-m5-partial.json
 Cargo.toml
 Cargo.lock
