@@ -1,0 +1,30 @@
+{
+  "name": "@nexus/web-a11y",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus web/desktop accessibility + LF-005 cross-device continuity proof package (EP-033 M5): renders the REAL @nexus/ui production components through react-dom/server, loads the actual markup in REAL headless Chrome, runs the axe-core WCAG 2.2 AA rule set, and proves the cross-device objective journey (voice start -> web dashboard continue -> mobile approval -> same task graph) against the real @nexus/web and @nexus/desktop components. Browser runtime is real (system Chrome, no emulation); the scan is machine-observed; evidence is current-run bound.",
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/contracts": "workspace:*",
+    "@nexus/web": "workspace:*",
+    "@nexus/desktop": "workspace:*",
+    "@nexus/ui": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "axe-core": "^4.10.0",
+    "playwright-core": "^1.49.0"
+  }
+}

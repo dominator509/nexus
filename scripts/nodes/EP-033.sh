@@ -14,8 +14,7 @@ case "$mode" in
   M4) python3 scripts/node-artifact-check.py EP-033 M4 && sh scripts/ep033-m4-tests.sh ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-033 M5
-      pnpm --filter @nexus/web test
-      sh scripts/live-fire/LF-005.sh
+      sh scripts/ep033-m5-tests.sh
       ;;
   *) echo "EP-033: FAIL - unknown mode $mode" >&2; exit 2;;
 esac

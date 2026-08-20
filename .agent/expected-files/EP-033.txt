@@ -15,3 +15,7 @@ scripts/ep033-m3-tests.sh
 tests/e2e/web/
 scripts/ep033-m4-tests.sh
 .agent/milestone-files/EP-033-M4.txt
+tests/accessibility/web/
+scripts/ep033-m5-tests.sh
+scripts/live-fire/LF-005.sh
+.agent/milestone-files/EP-033-M5.txt

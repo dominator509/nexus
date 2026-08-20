@@ -3,6 +3,7 @@ packages:
   - "infra/*"
   - "tests/workflows"
   - "tests/e2e/web"
+  - "tests/accessibility/web"
   - "apps/web"
   - "apps/desktop"
 # protobufjs is pulled transitively by @temporalio/proto@1.17.2; the

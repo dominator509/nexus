@@ -1,1 +1,6 @@
 tests/accessibility/web/
+scripts/ep033-m5-tests.sh
+scripts/live-fire/LF-005.sh
+scripts/nodes/EP-033.sh
+.agent/state/evidence/
+.agent/milestone-files/EP-033-M5.txt

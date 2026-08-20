@@ -1,0 +1,37 @@
+{
+  "node": "EP-033",
+  "milestone": "M5",
+  "proof": "LF-005 cross-device-continuity",
+  "run_id": "ep033-m5-lf005-1787269177645-psufjnj3",
+  "journey": {
+    "voice_start": {
+      "transcript_origin": "AGENT",
+      "objective_id": "obj-voice-lf005-1",
+      "correlation_id": "00000000-0000-4000-8000-000000000005",
+      "stage": "ACTIVE"
+    },
+    "web_dashboard_continue": {
+      "objective_bound": true,
+      "rendered_surface": "objectives",
+      "connectivity": "CONNECTED"
+    },
+    "mobile_approval": {
+      "approval_class": "FOUR_EYES",
+      "distinct_approvers": 2,
+      "satisfied": true,
+      "state": "APPROVED"
+    },
+    "final_artifact_same_graph": {
+      "task_count": 1,
+      "objective_ids_consistent": true,
+      "correlation_consistent": true,
+      "artifact_task_done": true
+    }
+  },
+  "authority_distinctions": {
+    "displayed_not_authorized": true,
+    "approved_not_executed_until_dispatched": true,
+    "executed_only_after_dispatch": true
+  },
+  "timestamp_unix_s": 1787269177
+}
