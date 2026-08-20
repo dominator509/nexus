@@ -272,10 +272,87 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 ## Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+## M2 completion (2026-08-20)
+
+Gate: `sh scripts/ep032-m2-tests.sh` -> `EP-032 M2: ok` (10 tests
+total: 6 provider invariants + 4 real-socket transport; 8 vacuity
+guards incl. anti-masking push sentinel, real-socket roundtrip
+sentinel, M1 regression, zero ignored/filtered).
+Node: `sh scripts/nodes/EP-032.sh M2` -> `EP-032 M2: ok` (RC=0).
+
+Created:
+- `connectors/push/` crate `nexus-push-connector`: mobile push channel
+  provider behind the nexus-notifications ChannelProvider port
+  (SPEC-014 behavior 7; channel class MOBILE_PUSH).
+  - `transport.rs`: PushTransport boundary + JsonPushTransport over an
+    arbitrary duplex byte source (socket/pipe/file). Wire: canonical
+    NotificationEnvelope as one JSON line, one ack line back. Ack
+    shape documented in-crate (provider_ref, delivered,
+    delivered_at_ms, error; deny_unknown_fields - unknown ack fields
+    rejected, never guessed). Malformed ack / closed peer fail closed
+    (External) with correlation. No external push provider API
+    invented (anti-hallucination).
+  - `adapter.rs`: PushChannelProvider<T> implements ChannelProvider.
+    Deterministic invariants: available() true ONLY when a transport
+    is bound (Reality rule; unbound advertises nothing + Unavailable);
+    every delivery returns a DeliveryReceipt carrying notification id +
+    correlation (acceptance obligation 4; SENT != DELIVERED, receipt
+    is the ONLY delivery authority); ack delivered=false OBSERVED as
+    Failed receipt, never fabricated into success; duplicate
+    notification id rejected with Conflict (bounded 256-entry
+    recent-delivery ring, idempotency); sensitive payload never in
+    errors/telemetry.
+- `scripts/ep032-m2-tests.sh`: M2 gate (8 reality guards +
+  anti-masking sentinels + M1 regression + no-ignored/no-filtered).
+
+Side gates: fmt clean; clippy -p nexus-push-connector --all-targets -D
+warnings clean; M1 regression green; scope audit pending node commit.
+
+Certification: push connector transport TRANSPORT_CERTIFIED over real
+std::net sockets vs controlled fixtures (production transport never
+mocked; mocks control the peer only). No real push provider
+(APNs/FCM/etc.) claimed; M3 owns connectors/sms, M4
+connectors/desktop-notify, M5 live-fire + closure.
+
+## Surprises & Discoveries
+
+- 2026-08-20 M2: `TcpStream::pair()` is nightly-only; the repo's
+  established real-socket pattern is TcpListener::bind("127.0.0.1:0")
+  + accept (CrowdSec precedent), used for all real-duplex tests.
+- 2026-08-20 M2: the peer thread must be joined AFTER the client I/O
+  completes, or the test deadlocks (peer waits for the envelope line
+  that the client only writes during deliver()).
+
+## Decision Log
+
+- 2026-08-20 M2: push transport is provider-neutral over an arbitrary
+  duplex byte source with an in-crate documented ack shape; NO
+  external push provider API is claimed (no APNs/FCM/ntfy credentials
+  or documented surface exists in-repo). Alternatives (inventing a
+  provider HTTP surface, claiming a real provider without
+  certification) rejected as hallucination / false certification.
+  Consequence: honest TRANSPORT_CERTIFIED-over-real-sockets boundary;
+  real provider certification deferred to deployment/ship review.
+  Reversal: swap transport behind PushTransport trait.
+- 2026-08-20 M2: duplicate delivery rejected with Conflict via a
+  bounded 256-entry ring (idempotency for retryable commands,
+  SPEC-006); alternative (unbounded map) rejected for memory bounds.
+- 2026-08-20 M2: ack delivered=false is a Failed receipt, NOT an
+  error - the provider observed a failure and the receipt records it;
+  fabricating an error (or success) would violate the receipt-as-
+  authority invariant.
+
+## Outcomes & Retrospective
+
+Changed files versus the machine fence: connectors/push/ (4 files),
+scripts/ep032-m2-tests.sh, .agent/expected-files/EP-032.txt,
+.agent/execplans/EP-032-..., .agent/state/LEDGER.md, Cargo.toml,
+Cargo.lock - all within the authorized fence.
 
 ## M1 completion (2026-08-20)
 

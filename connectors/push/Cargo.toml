@@ -1,0 +1,12 @@
+[package]
+name = "nexus-push-connector"
+version = "0.1.0"
+edition = "2021"
+description = "EP-032 push connector: mobile push channel provider behind the nexus-notifications ChannelProvider port (SPEC-014)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-notifications = { path = "../../crates/nexus-notifications", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

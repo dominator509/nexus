@@ -43,6 +43,7 @@ members = [
     "connectors/assist-satellite",
     "connectors/bluetooth-audio",
     "connectors/frigate",
+    "connectors/push",
     "connectors/roku-home",
     "connectors/robotics",
     "connectors/media",

@@ -4,6 +4,7 @@
 .agent/node-contracts/EP-032.md
 scripts/nodes/EP-032.sh
 scripts/ep032-m1-tests.sh
+scripts/ep032-m2-tests.sh
 crates/nexus-notifications/
 connectors/push/
 connectors/sms/

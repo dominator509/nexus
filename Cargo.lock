@@ -2028,6 +2028,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-push-connector"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-notifications",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-reflex"
 version = "0.1.0"
 dependencies = [
