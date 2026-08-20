@@ -47,9 +47,25 @@ pub trait SmsDb {
     /// Returns None when neither table has the message.
     fn status(&mut self, id: &str) -> Result<Option<SmsDbStatusRow>, NotificationError>;
 
+    /// Reconcile by the durable identity (CreatorID = the exact
+    /// Nexus notification identity recorded on the row). Returns the
+    /// provider row id when the provider already holds a request for
+    /// this exact notification (outbox or sentitems), else None.
+    ///
+    /// This is the ambiguity-resolution primitive: after a lost
+    /// confirmation, Nexus reconciles FIRST and never blindly inserts
+    /// a second SMS (M4 directive D/E).
+    fn reconcile_by_creator(&mut self, creator_id: &str) -> Result<Option<i64>, NotificationError>;
+
     /// Stable provider name for telemetry.
     fn provider_name(&self) -> &'static str;
 }
+
+/// The exact schema version certified by the tested runtime
+/// (Ubuntu noble package `gammu-smsd 1.42.0-8.1ubuntu2` ships
+/// Version 17). Any other version fails closed (never silently run
+/// partial SQL against an unknown schema).
+pub const CERTIFIED_SCHEMA_VERSION: i64 = 17;
 
 /// Map a documented SMSD `Status` column value to the provider state.
 fn map_status(status: &str) -> Result<SmsProviderState, NotificationError> {
@@ -85,7 +101,40 @@ impl SqliteSmsDb {
                 Some("gammu-smsd sqlite".to_string()),
             )
         })?;
-        Ok(Self { conn })
+        let db = Self { conn };
+        db.validate_schema_version()?;
+        Ok(db)
+    }
+
+    /// Fail closed on schema drift: the tested runtime certifies
+    /// Version 17 exactly. An unknown/missing version is External
+    /// (never run partial SQL against an unknown schema).
+    fn validate_schema_version(&self) -> Result<(), NotificationError> {
+        let version: Option<i64> = self
+            .conn
+            .query_row("SELECT Version FROM gammu LIMIT 1", [], |row| row.get(0))
+            .ok();
+        match version {
+            Some(v) if v == CERTIFIED_SCHEMA_VERSION => Ok(()),
+            Some(v) => Err(NotificationError::new(
+                NotificationErrorCode::External,
+                format!(
+                    "gammu smsd sqlite schema version {v} != certified {CERTIFIED_SCHEMA_VERSION} (fail closed)"
+                ),
+                None,
+                None,
+                None,
+                Some("gammu-smsd sqlite schema".to_string()),
+            )),
+            None => Err(NotificationError::new(
+                NotificationErrorCode::External,
+                "gammu smsd sqlite schema version missing (fail closed)",
+                None,
+                None,
+                None,
+                Some("gammu-smsd sqlite schema".to_string()),
+            )),
+        }
     }
 
     /// For in-memory tests only (TESTING.md test zone).
@@ -183,6 +232,32 @@ impl SmsDb for SqliteSmsDb {
     fn provider_name(&self) -> &'static str {
         "gammu-smsd-sqlite"
     }
+
+    fn reconcile_by_creator(&mut self, creator_id: &str) -> Result<Option<i64>, NotificationError> {
+        // The durable identity: a row bound to this exact CreatorID
+        // (outbox while queued, sentitems after submission). Look in
+        // outbox first (live request), then sentitems (completed).
+        let queued: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT ID FROM outbox WHERE CreatorID = ?1 LIMIT 1",
+                rusqlite::params![creator_id],
+                |row| row.get(0),
+            )
+            .ok();
+        if let Some(id) = queued {
+            return Ok(Some(id));
+        }
+        let sent: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT ID FROM sentitems WHERE CreatorID = ?1 AND SequencePosition = 1 LIMIT 1",
+                rusqlite::params![creator_id],
+                |row| row.get(0),
+            )
+            .ok();
+        Ok(sent)
+    }
 }
 
 /// PostgreSQL backend adapter (documented `native_pgsql` driver).
@@ -216,7 +291,49 @@ impl PostgresSmsDb {
                 Some("gammu-smsd postgres".to_string()),
             )
         })?;
-        Ok(Self { client })
+        let mut db = Self { client };
+        db.validate_schema_version()?;
+        Ok(db)
+    }
+
+    /// Fail closed on schema drift (PostgreSQL dialect; the shipped
+    /// pgsql.sql also records Version 17).
+    fn validate_schema_version(&mut self) -> Result<(), NotificationError> {
+        let version: Option<i64> = self
+            .client
+            .query_opt("SELECT \"Version\" FROM gammu LIMIT 1", &[])
+            .map_err(|e| {
+                NotificationError::new(
+                    NotificationErrorCode::External,
+                    format!("gammu smsd postgres schema read failed: {e}"),
+                    None,
+                    None,
+                    None,
+                    Some("gammu-smsd postgres schema".to_string()),
+                )
+            })?
+            .map(|row| row.get(0));
+        match version {
+            Some(v) if v == CERTIFIED_SCHEMA_VERSION => Ok(()),
+            Some(v) => Err(NotificationError::new(
+                NotificationErrorCode::External,
+                format!(
+                    "gammu smsd postgres schema version {v} != certified {CERTIFIED_SCHEMA_VERSION} (fail closed)"
+                ),
+                None,
+                None,
+                None,
+                Some("gammu-smsd postgres schema".to_string()),
+            )),
+            None => Err(NotificationError::new(
+                NotificationErrorCode::External,
+                "gammu smsd postgres schema version missing (fail closed)",
+                None,
+                None,
+                None,
+                Some("gammu-smsd postgres schema".to_string()),
+            )),
+        }
     }
 }
 
@@ -311,11 +428,54 @@ impl SmsDb for PostgresSmsDb {
     fn provider_name(&self) -> &'static str {
         "gammu-smsd-postgres"
     }
+
+    fn reconcile_by_creator(&mut self, creator_id: &str) -> Result<Option<i64>, NotificationError> {
+        let queued: Option<i64> = self
+            .client
+            .query_opt(
+                "SELECT ID FROM outbox WHERE CreatorID = $1 LIMIT 1",
+                &[&creator_id],
+            )
+            .map_err(|e| {
+                NotificationError::new(
+                    NotificationErrorCode::External,
+                    format!("gammu smsd outbox reconcile failed: {e}"),
+                    None,
+                    None,
+                    None,
+                    Some("gammu-smsd outbox".to_string()),
+                )
+            })?
+            .map(|row| row.get(0));
+        if let Some(id) = queued {
+            return Ok(Some(id));
+        }
+        let sent: Option<i64> = self
+            .client
+            .query_opt(
+                "SELECT ID FROM sentitems WHERE CreatorID = $1 AND SequencePosition = 1 LIMIT 1",
+                &[&creator_id],
+            )
+            .map_err(|e| {
+                NotificationError::new(
+                    NotificationErrorCode::External,
+                    format!("gammu smsd sentitems reconcile failed: {e}"),
+                    None,
+                    None,
+                    None,
+                    Some("gammu-smsd sentitems".to_string()),
+                )
+            })?
+            .map(|row| row.get(0));
+        Ok(sent)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gateway::GammuSmsdGateway;
+    use nexus_notifications::SmsDestination;
 
     /// Minimal documented schema (Gammu SMSD Database Structure;
     /// version 17 matches the Ubuntu noble package schema). Table
@@ -472,5 +632,132 @@ mod tests {
     fn ep032_unit_sms_db_unopenable_path_fails_closed() {
         let err = SqliteSmsDb::open("/nonexistent/dir/smsd.db").unwrap_err();
         assert_eq!(err.code, NotificationErrorCode::Unavailable);
+    }
+
+    #[test]
+    fn ep032_failure_unit_sms_db_schema_drift_fails_closed() {
+        // A database with an uncertified schema version must fail
+        // closed at open (External), never run partial SQL against an
+        // unknown schema (M4 directive AC).
+        let dir = std::env::temp_dir().join(format!("smsd-drift-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("drift.db");
+        let _ = std::fs::remove_file(&path);
+        {
+            let conn = rusqlite::Connection::open(&path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE gammu (Version INTEGER NOT NULL DEFAULT 0 PRIMARY KEY);
+                 INSERT INTO gammu (Version) VALUES (18);",
+            )
+            .unwrap();
+        }
+        let err = SqliteSmsDb::open(path.to_str().unwrap()).unwrap_err();
+        assert_eq!(err.code, NotificationErrorCode::External);
+        assert!(err.message.contains("18"), "must name the drift version");
+        // A missing version row also fails closed.
+        let path2 = dir.join("drift2.db");
+        let _ = std::fs::remove_file(&path2);
+        {
+            let conn = rusqlite::Connection::open(&path2).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE gammu (Version INTEGER NOT NULL DEFAULT 0 PRIMARY KEY);",
+            )
+            .unwrap();
+        }
+        let err = SqliteSmsDb::open(path2.to_str().unwrap()).unwrap_err();
+        assert_eq!(err.code, NotificationErrorCode::External);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn ep032_failure_unit_sms_db_reconcile_by_creator_durable_identity() {
+        // M4 directive D/E: reconcile by CreatorID returns the exact
+        // provider row for a notification identity - outbox first,
+        // then sentitems - so a replayed identity is detected.
+        let mut db = mem_db();
+        let id = db
+            .submit("+15551234567", "hello", "nexus:n-reconcile", true)
+            .unwrap();
+        let found = db
+            .reconcile_by_creator("nexus:n-reconcile")
+            .unwrap()
+            .unwrap();
+        assert_eq!(found, id);
+        // Unknown identity -> None.
+        assert!(db.reconcile_by_creator("nexus:n-never").unwrap().is_none());
+        // After the daemon moves the row to sentitems, reconcile
+        // still finds it by the same durable identity.
+        db.conn
+            .execute("DELETE FROM outbox WHERE ID = 1", [])
+            .unwrap();
+        db.conn
+            .execute(
+                "INSERT INTO sentitems (ID, SequencePosition, Status, CreatorID, SenderID, TPMR, Text, UDH)
+                 VALUES (1, 1, 'SendingOK', 'nexus:n-reconcile', '', 7, 'hello', '')",
+                [],
+            )
+            .unwrap();
+        let found = db
+            .reconcile_by_creator("nexus:n-reconcile")
+            .unwrap()
+            .unwrap();
+        assert_eq!(found, 1);
+    }
+
+    #[test]
+    fn ep032_failure_unit_sms_gateway_submit_reconciled_no_blind_duplicate() {
+        // M4 directive D/E: after a lost confirmation, submit_reconciled
+        // must NOT insert a second row - it returns the existing
+        // provider identity (Verification outcome). Provider-side row
+        // count is read through an INDEPENDENT second connection.
+        let dir = std::env::temp_dir().join(format!("smsd-ambig-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("ambig.db");
+        let _ = std::fs::remove_file(&path);
+        {
+            let conn = rusqlite::Connection::open(&path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE gammu (Version INTEGER NOT NULL DEFAULT 0 PRIMARY KEY);
+                 INSERT INTO gammu (Version) VALUES (17);
+                 CREATE TABLE outbox (
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CreatorID TEXT NOT NULL,
+                    SenderID TEXT,
+                    DestinationNumber TEXT NOT NULL DEFAULT '',
+                    TextDecoded TEXT NOT NULL DEFAULT '',
+                    DeliveryReport TEXT DEFAULT 'default',
+                    MultiPart TEXT NOT NULL DEFAULT 'false',
+                    Coding TEXT NOT NULL DEFAULT 'Default_No_Compression',
+                    Class INTEGER DEFAULT -1,
+                    Status TEXT NOT NULL DEFAULT 'Reserved');",
+            )
+            .unwrap();
+        }
+        let db = SqliteSmsDb::open(path.to_str().unwrap()).unwrap();
+        let mut gateway = GammuSmsdGateway::new(db, "nexus:");
+        let dest = SmsDestination::new("+15551234567").unwrap();
+        let (first, reconciled_first) = gateway
+            .submit_reconciled(&dest, "hello", "n-ambig")
+            .unwrap();
+        assert!(!reconciled_first, "first submit inserts exactly once");
+        let (again, reconciled_again) = gateway
+            .submit_reconciled(&dest, "hello", "n-ambig")
+            .unwrap();
+        assert!(
+            reconciled_again,
+            "replay must be detected as reconciled, never re-inserted"
+        );
+        assert_eq!(again, first, "same provider row identity");
+        let count: i64 = {
+            let conn = rusqlite::Connection::open(&path).unwrap();
+            conn.query_row(
+                "SELECT COUNT(*) FROM outbox WHERE CreatorID = 'nexus:n-ambig'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap()
+        };
+        assert_eq!(count, 1, "exactly one provider row, no blind duplicate");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

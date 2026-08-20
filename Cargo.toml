@@ -39,6 +39,7 @@ members = [
     "crates/nexus-hydra",
     "crates/nexus-social",
     "crates/nexus-sentinel",
+    "tests/notifications",
     "connectors/home-assistant",
     "connectors/assist-satellite",
     "connectors/bluetooth-audio",

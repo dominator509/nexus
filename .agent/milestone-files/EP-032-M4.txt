@@ -1,1 +1,11 @@
-connectors/desktop-notify/
+tests/notifications/**
+connectors/sms/** (failure additions: tests/ep032_failure_smsd.rs, src/db.rs reconcile+schema drift, src/gateway.rs submit_reconciled, src/adapter.rs reconciled path)
+infra/sms/at_modem.py (M4 failure modes)
+scripts/ep032-m4-tests.sh
+scripts/sms-diag.sh
+scripts/nodes/EP-032.sh
+.agent/expected-files/EP-032.txt
+Cargo.toml
+Cargo.lock
+M4 evidence (gate log + daemon logs + AT peer logs + schema-17 DBs under /tmp/ep032-m4)
+ExecPlan updates

@@ -1,0 +1,12 @@
+[package]
+name = "nexus-notifications-failure-e2e"
+version = "0.1.0"
+edition = "2021"
+description = "EP-032 M4 notification failure/abuse/observability e2e proofs: state-aware escalation, privacy-over-availability, allowlist fail-closed, observability redaction (SPEC-014)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-notifications = { path = "../../crates/nexus-notifications", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

@@ -274,8 +274,125 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+## M4 completion (2026-08-20)
+
+Gate: `sh scripts/ep032-m4-tests.sh` -> `EP-032 M4: ok` (19 gate
+guards; 11 e2e failure proofs + 3 connector unit failure proofs +
+8 LIVE Gammu forced-failure proofs over the REAL 1.42.0 fixture +
+M1/M2/M3 regressions + sms-diag + redaction scan + zero-orphan).
+Node: `sh scripts/nodes/EP-032.sh M4` -> `EP-032 M4: ok` (RC=0).
+
+Created:
+- `crates/nexus-notifications/src/router.rs`: EscalatingNotificationRouter
+  (production NotificationRouter impl, SPEC-014 behavior 7):
+  DeliveryPolicy gate FIRST (allowlist/min-urgency denial -> ZERO
+  provider mutation, no best-effort bypass); PrivacyRouting BEFORE
+  escalation and NEVER weakened by fallback (SENSITIVE+ never reaches
+  SPEAKER/CAR, even when the private channel is unavailable - privacy
+  over availability); CRITICAL urgency never authorizes a
+  privacy-forbidden channel; escalation chain rejects duplicates at
+  construction (no SMS->SMS->SMS loops); state-aware escalation:
+  FAILED escalates exactly once to the next permitted channel,
+  PENDING/SENDING/UNKNOWN never triggers blind escalation; one attempt
+  per channel (provider call counts prove no A-retry + A-again);
+  every attempt records a bounded redacted observation.
+- `crates/nexus-notifications/src/observability.rs`:
+  NotificationObservability bounded 256-entry ring + safe-field
+  NotificationObservation (notification fingerprint, channel, provider
+  ref, state, correlation, duration, escalation stage, error class,
+  delivery-report presence). Redaction by construction: the entry type
+  has no body/destination/credential fields.
+- `connectors/sms/src/db.rs` M4: SmsDb::reconcile_by_creator (durable
+  identity: outbox first, then sentitems, by CreatorID =
+  NotificationId) for SQLite + Postgres; CERTIFIED_SCHEMA_VERSION=17;
+  SqliteSmsDb::open + PostgresSmsDb::connect validate the schema
+  version and fail closed (External) on drift/missing version - never
+  partial SQL against an unknown schema.
+- `connectors/sms/src/gateway.rs` M4: GammuSmsdGateway::submit_reconciled
+  (reconcile by CreatorID BEFORE insert; existing row -> Verification
+  outcome, never a blind duplicate SMS) + SmsGateway trait default.
+- `connectors/sms/src/adapter.rs` M4: deliver_to now uses
+  submit_reconciled (durable idempotency: in-memory ring covers
+  process lifetime; CreatorID reconciliation covers restart).
+- `connectors/sms/tests/ep032_failure_smsd.rs`: 8 LIVE-STACK tests
+  (EP-030/EP-031 M4 convention, `#[ignore]`d, run by the gate):
+  ambiguous submission (real outbox INSERT -> reconcile -> exactly one
+  row, no blind duplicate), durable idempotency across connector
+  restart, daemon unavailable (no fabricated Delivered), backend
+  unavailable (directory-replaced DB -> canonical fail-closed),
+  no delivery report (SendingOK never Delivered), real failure report
+  (+CDS TP-Status 0x41 -> daemon itself writes DeliveryFailed ->
+  Failed receipt; independent DB readback), unmatched report (exact
+  target never satisfied), provider restart/reconcile/recover.
+- `infra/sms/at_modem.py` M4 failure modes: SMSD_NO_REPORT=1,
+  SMSD_FAILURE_REPORT=1 (TP-Status 0x41; gammu 1.42 classifies bit
+  0x40 as Failed - verified in gsmsms.c), SMSD_UNMATCHED_REPORT=1.
+- `tests/notifications/` crate `nexus-notifications-failure-e2e`:
+  11 e2e failure proofs (privacy forbidden fallback zero forbidden
+  mutation, CRITICAL never overrides privacy, allowlist denied zero
+  mutation, min-urgency denied zero mutation, escalation duplicate
+  rejected, state-aware escalation failed-escalates-once, pending/
+  unknown never blind escalation, channel-specific duplicate
+  suppression, cross-recipient exact identity, malicious content is
+  data not authority, observability redaction canary zero leakage).
+- `scripts/sms-diag.sh`: truthful SMS diagnostic (configured /
+  provider_db with certified schema / daemon process / provider queue
+  writable via create_outbox probe; delivery-report not asserted
+  without a real report; healthy never from config existence; missing
+  config rc=3 fail closed).
+- `scripts/ep032-m4-tests.sh`: M4 gate (19 guards incl. anti-masking
+  ep032_failure_* sentinel, real Gammu runtime for every
+  provider-behavior claim, ambiguity + no-report + failure-report +
+  privacy + idempotency + restart + redaction + push regression +
+  zero-orphan).
+
+Discoveries:
+- DB ambiguity semantics: reconcile-by-CreatorID is the durable
+  primitive; outcome is Verification (existing row returned), never
+  Failed-before-mutation, never automatic retry.
+- Durable vs process-local idempotency: the 256-ring is
+  process-lifetime; CreatorID reconciliation extends suppression
+  across connector restart (proven). Cross-restart durable
+  idempotency is owned by M4; no later debt.
+- Provider restart/reconciliation: the provider queue survives
+  daemon restart; a fresh connector instance reconciles the exact
+  same identity -> exactly one row.
+- Privacy-over-availability: the router records the unavailable
+  private channel truthfully WITHOUT invoking it and never falls
+  back to a privacy-forbidden channel.
+- Pending/unknown vs failed escalation: FAILED escalates; non-final
+  states stop the chain (no blind multi-channel fire).
+- Schema-version handling: open()/connect() fail closed on any
+  version != 17 (External), including missing version row.
+- Postgres boundary: PostgresSmsDb is IMPLEMENTED with real postgres
+  0.19.14 client + documented pgsql.sql schema-17 validation, but
+  NOT provider-certified in M4 (no live PG fixture exercised);
+  certification debt owned by deployment/ship review (or a future
+  live-PG milestone), recorded honestly - "compiles" != certified.
+- Redaction: canaries in body/destination/credentials never appear
+  in receipts, observability, errors, or gate logs.
+
+Side gates: fmt clean; clippy -p nexus-notifications -p
+nexus-sms-connector -p nexus-notifications-failure-e2e --all-targets
+-D warnings clean; license gate ok; reality gate ok; security check ok
+(0 advisories); dependency audit ok (blueprint ASCII-clean); scope
+audit EP-032 ok; workspace battery green.
+
+Certification: notification contract (router/privacy/escalation/
+observability) INTERNAL CERTIFIED; Push transport TRANSPORT_CERTIFIED
+against controlled real sockets (M2, regression green); SMS connector
+IMPLEMENTED; Gammu SMSD fixture path PROVIDER_CERTIFIED; SMS
+forced-failure/recovery path CERTIFIED for controlled fixture;
+ambiguous DB reconciliation CERTIFIED (unit + live proof); SQLite
+schema 17 CERTIFIED; Postgres NOT CERTIFIED (implementation-only,
+deferred); PTY modem CONTROLLED SIMULATION FIXTURE; physical modem /
+carrier / handset / arbitrary SMS delivery NOT ASSERTED. M5 owns
+desktop-notify (per original plan CHANGE line, not implemented in M4 -
+M4 scope is failure/abuse/observability per directive), live-fire,
+operations, node closure.
 
 ## M3 completion (2026-08-20)
 

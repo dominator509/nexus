@@ -159,7 +159,12 @@ impl<T: SmsGateway> SmsChannelProvider<T> {
         self.record_recent(&envelope.notification_id)?;
 
         let mut gateway = gateway.borrow_mut();
-        let provider_ref = gateway.submit(
+        // Ambiguity-safe submission: reconcile by the exact durable
+        // identity (CreatorID = NotificationId) BEFORE any insert, so
+        // a replayed identity never creates a second provider row
+        // (M4 directive D/E). The in-memory ring covers process
+        // lifetime; CreatorID reconciliation covers restart.
+        let (provider_ref, _reconciled) = gateway.submit_reconciled(
             destination,
             &envelope.summary,
             envelope.notification_id.as_str(),

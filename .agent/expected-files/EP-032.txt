@@ -2,10 +2,14 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-032.txt
 .agent/node-contracts/EP-032.md
+.agent/milestone-files/EP-032-M3.txt
+.agent/milestone-files/EP-032-M4.txt
 scripts/nodes/EP-032.sh
 scripts/ep032-m1-tests.sh
 scripts/ep032-m2-tests.sh
 scripts/ep032-m3-tests.sh
+scripts/ep032-m4-tests.sh
+scripts/sms-diag.sh
 crates/nexus-notifications/
 connectors/push/
 connectors/sms/
@@ -14,4 +18,5 @@ infra/sms/
 tests/notifications/
 Cargo.toml
 Cargo.lock
+deny.toml
 COMPONENT_REGISTRY.yaml

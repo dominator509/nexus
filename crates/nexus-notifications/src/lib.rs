@@ -31,16 +31,20 @@
 
 pub mod error;
 pub mod model;
+pub mod observability;
 pub mod provider;
+pub mod router;
 pub mod vocabulary;
 
 pub use error::{NotificationError, NotificationErrorCode};
 pub use model::{
     DeliveryPolicy, DeliveryReceipt, EscalationPolicy, NotificationEnvelope, PrivacyRouting,
 };
+pub use observability::{NotificationObservability, NotificationObservation};
 pub use provider::{
     ChannelProvider, NotificationRouter, UnboundChannelProvider, UnboundNotificationRouter,
 };
+pub use router::EscalatingNotificationRouter;
 pub use vocabulary::{
     DeliveryReceiptId, DeliveryState, EscalationStage, NotificationId, NotificationUrgency,
     SmsDestination,

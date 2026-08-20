@@ -143,6 +143,30 @@ impl<D: SmsDb> GammuSmsdGateway<D> {
         Ok(SmsProviderRef(id.to_string()))
     }
 
+    /// Ambiguity-safe submission (M4 directive D/E): reconcile by the
+    /// exact durable identity (CreatorID = NotificationId) BEFORE any
+    /// insert. When the provider already holds a request for this
+    /// exact notification, return that existing provider row identity
+    /// (Verification outcome) - NEVER a blind duplicate SMS. When no
+    /// row exists, submit exactly once.
+    ///
+    /// Returns `(provider_ref, reconciled)` where `reconciled=true`
+    /// means the provider row already existed and no new outbox row
+    /// was inserted.
+    pub fn submit_reconciled(
+        &mut self,
+        destination: &SmsDestination,
+        text: &str,
+        notification_id: &str,
+    ) -> Result<(SmsProviderRef, bool), NotificationError> {
+        let creator = self.creator_for(notification_id);
+        if let Some(existing) = self.db.reconcile_by_creator(&creator)? {
+            return Ok((SmsProviderRef(existing.to_string()), true));
+        }
+        let id = self.db.submit(destination.as_str(), text, &creator, true)?;
+        Ok((SmsProviderRef(id.to_string()), false))
+    }
+
     /// Observe the daemon-written provider state for a message.
     pub fn status(
         &mut self,
@@ -172,6 +196,21 @@ pub trait SmsGateway {
         text: &str,
         notification_id: &str,
     ) -> Result<SmsProviderRef, NotificationError>;
+
+    /// Ambiguity-safe submission (M4 directive D/E). The default
+    /// delegates to `submit`; production `GammuSmsdGateway` overrides
+    /// with durable CreatorID reconciliation so a replayed
+    /// notification identity never creates a second provider row.
+    fn submit_reconciled(
+        &mut self,
+        destination: &SmsDestination,
+        text: &str,
+        notification_id: &str,
+    ) -> Result<(SmsProviderRef, bool), NotificationError> {
+        let ref_ = self.submit(destination, text, notification_id)?;
+        Ok((ref_, false))
+    }
+
     fn status(
         &mut self,
         provider_ref: &SmsProviderRef,
@@ -186,6 +225,15 @@ impl<D: SmsDb> SmsGateway for GammuSmsdGateway<D> {
         notification_id: &str,
     ) -> Result<SmsProviderRef, NotificationError> {
         GammuSmsdGateway::submit(self, destination, text, notification_id)
+    }
+
+    fn submit_reconciled(
+        &mut self,
+        destination: &SmsDestination,
+        text: &str,
+        notification_id: &str,
+    ) -> Result<(SmsProviderRef, bool), NotificationError> {
+        GammuSmsdGateway::submit_reconciled(self, destination, text, notification_id)
     }
 
     fn status(

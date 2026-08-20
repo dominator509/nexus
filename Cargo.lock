@@ -1931,6 +1931,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-notifications-failure-e2e"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-notifications",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-opa"
 version = "0.1.0"
 dependencies = [

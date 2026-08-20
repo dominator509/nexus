@@ -140,6 +140,17 @@ impl NotificationError {
             None,
         )
     }
+
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self::new(
+            NotificationErrorCode::Internal,
+            message,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
 }
 
 impl fmt::Display for NotificationError {

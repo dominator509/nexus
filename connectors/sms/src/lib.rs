@@ -40,7 +40,7 @@ pub mod db;
 pub mod gateway;
 
 pub use adapter::{SmsChannelProvider, SmsChannelProviderError};
-pub use db::{PostgresSmsDb, SmsDb, SmsDbStatusRow, SqliteSmsDb};
+pub use db::{PostgresSmsDb, SmsDb, SmsDbStatusRow, SqliteSmsDb, CERTIFIED_SCHEMA_VERSION};
 pub use gateway::{
     GammuSmsdGateway, SmsGateway, SmsProviderRef, SmsProviderState, SmsProviderStatus,
 };

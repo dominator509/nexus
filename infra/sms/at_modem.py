@@ -109,6 +109,15 @@ class AtModem:
         self.sent_mrs = []
         self.delivery_reports = []
         self._stop = threading.Event()
+        # M4 failure modes (controlled fixture; SIMULATION):
+        #   SMSD_NO_REPORT=1        - CMGS accepted, NO +CDS ever sent
+        #   SMSD_FAILURE_REPORT=1   - +CDS with TP-Status != 0x00 (failure)
+        #   SMSD_UNMATCHED_REPORT=1 - +CDS bound to a DIFFERENT message
+        #                             (wrong TPMR/destination) so it can
+        #                             never satisfy the current message
+        self.no_report = os.environ.get("SMSD_NO_REPORT") == "1"
+        self.failure_report = os.environ.get("SMSD_FAILURE_REPORT") == "1"
+        self.unmatched_report = os.environ.get("SMSD_UNMATCHED_REPORT") == "1"
 
     def read_line(self, f) -> str:
         line = f.readline()
@@ -173,12 +182,51 @@ class AtModem:
             time.sleep(1.0)
             if self._stop.is_set():
                 return
-            pdu = build_status_report(mr, dest, ton)
+            if self.no_report:
+                # M4: no delivery report arrives; the message stays
+                # in a non-delivered provider state (SendingOK).
+                log("+CDS suppressed (SMSD_NO_REPORT=1)")
+                return
+            status = 0x00
+            if self.failure_report:
+                # TP-Status 0x41 = permanent error (GSM 03.40
+                # section 9.2.3.15; gammu 1.42 classifies TP-Status
+                # with bit 0x40 as "Failed", verified in
+                # libgammu/service/sms/gsmsms.c
+                # GSM_DecodeSMSStatusReportData); the daemon records
+                # the documented DeliveryFailed state.
+                status = 0x41
+            if self.unmatched_report:
+                # Report bound to a DIFFERENT message: bump the TPMR
+                # and use a different destination so the daemon can
+                # never correlate it to the current message.
+                wrong_mr = (mr + 1) % 256
+                wrong_dest = "15550000000"
+                pdu = build_status_report(wrong_mr, wrong_dest, ton, status)
+                log(f"+CDS (unmatched) -> {pdu}")
+                with _log_lock:
+                    try:
+                        d = os.open(self.device, os.O_RDWR | os.O_NOCTTY)
+                        os.write(
+                            d,
+                            f"\r\n+CDS: {len(bytes.fromhex(pdu.replace(' ', '')))}\r\n".encode(),
+                        )
+                        time.sleep(0.05)
+                        os.write(d, (pdu + "\r\n").encode())
+                        os.close(d)
+                    except Exception as e:  # pragma: no cover
+                        log(f"+CDS write failed: {e}")
+                self.delivery_reports.append((wrong_mr, wrong_dest))
+                return
+            pdu = build_status_report(mr, dest, ton, status)
             log(f"+CDS -> {pdu}")
             with _log_lock:
                 try:
                     d = os.open(self.device, os.O_RDWR | os.O_NOCTTY)
-                    os.write(d, f"\r\n+CDS: {len(bytes.fromhex(pdu.replace(' ', '')))}\r\n".encode())
+                    os.write(
+                        d,
+                        f"\r\n+CDS: {len(bytes.fromhex(pdu.replace(' ', '')))}\r\n".encode(),
+                    )
                     time.sleep(0.05)
                     os.write(d, (pdu + "\r\n").encode())
                     os.close(d)
