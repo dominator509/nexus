@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
@@ -287,6 +287,7 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - 2026-08-20 (M2): QuarantineProposal has no `with_state` builder in the M1 contract (fields are public by design); the adapter uses struct-update syntax `QuarantineProposal { state: ..., ..proposal }` instead of adding a builder to the contract crate (M2 fence forbids contract-crate changes).
 - 2026-08-20 (M2): The documented searchRule response normalizes `enabled` as string "1"/"0" in the docs example, but OpnsenseRule's serde contract is bool; the production transport normalizes via a raw SearchRow with `Option<serde_json::Value>`. The unit test must feed the struct's own serde shape (bool), not the raw wire string.
 - 2026-08-20 (M3): OpenWrt's classic `/cgi-bin/luci/rpc/*` API is deprecated in current releases; the modern documented surface is the ubus HTTP JSON-RPC 2.0 endpoint POST /ubus (openwrt.org/docs/techref/ubus + rpcd source uci.c/rc.c/session.c). Integration fixture emits REAL ubus-shaped responses incl session/login result[1].ubus_rpc_session, uci add/set/commit, uci get map-of-sections, rc init {name, action}, and ubus status 6 (PERMISSION_DENIED).
+- 2026-08-20 (M4): AdGuard Home query log `question` is a JSON object with a `name` field in the documented QueryLogItem shape, not a plain string; the production transport normalizes via a raw item struct and the QueryLogEntry struct carries the string. The unit test asserts the struct-level shape after normalization.
 
 # 13. Decision Log
 

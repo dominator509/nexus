@@ -59,6 +59,7 @@ members = [
     "connectors/social-direct",
     "connectors/opnsense",
     "connectors/openwrt",
+    "connectors/adguard-home",
     "tests/audio",
     "tests/social",
     "tests/sentinel/core",
