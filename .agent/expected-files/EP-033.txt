@@ -4,7 +4,5 @@
 .agent/node-contracts/EP-033.md
 scripts/nodes/EP-033.sh
 apps/web/
-apps/desktop/
-packages/ui/
-tests/e2e/web/
-tests/accessibility/web/
+pnpm-lock.yaml
+scripts/ep033-m1-tests.sh

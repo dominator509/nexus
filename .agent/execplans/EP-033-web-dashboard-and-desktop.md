@@ -273,19 +273,44 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
+### M1 completion (2026-08-20)
+
+- `apps/web/` @nexus/web contract package created (TypeScript, framework-neutral): package.json, tsconfig (strict + noUncheckedIndexedAccess + exactOptionalPropertyTypes + verbatimModuleSyntax), tsconfig.build.json; depends only on `@nexus/contracts` (generated canonical bindings) + typescript/vitest dev deps.
+- Eight public interfaces defined with typed validation and deny-unknown semantics: DashboardShell (canonical SPEC-004 navigation vocabulary, unknown routes fail closed), ChatWorkspace (typed messages, idempotent sends, chat-when-phone-impossible), ObjectiveView (typed ids + LF-005 continuity seam), ApprovalCenter (approval-class preservation, FOUR_EYES two distinct principals), FleetView, SecurityConsole, ProviderSettings (certification/route/cost/privacy/egress disclosure before activation; uncertified never activatable), AuditExplorer.
+- Supporting contracts: AuthenticatedSession (auth-session schema parity), BusinessContext/BoundContext (explicit principal/tenant/business binding), ContextProjection (context-switch invalidation), ViewState (SPEC-004 six state kinds + connectivity CONNECTED/DEGRADED/OFFLINE/AUTH_EXPIRED/BACKEND_UNAVAILABLE + FRESH/STALE), PresentedCapability/KnownCapabilityVocabulary (VISIBLE != AUTHORIZED; unknown capability UNSUPPORTED), TypedCommandRequest/DispatchGate (typed capability ids, idempotency keys, invocation binding; auth-expiry fail closed, no blind replay), EventFilter/EventSubscription (EventEnvelope binding), PreferencePersistence (allowlist only; tokens/secrets/approval credentials refused), ThemePreference (theme never mutates authority), A11ySurface/FocusOrder (label/role/keyboard/focus/reduced-motion/non-color; NO WCAG claim), RedactedLogger/redact (safe fields only; canary-tested).
+- Tests: 143 ep033_unit tests across 16 files (construction, validation, serialization, vocabulary rejection, dependency-direction, schema-parity against canonical schema files).
+- Node script M1 rewired from EP-001-masking artifact-check branch to the real gate `scripts/ep033-m1-tests.sh` (10 guards: package/sources present, tsc --noEmit clean, non-zero passing, zero failures, zero skipped, dependency-direction observed, anti-masking ep033_unit_session + ep033_unit_capability sentinels, fence artifacts).
+- Side gates: scope audit EP-033: ok; expected files EP-033: ok; reality gate: ok; license gate: ok; security check: ok (0 advisories); dependency audit: ok (blueprint ASCII clean); workspace install clean.
+- Commands + sentinels: `sh scripts/ep033-m1-tests.sh` -> EP-033 M1: ok (143 tests); `sh scripts/nodes/EP-033.sh M1` -> EP-033 M1: ok (RC=0).
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-20 M1: The pre-created `scripts/nodes/EP-033.sh` M1 branch was EP-001-masking class (artifact-check only). Rewired to `scripts/ep033-m1-tests.sh` before any M1 sentinel could be claimed.
+- 2026-08-20 M1: vitest emits ANSI color codes even under CI=true; gate greps required `sed -i 's/\x1b\[[0-9;]*m//g'` on the log (same class of issue EP-006 handled with sed in its node script).
+- 2026-08-20 M1: `exactOptionalPropertyTypes` (workspace convention) rejects optional-property assignment of `undefined`; contract shapes use `field: string | undefined` (required field) instead of `field?: string` in internal shape interfaces.
+- 2026-08-20 M1: The tool display layer masks `["NONE",`-shaped content as `***` in terminal output and mangles long digit/JWT-shaped strings in some writes; verified actual file bytes with od (files were correct; display-only). No functional impact.
+- 2026-08-20 M1: auth-session.schema.json (and all nested schemas/) are NOT emitted by the contracts generator (top-level glob only), so AuthSession has no generated binding; the session contract binds field-for-field to the canonical schema and the schema-parity test reads the schema file to prevent drift.
+- 2026-08-20 M1: `EventEnvelope.schema_version` generated type is the literal `"1.0.0"`; event filter version is a string, not a number.
+- 2026-08-20 M1: pre-scaffolded `.agent/expected-files/EP-033.txt` listed all milestone dirs (apps/desktop/, packages/ui/, tests/e2e/web/, tests/accessibility/web/); trimmed to M1 scope following the EP-032 per-milestone fence-growth pattern (directive Y: no empty M2-M5 placeholders).
+- 2026-08-20 M1: `pnpm` shell shim is wrapped by rtk-tee which collapses output/fails; use the real binary `/root/.local/share/mise/installs/pnpm/11.17.0/pnpm` (or PNPM_BIN) with output redirected to a file.
+- 2026-08-20 M1: LF-005 (cross-device continuity) remains M5-owned; its runner `scripts/live-fire/LF-005.sh` currently delegates to `proof-runner.sh` which requires a `nexus-cli`/`nexusctl` proof registry that does not exist in this repo (no crate named nexus-cli) - the M5 milestone must rewire LF-005 to a real gate and create the proof, mirroring EP-031 LF-009 precedent.
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-20 M1: M1 package boundary = `apps/web/` contract layer only (framework-neutral TypeScript). No React/Vite/Playwright in M1 (directive X: no premature full dashboard); React PWA rendering is M2/M3 work. Evidence: ExecPlan M1 CONTENT (workspace manifests + module roots + public interfaces + ep033_unit tests); alternatives considered: scaffolding the full React app in M1 (rejected: violates M1 scope and dependency-direction); consequence: desktop shell (M2) can import the same contracts; reversal: none; security: none; license: none (typescript/vitest already in workspace lockfile); compatibility: pnpm-lock.yaml updated (+13 lines) for the new importer.
+- 2026-08-20 M1: Contract validation uses deny-unknown + typed enums mirroring the canonical schema `additionalProperties: false` and the Rust serde deny_unknown_fields pattern (EP-002/EP-032 precedent), so raw wire input can never fabricate vocabulary or authority. Evidence: 143 tests incl. vocabulary-rejection and schema-parity suites; alternatives: permissive validation (rejected: fail-closed doctrine); reversal: none; security: fail-closed by construction.
+- 2026-08-20 M1: Session/business context is bound explicitly (AuthenticatedSession + BusinessContext + BoundContext) and context switch invalidates old projections (ContextProjection.requireCurrent fails closed). Evidence: ep033_unit_session tests (switch invalidation, cross-context refusal); alternatives: deriving context from a screen label (rejected: directive F/G); reversal: none.
+- 2026-08-20 M1: M1 certification remains INTERNAL CONTRACT CERTIFIED; no provider, hardware, or deployment certification claimed (no React runtime, no browser, no WCAG scan in M1). WCAG 2.2 AA checks are owned by M3/M5 (Playwright + axe per SPEC-004 required tests); accessibility contracts in M1 are executable labels/roles/keyboard/focus/reduced-motion/non-color contracts only.
 
 # 14. Outcomes & Retrospective
 
