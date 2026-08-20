@@ -1881,6 +1881,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-notifications"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-opa"
 version = "0.1.0"
 dependencies = [

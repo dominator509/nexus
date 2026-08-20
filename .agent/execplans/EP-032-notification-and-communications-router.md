@@ -269,22 +269,112 @@ Owned live-fire proofs:
 
 Resume cold by running the boot sequence, confirming the lease, reading Progress and ledger evidence, and rerunning the last checked milestone sentinel. All provisioning, migration, event consumption, provider writes, and workflow activities must be idempotent. Before a risky mutation, create the specified backup or snapshot. Rollback to the previous milestone commit under LOOPS.md; never cross a completed green tag.
 
-# 11. Progress
+## Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
-# 12. Surprises & Discoveries
+## M1 completion (2026-08-20)
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+Gate: `sh scripts/ep032-m1-tests.sh` -> `EP-032 M1: ok` (21 tests
+total: 20 unit + 1 dependency-direction; 10 vacuity guards incl.
+anti-masking ep032_unit_* sentinel, dependency-direction, zero
+ignored/filtered).
+Node: `sh scripts/nodes/EP-032.sh M1` -> `EP-032 M1: ok` (RC=0).
 
-# 13. Decision Log
+Created:
+- `crates/nexus-notifications/` crate `nexus-notifications`:
+  provider-neutral notification contracts (SPEC-014 behavior 7).
+  - `error.rs`: NotificationError + NotificationErrorCode (SPEC-006
+    codes; Box<str> refs keep Err small; redaction-safe fields).
+  - `vocabulary.rs`: owned NotificationUrgency (LOW/NORMAL/HIGH/
+    CRITICAL - matches schemas/notification-envelope.schema.json
+    exactly), DeliveryState (PENDING/SENDING/DELIVERED/FAILED/
+    EXPIRED/ESCALATED), EscalationStage (PRIMARY/SECONDARY/TERTIARY/
+    FINAL); typed ids NotificationId + DeliveryReceiptId validate in
+    `new` AND serde deserialization (malformed wire values never
+    bypass; fail closed). Channel classes and privacy classes come
+    from nexus-domain (never redefined). No vendor brand leaks.
+  - `model.rs`: NotificationEnvelope mirrors the canonical schema
+    field-for-field (deny_unknown_fields; title 1..=160, summary
+    1..=1000, at least one channel, non-empty expires_at; serde test
+    asserts all 9 required schema fields present); DeliveryPolicy
+    (min_urgency + explicit channel allowlist, fail closed - a
+    channel not on the allowlist is denied); PrivacyRouting
+    (SENSITIVE-or-higher privacy NEVER routes to shared-room
+    channels SPEAKER/CAR - explicit rank helper since nexus-domain
+    Privacy does not derive ordering); EscalationPolicy (ordered
+    fallback chain, duplicate channel rejected at construction);
+    DeliveryReceipt (ONLY delivery authority; Delivered state only;
+    carries notification_id + correlation_id).
+  - `provider.rs`: ChannelProvider port (channel(), available(),
+    deliver()); NotificationRouter port (route() applies policy +
+    privacy + escalation); UnboundChannelProvider +
+    UnboundNotificationRouter fail closed (advertise nothing,
+    Unavailable).
+  - `tests/dependency_direction.rs`: nexus-domain + serde/serde_json
+    only (ep032_unit_dependency_direction).
+- `scripts/ep032-m1-tests.sh`: M1 gate (10 reality guards +
+  anti-masking sentinel + no-ignored/no-filtered).
+- `scripts/nodes/EP-032.sh`: node script (M1-M5 modes + verify).
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+Workspace member registered (Cargo.toml + Cargo.lock); node contract
+spec path typo fixed (`.agent/specs/.agent/specs/...` -> `.agent/
+specs/...`); expected-files/EP-032.txt extended with the M1 gate
+script and workspace files.
 
-# 14. Outcomes & Retrospective
+Side gates: fmt clean; clippy -p nexus-notifications --all-targets -D
+warnings clean (Box<str> error refs + too_many_arguments on the
+schema-shaped constructor only); dependency-direction passed; scope
+audit pending node commit.
 
-At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+Certification: nexus-notifications contract INTERNAL_CERTIFIED
+(contract + vocabulary only). No channel provider is claimed
+operational; M2 owns connectors/push, M3 connectors/sms, M4
+connectors/desktop-notify, M5 live-fire + closure.
+
+## Surprises & Discoveries
+
+- 2026-08-20 M1: `schemas/notification-envelope.schema.json` already
+  exists and is the canonical wire contract; the generated
+  nexus-contracts DTO exists but has no validated/typed layer, so
+  nexus-notifications defines the typed contract layer directly from
+  the schema (anti-hallucination: field names and bounds copied from
+  the schema, not invented).
+- 2026-08-20 M1: nexus-domain `Privacy` does NOT derive PartialOrd,
+  so "SENSITIVE or higher" cannot use `>=`; implemented an explicit
+  rank helper matching SPEC-001 class order.
+- 2026-08-20 M1: clippy result_large_err fired on the 5-Option-String
+  error struct; the repo's established fix (nexus-sentinel) is
+  Box<str> refs, which also matches redaction-safe telemetry goals.
+
+## Decision Log
+
+- 2026-08-20 M1: nexus-notifications owns the typed notification
+  contract layer (envelope/policy/privacy/escalation/receipt) and
+  reuses nexus-domain NotificationChannel + Privacy + PersonId +
+  CorrelationId; alternatives (hand-rolling channels in-crate,
+  editing nexus-domain) rejected as parallel vocabulary / cross-node
+  scope. Consequence: single canonical vocabulary. Reversal: ADR +
+  schema update. Security: least privilege, fail-closed allowlists.
+  License: MIT, no new deps.
+- 2026-08-20 M1: DeliveryState/EscalationStage are EP-032-owned
+  vocabulary matching the schema's envelope contract; recorded here
+  as the owning node's vocabulary addition (no ADR needed - they are
+  node-owned classes, not synonyms for locked terms).
+- 2026-08-20 M1: EscalationPolicy rejects duplicate channels at
+  construction (acceptance obligation 3: without duplication), and
+  DeliveryPolicy denies unlisted channels (fail closed) rather than
+  defaulting to "allow all".
+
+## Outcomes & Retrospective
+
+Changed files versus the machine fence: crates/nexus-notifications/
+(8 files), scripts/ep032-m1-tests.sh, scripts/nodes/EP-032.sh,
+.agent/expected-files/EP-032.txt, .agent/node-contracts/EP-032.md,
+.agent/execplans/EP-032-..., .agent/state/LEDGER.md, Cargo.toml,
+Cargo.lock - all within the authorized fence.
+
