@@ -3,10 +3,8 @@
 .agent/expected-files/EP-031.txt
 .agent/node-contracts/EP-031.md
 scripts/nodes/EP-031.sh
+scripts/ep031-m1-tests.sh
 connectors/suricata/
-connectors/zeek/
-connectors/crowdsec/
-connectors/wazuh/
-connectors/osquery/
 infra/sentinel/advanced/
-tests/sentinel/advanced/
+Cargo.toml
+Cargo.lock

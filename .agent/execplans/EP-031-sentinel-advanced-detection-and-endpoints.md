@@ -274,11 +274,53 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+## M1 completion (2026-08-20)
+
+Gate: `sh scripts/ep031-m1-tests.sh` -> `EP-031 M1: ok` (19 advanced unit + 1
+dependency-direction + 2 Suricata connector tests; 6 vacuity guards,
+anti-masking EP-031-owned sentinels, zero ignored/filtered).
+Node: `sh scripts/nodes/EP-031.sh M1` -> `EP-031 M1: ok` (RC=0), rewired
+from EP-001-masking artifact-check branch to the real gate.
+
+Created:
+- `infra/sentinel/advanced/` crate `nexus-sentinel-advanced`: EP-031
+  provider-neutral contract layer. Vocabulary (SPEC-013 behavior 3/7):
+  AdvancedSensorProfile (SURICATA/ZEEK/CROWDSEC/WAZUH/OSQUERY/HONEYPOT),
+  AlertState, IncidentState, CorrelationConfidence, HoneypotKind/State,
+  TriagePriority, InvestigationState, ResponseKind (is_destructive /
+  is_bounded_containment classes: destructive never preauthorized),
+  ResponsePlanState, VerificationState; EP-031-owned typed ids
+  (SecurityEventId/IncidentCorrelationId/HoneypotId/TriageCaseId/
+  InvestigationCaseId/ResponsePlanId/VerificationRecordId, 1..=128
+  validated in new AND serde). Value objects: SecurityEvent (OBSERVED
+  data + evidence_ref), Incident (correlates events not floods),
+  HoneypotRecord, TriageCase, InvestigationCase, ResponsePlan
+  (preauthorized = bounded containment only; destructive requires
+  human), VerificationRecord. Public interfaces (node contract):
+  NetworkDetectionProvider, EndpointTelemetryProvider, ThreatIntelProvider,
+  HoneypotProvider, SecurityTriage, SecurityInvestigator, ResponsePlanner,
+  SecurityVerifier + Unbound* fail-closed impls (empty capabilities,
+  Unavailable, never fabricate). Reuses nexus-sentinel SPEC-006
+  SentinelError + SentinelCapabilityMap (fail closed), nexus-domain
+  IncidentId/ApprovalClass never redefined. Dependency direction
+  test: nexus-domain/nexus-sentinel/serde only.
+- `connectors/suricata/` crate `nexus-suricata-connector`: package
+  boundary + documented Suricata EVE JSON surface vocabulary
+  (EveEventType alert/dns/flow/http/tls/smtp/ssh/fileinfo/netflow,
+  SuricataAlertSeverity 1..=4 bounded; unknown rejected). Real
+  NetworkDetectionProvider transport arrives M2+.
+
+Side gates: scope audit EP-031: ok; fmt clean; clippy -D warnings clean;
+security check: ok; license gate: ok; reality gate: ok; dependency audit:
+ok (cargo-deny 0.20.2); workspace battery 2131 passed 0 failed (2109 prior
++ 22 new EP-031 tests; docker volume prune reclaimed 63.31GB, 100%->70%
+disk).
 
 # 12. Surprises & Discoveries
 

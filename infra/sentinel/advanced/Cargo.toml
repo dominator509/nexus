@@ -1,0 +1,12 @@
+[package]
+name = "nexus-sentinel-advanced"
+version = "0.1.0"
+edition = "2021"
+description = "EP-031 provider-neutral advanced detection contracts: NetworkDetectionProvider, EndpointTelemetryProvider, ThreatIntelProvider, HoneypotProvider, SecurityTriage, SecurityInvestigator, ResponsePlanner, SecurityVerifier (SPEC-013)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../../crates/nexus-domain", version = "0.1.0" }
+nexus-sentinel = { path = "../../../crates/nexus-sentinel", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

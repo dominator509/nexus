@@ -2035,6 +2035,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-sentinel-advanced"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-sentinel",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-sentinel-core-e2e"
 version = "0.1.0"
 dependencies = [
@@ -2121,6 +2131,17 @@ dependencies = [
  "nexus-postiz-connector",
  "nexus-social",
  "nexus-social-direct-connector",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-suricata-connector"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-sentinel",
+ "nexus-sentinel-advanced",
  "serde",
  "serde_json",
 ]

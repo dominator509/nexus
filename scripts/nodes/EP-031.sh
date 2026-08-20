@@ -8,13 +8,12 @@ export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
 case "$mode" in
-  M1) python3 scripts/node-artifact-check.py EP-031 M1 ;;
-  M2) python3 scripts/node-artifact-check.py EP-031 M2; cargo test --locked -p nexus-sentinel ep031_unit ;;
-  M3) python3 scripts/node-artifact-check.py EP-031 M3; cargo test --locked -p nexus-sentinel ep031_integration ;;
-  M4) python3 scripts/node-artifact-check.py EP-031 M4; cargo test --locked -p nexus-sentinel ep031_failure ;;
+  M1) sh scripts/ep031-m1-tests.sh ;;
+  M2) sh scripts/ep031-m2-tests.sh ;;
+  M3) sh scripts/ep031-m3-tests.sh ;;
+  M4) sh scripts/ep031-m4-tests.sh ;;
   M5|verify)
-      python3 scripts/node-artifact-check.py EP-031 M5
-      cargo test --locked -p nexus-sentinel
+      sh scripts/ep031-m5-tests.sh
       sh scripts/live-fire/LF-009.sh
       ;;
   *) echo "EP-031: FAIL - unknown mode $mode" >&2; exit 2;;
