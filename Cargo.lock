@@ -1936,6 +1936,9 @@ version = "0.1.0"
 dependencies = [
  "nexus-domain",
  "nexus-notifications",
+ "nexus-push-connector",
+ "nexus-sms-connector",
+ "rusqlite",
  "serde",
  "serde_json",
 ]

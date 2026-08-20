@@ -9,11 +9,14 @@ scripts/ep032-m1-tests.sh
 scripts/ep032-m2-tests.sh
 scripts/ep032-m3-tests.sh
 scripts/ep032-m4-tests.sh
+scripts/ep032-m5-tests.sh
 scripts/sms-diag.sh
+docs/operations/EP-032-notifications.md
+.agent/milestone-files/EP-032-M5.txt
+.agent/state/evidence/EP-032-M5-live-fire.json
 crates/nexus-notifications/
 connectors/push/
 connectors/sms/
-connectors/desktop-notify/
 infra/sms/
 tests/notifications/
 Cargo.toml

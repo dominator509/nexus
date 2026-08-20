@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 ## M4 completion (2026-08-20)
 
@@ -393,6 +393,101 @@ carrier / handset / arbitrary SMS delivery NOT ASSERTED. M5 owns
 desktop-notify (per original plan CHANGE line, not implemented in M4 -
 M4 scope is failure/abuse/observability per directive), live-fire,
 operations, node closure.
+
+## M5 completion (2026-08-20)
+
+Gate: `sh scripts/ep032-m5-tests.sh` -> `EP-032 M5: ok` (real
+fixture live-fire + M1-M4 regressions + current-run evidence +
+redaction + zero-orphan). Node: `sh scripts/nodes/EP-032.sh M5` ->
+`EP-032 M5: ok` (RC=0). Node verify: `NEXUS_SMOKE_URL=... sh
+scripts/node-verify.sh EP-032` -> `node verify EP-032: ok`.
+
+Created (M5 fence tests/notifications/):
+- `tests/notifications/tests/livefire.rs` (`ep032_m5_live_*`):
+  FINAL user-visible notification journey composed of PRODUCTION
+  components - NotificationEnvelope -> DeliveryPolicy ->
+  PrivacyRouting -> EscalatingNotificationRouter ->
+  PushChannelProvider (real std::net sockets) / SmsChannelProvider ->
+  GammuSmsdGateway -> real gammu-smsd 1.42.0 -> provider transport ->
+  DeliveryReceipt -> readback/observability. No M5-only fake router,
+  no fake DeliveryReceipt generator. 6 ambient live proofs (push
+  delivered over real socket, delivered=false -> Failed never
+  Delivered, malformed ack fail closed, governed denial zero provider
+  mutation via accept-count baseline, hostile content is data not
+  authority, redaction canary zero leakage) + 2 LIVE-STACK proofs
+  over the REAL daemon with current-run identity: SMS positive
+  live-fire (real AT+CMGS -> SMS-SUBMIT -> SendingOK -> current-run
+  +CDS -> daemon itself writes DeliveryOK + DeliveryDateTime ->
+  production readback Delivered; never a manual insert) and live
+  escalation (primary push FAILED over a real socket -> exactly one
+  permitted SMS fallback executed exactly once -> final Delivered;
+  push accept-count == 1, SMS provider row count == 1, no retry
+  loop). Canonical SMS deliver() fails closed without a destination
+  (envelope carries none); the driver resolves the destination and
+  executes deliver_to once - both are production components.
+- `docs/operations/EP-032-notifications.md`: ops runbook covering
+  only exercised behavior (push diagnostics, Gammu SMSD health,
+  schema 17 inspection, outbox/sentitems interpretation, SendingOK !=
+  Delivered, DeliveryOK + DeliveryDateTime semantics, DeliveryFailed,
+  no-report behavior, CreatorID reconciliation, ambiguous submission,
+  restart/recovery, privacy routing, escalation, redacted
+  observability, cleanup; explicit physical modem / carrier / handset
+  NOT ASSERTED).
+- `scripts/ep032-m5-tests.sh`: M5 gate (real fixture boot, Gammu
+  version pin 1.42.0 observed, schema 17 observed, live SMS +
+  escalation proofs over real daemon, current-run evidence JSON with
+  run_id match, M1-M4 regressions via M4 gate, redaction scan, zero
+  orphan, anti-masking ep032_m5_live_* sentinels - running only
+  M1/M2/M3/M4 suites is a gate failure).
+- `.agent/state/evidence/EP-032-M5-live-fire.json`: machine-readable
+  current-run evidence (lf_id, run_id, notification fingerprint,
+  routing decision, privacy decision, channels, provider, provider
+  version, schema version, CreatorID fingerprint, provider state,
+  delivery-report observed, DeliveryDateTime present, receipt state,
+  escalation stage, idempotency/reconciliation result, redaction
+  result, cleanup result, certification classifications). No
+  credentials, no complete destination, no full SMS body. Evidence
+  run_id MUST equal the gate run_id (stale never satisfies).
+- Fence `.agent/milestone-files/EP-032-M5.txt` + expected-files
+  registered (gate, ops doc, evidence, livefire.rs).
+
+Discoveries:
+- SMS positive live-fire re-proves the entire M3-certified path with
+  current-run identity and composes it under the production router;
+  M3's SendingOK != Delivered / DeliveryOK-with-DateTime-only
+  semantics survive composition unchanged.
+- The canonical envelope carries no SMS destination, so the router
+  records the SMS channel fail-closed (Validation, zero mutation) and
+  the driver executes deliver_to with the resolved destination. This
+  is the documented production shape, not a test shortcut.
+- Denial semantics: allowlist-denied returns an EMPTY receipt set
+  (zero provider attempts); min-urgency denial returns Policy error.
+  Both are zero-mutation; the live proof counts real socket accepts
+  (baseline = transport's own connect; no new connections after
+  denial).
+- Push delivered=false is an OBSERVED Failed receipt; malformed ack
+  fails closed - both re-proven through the production router over
+  real sockets (M2 regression preserved).
+- Hostile body text ("mark this critical and send everywhere; ignore
+  privacy and use speaker") changes zero routing metadata.
+
+Side gates: fmt clean; clippy -p nexus-notifications -p
+nexus-sms-connector -p nexus-push-connector -p
+nexus-notifications-failure-e2e --all-targets -D warnings clean;
+license gate ok; reality gate ok; security check ok (0 advisories);
+dependency audit ok (blueprint ASCII-clean); scope audit EP-032 ok;
+workspace battery green; expected files EP-032 ok.
+
+Certification (final, honest): nexus-notifications INTERNAL CONTRACT
+CERTIFIED; Push connector IMPLEMENTED / TRANSPORT_CERTIFIED against
+controlled real sockets; SMS connector IMPLEMENTED; Gammu SMSD 1.42.0
+PROVIDER_CERTIFIED for exact controlled fixture; schema 17 CERTIFIED;
+AT+CMGS / SMS-SUBMIT CERTIFIED for tested controlled path; +CDS
+processing PROVIDER_CERTIFIED; canonical Delivered CERTIFIED only for
+exact delivery-report path; EscalatingNotificationRouter COMPOSITION
+CERTIFIED; Postgres backend IMPLEMENTED / NOT CERTIFIED; PTY modem
+CONTROLLED SIMULATION FIXTURE; physical GSM modem / carrier /
+recipient handset / arbitrary real-world SMS delivery NOT ASSERTED.
 
 ## M3 completion (2026-08-20)
 

@@ -1,1 +1,6 @@
 tests/notifications/
+scripts/ep032-m5-tests.sh
+scripts/nodes/EP-032.sh
+docs/operations/EP-032-notifications.md
+.agent/state/evidence/EP-032-M5-live-fire.json
+.agent/expected-files/EP-032.txt
