@@ -1,0 +1,28 @@
+{
+  "name": "@nexus/web-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus web/desktop/ui forced-failure e2e suite (EP-033 M4): composes the REAL @nexus/web contracts, @nexus/desktop runtime/dispatcher, and @nexus/ui React components and proves fail-closed behavior under corrupted messages, denied policy, duplicate requests, expired/revoked sessions, unavailable backends, secret-leak attempts, and context switches. Production components are never mocked; controlled inputs are the failure mechanism.",
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/contracts": "workspace:*",
+    "@nexus/web": "workspace:*",
+    "@nexus/desktop": "workspace:*",
+    "@nexus/ui": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0"
+  }
+}

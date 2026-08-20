@@ -12,3 +12,6 @@ scripts/ep033-m2-tests.sh
 packages/ui/
 COMPONENT_REGISTRY.yaml
 scripts/ep033-m3-tests.sh
+tests/e2e/web/
+scripts/ep033-m4-tests.sh
+.agent/milestone-files/EP-033-M4.txt

@@ -1,1 +1,3 @@
 tests/e2e/web/
+scripts/ep033-m4-tests.sh
+scripts/nodes/EP-033.sh
