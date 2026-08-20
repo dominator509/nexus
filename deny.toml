@@ -92,5 +92,32 @@ skip = [
   { name = "block-buffer", version = "0.10.4" },
   { name = "cpufeatures", version = "0.2.17" },
   { name = "crypto-common", version = "0.1.7" },
+  # EP-032 M3 SMS connector (nexus-sms-connector) real Gammu SMSD
+  # SQL backends: rusqlite 0.32.1 (bundled SQLite, fixture + SQLite
+  # service path) and postgres 0.19.14 (locked workspace driver class,
+  # native_pgsql production path) pin incompatible transitive majors.
+  # fallible-iterator 0.2.0 is required by postgres 0.19.14; 0.3.0 is
+  # required by rusqlite 0.32.1. Cannot be unified without breaking
+  # the pinned driver lines.
+  { name = "fallible-iterator", version = "0.3.0" },
+  # getrandom 0.3.4 enters via ahash 0.8.12 (hashbrown/hashlink, the
+  # rusqlite bundled-SQLite hash chain). The 0.2.17 line (jsonwebtoken,
+  # ring, rand 0.8.7) and the 0.4.3 line (aws-lc-sys, rand 0.10.2)
+  # are separately documented above; all three are API-incompatible
+  # majors that cannot be unified.
+  { name = "getrandom", version = "0.3.4" },
+  # r-efi 5.3.0 vs 6.0.0: UEFI target crate split. 6.0.0 is pulled
+  # only by the getrandom 0.3.4 line (ahash/runtime-rng); 5.3.0 is
+  # required by the pre-existing wasi/getrandom 0.2 line. Linux
+  # build; never linked into the final binary.
+  { name = "r-efi", version = "6.0.0" },
+  # rand 0.8.7 (async-nats 0.47 pinned, nexus-asterisk) vs 0.10.2
+  # (postgres-protocol -> tokio-postgres -> postgres 0.19.14, the
+  # locked SMSD native_pgsql driver class). API-incompatible majors.
+  { name = "rand", version = "0.10.2" },
+  # wasi 0.11.1 vs 0.14.7: WASI snapshot major split. 0.11.1 is
+  # required by getrandom 0.2.17; 0.14.7 is required by getrandom
+  # 0.3.4 (rusqlite hash chain). Never linked on Linux.
+  { name = "wasi", version = "0.14.7" },
 ]
 skip-tree = []

@@ -273,9 +273,160 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+## M3 completion (2026-08-20)
+
+Gate: `sh scripts/ep032-m3-tests.sh` -> `EP-032 M3: ok` (16+ reality
+guards incl. real daemon version pin, schema pin, daemon-log +CDS
+evidence, independent DB readback, idempotency provider-count proof,
+denied-routing zero mutation, redaction, orphan guard; unit suite 19
+green + M1 regression incl. SmsDestination + M2 push regression).
+Node: `sh scripts/nodes/EP-032.sh M3` -> `EP-032 M3: ok` (RC=0).
+
+Created:
+- `connectors/sms/` crate `nexus-sms-connector`: REAL Gammu SMSD
+  channel provider behind the nexus-notifications ChannelProvider port
+  (SPEC-014 behavior 7; channel class SMS).
+  - `db.rs`: SmsDb port + SqliteSmsDb (rusqlite bundled, DBI sqlite3
+    path, fixture + production SQLite service) + PostgresSmsDb
+    (postgres 0.19.14 workspace driver class, documented native_pgsql
+    path). Both implement the DOCUMENTED Gammu SMSD SQL service
+    surface (`create_outbox` outbox insert; status readback from
+    outbox `Reserved` then sentitems post-submission). Only the
+    daemon evolves provider state; Nexus submits the authorized
+    request and reads back observations.
+  - `gateway.rs`: SmsGateway port + GammuSmsdGateway<D>. submit() ->
+    documented outbox row with CreatorID binding + DeliveryReport=yes;
+    status() -> provider-observed sentitems state (documented SMSD
+    status vocabulary parsed fail-closed; unknown values -> External).
+    SmsProviderRef = outbox row id (carried in DeliveryReceipt.
+    provider_ref). SmsProviderState derives Default (Reserved) for
+    gateway doubles.
+  - `adapter.rs`: SmsChannelProvider<T> implements ChannelProvider.
+    available() true ONLY when a gateway is bound (Reality rule);
+    deliver_to() validates destination + body (1..=160 single-part
+    documented TextDecoded bound) BEFORE any provider mutation;
+    deliver() (no destination) fails closed - the canonical envelope
+    carries no phone number and one is never invented; duplicate
+    notification id rejected with Conflict (bounded 256-entry ring);
+    truthful mapping: Reserved->Pending, SendingOK/SendingOKNoReport/
+    DeliveryPending/DeliveryUnknown->Sending (never Delivered),
+    DeliveryOK WITH DeliveryDateTime->Delivered, DeliveryOK without
+    DeliveryDateTime->NOT Delivered, SendingError/Error/DeliveryFailed
+    ->Failed; refresh() re-observes provider state later.
+- `infra/sms/at_modem.py`: CONTROLLED TEST FIXTURE (SIMULATION) - a
+  PTY AT modem peer implementing the documented AT surface
+  (ATE1 echo, AT+CMGS PDU mode SMS-SUBMIT, +CSCA SMSC, +CDS
+  SMS-STATUS-REPORT with real GSM semi-octet SCTS). NOT a physical
+  GSM modem; physical modem/carrier/handset NOT ASSERTED.
+- `connectors/sms/tests/ep032_integration_smsd.rs`: 4 LIVE-STACK
+  tests (EP-025 M3 convention, `#[ignore]`d, run by the gate):
+  real_delivery_lifecycle (production provider -> production gateway
+  -> production SqliteSmsDb -> real daemon outbox -> real AT+CMGS ->
+  real SMS-SUBMIT PDU -> SendingOK -> real +CDS -> daemon ITSELF
+  writes sentitems DeliveryOK + DeliveryDateTime -> production
+  readback Delivered; independent evidence: daemon log + raw second
+  DB connection, current-run canary run_id), idempotency
+  (duplicate replay -> Conflict + exactly ONE provider lifecycle,
+  provider-observable), denied routing (161-char body -> Validation +
+  ZERO provider mutation; unbound -> Unavailable + zero mutation),
+  redaction (receipt/errors never carry body or full destination).
+- `scripts/ep032-m3-tests.sh`: M3 gate (real daemon version pin
+  1.42.0, schema pin 17 from the SHIPPED package sqlite.sql, fresh
+  per-run fixture, live suite with --ignored, daemon-log AT+CMGS +
+  +CDS + Delivery report evidence, independent sqlite3 readback of
+  DeliveryOK + DeliveryDateTime for the current-run creator,
+  idempotency provider-count, denied zero mutation, redaction,
+  TERM-then-KILL cleanup + orphan guard).
+
+Side gates: fmt clean; clippy -p nexus-sms-connector -p
+nexus-notifications --all-targets -D warnings clean; license gate ok;
+reality gate ok; security check ok (0 advisories); dependency audit ok
+(blueprint validation ASCII-clean; cargo-deny bans ok after 5
+documented targeted skips for rusqlite/postgres transitive splits);
+scope audit EP-032 ok (M3 files registered in expected-files).
+
+Certification: nexus-sms-connector IMPLEMENTED; Gammu SMSD SQL
+integration TRANSPORT_CERTIFIED; Gammu SMSD 1.42.0 tested runtime
+PROVIDER_CERTIFIED (fixture); SQLite schema 17 path PROVIDER_CERTIFIED
+for tested integration; AT modem peer CONTROLLED_TEST_FIXTURE
+(SIMULATION); actual SMS-SUBMIT PDU PROTOCOL OBSERVED/CERTIFIED for
+tested path; provider +CDS processing PROVIDER_CERTIFIED; canonical
+Delivered transition CERTIFIED for tested delivery-report path;
+physical GSM modem / cellular carrier / recipient handset / arbitrary
+real-world SMS delivery: NOT ASSERTED (certification debt owned by
+deployment/ship review; M4 owns connectors/desktop-notify, M5
+live-fire + closure).
+
+## Surprises & Discoveries
+
+- 2026-08-20 M3: no SMS provider existed in-repo; Asterisk ARI was
+  explicitly rejected as a general SMS API (no invented
+  `POST /ari/sms`-style endpoints; SIP MESSAGE != cellular SMS). Gammu
+  SMSD 1.42.0 (Ubuntu noble `1.42.0-8.1ubuntu2`, GPL-2.0) selected:
+  real self-hosted daemon with documented send/status/delivery-report
+  workflows.
+- 2026-08-20 M3: the SHIPPED package schema is Version 17
+  (`/usr/share/doc/gammu-smsd/examples/sqlite.sql`); the current
+  online docs describe a newer schema (18). The tested runtime is
+  authoritative: the connector certifies schema 17 only.
+- 2026-08-20 M3: SMSD SQL backend chosen as the production boundary
+  (documented create_outbox/add_sent_info/save_inbox_sms_update_
+  delivered); Gammu libraries are NOT linked into Nexus (process/
+  database boundary only - GPL boundary respected, license gate ok).
+- 2026-08-20 M3: the PTY AT fixture required echo-compatible behavior
+  (ATE1 reflected command + reply in ONE write - verified against
+  gammu 1.42 atbus.c frame handling); `model = AT` pin skips the
+  Motorola probe; +CDS needs the SMSC field + real SCTS + no spaces to
+  be matched by the daemon; `skipsmscnumber = yes` robustness knob.
+- 2026-08-20 M3: DeliveryOK requires DeliveryDateTime before the
+  canonical Delivered transition; SendingOK is queue/send acceptance
+  and never delivery (SENT != DELIVERED preserved end-to-end).
+- 2026-08-20 M3: the SMS destination type ownership was corrected:
+  `nexus_fax::FaxNumber` was NOT used. nexus-domain owns no telephone
+  type and no doc declares nexus-fax the canonical owner of all
+  telephone numbers, so the provider-neutral notification value
+  object `nexus_notifications::SmsDestination` (SPEC-014 behavior 6,
+  validated in `new` AND serde) was added to nexus-notifications.
+  Dependency graph: nexus-domain -> nexus-notifications ->
+  nexus-sms-connector. `connectors/sms` never depends on nexus-fax.
+- 2026-08-20 M3: rusqlite 0.32.1 (bundled SQLite) + postgres 0.19.14
+  pull five transitive version splits (fallible-iterator, getrandom
+  0.3.4, r-efi, rand, wasi) documented as targeted cargo-deny skips.
+
+## Decision Log
+
+- 2026-08-20 M3: provider = Gammu SMSD 1.42.0 (self-hosted,
+  open-source, purpose-built SMS daemon; documented SQL service
+  boundary). Alternatives rejected: Asterisk ARI (not a general SMS
+  API), smstools3 (unverified surface), inventing a provider.
+  Reversal: swap behind SmsGateway/SmsDb ports.
+- 2026-08-20 M3: SMS destination type owned by nexus-notifications
+  (SmsDestination), NOT nexus-fax - resolves E.164 normalization
+  ownership once at the provider-neutral notification layer; serde
+  enforces the same invariants as `new` (anti-bypass).
+- 2026-08-20 M3: production boundary is the documented SMSD SQL
+  service (outbox insert + sentitems readback); Nexus never writes
+  sentitems state, never manufactures SendingOK/DeliveryOK/Delivery
+  Failed, never links libgammu/libgsmsd. Only the daemon evolves
+  provider state; Nexus reads observations.
+- 2026-08-20 M3: connector owns single-part text (1..=160, the
+  documented outbox TextDecoded varchar(160) bound) as a bounded V1
+  contract; multipart (Gammu outbox_multipart) and Unicode
+  segmentation are NOT silently truncated - bodies over 160 chars are
+  rejected fail-closed. Later ownership: M4+ may add documented
+  multipart handling if SPEC-014 requires general SMS delivery.
+- 2026-08-20 M3: idempotency is process-lifetime (bounded 256-entry
+  ring) PLUS provider-observable CreatorID identity; durable
+  cross-restart idempotency (outbox CreatorID uniqueness /
+  reconciliation) is recorded as later ownership, not claimed now.
+- 2026-08-20 M3: the AT modem peer is a SIMULATION fixture, labeled
+  as such in code, registry, gate, and evidence. No physical GSM
+  modem, no carrier, no real handset is asserted; arbitrary real-world
+  SMS delivery is NOT ASSERTED.
 
 ## M2 completion (2026-08-20)
 

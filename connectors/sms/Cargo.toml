@@ -1,0 +1,28 @@
+[package]
+name = "nexus-sms-connector"
+version = "0.1.0"
+edition = "2021"
+description = "EP-032 M3 SMS connector: Gammu SMSD channel provider behind the nexus-notifications ChannelProvider port (SPEC-014; channel class SMS)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-notifications = { path = "../../crates/nexus-notifications", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+# Real SQL clients for the documented Gammu SMSD SQL service
+# (docs.gammu.org "SMSD Database Structure" / "SQL Service"; the
+# daemon stores its outbox/sentitems in a SQL backend). postgres is
+# the locked workspace client class (nexus-identity/nexus-memory
+# precedent, postgres 0.19.14) for the production native_pgsql
+# backend; rusqlite (bundled SQLite) drives the controlled fixture's
+# DBI sqlite3 backend so the integration suite exercises the real
+# daemon against the documented schema. Both MIT/Apache-2.0.
+postgres = { version = "0.19.14", features = ["with-serde_json-1"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+[dev-dependencies]
+# The integration suite performs INDEPENDENT database readback (a
+# second connection that bypasses the connector) to prove the real
+# daemon wrote the provider state itself.
+rusqlite = { version = "0.32", features = ["bundled"] }

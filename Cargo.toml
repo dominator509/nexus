@@ -54,6 +54,7 @@ members = [
     "connectors/gmail",
     "connectors/microsoft-mail",
     "connectors/imap-smtp",
+    "connectors/sms",
     "connectors/ictfax",
     "connectors/hylafax",
     "connectors/hydra",

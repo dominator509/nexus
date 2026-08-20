@@ -332,3 +332,22 @@ components:
     commercial_review: "AGPL-3.0; compatibility-only, isolated-sidecar boundary, upstream archived"
     status: legacy-optional
     rationale: "Compatibility only because upstream is archived"
+  - id: gammu-smsd
+    capability: sms.gateway
+    implementation: "Gammu SMSD"
+    license: "GPL-2.0"
+    integration_mode: external-daemon
+    replacement_contract: "SmsGateway contract; documented SMSD SQL/DBI service boundary; Nexus never links libgammu/libgsmsd (process/database boundary only)"
+    commercial_review: "GPL-2.0; external daemon boundary required, no linkage into Nexus"
+    status: ep032-m3
+    owner: "EP-032"
+    upstream_software: "Gammu SMSD 1.42.0"
+    tested_package: "1.42.0-8.1ubuntu2 (Ubuntu noble universe)"
+    tested_db_schema: "17 (shipped /usr/share/doc/gammu-smsd/examples/sqlite.sql)"
+    current_upstream_doc_schema: "18 (newer docs)"
+    docs: "https://docs.gammu.org/ (SMSD Database Structure, SQL Service, gammu-smsd)"
+    fixture: "controlled real daemon + real SQLite DBI backend + scripted PTY AT modem peer (SIMULATION; not a physical GSM modem)"
+    physical_gsm_modem: "NOT ASSERTED"
+    carrier: "NOT ASSERTED"
+    real_handset: "NOT ASSERTED"
+    rationale: "EP-032 M3 SMS channel: real self-hosted SMS daemon with documented send/status/delivery-report workflow"

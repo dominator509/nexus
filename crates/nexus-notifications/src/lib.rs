@@ -43,4 +43,5 @@ pub use provider::{
 };
 pub use vocabulary::{
     DeliveryReceiptId, DeliveryState, EscalationStage, NotificationId, NotificationUrgency,
+    SmsDestination,
 };
