@@ -1,2 +1,3 @@
 providers/contabo/
 tests/infra/
+scripts/ep036-m4-tests.sh

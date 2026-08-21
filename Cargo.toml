@@ -44,6 +44,8 @@ members = [
     "providers/digitalocean",
     "providers/aws",
     "providers/existing-ssh",
+    "providers/contabo",
+    "tests/infra",
     "tests/notifications",
     "connectors/home-assistant",
     "connectors/assist-satellite",

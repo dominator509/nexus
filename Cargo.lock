@@ -1801,6 +1801,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-infra-failure-tests"
+version = "0.1.0"
+dependencies = [
+ "nexus-compute",
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-irrigation"
 version = "0.1.0"
 dependencies = [
@@ -2092,6 +2102,16 @@ dependencies = [
 
 [[package]]
 name = "nexus-provider-aws"
+version = "0.1.0"
+dependencies = [
+ "nexus-compute",
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-provider-contabo"
 version = "0.1.0"
 dependencies = [
  "nexus-compute",
