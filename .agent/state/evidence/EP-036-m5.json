@@ -1,0 +1,28 @@
+{
+  "lf_id": "EP-036-M5",
+  "node": "EP-036",
+  "milestone": "M5",
+  "run_id": "ep036-m5-20260821T232608Z",
+  "slug": "compute-fabric-and-cloud-provisioning-closure",
+  "git_commit": "8be21e0065133912036c10c767081e567ba5f636",
+  "owned_live_fire": "NONE_STANDALONE",
+  "real_proofs_observed": {
+    "M1_contract": "48 tests green (contract 32 + model 11 + dependency_direction 2 + digitalocean 3)",
+    "M2_opentofu": "real tofu validate + fmt green",
+    "M3_transport": "real ephemeral sshd container + ssh-keyscan probe green",
+    "M4_failures": "real forced-failure suite green (7 tests)",
+    "M5_hetzner": "3 hetzner binding tests green"
+  },
+  "certification_boundary": {
+    "nexus-compute": "INTERNAL CONTRACT CERTIFIED",
+    "providers-digitalocean": "CONTRACT/BINDING IMPLEMENTED; real API NOT ASSERTED",
+    "providers-aws": "CONTRACT/BINDING IMPLEMENTED; real API NOT ASSERTED",
+    "providers-contabo": "CONTRACT/BINDING IMPLEMENTED; real API NOT ASSERTED",
+    "providers-hetzner": "CONTRACT/BINDING IMPLEMENTED; real API NOT ASSERTED",
+    "infra-opentofu": "VALIDATED with real OpenTofu tooling; plan/apply NOT ASSERTED",
+    "infra-cloud-init": "SCHEMA VALID; execution on a VM NOT ASSERTED",
+    "existing-ssh": "REAL TRANSPORT CERTIFIED for exact controlled ephemeral sshd path; authentication/remote bootstrap NOT ASSERTED",
+    "fleet-enrollment": "NOT ASSERTED",
+    "physical-cloud-node-readiness": "NOT ASSERTED"
+  }
+}
