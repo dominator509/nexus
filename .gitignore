@@ -32,3 +32,19 @@ artifacts/local/
 backups/local/
 .agent/state/*.tmp
 !.agent/state/LEDGER.md
+
+# Private key material and credential files
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.p8
+*.age
+id_rsa
+id_ed25519
+id_ecdsa
+.git-credentials
+*.secret
+*.token
