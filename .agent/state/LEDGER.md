@@ -249,3 +249,4 @@
 2026-08-21T00:08:34Z | ipman | EP-034 | LEASE | EP-033 closed (green b86d49d, closure e4253c5); graph-next dispatched NEXT EP-034; resume autonomous GraphLock directive
 2026-08-21T00:29:21Z | ipman | EP-034 | MILESTONE_PASS | M1 EP-034 M1: ok
 2026-08-21T00:39:14Z | ipman | EP-034 | MILESTONE_PASS | M2 EP-034 M2: ok
+2026-08-21T00:43:47Z | ipman | EP-034 | MILESTONE_PASS | M3 EP-034 M3: ok

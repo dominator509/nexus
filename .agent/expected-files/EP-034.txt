@@ -9,3 +9,6 @@ apps/mobile/
 packages/mobile-contracts/
 scripts/ep034-m2-tests.sh
 .agent/milestone-files/EP-034-M2.txt
+tests/e2e/mobile/
+scripts/ep034-m3-tests.sh
+.agent/milestone-files/EP-034-M3.txt

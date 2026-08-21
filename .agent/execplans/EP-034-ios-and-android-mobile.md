@@ -289,7 +289,14 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   - Gates observed: `scripts/ep034-m2-tests.sh` -> `EP-034 M2: ok` (38 tests); `sh scripts/nodes/EP-034.sh M2` -> `EP-034 M2: ok` (exit 0).
   - Side gates: scope-audit EP-034 ok; reality-gate ok; security-check ok; license-gate ok; dependency-audit ok; expected-files EP-034 ok.
   - Committed as `[EP-034][M2] core behavior and deterministic invariants`; committed-tree reproduction green; tree clean.
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
+  - `tests/e2e/mobile/` e2e package (nexus_mobile_e2e) proving contract behavior across a REAL dart:io HTTP transport boundary (loopback sockets, real HttpClient/HttpServer; standard-library path per AGENTS.md dependency rule, no new third-party dependency).
+  - Integration fixture: real loopback ApprovalApiServer serving canonical approval JSON with readiness, idempotent resolution (exactly-once replay; divergent same-key retry -> CONFLICT), slow endpoint, and server-side audit event emission.
+  - Tests: 10 integration tests / 1 file green, names begin `ep034_integration_`; `flutter analyze` clean; `dart format` clean.
+  - Proven across the boundary: readiness, canonical ApprovalPrompt round-trip, idempotent retry exactly-once, divergent retry CONFLICT, timeout (real delayed response), client cancellation reaching server as aborted request, typed SPEC-006 VOCABULARY error with correlation preserved (ProblemDetails), server audit correlation, port release on cleanup, transport-unavailable fail-closed (connection refused).
+  - Gates observed: `scripts/ep034-m3-tests.sh` -> `EP-034 M3: ok` (10 tests); `sh scripts/nodes/EP-034.sh M3` -> `EP-034 M3: ok` (exit 0).
+  - Side gates: scope-audit EP-034 ok; reality-gate ok; security-check ok; license-gate ok; dependency-audit ok; expected-files EP-034 ok.
+  - Committed as `[EP-034][M3] real dependency and transport integration`; committed-tree reproduction green; tree clean.
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -300,6 +307,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-21: `expected-files.sh EP-034` fails while future-milestone paths (`packages/mobile-contracts/`, `tests/e2e/mobile/`, `tests/accessibility/mobile/`) are listed before they exist; trimmed to M1-owned paths, re-appended as milestones land (EP-033 incremental convention).
 - 2026-08-21: Dart RegExp does not support the `(?i)` inline flag (FormatException: Invalid group); the analyzer `valid_regexps` lint caught it. Use the `caseSensitive: false` constructor parameter instead.
 - 2026-08-21: Flutter analyzer `implementation_imports` lint rejects importing `package:nexus_mobile/src/contracts/*` from another package; behavior sources import the public barrel `package:nexus_mobile/nexus_mobile.dart` (which exports the full contract layer).
+- 2026-08-21: The M3 e2e fixture's first idempotency implementation replayed the prior resolution for ANY same-key retry; real divergence (different decision) must be CONFLICT (EP-033 reused-key-different-action precedent). Fixed by comparing decision/timestamp/correlation before replaying.
 
 # 13. Decision Log
 
@@ -309,6 +317,8 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-21 | M2 core behavior lives in `packages/mobile-contracts/` (fence) and path-depends on the `apps/mobile` contract barrel; no cycle within EP-034 because apps/mobile is closed after M1 and M3/M4 fences are tests-only. Evidence: pubspec path dependency + dependency-direction test. Alternatives: moving contracts into the behavior package (reopens M1) or forking vocabulary (forbidden). Consequence: single canonical vocabulary; behavior package is pure Dart. Reversal: package restructure ADR. Security/license/compat: none.
 - 2026-08-21 | In-memory stores (InMemoryApprovalResolutionStore, InMemoryOfflinePolicyStore) are the real M2 layer for deterministic invariants; platform/durable storage and native providers are later milestones (NOT ASSERTED at M2). Evidence: port interfaces + in-memory implementations exercised by 38 tests. Alternatives: platform keychain in M2 (native milestone). Consequence: honest boundary (BEHAVIOR IMPLEMENTED != PLATFORM PERSISTED != DEVICE CERTIFIED). Reversal: later milestones. Security/license/compat: none.
 - 2026-08-21 | Offline high-risk refusal and stale/unknown denials use SPEC-006 POLICY; divergent re-resolution uses CONFLICT; device/user binding violations use AUTHORIZATION. Evidence: typed-error assertions in M2 tests. Alternatives: UNAVAILABLE for offline refusals. Consequence: policy decisions are distinguishable from transport failures. Reversal: none without schema update. Security/license/compat: none.
+- 2026-08-21 | M3 transport = real dart:io HTTP over loopback (standard library), not a new third-party dependency, per AGENTS.md dependency rule (prefer standard library). Component record: Dart SDK 3.12.2 / Flutter 3.44.7 (BSD-3), replacement contract = shelf/http package if a server framework is later required. Evidence: pubspec has no transport dependency; integration tests exercise real sockets. Alternatives: shelf or package:http. Consequence: no new license/advisory surface. Reversal: ADR + registry update. Security/license/compat: none.
+- 2026-08-21 | M3-owned proofs cover contract behavior across a real transport boundary (approval wire JSON, idempotency, timeout, cancellation, typed errors, audit, cleanup). Native provider integration (passkeys, biometrics, Bluetooth, push, secure enclave), emulator/device runs, and hardware certification remain NOT ASSERTED and are owned by later milestones (M4 accessibility/failure fences + native milestone). Evidence: M3 fence tests/e2e/mobile/ contains no native plugin code. Alternatives: containerized backend integration (no mobile backend API exists yet). Consequence: honest layer boundary (TRANSPORT PROVEN != NATIVE PROVIDER PROVEN). Reversal: later milestones. Security/license/compat: none.
 
 # 14. Outcomes & Retrospective
 
