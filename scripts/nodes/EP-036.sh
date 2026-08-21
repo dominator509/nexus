@@ -9,7 +9,7 @@ export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
 case "$mode" in
   M1) sh scripts/ep036-m1-tests.sh ;;
-  M2) python3 scripts/node-artifact-check.py EP-036 M2; python3 tests/infra/test_ep036.py ;;
+  M2) sh scripts/ep036-m2-tests.sh ;;
   M3) python3 scripts/node-artifact-check.py EP-036 M3; python3 tests/infra/test_ep036.py ;;
   M4) python3 scripts/node-artifact-check.py EP-036 M4; python3 tests/infra/test_ep036.py ;;
   M5|verify)

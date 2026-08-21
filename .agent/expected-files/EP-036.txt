@@ -9,6 +9,7 @@
 .agent/milestone-files/EP-036-M5.txt
 scripts/nodes/EP-036.sh
 scripts/ep036-m1-tests.sh
+scripts/ep036-m2-tests.sh
 Cargo.toml
 Cargo.lock
 crates/nexus-compute/

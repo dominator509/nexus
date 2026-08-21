@@ -42,6 +42,7 @@ members = [
     "crates/nexus-sentinel",
     "crates/nexus-compute",
     "providers/digitalocean",
+    "providers/aws",
     "tests/notifications",
     "connectors/home-assistant",
     "connectors/assist-satellite",

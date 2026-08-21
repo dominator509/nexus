@@ -2091,6 +2091,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-provider-aws"
+version = "0.1.0"
+dependencies = [
+ "nexus-compute",
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-provider-digitalocean"
 version = "0.1.0"
 dependencies = [
