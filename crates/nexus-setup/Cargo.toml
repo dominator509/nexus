@@ -1,0 +1,11 @@
+[package]
+name = "nexus-setup"
+version = "0.1.0"
+edition = "2021"
+description = "EP-035 provider-neutral Nexus Setup Wizard and Onboarding behavior: SetupWizard, DeploymentChoice, HardwareProfiler, OwnerBootstrap, EdgeEnrollment, DiscoveryWizard, IntegrationCard, RecoveryFlow (SPEC-004/SPEC-016)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
