@@ -43,6 +43,7 @@ members = [
     "crates/nexus-compute",
     "providers/digitalocean",
     "providers/aws",
+    "providers/existing-ssh",
     "tests/notifications",
     "connectors/home-assistant",
     "connectors/assist-satellite",

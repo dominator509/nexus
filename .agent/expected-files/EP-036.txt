@@ -10,6 +10,7 @@
 scripts/nodes/EP-036.sh
 scripts/ep036-m1-tests.sh
 scripts/ep036-m2-tests.sh
+scripts/ep036-m3-tests.sh
 Cargo.toml
 Cargo.lock
 crates/nexus-compute/

@@ -1,0 +1,12 @@
+[package]
+name = "nexus-provider-existing-ssh"
+version = "0.1.0"
+edition = "2021"
+description = "EP-036 generic existing-SSH provider binding for the Compute Fabric contract (SPEC-016). M3 declares the binding and proves real SSH transport reachability; fully local and existing SSH remain first-class paths."
+license = "MIT"
+
+[dependencies]
+nexus-compute = { path = "../../crates/nexus-compute", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

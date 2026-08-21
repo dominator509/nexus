@@ -1,2 +1,3 @@
 infra/cloud-init/
 providers/existing-ssh/
+scripts/ep036-m3-tests.sh
