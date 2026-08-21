@@ -1,1 +1,4 @@
 packages/mobile-contracts/
+scripts/ep034-m2-tests.sh
+scripts/nodes/EP-034.sh
+.agent/milestone-files/EP-034-M2.txt

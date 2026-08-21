@@ -279,7 +279,16 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   - Gates observed: `scripts/ep034-m1-tests.sh` -> `EP-034 M1: ok`; `sh scripts/nodes/EP-034.sh M1` -> `EP-034 M1: ok` (exit 0).
   - Side gates: scope-audit EP-034 ok; reality-gate ok (after removing scaffold TODO placeholder); security-check ok; license-gate ok; dependency-audit ok; expected-files EP-034 ok.
   - Committed as `[EP-034][M1] contract, vocabulary, and package boundary`; committed-tree reproduction green; tree clean.
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
+  - `packages/mobile-contracts/` pure-Dart behavior package (nexus_mobile_contracts) path-depending on the nexus_mobile contract barrel.
+  - ApprovalBindingService: high-risk approvals bind to device AND user (SPEC-017 behavior 4; node contract); actionable-prompt, usable-session, active-binding, device-match, principal-match, human-class-for-R3/R4 guards; idempotent exactly-once resolution with CONFLICT on divergent re-resolution (bounded in-memory ring store).
+  - OfflinePolicyCache: offline low-risk controls follow cached policy (SPEC-017 behavior 6; node contract); only explicitly allowed entries cached; stale never actionable; R3/R4 never run from cache; unknown capability fails closed; deny-unknown CachedPolicyEntry wire parsing.
+  - Telemetry: canonical TelemetryEvent context; SanitizingTelemetrySink redacts secret-shaped values (bearer/jwt/token/secret/password/api-key/authorization) before emission; never raw prompt content.
+  - All failures typed SPEC-006 errors (policy/authorization/conflict/vocabulary/validation) with correlation preserved.
+  - Tests: 38 tests / 4 files green, names begin `ep034_unit_`; `flutter analyze` clean; `dart format` clean.
+  - Gates observed: `scripts/ep034-m2-tests.sh` -> `EP-034 M2: ok` (38 tests); `sh scripts/nodes/EP-034.sh M2` -> `EP-034 M2: ok` (exit 0).
+  - Side gates: scope-audit EP-034 ok; reality-gate ok; security-check ok; license-gate ok; dependency-audit ok; expected-files EP-034 ok.
+  - Committed as `[EP-034][M2] core behavior and deterministic invariants`; committed-tree reproduction green; tree clean.
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -289,12 +298,17 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-21: `requireString` with an empty allowlist incorrectly rejected all reads (empty set interpreted as deny-all). Fixed by reading values directly after `rejectUnknownKeys`; regression test retained for corrected semantics (no allowlist restriction vs empty set deny-all).
 - 2026-08-21: Flutter scaffold `android/app/build.gradle.kts` ships a `// TODO: Add your own signing config` placeholder which fails the repo reality gate. Replaced with factual comment (release signing deferred to native release milestone; debug signing for dev); behavior unchanged.
 - 2026-08-21: `expected-files.sh EP-034` fails while future-milestone paths (`packages/mobile-contracts/`, `tests/e2e/mobile/`, `tests/accessibility/mobile/`) are listed before they exist; trimmed to M1-owned paths, re-appended as milestones land (EP-033 incremental convention).
+- 2026-08-21: Dart RegExp does not support the `(?i)` inline flag (FormatException: Invalid group); the analyzer `valid_regexps` lint caught it. Use the `caseSensitive: false` constructor parameter instead.
+- 2026-08-21: Flutter analyzer `implementation_imports` lint rejects importing `package:nexus_mobile/src/contracts/*` from another package; behavior sources import the public barrel `package:nexus_mobile/nexus_mobile.dart` (which exports the full contract layer).
 
 # 13. Decision Log
 
 - 2026-08-21 | Mobile contracts reuse canonical schemas (SPEC-006 errors, SPEC-017 vocabulary); no mobile-only forked vocabulary. Evidence: schema-parity serialization tests in `apps/mobile/test/ep034_unit_serialization_test.dart`. Alternatives: hand-copying enums into Dart. Consequence: anti-drift regressions permanently retained. Reversal: schema update + ADR. Security/license/compat: none.
 - 2026-08-21 | Native features intentionally deferred from M1: passkeys, biometrics, Bluetooth, push native modules, secure enclave/Keychain/Keystore, emulator/device runs, hardware certification - all NOT ASSERTED at M1. Evidence: M1 contract layer declares interfaces only; no native plugin implementations. Alternatives: implement native modules in M1. Consequence: honest certification boundary preserved (INTERFACE EXISTS != NATIVE PROVIDER IMPLEMENTED != DEVICE CERTIFIED). Reversal: later milestones. Security/license/compat: none.
 - 2026-08-21 | Release signing for Android deferred to the native release milestone; debug signing retained for development builds. Evidence: `apps/mobile/android/app/build.gradle.kts` comment. Consequence: `flutter run --release` functional during development; no release artifact certified. Reversal: configure signing in M5/ship milestone. Security: no production signing keys exist.
+- 2026-08-21 | M2 core behavior lives in `packages/mobile-contracts/` (fence) and path-depends on the `apps/mobile` contract barrel; no cycle within EP-034 because apps/mobile is closed after M1 and M3/M4 fences are tests-only. Evidence: pubspec path dependency + dependency-direction test. Alternatives: moving contracts into the behavior package (reopens M1) or forking vocabulary (forbidden). Consequence: single canonical vocabulary; behavior package is pure Dart. Reversal: package restructure ADR. Security/license/compat: none.
+- 2026-08-21 | In-memory stores (InMemoryApprovalResolutionStore, InMemoryOfflinePolicyStore) are the real M2 layer for deterministic invariants; platform/durable storage and native providers are later milestones (NOT ASSERTED at M2). Evidence: port interfaces + in-memory implementations exercised by 38 tests. Alternatives: platform keychain in M2 (native milestone). Consequence: honest boundary (BEHAVIOR IMPLEMENTED != PLATFORM PERSISTED != DEVICE CERTIFIED). Reversal: later milestones. Security/license/compat: none.
+- 2026-08-21 | Offline high-risk refusal and stale/unknown denials use SPEC-006 POLICY; divergent re-resolution uses CONFLICT; device/user binding violations use AUTHORIZATION. Evidence: typed-error assertions in M2 tests. Alternatives: UNAVAILABLE for offline refusals. Consequence: policy decisions are distinguishable from transport failures. Reversal: none without schema update. Security/license/compat: none.
 
 # 14. Outcomes & Retrospective
 
