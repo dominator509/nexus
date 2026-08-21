@@ -1,0 +1,25 @@
+{
+  "name": "@nexus/onboarding-failure",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus onboarding forced-failure suite (EP-035 M4): composes the REAL @nexus/onboarding integration layer against REAL PostgreSQL 18.4 + NATS 2.14.3 containers and proves fail-closed behavior under terminated providers, exhausted budgets, corrupted messages, duplicate requests, denied permissions, partial side effects, and observability. Production components are never mocked; the failure mechanism is the real provider boundary.",
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/onboarding": "workspace:*",
+    "@nexus/setup": "workspace:*",
+    "nats": "^2.29.3",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0"
+  }
+}

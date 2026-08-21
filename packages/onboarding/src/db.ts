@@ -115,6 +115,26 @@ export class OnboardingDb {
         correlationId,
       );
     }
+    // A provider that dies mid-session surfaces as a reset/terminated
+    // connection (container removal, crash, network drop), not a
+    // refused connect. That is the same Unavailable class - the store
+    // must never report Internal for a provider that is simply gone.
+    // Timeout-flavored terminations ("...due to connection timeout")
+    // are already classified as Timeout above.
+    if (
+      e?.code === "ECONNRESET" ||
+      e?.code === "EPIPE" ||
+      (typeof e?.message === "string" &&
+        /terminat|connection closed|connection ended|socket hang up|server closed/i.test(
+          e.message,
+        ))
+    ) {
+      return new Spec006Error(
+        ErrorCode.Unavailable,
+        "database connection terminated",
+        correlationId,
+      );
+    }
     if (e?.code === "28P01") {
       return new Spec006Error(
         ErrorCode.Authentication,

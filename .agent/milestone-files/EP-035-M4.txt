@@ -1,1 +1,6 @@
-# Populated at M4 (tests/onboarding/)
+tests/onboarding/
+scripts/ep035-m4-tests.sh
+scripts/nodes/EP-035.sh
+pnpm-workspace.yaml
+pnpm-lock.yaml
+.agent/milestone-files/EP-035-M4.txt

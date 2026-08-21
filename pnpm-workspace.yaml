@@ -4,6 +4,7 @@ packages:
   - "tests/workflows"
   - "tests/e2e/web"
   - "tests/accessibility/web"
+  - "tests/onboarding"
   - "apps/web"
   - "apps/desktop"
   - "apps/setup"

@@ -15,6 +15,8 @@ crates/nexus-setup/
 packages/onboarding/
 scripts/ep035-m3-tests.sh
 COMPONENT_REGISTRY.yaml
+tests/onboarding/
+scripts/ep035-m4-tests.sh
 Cargo.toml
 Cargo.lock
 pnpm-workspace.yaml
