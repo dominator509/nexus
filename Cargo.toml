@@ -40,6 +40,8 @@ members = [
     "crates/nexus-social",
     "crates/nexus-setup",
     "crates/nexus-sentinel",
+    "crates/nexus-compute",
+    "providers/digitalocean",
     "tests/notifications",
     "connectors/home-assistant",
     "connectors/assist-satellite",

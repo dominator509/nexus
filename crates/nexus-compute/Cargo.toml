@@ -1,0 +1,11 @@
+[package]
+name = "nexus-compute"
+version = "0.1.0"
+edition = "2021"
+description = "EP-036 provider-neutral Compute Fabric and Cloud Provisioning contracts: ComputeNode, PlacementConstraint, PlacementDecision, CloudProvider, ProvisioningPlan, BootstrapBundle, FleetEnrollment (SPEC-016)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

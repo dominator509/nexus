@@ -2,7 +2,15 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-036.txt
 .agent/node-contracts/EP-036.md
+.agent/milestone-files/EP-036-M1.txt
+.agent/milestone-files/EP-036-M2.txt
+.agent/milestone-files/EP-036-M3.txt
+.agent/milestone-files/EP-036-M4.txt
+.agent/milestone-files/EP-036-M5.txt
 scripts/nodes/EP-036.sh
+scripts/ep036-m1-tests.sh
+Cargo.toml
+Cargo.lock
 crates/nexus-compute/
 infra/opentofu/
 infra/cloud-init/

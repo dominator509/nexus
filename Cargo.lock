@@ -1442,6 +1442,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-compute"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-connector-sdk"
 version = "0.1.0"
 dependencies = [
@@ -2077,6 +2086,16 @@ version = "0.1.0"
 dependencies = [
  "nexus-domain",
  "nexus-identity",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-provider-digitalocean"
+version = "0.1.0"
+dependencies = [
+ "nexus-compute",
+ "nexus-domain",
  "serde",
  "serde_json",
 ]
