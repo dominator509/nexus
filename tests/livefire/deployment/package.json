@@ -1,0 +1,25 @@
+{
+  "name": "@nexus/deployment-livefire",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus Setup one-package deployment live-fire (EP-035 M5 LF-001): builds the one-package deployment bundle from the current source tree, boots a clean ephemeral target with REAL PostgreSQL 18.4 + NATS 2.14.3 containers, applies the package's own DDL, observes real readiness, records deployment intent, bootstraps the first owner through the real durable store, records verification evidence, emits redacted onboarding events, proves replay idempotency, and writes current-run machine-readable evidence. Production components are never mocked.",
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/onboarding": "workspace:*",
+    "@nexus/setup": "workspace:*",
+    "nats": "^2.29.3",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0"
+  }
+}

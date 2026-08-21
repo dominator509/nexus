@@ -5,6 +5,7 @@ packages:
   - "tests/e2e/web"
   - "tests/accessibility/web"
   - "tests/onboarding"
+  - "tests/livefire/deployment"
   - "apps/web"
   - "apps/desktop"
   - "apps/setup"

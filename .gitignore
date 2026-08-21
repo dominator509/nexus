@@ -31,6 +31,7 @@ crash.log
 artifacts/local/
 backups/local/
 .agent/state/*.tmp
+.agent/state/livefire/
 !.agent/state/LEDGER.md
 
 # Private key material and credential files

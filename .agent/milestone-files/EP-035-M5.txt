@@ -1,1 +1,11 @@
-# Populated at M5 (schemas/deployment-profile.schema.json + evidence)
+tests/livefire/deployment/
+scripts/ep035-one-package-build.sh
+scripts/ep035-m5-tests.sh
+scripts/live-fire/LF-001.sh
+scripts/nodes/EP-035.sh
+schemas/deployment-profile.schema.json
+pnpm-workspace.yaml
+pnpm-lock.yaml
+.agent/state/evidence/
+.agent/milestone-files/EP-035-M5.txt
+.gitignore

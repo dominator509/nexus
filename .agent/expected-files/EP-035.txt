@@ -21,3 +21,10 @@ Cargo.toml
 Cargo.lock
 pnpm-workspace.yaml
 pnpm-lock.yaml
+tests/livefire/deployment/
+scripts/ep035-one-package-build.sh
+scripts/ep035-m5-tests.sh
+scripts/live-fire/LF-001.sh
+schemas/deployment-profile.schema.json
+.agent/state/evidence/
+.gitignore
