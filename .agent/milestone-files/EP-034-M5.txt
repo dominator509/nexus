@@ -1,1 +1,7 @@
-
+tests/livefire/mobile/
+scripts/ep034-m5-tests.sh
+scripts/live-fire/LF-004.sh
+scripts/live-fire/LF-022.sh
+scripts/nodes/EP-034.sh
+.agent/state/evidence/
+.agent/milestone-files/EP-034-M5.txt

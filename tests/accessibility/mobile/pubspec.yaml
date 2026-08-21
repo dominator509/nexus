@@ -1,6 +1,6 @@
 name: nexus_mobile_failure
 description: "Nexus EP-034 M4 forced-failure suite: fail-closed behavior of the mobile contract/behavior layer under malformed input, denied authority, duplicate/cancelled/unavailable work, and observability redaction. Real production components; real failure mechanisms."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0+1
 
 environment:

@@ -10,5 +10,6 @@ python3 scripts/blueprint_validate.py >/dev/null
 if [ -f Cargo.toml ]; then cargo test --workspace --lib --bins --locked; fi
 if [ -f pnpm-lock.yaml ]; then pnpm -r test:unit; fi
 if [ -f pyproject.toml ] && [ -d tests/unit ]; then uv run --frozen pytest tests/unit -q; fi
-if [ -f apps/mobile/pubspec.yaml ]; then (cd apps/mobile && flutter test test/unit); fi
+if [ -f apps/mobile/pubspec.yaml ]; then (cd apps/mobile && flutter test); fi
+if [ -f packages/mobile-contracts/pubspec.yaml ]; then (cd packages/mobile-contracts && flutter test); fi
 echo "unit tests: ok"

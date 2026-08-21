@@ -15,3 +15,16 @@ scripts/ep034-m3-tests.sh
 tests/accessibility/mobile/
 scripts/ep034-m4-tests.sh
 .agent/milestone-files/EP-034-M4.txt
+tests/livefire/mobile/
+scripts/ep034-m5-tests.sh
+scripts/live-fire/LF-004.sh
+scripts/live-fire/LF-022.sh
+.agent/milestone-files/EP-034-M5.txt
+.agent/state/evidence/
+scripts/test-unit.sh
+scripts/test-e2e.sh
+scripts/test-integration.sh
+scripts/build.sh
+scripts/format-check.sh
+scripts/typecheck.sh
+scripts/lint.sh

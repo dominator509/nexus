@@ -1,6 +1,6 @@
 name: nexus_mobile_contracts
 description: "Nexus EP-034 mobile core behavior: approval binding (device+user), offline cached-policy controls, SPEC-006 typed errors, canonical telemetry redaction. Pure Dart domain over the nexus_mobile contract layer."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0+1
 
 environment:

@@ -14,7 +14,7 @@ case "$mode" in
   M4) python3 scripts/node-artifact-check.py EP-034 M4 && sh scripts/ep034-m4-tests.sh ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-034 M5
-      (cd apps/mobile && flutter test)
+      sh scripts/ep034-m5-tests.sh
       sh scripts/live-fire/LF-004.sh
       sh scripts/live-fire/LF-022.sh
       ;;

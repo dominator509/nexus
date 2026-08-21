@@ -1,6 +1,6 @@
 name: nexus_mobile
 description: "Nexus Flutter iOS/Android app: contracts, passkeys, biometrics, voice, push, Bluetooth, approvals, remote controls, and secure local storage (EP-034)."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0+1
 
 environment:

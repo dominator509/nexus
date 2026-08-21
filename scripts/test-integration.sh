@@ -10,4 +10,5 @@ python3 scripts/blueprint_validate.py >/dev/null
 if [ -f Cargo.toml ] && find crates -path '*/tests/*.rs' -type f 2>/dev/null | grep -q .; then cargo test --workspace --tests --locked; fi
 if [ -f pnpm-lock.yaml ]; then pnpm -r test:integration; fi
 if [ -f pyproject.toml ] && [ -d tests/integration ]; then uv run --frozen pytest tests/integration -q; fi
+if [ -f tests/accessibility/mobile/pubspec.yaml ]; then (cd tests/accessibility/mobile && flutter test); fi
 echo "integration tests: ok"

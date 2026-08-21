@@ -1,6 +1,6 @@
 name: nexus_mobile_e2e
 description: "Nexus EP-034 M3 integration tests: real HTTP transport (dart:io) carrying canonical mobile contract JSON across a real socket boundary."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0+1
 
 environment:
