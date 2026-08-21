@@ -12,3 +12,6 @@ scripts/ep034-m2-tests.sh
 tests/e2e/mobile/
 scripts/ep034-m3-tests.sh
 .agent/milestone-files/EP-034-M3.txt
+tests/accessibility/mobile/
+scripts/ep034-m4-tests.sh
+.agent/milestone-files/EP-034-M4.txt

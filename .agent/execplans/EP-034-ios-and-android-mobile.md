@@ -297,7 +297,17 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   - Gates observed: `scripts/ep034-m3-tests.sh` -> `EP-034 M3: ok` (10 tests); `sh scripts/nodes/EP-034.sh M3` -> `EP-034 M3: ok` (exit 0).
   - Side gates: scope-audit EP-034 ok; reality-gate ok; security-check ok; license-gate ok; dependency-audit ok; expected-files EP-034 ok.
   - Committed as `[EP-034][M3] real dependency and transport integration`; committed-tree reproduction green; tree clean.
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
+  - `tests/accessibility/mobile/` (machine fence path; content is the forced-failure suite per ExecPlan) package (nexus_mobile_failure) proving fail-closed behavior over REAL production components with real failure mechanisms.
+  - 5 failure files / 31 tests, names begin `ep034_failure_`; `flutter analyze` clean; `dart format` clean.
+  - Malformed input: unknown field, fabricated enums (approval class, trust level, problem code, session field), missing required value, bad uuid -> VOCABULARY/VALIDATION.
+  - Denied authority: wrong device, wrong principal, revoked binding, revoked session, R4-with-POLICY-class, expired approval, offline R3/R4, stale cache, unknown capability -> AUTHORIZATION/POLICY.
+  - Idempotency/partial side effects: duplicate exactly-once, divergent CONFLICT, double-deny idempotent + approve-after-deny CONFLICT, timed-out resolve retried with same key does not double-execute, corrupted wire payload 422 VOCABULARY.
+  - Observability: bearer/token/secret/password-shaped canaries never leave in telemetry (exact-canary absence + [REDACTED]); private prompt content never emitted; correlation/outcome observable after redaction.
+  - Transport failures: unavailable fails closed (SocketException), slow server exceeds timeout, client cancellation aborts server-side, unknown route NOT_FOUND.
+  - Gates observed: `scripts/ep034-m4-tests.sh` -> `EP-034 M4: ok` (31 tests, sequential -j 1 + expanded reporter so every owned name is observable); `sh scripts/nodes/EP-034.sh M4` -> `EP-034 M4: ok` (exit 0); security-check ok; license-gate ok.
+  - Side gates: scope-audit EP-034 ok; reality-gate ok; dependency-audit ok; expected-files EP-034 ok.
+  - Committed as `[EP-034][M4] forced failures, abuse cases, and observability`; committed-tree reproduction green; tree clean.
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
@@ -308,6 +318,9 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-21: Dart RegExp does not support the `(?i)` inline flag (FormatException: Invalid group); the analyzer `valid_regexps` lint caught it. Use the `caseSensitive: false` constructor parameter instead.
 - 2026-08-21: Flutter analyzer `implementation_imports` lint rejects importing `package:nexus_mobile/src/contracts/*` from another package; behavior sources import the public barrel `package:nexus_mobile/nexus_mobile.dart` (which exports the full contract layer).
 - 2026-08-21: The M3 e2e fixture's first idempotency implementation replayed the prior resolution for ANY same-key retry; real divergence (different decision) must be CONFLICT (EP-033 reused-key-different-action precedent). Fixed by comparing decision/timestamp/correlation before replaying.
+- 2026-08-21: flutter test parallel runs interleave reporter labels and hide fast synchronous suite names (authority file invisible in log); anti-masking greps need `-j 1` + expanded reporter so every owned test name is observable (EP-033 worker-starvation lesson).
+- 2026-08-21: In dart:io, a connection-refused error surfaces from `HttpClient.getUrl` (not `request.close()`); tests must wrap the whole request creation+close in the expectation.
+- 2026-08-21: Substring assertions on canary words are unsound (`contains('to')` matches ordinary JSON words); assert exact-canary absence instead.
 
 # 13. Decision Log
 
@@ -319,6 +332,8 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-21 | Offline high-risk refusal and stale/unknown denials use SPEC-006 POLICY; divergent re-resolution uses CONFLICT; device/user binding violations use AUTHORIZATION. Evidence: typed-error assertions in M2 tests. Alternatives: UNAVAILABLE for offline refusals. Consequence: policy decisions are distinguishable from transport failures. Reversal: none without schema update. Security/license/compat: none.
 - 2026-08-21 | M3 transport = real dart:io HTTP over loopback (standard library), not a new third-party dependency, per AGENTS.md dependency rule (prefer standard library). Component record: Dart SDK 3.12.2 / Flutter 3.44.7 (BSD-3), replacement contract = shelf/http package if a server framework is later required. Evidence: pubspec has no transport dependency; integration tests exercise real sockets. Alternatives: shelf or package:http. Consequence: no new license/advisory surface. Reversal: ADR + registry update. Security/license/compat: none.
 - 2026-08-21 | M3-owned proofs cover contract behavior across a real transport boundary (approval wire JSON, idempotency, timeout, cancellation, typed errors, audit, cleanup). Native provider integration (passkeys, biometrics, Bluetooth, push, secure enclave), emulator/device runs, and hardware certification remain NOT ASSERTED and are owned by later milestones (M4 accessibility/failure fences + native milestone). Evidence: M3 fence tests/e2e/mobile/ contains no native plugin code. Alternatives: containerized backend integration (no mobile backend API exists yet). Consequence: honest layer boundary (TRANSPORT PROVEN != NATIVE PROVIDER PROVEN). Reversal: later milestones. Security/license/compat: none.
+- 2026-08-21 | M4 forced-failure suite lives under `tests/accessibility/mobile/` (the machine fence path assigned by the plan; content is the failure suite per ExecPlan M4 CONTENT). Evidence: node artifact check requires the fence path; ExecPlan M4 CONTENT defines failure obligations. Alternatives: renaming the fence (requires ADR). Consequence: fence path honored, content honest. Reversal: ADR + plan update. Security/license/compat: none.
+- 2026-08-21 | M4 gate runs flutter test sequentially (-j 1) with the expanded reporter so every owned proof name is observable; anti-masking greps require observable names. Evidence: EP-033 worker-starvation lesson. Alternatives: trusting the parallel count. Consequence: gate cannot be fooled by interleaved labels. Reversal: none. Security/license/compat: none.
 
 # 14. Outcomes & Retrospective
 

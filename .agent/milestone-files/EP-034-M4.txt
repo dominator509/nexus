@@ -1,1 +1,4 @@
 tests/accessibility/mobile/
+scripts/ep034-m4-tests.sh
+scripts/nodes/EP-034.sh
+.agent/milestone-files/EP-034-M4.txt
