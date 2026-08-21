@@ -272,7 +272,13 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
+  - Flutter 3.44.7 (stable, revision 84fc5cbb22) / Dart 3.12.2 via mise; `apps/mobile/` flutter package created.
+  - Contract layer: 8 public interfaces (device, session, approvals, enrollment, voice, bluetooth, secure_store, push, remote) + supporting SPEC-017 vocabulary bound to canonical schemas; deny-unknown validation (rejectUnknownKeys then direct value readers); provider-neutral dependency direction (contract layer imports no provider packages).
+  - Tests: 44 tests / 5 files green (`flutter test`: All tests passed), names begin `ep034_unit_`; serialization round-trips prove canonical schema parity; `flutter analyze` clean; `dart format` clean.
+  - Gates observed: `scripts/ep034-m1-tests.sh` -> `EP-034 M1: ok`; `sh scripts/nodes/EP-034.sh M1` -> `EP-034 M1: ok` (exit 0).
+  - Side gates: scope-audit EP-034 ok; reality-gate ok (after removing scaffold TODO placeholder); security-check ok; license-gate ok; dependency-audit ok; expected-files EP-034 ok.
+  - Committed as `[EP-034][M1] contract, vocabulary, and package boundary`; committed-tree reproduction green; tree clean.
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -280,11 +286,15 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-21: `requireString` with an empty allowlist incorrectly rejected all reads (empty set interpreted as deny-all). Fixed by reading values directly after `rejectUnknownKeys`; regression test retained for corrected semantics (no allowlist restriction vs empty set deny-all).
+- 2026-08-21: Flutter scaffold `android/app/build.gradle.kts` ships a `// TODO: Add your own signing config` placeholder which fails the repo reality gate. Replaced with factual comment (release signing deferred to native release milestone; debug signing for dev); behavior unchanged.
+- 2026-08-21: `expected-files.sh EP-034` fails while future-milestone paths (`packages/mobile-contracts/`, `tests/e2e/mobile/`, `tests/accessibility/mobile/`) are listed before they exist; trimmed to M1-owned paths, re-appended as milestones land (EP-033 incremental convention).
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-21 | Mobile contracts reuse canonical schemas (SPEC-006 errors, SPEC-017 vocabulary); no mobile-only forked vocabulary. Evidence: schema-parity serialization tests in `apps/mobile/test/ep034_unit_serialization_test.dart`. Alternatives: hand-copying enums into Dart. Consequence: anti-drift regressions permanently retained. Reversal: schema update + ADR. Security/license/compat: none.
+- 2026-08-21 | Native features intentionally deferred from M1: passkeys, biometrics, Bluetooth, push native modules, secure enclave/Keychain/Keystore, emulator/device runs, hardware certification - all NOT ASSERTED at M1. Evidence: M1 contract layer declares interfaces only; no native plugin implementations. Alternatives: implement native modules in M1. Consequence: honest certification boundary preserved (INTERFACE EXISTS != NATIVE PROVIDER IMPLEMENTED != DEVICE CERTIFIED). Reversal: later milestones. Security/license/compat: none.
+- 2026-08-21 | Release signing for Android deferred to the native release milestone; debug signing retained for development builds. Evidence: `apps/mobile/android/app/build.gradle.kts` comment. Consequence: `flutter run --release` functional during development; no release artifact certified. Reversal: configure signing in M5/ship milestone. Security: no production signing keys exist.
 
 # 14. Outcomes & Retrospective
 

@@ -3,4 +3,6 @@
 .agent/expected-files/EP-034.txt
 .agent/node-contracts/EP-034.md
 scripts/nodes/EP-034.sh
+scripts/ep034-m1-tests.sh
+.agent/milestone-files/EP-034-M1.txt
 apps/mobile/
