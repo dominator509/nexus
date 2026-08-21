@@ -12,6 +12,9 @@ scripts/ep035-m2-tests.sh
 .agent/milestone-files/EP-035-M5.txt
 apps/setup/
 crates/nexus-setup/
+packages/onboarding/
+scripts/ep035-m3-tests.sh
+COMPONENT_REGISTRY.yaml
 Cargo.toml
 Cargo.lock
 pnpm-workspace.yaml

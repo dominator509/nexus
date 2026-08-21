@@ -1,0 +1,28 @@
+{
+  "name": "@nexus/onboarding",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus Setup onboarding integration layer (EP-035 M3): real PostgreSQL 18.4 durable stores for owner bootstrap, deployment intent, enrollment tokens, integration state, and recovery checkpoints, plus real NATS JetStream event emission, bridging the @nexus/setup contracts to the canonical durable store and event bus. Provider-neutral boundary: contract semantics stay in @nexus/setup; this package owns transport only.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__/unit",
+    "test:integration": "vitest run src/__tests__/integration --no-file-parallelism",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/setup": "workspace:*",
+    "nats": "^2.29.3",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0"
+  }
+}

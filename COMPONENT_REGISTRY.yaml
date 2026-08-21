@@ -367,3 +367,33 @@ components:
     fixture: "real React 19 server rendering via react-dom/server renderToString in ep033_integration_* tests (real markup output; no browser/jsdom in M3)"
     browser_runtime: "NOT ASSERTED in M3 (Playwright e2e owned by M4/M5)"
     rationale: "EP-033 M3 shared UI components (SPEC-017 behavior 1: React PWA is the shared web surface)"
+  - id: node-postgres
+    capability: data.relational.client
+    implementation: "node-postgres (pg)"
+    license: "MIT"
+    integration_mode: embedded
+    replacement_contract: "PostgreSQL 18.4 locked; pg client is a transport driver behind OnboardingDb; version advance by ADR"
+    commercial_review: "MIT; commercial use permitted"
+    status: ep035-m3
+    owner: "EP-035"
+    upstream_software: "pg 8.23.0 (npm)"
+    tested_package: "8.23.0 (pnpm lockfile)"
+    docs: "https://node-postgres.com/"
+    fixture: "real PostgreSQL 18.4 ephemeral container (postgres:18.4@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636) in ep035_integration_* tests; readiness proven by connecting through the published host port"
+    certification: "TRANSPORT_CERTIFIED / CONTROLLED_FIXTURE (real Postgres 18.4 server, digest-pinned)"
+    rationale: "EP-035 M3 durable onboarding stores (owner bootstrap, enrollment tokens, deployment intent, integration state, recovery checkpoints) over the canonical durable store"
+  - id: nats-js-client
+    capability: events.bus.client
+    implementation: "nats.js (official NATS node client)"
+    license: "Apache-2.0"
+    integration_mode: embedded
+    replacement_contract: "NATS JetStream 2.14.3 locked; nats.js is a transport driver behind OnboardingEventPublisher; version advance by ADR"
+    commercial_review: "Apache-2.0; commercial use permitted"
+    status: ep035-m3
+    owner: "EP-035"
+    upstream_software: "nats 2.29.3 (npm)"
+    tested_package: "2.29.3 (pnpm lockfile)"
+    docs: "https://docs.nats.io/developing-with-nats/tutorials/nats.js"
+    fixture: "real NATS 2.14.3 ephemeral container (nats:2.14.3@sha256:67ac7866d010e8d83302dd30332eeae1a2b7a8ee051155e2eb5a5485b720cd4b, -js JetStream enabled) in ep035_integration_* tests; PING/PONG through the published host port"
+    certification: "TRANSPORT_CERTIFIED / CONTROLLED_FIXTURE (real NATS 2.14.3 server, digest-pinned)"
+    rationale: "EP-035 M3 real event emission for onboarding lifecycle (owner, enrollment, deployment, integration, recovery) on the canonical event bus"

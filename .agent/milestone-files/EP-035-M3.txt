@@ -1,1 +1,7 @@
 # Populated at M3 (packages/onboarding/)
+packages/onboarding/
+scripts/ep035-m3-tests.sh
+scripts/nodes/EP-035.sh
+COMPONENT_REGISTRY.yaml
+pnpm-workspace.yaml
+pnpm-lock.yaml
