@@ -2141,6 +2141,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-provider-hetzner"
+version = "0.1.0"
+dependencies = [
+ "nexus-compute",
+ "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-push-connector"
 version = "0.1.0"
 dependencies = [

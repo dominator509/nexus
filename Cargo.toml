@@ -45,6 +45,7 @@ members = [
     "providers/aws",
     "providers/existing-ssh",
     "providers/contabo",
+    "providers/hetzner",
     "tests/infra",
     "tests/notifications",
     "connectors/home-assistant",

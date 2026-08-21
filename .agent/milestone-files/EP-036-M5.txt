@@ -1,1 +1,2 @@
 providers/hetzner/
+scripts/ep036-m5-tests.sh
