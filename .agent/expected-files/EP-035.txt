@@ -3,8 +3,12 @@
 .agent/expected-files/EP-035.txt
 .agent/node-contracts/EP-035.md
 scripts/nodes/EP-035.sh
+scripts/ep035-m1-tests.sh
+.agent/milestone-files/EP-035-M1.txt
+.agent/milestone-files/EP-035-M2.txt
+.agent/milestone-files/EP-035-M3.txt
+.agent/milestone-files/EP-035-M4.txt
+.agent/milestone-files/EP-035-M5.txt
 apps/setup/
-crates/nexus-setup/
-packages/onboarding/
-tests/onboarding/
-schemas/deployment-profile.schema.json
+pnpm-workspace.yaml
+pnpm-lock.yaml

@@ -1,0 +1,24 @@
+{
+  "name": "@nexus/setup",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus Setup Wizard and Onboarding contracts (EP-035 M1): provider-neutral setup wizard, deployment choice, hardware profiler, owner bootstrap, edge enrollment, discovery, integration card, and recovery flow contracts over canonical schemas. Framework-neutral contract layer: no React/DOM/backend-client imports in src/contracts.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
