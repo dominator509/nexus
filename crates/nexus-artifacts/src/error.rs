@@ -203,6 +203,19 @@ impl ArtifactError {
         }
     }
 
+    /// Construct a rate-limit failure (SPEC-006 RateLimit; S3 429 /
+    /// SlowDown).
+    pub fn rate_limit(message: impl Into<String>) -> Self {
+        Self {
+            code: ArtifactErrorCode::RateLimit,
+            message: message.into(),
+            correlation: None,
+            actor: None,
+            tenant: None,
+            resource: None,
+        }
+    }
+
     /// Construct an internal invariant failure.
     pub fn internal(message: impl Into<String>) -> Self {
         Self {

@@ -1,0 +1,42 @@
+{
+  "adapter": "nexus-provider-storage-s3",
+  "addressing": "PATH_STYLE",
+  "approval_reference": "approval-ep037-m5-1787434683674-728a4",
+  "approval_required": true,
+  "certification_boundary": {
+    "AWS S3": "NOT ASSERTED",
+    "Backblaze B2": "NOT ASSERTED",
+    "Cloudflare R2": "NOT ASSERTED",
+    "LF-020": "COMPOSITION CERTIFIED for exact local<->S3-compatible migration path",
+    "MinIO": "REAL S3-COMPATIBILITY PROVIDER CERTIFIED (digest-pinned container)",
+    "storage-local": "REAL FILESYSTEM CERTIFIED",
+    "storage-s3 adapter": "S3-COMPATIBILITY INTEGRATION CERTIFIED against exercised MinIO endpoint"
+  },
+  "destination_hashes_verified": true,
+  "destination_intact_after_source_delete": true,
+  "destination_provider": "MINIO",
+  "git_commit": "50f44a30086ae84e4c3fcffcb9ab25cd38c0f4f4",
+  "lf_id": "LF-020",
+  "metadata_verified": true,
+  "migration_state": "CANONICAL_LOCATION_CHANGED",
+  "milestone": "M5",
+  "node": "EP-037",
+  "profile": "MINIO",
+  "run_id": "ep037-m5-1787434683674-728a4",
+  "slug": "storage-backend-portability",
+  "source_delete": "RESOURCE_ABSENT_VERIFIED",
+  "source_provider": "LOCAL",
+  "versioned_artifacts": [
+    {
+      "artifact_hash": "f297862edc308dc2312eb45b574b5899e54dba20119f597404c98ce3959f7edb",
+      "artifact_id": "01970000-0000-7000-8000-000000000140",
+      "version": "1"
+    },
+    {
+      "artifact_hash": "f385e0554cb37aee78e77574d1c4777e3a6166218d91665770ba914a5bff4584",
+      "artifact_id": "01970000-0000-7000-8000-000000000141",
+      "version": "2"
+    }
+  ],
+  "written_at": "2026-08-22T21:38:03Z"
+}

@@ -1,0 +1,25 @@
+[package]
+name = "nexus-storage-livefire"
+version = "0.1.0"
+edition = "2021"
+description = "EP-037 M5 live-fire journeys: LF-020 storage-backend-portability (versioned artifacts local -> real S3-compatible backend with approval-gated source deletion) and LF-002 restore-existing-nexus (restore encrypted Nexus state onto a fresh deployment and prove identities, policies, memories, skills, and connectors reattach). REAL production adapters + REAL domain types + REAL crypto; current-run evidence."
+license = "MIT"
+
+[dependencies]
+nexus-artifacts = { path = "../../../crates/nexus-artifacts", version = "0.1.0" }
+nexus-domain = { path = "../../../crates/nexus-domain", version = "0.1.0" }
+nexus-identity = { path = "../../../crates/nexus-identity", version = "0.1.0" }
+nexus-policy = { path = "../../../crates/nexus-policy", version = "0.1.0" }
+nexus-data = { path = "../../../crates/nexus-data", version = "0.1.0" }
+nexus-skills = { path = "../../../crates/nexus-skills", version = "0.1.0" }
+nexus-connectors = { path = "../../../crates/nexus-connectors", version = "0.1.0" }
+nexus-capabilities = { path = "../../../crates/nexus-capabilities", version = "0.1.0" }
+nexus-provider-storage-local = { path = "../../../connectors/storage-local", version = "0.1.0" }
+nexus-provider-storage-s3 = { path = "../../../connectors/storage-s3", version = "0.1.0" }
+sha2 = "0.10"
+serde.workspace = true
+serde_json.workspace = true
+ring = "0.17"
+
+[dev-dependencies]
+tempfile = "3"

@@ -7,12 +7,12 @@ Backblaze B2, Amazon S3) satisfy ONE contract defined in
 
 ## Backend adapter ownership
 
-| Backend | Adapter root (later milestones) | Status |
-| --- | --- | --- |
-| Local filesystem | `connectors/storage-local/` (M2) | CONTRACT BOUNDARY ONLY |
-| NAS | `connectors/storage-nas/` (M3) | CONTRACT BOUNDARY ONLY |
-| SeaweedFS | `connectors/storage-seaweedfs/` (M4) | CONTRACT BOUNDARY ONLY |
-| S3-compatible (S3, MinIO, R2, B2) | `connectors/storage-s3/` (M5) | CONTRACT BOUNDARY ONLY |
+| Backend                           | Adapter root (later milestones)      | Status                 |
+| --------------------------------- | ------------------------------------ | ---------------------- |
+| Local filesystem                  | `connectors/storage-local/` (M2)     | CONTRACT BOUNDARY ONLY |
+| NAS                               | `connectors/storage-nas/` (M3)       | CONTRACT BOUNDARY ONLY |
+| SeaweedFS                         | `connectors/storage-seaweedfs/` (M4) | CONTRACT BOUNDARY ONLY |
+| S3-compatible (S3, MinIO, R2, B2) | `connectors/storage-s3/` (M5)        | CONTRACT BOUNDARY ONLY |
 
 MinIO is compatibility-only because the community repository is archived;
 the UI warns and recommends a maintained alternative (SPEC-024

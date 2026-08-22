@@ -23,3 +23,9 @@ scripts/ep037-m4-tests.sh
 .agent/milestone-files/EP-037-M4.txt
 COMPONENT_REGISTRY.yaml
 deny.toml
+scripts/ep037-m5-tests.sh
+scripts/live-fire/LF-002.sh
+scripts/live-fire/LF-020.sh
+tests/livefire/storage/
+.agent/state/evidence/
+.agent/milestone-files/EP-037-M5.txt

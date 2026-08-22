@@ -2195,6 +2195,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-provider-storage-s3"
+version = "0.1.0"
+dependencies = [
+ "nexus-artifacts",
+ "nexus-domain",
+ "nexus-provider-storage-local",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+]
+
+[[package]]
 name = "nexus-provider-storage-seaweedfs"
 version = "0.1.0"
 dependencies = [
@@ -2404,6 +2417,27 @@ dependencies = [
  "nexus-social-direct-connector",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "nexus-storage-livefire"
+version = "0.1.0"
+dependencies = [
+ "nexus-artifacts",
+ "nexus-capabilities",
+ "nexus-connectors",
+ "nexus-data",
+ "nexus-domain",
+ "nexus-identity",
+ "nexus-policy",
+ "nexus-provider-storage-local",
+ "nexus-provider-storage-s3",
+ "nexus-skills",
+ "ring",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
 ]
 
 [[package]]
