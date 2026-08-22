@@ -279,12 +279,66 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary (2026-08-21): crates/nexus-artifacts @nexus-artifacts ArtifactStore contract crate (workspace member +1; deps nexus-domain + serde/serde_json only, no SDK/transport; provider-neutral contract for local/NAS/SeaweedFS/MinIO compatibility/R2/B2/S3 - StorageBackend vocabulary rejects unknown backends, MinIO marked compatibility-only (community repository archived); DataClass/RetentionClass/BackupState/RestoreVerificationState/MigrationState vocabularies; ArtifactHash canonical hex SHA-256 content addressing; ArtifactMetadata/ArtifactVersion with version-lineage binding + encryption-before-egress policy (sensitive class on remote backend requires EncryptionMetadata, local exempt); BackendLocation opaque reference rejects credential-bearing URLs; BackupSet state ladder DECLARED != CREATED != VERIFIED != RESTORED with recovery key never stored beside backup; RestorePlan hash-verification gates destructive steps; StorageMigration copy-verify-approve-delete ordering (delete only after verification + approval); RecoveryKey reference-only; ArtifactStore port with put/get/verify/delete/create_backup/restore/migrate/list/set_retention; 25 ep037_unit_* tests green (0 failed/ignored); clippy -D warnings clean; fmt clean; dependency-direction proof (cargo tree depth 1 rejects storage SDK/transport/framework crates); gate scripts/ep037-m1-tests.sh 8 anti-masking sentinels + vacuity guards; node M1 rewired from phantom node-artifact-check masking to real gate with rc propagation; infra/storage/ topology root (adapter ownership table + truthfulness boundaries); side gates: scope audit EP-037: ok, preflight: ok, reality gate: ok, security check: ok, license gate: ok, dependency audit: ok, blueprint validation: ok; expected-files later-owned dirs (connectors/storage-local M2, connectors/storage-nas + tests/backup M3, connectors/storage-seaweedfs M4, connectors/storage-s3 M5) recorded; certification (honest): EP-037 M1 contract layer INTERNAL CONTRACT CERTIFIED, ArtifactStore semantics INTERNAL CONTRACT CERTIFIED, content addressing + backup/restore/migration invariants INTERNAL CONTRACT CERTIFIED where tested; real local/NAS/SeaweedFS/MinIO/R2/B2/S3 backend adapters, real encryption, real backup/restore/migration live-fire, real provider access, hardware certification NOT ASSERTED (M2-M5 + deployment/native/ship milestones own them); ExecPlan Progress updated
 - [x] M2: Core behavior and deterministic invariants (2026-08-22): connectors/storage-local @nexus-provider-storage-local local filesystem ArtifactStore adapter (workspace member +1; deps nexus-artifacts + nexus-domain + serde/serde_json + sha2 only, no SDK/transport; REAL std::fs behavior - no in-memory production engine); content-addressed storage keyed by canonical hex SHA-256 (write verifies caller-supplied hash against actual bytes before persisting, atomic write-then-rename through staging, identical-digest dedup); every read re-hashes bytes on disk and fails Verification on corruption; metadata persisted as JSON sidecars with atomic rename; delete ladder DELETE_REQUESTED != DELETE_ACCEPTED != RESOURCE_ABSENT_VERIFIED (removes index + object, verifies absence, second delete NotFound); backup manifest written only after every hash verifies on disk, duplicate backup Conflict; restore requires every required hash verified on the fresh target before Validated; migration verifies objects on the target; list pagination with last-item cursor; set_retention updates persisted metadata; 15 ep037_unit_* tests green over real temp roots (0 failed/ignored) incl. real corruption tampering, real hash-mismatch rejection, real dedup counting, real delete absence checks; clippy -D warnings clean; fmt clean; gate scripts/ep037-m2-tests.sh 8 anti-masking sentinels + vacuity guards + M1 regression; tests/artifacts/ umbrella README; side gates: scope audit EP-037: ok, security check: ok; certification (honest): local filesystem adapter REAL FILESYSTEM BEHAVIOR CERTIFIED for exact exercised std::fs paths (content addressing, hash verification, delete absent-verification, backup/restore/migration invariants); NAS/SeaweedFS/MinIO/R2/B2/S3 adapters, real encryption, real cross-provider migration, live-fire restore NOT ASSERTED (M3-M5 own them); ExecPlan Progress updated
 - [x] M3: Real dependency and transport integration (2026-08-22): connectors/storage-nas @nexus-provider-storage-nas NAS ArtifactStore adapter (workspace member +1; composes the real local adapter core over a NAS mount root; encryption-before-egress enforced at the adapter boundary - sensitive-class artifact without EncryptionMetadata fails Policy BEFORE any byte reaches the share); tests/backup @nexus-backup-tests REAL S3-compatible backup/restore integration over a digest-pinned MinIO container (minio/minio:RELEASE.2024-04-06T05-26-02Z, COMPONENT_REGISTRY minio fallback; plain HTTP/1.1 + AWS SigV4 client over std::net - no vendor SDK, real network to the real container; SigV4 HMAC-SHA256 verified against RFC 4231 vector); 10 ep037_integration/unit tests green (NAS adapter 5: public roundtrip, sensitive-without-encryption Policy fail-closed before write, encrypted sensitive roundtrip, delete absent-verification, backup manifest + restore validation; backup crate 5: SigV4 date/HMAC vectors + 3 REAL MinIO tests - put/get digest verified, corruption digest mismatch detected, delete then absent 404); clippy -D warnings clean; fmt clean; gate scripts/ep037-m3-tests.sh (provisions real MinIO container, waits readiness, runs NAS + backup suites, 8 anti-masking sentinels, orphan guard, M1+M2 regression); side gates: scope audit EP-037: ok, security check: ok; certification (honest): NAS adapter REAL FILESYSTEM BEHAVIOR CERTIFIED for exact exercised std::fs path with encryption-before-egress enforcement, MinIO S3-compatible path REAL TRANSPORT/PROTOCOL CERTIFIED for exact exercised HTTP+SigV4 surface (MinIO remains compatibility-only per SPEC-024 because the community repository is archived); SeaweedFS/R2/B2/S3 vendor adapters, real object-encryption-at-rest, LF-002/LF-020 live-fire NOT ASSERTED (M4/M5 own them); ExecPlan Progress updated
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability (2026-08-22): connectors/storage-seaweedfs @nexus-provider-storage-seaweedfs real SeaweedFS S3-gateway adapter + forced-failure suite (workspace member +1; deps nexus-artifacts + nexus-domain + serde/serde_json + sha2 only; AWS SigV4 path-style HTTP/1.1 over std::net - fresh TcpStream per request, bounded connect/read timeouts, no persisted socket state); REAL digest-pinned SeaweedFS container (chrislusf/seaweedfs:4.43@sha256:4d5118c198...); error classification distinct: refused -> Unavailable, silent -> Timeout, malformed -> ExternalProvider, 404 -> NotFound, 403 -> Authorization, 500 -> ExternalProvider; content-address identity + hash-verified put/get + encryption-before-egress (zero provider mutation on policy failure) + delete absent-verified ladder + shared-content preservation + backup/restore hash gates + migration mark_verified contract fix + hash-aware retry dedup + bounded redacted observability + seaweedfs-diag (CONFIGURED != REACHABLE != RESPONDING != PROBE_VERIFIED); 21 ep037_failure_/integration tests over the REAL provider; FIXTURE LIFECYCLE REFACTOR: shared provider used ONLY by non-destructive tests; every destructive test (stop/unavailable, restart/recovery, backing-store corruption, migration destination failure) owns a fresh unique SeaweedFS runtime with runtime-generated credentials, unique ports, explicit generations (restart increments), production-probe readiness, and Drop teardown; corruption test corrupts needle DATA (never the 8-byte superblock) on its own fixture and never reuses the poisoned provider; gate now probe-verifies initial readiness and post-restart readiness (healthz alone never satisfies readiness) and records docker/disk pressure; 3 consecutive clean full-suite runs 21/21 + destructive subset 6/6 + each previously-failing test green alone; M2 migration regression updated to the corrected mark_verified contract; clippy -D warnings clean; fmt clean; dependency audit green (exact-version sha2 0.10.9 skip matching the documented digest 0.10 split); side gates: scope audit EP-037: ok, preflight: ok, reality gate: ok, security check: ok, license gate: ok, dependency audit: ok, blueprint validation: ok; certification (honest): SeaweedFS 4.43 REAL PROVIDER CERTIFIED for the exact exercised S3-gateway runtime/interface (write/read/delete/verify/list, restart recovery, backing-store corruption, backup/restore/migration, diag probe); filer HTTP API / volume server API / filesystem mount NOT ASSERTED; R2/B2/AWS S3 external cloud NOT ASSERTED; expected-files audit deferred to node closure (M5 owns connectors/storage-s3/); ExecPlan Surprises updated with real provider operational knowledge
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
+
+## 2026-08-22 M4 failure-harness lifecycle (evidence-backed)
+
+Instrumented full-suite trace (21 tests, --test-threads=1, per-test timestamps +
+container generation poller, `/tmp/ep037-m4-instrumented.log`): 16/21 green.
+Root failure was NOT adapter logic.
+
+- **PROVIDER_STARTUP (1 test): `ep037_failure_volume_dat_corruption_fails_closed`**
+  The test wiped `/data`, restarted, wrote one artifact, then zeroed the first
+  64 bytes of every collection volume `.dat` - i.e. the 8-byte volume
+  SUPERBLOCK. On the final restart the volume server could not load the
+  corrupted volumes ("assign volume: all filers fail"), the production probe
+  never passed, `wait_ready` timed out, and the shared container exited 255.
+  The corruption proof itself worked (`get` returned Err before the timeout);
+  the test then tried to RESTORE the same poisoned provider and reuse it.
+- **FIXTURE_STATE_LEAK (4 tests): `wrong_target_delete_preserves_other`,
+  `diag_probe_verified`, `list_pagination`, `positive_roundtrip`** - all
+  `Connection refused (os error 111)` because the shared container was dead
+  from the corruption test. Pure cascade; the adapter was never exercised.
+- **TRANSPORT STATELESSNESS**: `transport.rs` opens one fresh `TcpStream` per
+  request (`open_stream()` -> `connect_timeout` inside every `request()`).
+  Stale client sockets are NOT a failure class; no reconnection state added.
+
+## Real SeaweedFS 4.43 operational knowledge (evidence-backed)
+
+- SeaweedFS 4.43 single-node `weed server` needs explicit `-filer -s3` flags;
+  without them the S3 gateway does not serve.
+- `healthz` on the S3 gateway can be 200 while master/volume topology is still
+  re-syncing; writes then fail 500 "assign volume: all filers fail" for a
+  bounded window (observed ~10-20s post-restart). Readiness authority is the
+  real production probe (PUT -> GET -> SHA-256 verify -> DELETE), never healthz.
+- After restart the diag probe may transiently return 500 (InternalError) -
+  that is SEAWEEDFS_NOT_READY_YET, retried inside wait_ready only; the
+  production error mapping is unchanged (500 remains ExternalProvider outside
+  wait_ready).
+- Volume .dat files for named collections are `{collection}_{id}.dat`; the
+  object bytes and the metadata sidecar can land in different volumes of the
+  growth batch, so corruption must cover every volume of the collection.
+- Zeroing the volume superblock makes the volume unloadable and the provider
+  never returns; zeroing needle DATA (offset >= 64) keeps the volume loadable
+  and the corrupted artifact fails closed (observed manifest: read Timeout).
+- Volume-server /status replies with Transfer-Encoding: chunked; the decoder
+  handles the hex-size framing before JSON parse.
+- `docker stop`+`docker start` does NOT increment RestartCount (only
+  `docker restart` does); provider generations are therefore tracked by the
+  harness, not by Docker's counter.
+- StorageMigration mark_verified contract fix (AH): a migration whose
+  destination readback hash-verified becomes VERIFIED immediately. The M2
+  local regression asserting `Requested` was updated to the corrected
+  contract; all adapters (local, SeaweedFS) call mark_verified.
+- `sha2` 0.10.9 + 0.11.0 coexist in the lock: storage adapters pin the 0.10
+  line (digest 0.10 stack), email/fax/gateway pin 0.11. Not M4-introduced;
+  exact-version targeted skip added to deny.toml matching the documented
+  digest 0.10.7 split.
 
 # 13. Decision Log
 

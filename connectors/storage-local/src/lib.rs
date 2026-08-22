@@ -371,6 +371,9 @@ impl ArtifactStore for LocalArtifactStore {
             self.verify_object(&obj.content_hash)?;
             migrated.record_verified(obj)?;
         }
+        if migrated.all_verified() {
+            migrated.mark_verified()?;
+        }
         Ok(migrated)
     }
 

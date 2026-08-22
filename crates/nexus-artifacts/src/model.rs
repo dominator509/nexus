@@ -531,6 +531,28 @@ impl StorageMigration {
             .all(|o| self.verified_refs.contains(o))
     }
 
+    /// Advance the migration to VERIFIED once every object verifies on
+    /// the target (SPEC-024 requirement 8: migration is verified only
+    /// after destination readback; copied != verified). Leaps from
+    /// non-requested/copying states are rejected.
+    pub fn mark_verified(&mut self) -> ArtifactResult<MigrationState> {
+        if !self.all_verified() {
+            return Err(ArtifactError::verification(
+                "cannot mark migration VERIFIED before every object verifies on the target",
+            ));
+        }
+        match self.state {
+            MigrationState::Requested | MigrationState::Copying => {
+                self.state = MigrationState::Verified;
+                Ok(self.state)
+            }
+            MigrationState::Verified => Ok(self.state),
+            other => Err(ArtifactError::policy(format!(
+                "cannot mark {other:?} migration VERIFIED"
+            ))),
+        }
+    }
+
     /// Approve deletion of old objects. Approval requires that every
     /// object verified on the target first (SPEC-024: delete old objects
     /// only after verification and approval).

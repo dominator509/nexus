@@ -155,10 +155,34 @@ impl ArtifactError {
         }
     }
 
+    /// Construct a timeout failure.
+    pub fn timeout(message: impl Into<String>) -> Self {
+        Self {
+            code: ArtifactErrorCode::Timeout,
+            message: message.into(),
+            correlation: None,
+            actor: None,
+            tenant: None,
+            resource: None,
+        }
+    }
+
     /// Construct an unavailable failure.
     pub fn unavailable(message: impl Into<String>) -> Self {
         Self {
             code: ArtifactErrorCode::Unavailable,
+            message: message.into(),
+            correlation: None,
+            actor: None,
+            tenant: None,
+            resource: None,
+        }
+    }
+
+    /// Construct an authorization failure.
+    pub fn authorization(message: impl Into<String>) -> Self {
+        Self {
+            code: ArtifactErrorCode::Authorization,
             message: message.into(),
             correlation: None,
             actor: None,

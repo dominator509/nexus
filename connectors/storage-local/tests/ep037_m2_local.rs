@@ -448,7 +448,12 @@ fn ep037_unit_local_migrate_verifies_objects_on_target() {
         .migrate(&tenant(), &migration, &correlation())
         .unwrap();
     assert!(result.all_verified());
-    assert_eq!(result.state, nexus_artifacts::MigrationState::Requested);
+    // EP-037 M4 contract fix (StorageMigration mark_verified): a
+    // migration whose destination readback hash-verified becomes
+    // VERIFIED immediately (copy-verify-approve ordering; copied !=
+    // verified). The pre-M4 behavior left the state Requested, which
+    // contradicted the corrected contract.
+    assert_eq!(result.state, nexus_artifacts::MigrationState::Verified);
     teardown(&root);
 }
 

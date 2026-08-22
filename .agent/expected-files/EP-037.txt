@@ -19,3 +19,6 @@ scripts/ep037-m2-tests.sh
 .agent/milestone-files/EP-037-M2.txt
 scripts/ep037-m3-tests.sh
 .agent/milestone-files/EP-037-M3.txt
+scripts/ep037-m4-tests.sh
+.agent/milestone-files/EP-037-M4.txt
+COMPONENT_REGISTRY.yaml

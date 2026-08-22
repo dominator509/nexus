@@ -316,13 +316,20 @@ components:
     rationale: "Error and incident UI"
   - id: seaweedfs
     capability: artifact.object-store
-    implementation: "SeaweedFS"
-    license: "Apache-2.0"
+    implementation: "SeaweedFS 4.43 (chrislusf/seaweedfs:4.43@sha256:4d5118c198a6b9c0470c04b1822a0671459301625d995d1764c352bb553b3160)"
+    license: "Apache-2.0 (verified upstream LICENSE)"
     integration_mode: sidecar
     replacement_contract: "ArtifactStore contract; local filesystem/NAS default, R2/B2/S3 fallback"
     commercial_review: "Apache-2.0; commercial use permitted"
     status: optional
-    rationale: "Preferred scalable local S3-compatible store"
+    owner: "EP-037 M4"
+    upstream_software: "SeaweedFS 4.43 (single-node weed server: master :9333, volume :8080, filer :8888, s3 gateway :8333)"
+    tested_package: "chrislusf/seaweedfs:4.43@sha256:4d5118c198a6b9c0470c04b1822a0671459301625d995d1764c352bb553b3160"
+    docs: "https://github.com/seaweedfs/seaweedfs (weed/command/s3.go: s3 gateway default port 8333 over filer :8888; weed/s3api/s3api_server.go: /healthz /readyz /status + path-style S3 routes; s3.config identities/credentials/actions for SigV4 auth)"
+    interface: "S3 gateway (AWS SigV4, path-style HTTP/1.1): bucket ops, PUT/GET/HEAD/DELETE object, ListObjectsV2 with continuation token, /healthz /readyz"
+    fixture: "REAL ephemeral single-node SeaweedFS container, digest-pinned, s3.config with runtime-generated credentials, S3 gateway :8333 (EP-037 M4 gate scripts/ep037-m4-tests.sh)"
+    certification: "PROVIDER CERTIFIED for exact exercised S3-gateway runtime/interface (EP-037 M4 gate); filer HTTP API / volume server API / filesystem mount NOT ASSERTED; R2/B2/AWS S3 external cloud NOT ASSERTED"
+    rationale: "Preferred scalable local S3-compatible store (SPEC-024); EP-037 M4 real provider integration and forced-failure suite"
   - id: minio
     capability: artifact.object-store
     implementation: "MinIO community"

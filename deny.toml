@@ -89,6 +89,16 @@ skip = [
   # 0.11 stack. Exact-version targeted skips only; sha1 is used for
   # the handshake digest, never for integrity or signing.
   { name = "digest", version = "0.10.7" },
+  # sha2 0.10 vs 0.11: the storage provider adapters (storage-local,
+  # storage-nas, storage-seaweedfs; EP-037 M2/M3/M4) pin the sha2 0.10
+  # line (Digest trait over the digest 0.10 stack), while email/fax/
+  # gateway crates pin sha2 0.11 (digest 0.11 stack). The two sha2
+  # lines are API-incompatible and cannot be unified without a
+  # workspace-wide dependency migration; the digest 0.10.7 skip above
+  # already documents the same split. Exact-version targeted skip only;
+  # sha2 is used for content addressing and integrity verification,
+  # never weakened.
+  { name = "sha2", version = "0.10.9" },
   { name = "block-buffer", version = "0.10.4" },
   { name = "cpufeatures", version = "0.2.17" },
   { name = "crypto-common", version = "0.1.7" },
