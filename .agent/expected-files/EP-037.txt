@@ -22,3 +22,4 @@ scripts/ep037-m3-tests.sh
 scripts/ep037-m4-tests.sh
 .agent/milestone-files/EP-037-M4.txt
 COMPONENT_REGISTRY.yaml
+deny.toml
