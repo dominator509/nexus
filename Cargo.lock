@@ -1421,6 +1421,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-backup-tests"
+version = "0.1.0"
+dependencies = [
+ "nexus-artifacts",
+ "nexus-domain",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "nexus-bifrost"
 version = "0.1.0"
 dependencies = [
@@ -2165,6 +2175,19 @@ version = "0.1.0"
 dependencies = [
  "nexus-artifacts",
  "nexus-domain",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+]
+
+[[package]]
+name = "nexus-provider-storage-nas"
+version = "0.1.0"
+dependencies = [
+ "nexus-artifacts",
+ "nexus-domain",
+ "nexus-provider-storage-local",
  "serde",
  "serde_json",
  "sha2 0.10.9",

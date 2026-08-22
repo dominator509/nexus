@@ -17,3 +17,5 @@ tests/artifacts/
 tests/backup/
 scripts/ep037-m2-tests.sh
 .agent/milestone-files/EP-037-M2.txt
+scripts/ep037-m3-tests.sh
+.agent/milestone-files/EP-037-M3.txt

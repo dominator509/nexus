@@ -1,0 +1,17 @@
+[package]
+name = "nexus-provider-storage-nas"
+version = "0.1.0"
+edition = "2021"
+description = "EP-037 NAS ArtifactStore adapter (SPEC-024): real filesystem-backed store over a NAS mount root with encryption-before-egress enforcement for sensitive classes"
+license = "MIT"
+
+[dependencies]
+nexus-artifacts = { path = "../../crates/nexus-artifacts", version = "0.1.0" }
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-provider-storage-local = { path = "../storage-local", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+sha2 = "0.10"
+tempfile = "3"
