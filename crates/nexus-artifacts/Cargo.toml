@@ -1,0 +1,11 @@
+[package]
+name = "nexus-artifacts"
+version = "0.1.0"
+edition = "2021"
+description = "EP-037 provider-neutral ArtifactStore contracts: ArtifactStore, ArtifactMetadata, ArtifactVersion, ArtifactHash, StorageMigration, BackupSet, RestorePlan, RetentionClass (SPEC-024)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

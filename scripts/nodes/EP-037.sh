@@ -1,4 +1,7 @@
 #!/usr/bin/env sh
+# EP-037 node driver: every milestone runs the REAL owned gate with rc
+# propagation. No masking path may ever return success without running
+# the gate.
 set -eu
 export CI=true
 export GIT_TERMINAL_PROMPT=0
@@ -8,15 +11,12 @@ export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
 case "$mode" in
-  M1) python3 scripts/node-artifact-check.py EP-037 M1 ;;
-  M2) python3 scripts/node-artifact-check.py EP-037 M2; cargo test --locked -p nexus-artifacts ep037_unit ;;
-  M3) python3 scripts/node-artifact-check.py EP-037 M3; cargo test --locked -p nexus-artifacts ep037_integration ;;
-  M4) python3 scripts/node-artifact-check.py EP-037 M4; cargo test --locked -p nexus-artifacts ep037_failure ;;
+  M1) sh scripts/ep037-m1-tests.sh ;;
+  M2) sh scripts/ep037-m2-tests.sh ;;
+  M3) sh scripts/ep037-m3-tests.sh ;;
+  M4) sh scripts/ep037-m4-tests.sh ;;
   M5|verify)
-      python3 scripts/node-artifact-check.py EP-037 M5
-      cargo test --locked -p nexus-artifacts
-      sh scripts/live-fire/LF-002.sh
-      sh scripts/live-fire/LF-020.sh
+      sh scripts/ep037-m5-tests.sh
       ;;
   *) echo "EP-037: FAIL - unknown mode $mode" >&2; exit 2;;
 esac

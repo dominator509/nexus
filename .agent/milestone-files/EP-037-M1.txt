@@ -3,5 +3,8 @@
 .agent/expected-files/EP-037.txt
 .agent/node-contracts/EP-037.md
 scripts/nodes/EP-037.sh
+scripts/ep037-m1-tests.sh
+Cargo.toml
+Cargo.lock
 crates/nexus-artifacts/
 infra/storage/

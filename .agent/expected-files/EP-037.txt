@@ -2,7 +2,11 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-037.txt
 .agent/node-contracts/EP-037.md
+.agent/milestone-files/EP-037-M1.txt
 scripts/nodes/EP-037.sh
+scripts/ep037-m1-tests.sh
+Cargo.toml
+Cargo.lock
 crates/nexus-artifacts/
 connectors/storage-local/
 connectors/storage-nas/
