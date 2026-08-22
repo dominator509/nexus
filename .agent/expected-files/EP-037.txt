@@ -15,3 +15,5 @@ connectors/storage-s3/
 infra/storage/
 tests/artifacts/
 tests/backup/
+scripts/ep037-m2-tests.sh
+.agent/milestone-files/EP-037-M2.txt

@@ -42,6 +42,7 @@ members = [
     "crates/nexus-sentinel",
     "crates/nexus-compute",
     "crates/nexus-artifacts",
+    "connectors/storage-local",
     "providers/digitalocean",
     "providers/aws",
     "providers/existing-ssh",

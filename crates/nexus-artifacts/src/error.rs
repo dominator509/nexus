@@ -179,6 +179,18 @@ impl ArtifactError {
         }
     }
 
+    /// Construct an internal invariant failure.
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self {
+            code: ArtifactErrorCode::Internal,
+            message: message.into(),
+            correlation: None,
+            actor: None,
+            tenant: None,
+            resource: None,
+        }
+    }
+
     /// Attach correlation context to the failure.
     pub fn with_correlation(mut self, correlation: CorrelationId) -> Self {
         self.correlation = Some(correlation);
