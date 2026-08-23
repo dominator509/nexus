@@ -6,7 +6,11 @@
   "datasource": { "type": "prometheus", "uid": "prometheus" },
   "templating": {
     "list": [
-      { "name": "node", "type": "query", "query": "label_values(nexus.ops.health.composed, node)" }
+      {
+        "name": "node",
+        "type": "query",
+        "query": "label_values(nexus.ops.health.composed, node)"
+      }
     ]
   },
   "panels": [

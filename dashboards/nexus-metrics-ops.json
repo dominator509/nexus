@@ -6,7 +6,11 @@
   "datasource": { "type": "prometheus", "uid": "prometheus" },
   "templating": {
     "list": [
-      { "name": "node", "type": "query", "query": "label_values(nexus.ops.health.composed, node)" }
+      {
+        "name": "node",
+        "type": "query",
+        "query": "label_values(nexus.ops.health.composed, node)"
+      }
     ]
   },
   "panels": [
@@ -15,9 +19,7 @@
       "title": "Request rate",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        { "refId": "A", "expr": "rate(nexus.requests.total[5m])" }
-      ],
+      "targets": [{ "refId": "A", "expr": "rate(nexus.requests.total[5m])" }],
       "fieldConfig": {
         "defaults": {
           "thresholds": {
@@ -35,9 +37,7 @@
       "title": "Workflow duration",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        { "refId": "A", "expr": "nexus.workflow.duration" }
-      ],
+      "targets": [{ "refId": "A", "expr": "nexus.workflow.duration" }],
       "fieldConfig": {
         "defaults": {
           "thresholds": {
@@ -55,9 +55,7 @@
       "title": "API availability",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        { "refId": "A", "expr": "nexus.api.availability" }
-      ],
+      "targets": [{ "refId": "A", "expr": "nexus.api.availability" }],
       "fieldConfig": {
         "defaults": {
           "thresholds": {

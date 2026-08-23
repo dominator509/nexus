@@ -6,7 +6,11 @@
   "datasource": { "type": "prometheus", "uid": "prometheus" },
   "templating": {
     "list": [
-      { "name": "source", "type": "query", "query": "label_values(nexus.ops.incidents.delivered, source)" }
+      {
+        "name": "source",
+        "type": "query",
+        "query": "label_values(nexus.ops.incidents.delivered, source)"
+      }
     ]
   },
   "panels": [
@@ -16,7 +20,10 @@
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "refId": "A", "expr": "nexus.ops.incidents.delivered{source=\"$source\"}" }
+        {
+          "refId": "A",
+          "expr": "nexus.ops.incidents.delivered{source=\"$source\"}"
+        }
       ],
       "fieldConfig": {
         "defaults": {
@@ -35,9 +42,7 @@
       "title": "Incident delivery failures (no data is not green)",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        { "refId": "A", "expr": "nexus.ops.incidents.failed" }
-      ],
+      "targets": [{ "refId": "A", "expr": "nexus.ops.incidents.failed" }],
       "fieldConfig": {
         "defaults": {
           "thresholds": {
@@ -55,9 +60,7 @@
       "title": "SLO error budget (NO_DATA never renders healthy)",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        { "refId": "A", "expr": "nexus.slo.storage.put_success" }
-      ],
+      "targets": [{ "refId": "A", "expr": "nexus.slo.storage.put_success" }],
       "fieldConfig": {
         "defaults": {
           "thresholds": {
