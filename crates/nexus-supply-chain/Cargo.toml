@@ -1,0 +1,12 @@
+[package]
+name = "nexus-supply-chain"
+version = "0.1.0"
+edition = "2021"
+description = "EP-039 provider-neutral supply-chain contracts: LicenseClassifier, ComponentBoundary, SbomGenerator, ArtifactSigner, ProvenanceAttestation, AdvisoryMonitor, DependencyWaiver (SPEC-019)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10"

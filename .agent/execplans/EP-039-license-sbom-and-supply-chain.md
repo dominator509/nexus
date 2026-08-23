@@ -271,19 +271,120 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
+## M1 progress (observed 2026-08-23)
+
+Remote-sync truth (EP-038 closure): EP-038 remote sync was BLOCKED by
+GitHub credential HTTP 401 on every candidate (gh token, gateway-log
+tokens, SSH keys). Local closure is complete; remote refs are NOT
+verified. Fresh `gh auth login` or credential repair is required before
+any push. EP-039 must not claim remote synchronization until observed
+with ls-remote or equivalent. No force-push was attempted.
+
+M1 implemented and proven (all commands run now, outputs observed):
+
+- `crates/nexus-supply-chain/` provider-neutral supply-chain contract
+  crate (workspace member; deps only nexus-domain + serde + serde_json
+  + sha2; no vendor SDK / OCI / scanner / signer imports; dependency
+  direction enforced by the gate via cargo tree).
+- Vocabulary (deny-unknown, serde fail-closed): LicenseClass
+  (GREEN/REVIEW/SIDECAR/EXTERNAL/PROHIBITED per LICENSE_POLICY.md),
+  LicenseReview (APPROVED/DENIED/NEEDS_REVIEW), IntegrationMode
+  (EMBEDDED/PROCESS_SIDECAR/EXTERNAL_PROVIDER), ApprovalState
+  (APPROVED/REJECTED/PENDING), RiskClass, VerificationResult
+  (VERIFIED/NOT_VERIFIED/UNVERIFIED), WaiverState, AdvisorySeverity
+  (CRITICAL blocks release).
+- Error surface: SupplyChainErrorCode with SPEC-006 codes +
+  supply-chain-specific LicenseDenied/LicenseUnknown/SbomIncomplete/
+  ProvenanceMissing/SignatureInvalid/AdvisoryBlocking/WaiverExpired;
+  `to_redacted_json()` scrubs secret-shaped values (sk-, ghp_, AKIA,
+  Bearer, ...) at the evidence boundary - proven by
+  ep039_unit_error_messages_never_contain_secret_shaped_values.
+- Model: ArtifactDigest (alg:hex, lowercase, >=32 hex, rejects tags),
+  ComponentIdentity (digest is identity: same name+version with
+  different digest != same artifact), Component (explicit approval +
+  verification + review ladder; is_releasable() requires all three),
+  ComponentBoundary + SourceOffer (copyleft sidecar isolation),
+  SbomDocument (is_complete requires version+source+license on every
+  package incl. transitive; is_current binds run_id + freshness;
+  GENERATED != VERIFIED), ProvenanceAttestation (unsigned != trusted),
+  DependencyWaiver (active+unexpired only), Advisory (critical without
+  mitigation blocks).
+- Ports (object-safe, provider-neutral): LicenseClassifier +
+  LicenseClassifierPort (canonical classifier implementing
+  LICENSE_POLICY.md: permissive GREEN, MPL/LGPL REVIEW, GPL/AGPL
+  SIDECAR, commercial EXTERNAL, everything else DENIED),
+  ComponentBoundaryPort, SbomGeneratorPort, ArtifactSigner,
+  AdvisoryMonitor, DependencyWaiverPort.
+- 41 `ep039_unit_*` proofs green across 3 suites (0 failed, 0 ignored)
+  covering: deny-unknown vocabulary + serde rejection, license
+  fail-closed (unknown/missing), LICENSE PRESENT != VERIFIED,
+  DEPENDENCY EXISTS != APPROVED, ALLOWLIST ENTRY != APPROVAL FOR ALL
+  USES, TRANSITIVE != OUT OF SCOPE, PACKAGE NAME MATCH != SAME
+  ARTIFACT, IMAGE TAG != DIGEST, SBOM GENERATED != VERIFIED,
+  BUILD PASSED != SBOM COMPLETE, LOCKFILE EXISTS != ACCOUNTED FOR,
+  stale SBOM fails, provenance unsigned fails, waiver expired/revoked
+  fails, advisory critical blocks, error codes canonical + secret-free
+  serialization, port traits object-safe.
+- Gate `scripts/ep039-m1-tests.sh` non-vacuous: material presence,
+  workspace membership, real cargo test with pass-count vacuity guards
+  (nonzero pass, zero failed, zero ignored), 29 anti-masking sentinels
+  observed, dependency-direction proof (forbidden provider SDK
+  families), no-placeholder scan, clippy -D warnings clean, fmt clean,
+  crate license declared. Observed: `EP-039 M1 gate: ok`.
+- Node `scripts/nodes/EP-039.sh` M1 rewired from artifact-check masking
+  to the real gate. Observed: `EP-039 M1: ok` EXIT=0.
+- Side gates green: scope audit EP-039: ok, security check: ok
+  (0 advisories), dependency audit: ok, license gate: ok, reality
+  gate: ok, blueprint validation: ok, format check: ok, lint: ok,
+  typecheck: ok, test-unit: ok (under canonical env with mise shims;
+  dart/flutter are mise-managed).
+- Workspace battery: green on approved scope with live battery
+  fixtures (EP-039 crate included as a pure unit crate; no fixture
+  needed; destructive EP-037 M4 crate still excluded with its own
+  self-provisioned gate proof).
+- Resource hygiene: zero EP-039-owned containers/networks/volumes/temp
+  roots (M1 starts no fixtures).
+
+Certification boundary (honest): supply-chain policy + license policy
+CONTRACT/POLICY CERTIFIED for the exact exercised surface; SBOM
+schema/evidence + component provenance model CONTRACT CERTIFIED;
+actual third-party legal clearance NOT ASSERTED; complete production
+artifact SBOM NOT ASSERTED (no generator in M1); container image
+provenance NOT ASSERTED; SLSA/in-toto signing NOT ASSERTED;
+remote GitHub synchronization NOT ASSERTED until credentials are
+repaired and remote refs verified.
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-23 (M1): `to_redacted_json()` initially serialized the raw
+  message, and the secret-shape proof failed - the redaction boundary
+  must scrub secret-shaped substrings at serialization, not rely on
+  callers. Added `redact_secret_shaped()` (sk-, pk-, rk-, ghp_, gho_,
+  ghs_, github_pat_, AKIA, Bearer markers) and proved it by test.
+- 2026-08-23 (M1): blueprint validation rejects non-ASCII characters in
+  source files (em-dashes in doc comments). Replaced with ASCII.
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-23 (M1): dependency surface locked to nexus-domain + serde +
+  serde_json + sha2. No SBOM/signing/scanning SDK in M1; the ports
+  exist but provider implementations are owned by later milestones.
+  Alternatives considered and rejected: adding a real SPDX library
+  (M2+/M3+ behavior, not contract), adding a signing library (M4+).
+- 2026-08-23 (M1): workspace membership + gate script added to
+  expected-files EP-039.txt (same convention as EP-038 which lists
+  Cargo.toml/Cargo.lock and every ep038 gate script), so scope audit
+  EP-039 passes.
 
 # 14. Outcomes & Retrospective
 

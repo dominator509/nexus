@@ -2525,6 +2525,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-supply-chain"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "nexus-suricata-connector"
 version = "0.1.0"
 dependencies = [

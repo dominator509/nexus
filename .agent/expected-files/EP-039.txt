@@ -3,6 +3,9 @@
 .agent/expected-files/EP-039.txt
 .agent/node-contracts/EP-039.md
 scripts/nodes/EP-039.sh
+scripts/ep039-m1-tests.sh
+Cargo.toml
+Cargo.lock
 crates/nexus-supply-chain/
 supply-chain/
 policies/licenses/

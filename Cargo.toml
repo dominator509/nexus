@@ -43,6 +43,7 @@ members = [
     "crates/nexus-compute",
     "crates/nexus-artifacts",
     "crates/nexus-observability",
+    "crates/nexus-supply-chain",
     "infra/otel",
     "infra/glitchtip",
     "infra/observability",
