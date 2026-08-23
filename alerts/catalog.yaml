@@ -1,0 +1,81 @@
+# EP-038 M1 canonical alert rule catalog (SPEC-007 alerts section).
+# Contract/config only - no delivery backend is claimed in M1.
+#
+# Invariants enforced by scripts/ep038-m1-tests.sh:
+# - ids are deny-unknown (must match ^[a-z0-9][a-z0-9._-]*$)
+# - severities come from the canonical vocabulary
+# - every rule has owner, threshold, runbook, suppression, test_signal
+# - no rule may rely on "no data" to look healthy
+
+version: 1
+
+rules:
+  - id: nexus.storage.provider_unavailable
+    severity: CRITICAL
+    owner: storage
+    description: Storage provider is unreachable or unavailable.
+    threshold: 1
+    runbook: docs/runbooks/storage-provider-unavailable.md
+    suppression:
+      window_secs: 300
+    test_signal: true
+    resolution: automatic_on_recovery
+
+  - id: nexus.storage.backup_verification_failed
+    severity: CRITICAL
+    owner: storage
+    description: BackupSet integrity verification failed.
+    threshold: 1
+    runbook: docs/runbooks/backup-verification-failed.md
+    suppression:
+      window_secs: 900
+    test_signal: true
+    resolution: manual
+
+  - id: nexus.gateway.rate_limit_exceeded
+    severity: WARNING
+    owner: gateway
+    description: Model gateway rate limit exceeded for a tenant.
+    threshold: 5
+    window_secs: 60
+    runbook: docs/runbooks/gateway-rate-limit.md
+    suppression:
+      window_secs: 300
+    test_signal: true
+    resolution: automatic_on_recovery
+
+  - id: nexus.health.node_stale
+    severity: WARNING
+    owner: fleet
+    description: Fleet node has not reported within its freshness window.
+    threshold: 1
+    window_secs: 300
+    runbook: docs/runbooks/fleet-node-stale.md
+    suppression:
+      window_secs: 600
+    test_signal: true
+    resolution: automatic_on_recovery
+
+  - id: nexus.slo.error_budget_exhausted
+    severity: CRITICAL
+    owner: slo
+    description: SLO error budget is exhausted.
+    threshold: 1
+    window_secs: 3600
+    runbook: docs/runbooks/slo-error-budget.md
+    suppression:
+      window_secs: 3600
+    test_signal: true
+    resolution: manual
+
+  - id: nexus.security.redaction_fail_closed
+    severity: CRITICAL
+    owner: security
+    description: A value could not be classified for redaction and was denied.
+    threshold: 1
+    window_secs: 60
+    runbook: docs/runbooks/redaction-fail-closed.md
+    suppression:
+      window_secs: 300
+    test_signal: true
+    resolution: manual

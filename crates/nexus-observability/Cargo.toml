@@ -1,0 +1,12 @@
+[package]
+name = "nexus-observability"
+version = "0.1.0"
+edition = "2021"
+description = "EP-038 provider-neutral observability contracts: TelemetryContext, RedactionPolicy, MetricCatalog, TracePolicy, HealthAggregator, IncidentSink, FleetHealth, SloEvaluator (SPEC-007)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10"

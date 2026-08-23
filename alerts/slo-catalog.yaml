@@ -1,0 +1,37 @@
+# EP-038 M1 canonical SLO catalog (SPEC-007 SLO section).
+# Contract/config only - evaluation semantics live in the
+# nexus-observability SloEvaluator contract.
+#
+# Invariants enforced by scripts/ep038-m1-tests.sh:
+# - ids are deny-unknown
+# - target is in (0,1]
+# - window is non-zero
+# - min_evidence >= 1 (zero-denominator never greens)
+# - NO EVENTS != SLO MET; NO ALERTS != SYSTEM HEALTHY
+
+version: 1
+
+slos:
+  - id: nexus.slo.storage.put_success
+    target: 0.999
+    window: 30d
+    min_evidence: 100
+    event_source: storage
+    good_event: put_verified
+    owner: storage
+
+  - id: nexus.slo.gateway.request_success
+    target: 0.99
+    window: 30d
+    min_evidence: 1000
+    event_source: gateway
+    good_event: request_ok
+    owner: gateway
+
+  - id: nexus.slo.health.reporting_freshness
+    target: 0.999
+    window: 7d
+    min_evidence: 100
+    event_source: fleet
+    good_event: report_fresh
+    owner: fleet

@@ -3,7 +3,11 @@
 .agent/expected-files/EP-038.txt
 .agent/node-contracts/EP-038.md
 scripts/nodes/EP-038.sh
+scripts/ep038-m1-tests.sh
+Cargo.toml
+Cargo.lock
 crates/nexus-observability/
+alerts/
 infra/otel/
 infra/glitchtip/
 infra/observability/

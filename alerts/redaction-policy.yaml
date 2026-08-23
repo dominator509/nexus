@@ -1,0 +1,62 @@
+# EP-038 M1 alert redaction policy (SPEC-007 behavior 2; fail-closed).
+# Contract/config only - applied by nexus-observability RedactionPolicy
+# before any alert payload leaves the local component boundary.
+#
+# Invariants enforced by scripts/ep038-m1-tests.sh:
+# - OBSERVED RAW EVENT != EXPORTABLE TELEMETRY
+# - secret-shaped values are hashed or dropped, never kept raw
+# - unclassified values fail closed to a redaction marker
+# - raw payload/prompt/token fields are denied by default
+
+version: 1
+
+allowed_fields:
+  - component
+  - operation
+  - node
+  - severity
+  - unit
+  - metric
+  - state
+
+sensitive_fields:
+  - payload
+  - body
+  - prompt
+  - request
+  - response
+  - secret
+  - token
+  - password
+  - api_key
+  - authorization
+  - connector
+  - audio
+  - image
+
+secret_shape_detection:
+  aws_access_key: "AKIA prefix, >=20 chars"
+  private_key_block: "BEGIN ... PRIVATE KEY"
+  bearer_token: "bearer prefix, >16 chars"
+  assignment_shapes:
+    - password=
+    - passwd=
+    - secret=
+    - token=
+    - api_key=
+    - apikey=
+    - access_key=
+    - authorization:
+    - x-api-key:
+    - client_secret=
+  email: "local>=3 @ domain"
+  phone: ">=11 digits"
+  artifact_key: "64 lowercase hex"
+  ipv4: "4 octets"
+
+actions:
+  secret_action: HASH
+  unclassified_action: MARK_REDACTED
+
+fail_closed: true
+raw_payload_logging_by_default: false

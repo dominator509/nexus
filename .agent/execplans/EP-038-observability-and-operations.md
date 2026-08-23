@@ -274,11 +274,60 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+## M1 progress (observed)
+
+- Created `crates/nexus-observability/` - provider-neutral contract crate
+  (no Prometheus/Grafana/OTel SDK/Datadog/Honeycomb/Sentry/Loki/Tempo/
+  Jaeger/cloud SDK dependencies; cargo tree verified).
+- All 8 public interfaces implemented and re-exported: TelemetryContext,
+  RedactionPolicy, MetricCatalog (MetricRegistry), TracePolicy,
+  HealthAggregator (CompositeHealthAggregator), IncidentSink
+  (RecordingIncidentSink), FleetHealth, SloEvaluator
+  (WindowedSloEvaluator). Port traits isolated in `src/port.rs`.
+- Redaction-first model: `RedactedEnvelope` is the only egress form;
+  `OBSERVED RAW EVENT != EXPORTABLE TELEMETRY`; secret-shaped values are
+  hashed (`sha256:`-prefixed to avoid re-classification as artifact
+  keys), payload/prompt/token fields denied by default, unclassified
+  values fail closed to `[REDACTED]`; `contains_secret_shaped` rejects
+  embedded keys in metadata fields.
+- Health ladder: CONFIGURED != REACHABLE != RESPONDING != READY; stale
+  observations compose to Unknown/Degraded, never healthy.
+- FleetHealth: staleness visible; one healthy node never makes an
+  unknown fleet healthy; unsafe-to-claim when critical nodes unknown.
+- SLO: total=0 -> NoData; below min_evidence -> InsufficientEvidence;
+  never green without data.
+- IncidentSink: dedupe by key; severity escalation never hidden;
+  redacted bodies; id->dedupe_key index fixes get/ack/resolve.
+- Traces: TRACE ID PRESENT != TRACE EXPORTED != TRACE SAFE; denied
+  attribute keys force Denied (fail-closed); redaction before export.
+- Deny-unknown vocabularies: Severity, HealthState, MetricKind,
+  IncidentState, SloState, RedactionAction, TelemetrySignal,
+  StabilityLevel, CardinalityPolicy; serde rejects unknown wire values.
+- `alerts/` M1-owned contract/config: README.md, catalog.yaml (6 rules),
+  redaction-policy.yaml (fail-closed), slo-catalog.yaml (3 SLOs).
+- Gate: `scripts/ep038-m1-tests.sh` (17 sentinel anti-masking guards,
+  vacuity guards, dependency-direction, alerts validation, clippy/fmt);
+  node `scripts/nodes/EP-038.sh M1` rewired from artifact-check masking
+  to the real gate.
+- Test counts: 27 unit tests green (27 passed; 0 failed; 0 ignored);
+  5 real contract defects found and fixed during the run (embedded-key
+  context rejection, hash prefix, trace denied-key semantics, sink
+  id->dedupe index, error size).
+- Certification boundary: nexus-observability + 8 interfaces + alerts/ =
+  CONTRACT CERTIFIED; Prometheus/Grafana/OTel collector/GlitchTip/
+  Loki/Tempo/Jaeger/incident delivery = NOT ASSERTED.
+- M1 closure: EP-037 M4 fresh-provider proof refreshed 2026-08-23
+  (canonical self-provisioned gate 21/21 on a truly fresh SeaweedFS
+  4.43 runtime; M5 gate green incl. M4 regression; workspace battery
+  green on approved scope with live battery providers; foreign LF-*
+  evidence churn from gate reruns reverted per EP-037 closure
+  precedent).
 
 # 12. Surprises & Discoveries
 

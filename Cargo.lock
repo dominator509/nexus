@@ -1982,6 +1982,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-observability"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "nexus-opa"
 version = "0.1.0"
 dependencies = [
