@@ -384,9 +384,97 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   incident delivery, production monitoring deployment (M3+ own
   them).
 
+## M3 progress (observed)
+
+- Fence (`.agent/milestone-files/EP-038-M3.txt`): M3 owns `infra/glitchtip/`
+  real dependency + transport integration; node `scripts/nodes/EP-038.sh M3`
+  must emit `EP-038 M3: ok`; commit theme `real dependency and transport
+  integration`. MANIFEST requires `scripts/probes/glitchtip.sh` (upgraded
+  from placeholder to the full ladder by M3).
+- Created `infra/glitchtip/` - crate `nexus-glitchtip` (workspace member):
+  `dsn.rs` (DSN parse, secret-safe diagnostics, 32-hex public key never
+  rendered), `envelope.rs` (exact Sentry envelope grammar
+  `Headers {"\n" Item} ["\n"]`), `event.rs` (bounded event builder),
+  `transport.rs` (hand-rolled std::net POST; SPEC-006 mapping
+  refused->Unavailable, timeout->Timeout, 401/403->Authorization,
+  404->NotFound, 429->RateLimit, 5xx->ExternalProvider, malformed->
+  ExternalProvider; fresh TcpStream per request), `incident.rs`
+  (RedactedEnvelope-only boundary; dedupe key -> Sentry fingerprint;
+  per-delivery event-id nonce), `sink.rs` (M1 IncidentSink impl with
+  dedupe/escalation semantics), `diag.rs` (probe ladder
+  CONFIGURED != REACHABLE != RESPONDING != ACCEPTED != VERIFIED).
+- Integration proofs in `tests/glitchtip/` (crate `nexus-glitchtip-tests`,
+  workspace member): 4 real-provider tests (`ep038_integration_*`) +
+  dedicated stopped-provider binary (`ep038_m3_stopped.rs`) executed by the
+  gate as a separate cargo invocation after the real fixture is stopped.
+- Gate `scripts/ep038-m3-tests.sh` (non-vacuous): provisions REAL
+  postgres:18.4 + redis:7-alpine (network alias `redis`, required by baked
+  django cache config) + glitchtip:6.1.8 (`SERVER_ROLE=all_in_one`,
+  `GLITCHTIP_EMBED_WORKER=true`), runtime-generated credentials, Django
+  shell provisioning (users.User.create_user, org, OrganizationUser
+  role=3, Project, ProjectKey.public_key.hex, APIToken scopes=1153 =
+  project:read(0)|event:read(7)|org:read(10)), mode-600 env/token files,
+  unit 40/40, integration 4/4, stopped phase 1/1 (refused -> Unavailable),
+  exact pass-count vacuity guards, orphan guard (owned containers/network/
+  volume/temp files), trap teardown on every exit path. Node M3 rewired
+  from artifact-check masking to the real gate.
+- `scripts/probes/glitchtip.sh` ladder upgraded: CONFIGURED (DSN present
+  and shaped) -> REACHABLE (TCP) -> RESPONDING (HTTP status) ->
+  AUTHENTICATED (envelope POST with X-Sentry-Auth accepted) -> READY
+  (token readback returns real issues). Never prints the DSN key/token.
+- Test counts: M3 unit 40/40 green; M3 integration 4/4 green; stopped
+  phase 1/1 green; M1 regression 27 green; M2 regression 24 green; clippy
+  -D warnings clean; fmt clean; security/license/dependency-audit/reality/
+  scope-audit gates green. Expected-files full-list gate is M5-owned (the
+  list intentionally includes `infra/observability/`, `dashboards/` which
+  do not exist until M4/M5; same as M1/M2).
+- Real defects found and fixed by the proofs: (1) GlitchTip 6.1.8
+  authenticates envelope ingestion from the `X-Sentry-Auth` header, NOT
+  the envelope-body `dsn` (the probe originally omitted `sentry_key` and
+  would 403 against a healthy provider); (2) event_id was derived from
+  incident_id alone, so an escalated redelivery of the same incident got a
+  duplicate event_id and the provider dropped it -> per-delivery nonce
+  added; (3) redis must answer the baked-in hostname `redis` (network
+  alias on the owned container); (4) postgres:18+ refuses a volume mount
+  at `/var/lib/postgresql/data` (versioned PGDATA) -> mount the parent;
+  (5) readback is asynchronous: HTTP 200 acceptance precedes worker
+  processing by seconds -> integration tests poll readback against a
+  monotonic 30s deadline with recorded last observation.
+- Certification boundary: GlitchTip adapter INTEGRATION CERTIFIED for the
+  exact real fixture path exercised (real 6.1.8, real postgres 18.4, real
+  redis 7-alpine, real envelope POST + worker + readback); stopped-
+  provider handling CERTIFIED for the exact stopped fixture phase. NOT
+  ASSERTED: production GlitchTip deployment, GlitchTip SaaS/Sentry cloud,
+  PagerDuty/Slack/email incident delivery, arbitrary Sentry-compatible
+  providers, production monitoring deployment, real fleet incident
+  operations beyond the exercised fixture.
+
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-23 (M3, real GlitchTip 6.1.8): envelope HTTP 200 != processed.
+  The provider accepts the envelope immediately; the embedded worker
+  creates the issue asynchronously (seconds). Readback immediately after
+  POST returns zero issues; deadline-based readback polling is required.
+- 2026-08-23 (M3, real GlitchTip 6.1.8): `event_auth`/`auth_from_request`
+  authenticates via `X-Sentry-Auth` header or `?sentry_key=` query param;
+  the envelope-body `dsn` header is IGNORED for authentication. The DSN
+  public key must be placed in the header.
+- 2026-08-23 (M3, real GlitchTip 6.1.8): duplicate `event_id` events are
+  dropped by the provider (an escalated redelivery with a stale
+  event_id never lands). Event ids must be unique per delivery.
+- 2026-08-23 (M3): GlitchTip's django cache config bakes in hostname
+  `redis`; a differently-named redis container breaks org/project
+  creation (`Organization.save` -> `clear_metrics_cache` -> name
+  resolution failure). Use `--network-alias redis`.
+- 2026-08-23 (M3): postgres:18+ official image refuses data volumes at
+  `/var/lib/postgresql/data` ("Error: in 18+, these Docker images are
+  configured to store database data in a..."): mount the parent
+  `/var/lib/postgresql` instead.
+- 2026-08-23 (M3): APIToken scopes are a BitField; the working readback
+  token carries scopes=1153 = bits project:read(0) | event:read(7) |
+  org:read(10). ProjectKey.public_key is a UUID; the DSN key is its
+  32-hex `.hex` form. Django user creation is `create_user(email,
+  password)` (2-arg custom user model).
 
 # 13. Decision Log
 

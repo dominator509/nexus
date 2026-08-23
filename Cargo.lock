@@ -1664,6 +1664,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-glitchtip"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-observability",
+ "nexus-otel",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-glitchtip-tests"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-glitchtip",
+ "nexus-observability",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-gmail"
 version = "0.1.0"
 dependencies = [

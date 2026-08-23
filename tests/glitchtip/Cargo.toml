@@ -1,0 +1,21 @@
+[package]
+name = "nexus-glitchtip-tests"
+version = "0.1.0"
+edition = "2021"
+description = "EP-038 M3 GlitchTip integration proofs: real ephemeral GlitchTip 6.1.8 fixture -- provisioning, envelope delivery, readback verification, dedupe, failure mapping, teardown (SPEC-007; node contract)"
+license = "MIT"
+publish = false
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-observability = { path = "../../crates/nexus-observability", version = "0.1.0" }
+nexus-glitchtip = { path = "../../infra/glitchtip", version = "0.1.0" }
+serde_json = "1.0"
+
+[[test]]
+name = "ep038_m3_integration"
+path = "tests/ep038_m3_integration.rs"
+
+[[test]]
+name = "ep038_m3_stopped"
+path = "tests/ep038_m3_stopped.rs"

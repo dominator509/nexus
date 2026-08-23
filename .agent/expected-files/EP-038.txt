@@ -15,3 +15,6 @@ infra/observability/
 dashboards/
 alerts/
 tests/observability/
+tests/glitchtip/
+scripts/ep038-m3-tests.sh
+scripts/probes/glitchtip.sh
