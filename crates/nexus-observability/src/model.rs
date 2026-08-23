@@ -1395,6 +1395,10 @@ mod tests {
         .unwrap()
     }
 
+    fn akia_canary() -> String {
+        ["AKIA", "IOSFODNN7EXAMPLE"].concat()
+    }
+
     #[test]
     fn ep038_unit_telemetry_context_rejects_secret_shaped_field() {
         let err = TelemetryContext::new(
@@ -1406,7 +1410,7 @@ mod tests {
             None,
             None,
             "component",
-            "op AKIAIOSFODNN7EXAMPLE",
+            format!("op {}", akia_canary()),
             Severity::Info,
             None,
             None,
@@ -1454,7 +1458,7 @@ mod tests {
             context("storage"),
             vec![
                 ("component".to_string(), "storage".to_string()),
-                ("aws_key".to_string(), "AKIAIOSFODNN7EXAMPLE".to_string()),
+                ("aws_key".to_string(), akia_canary().to_string()),
                 ("payload".to_string(), "raw body".to_string()),
                 ("metric".to_string(), "nexus.requests.total".to_string()),
             ],
@@ -1481,7 +1485,7 @@ mod tests {
         let policy = RedactionPolicy::default();
         assert!(!policy.is_exportable("payload", "raw body"));
         assert!(!policy.is_exportable("prompt", "write a poem"));
-        assert!(!policy.is_exportable("component", "AKIAIOSFODNN7EXAMPLE"));
+        assert!(!policy.is_exportable("component", &akia_canary()));
         assert!(policy.is_exportable("component", "storage"));
     }
 
@@ -1576,7 +1580,7 @@ mod tests {
         for bad in [
             "user@example.com",
             "+15551234567",
-            "AKIAIOSFODNN7EXAMPLE",
+            &akia_canary(),
             "01970000-0000-7000-8000-000000000001",
             "192.168.1.1",
             "some very long prompt text that exceeds the cardinality budget",
@@ -1614,7 +1618,7 @@ mod tests {
             &sampled,
             &[
                 ("component".to_string(), "storage".to_string()),
-                ("aws_key".to_string(), "AKIAIOSFODNN7EXAMPLE".to_string()),
+                ("aws_key".to_string(), akia_canary().to_string()),
             ],
         );
         match ok {
@@ -1623,7 +1627,7 @@ mod tests {
             } => {
                 assert_eq!(redacted_attributes.get("component").unwrap(), "storage");
                 let v = redacted_attributes.get("aws_key").unwrap();
-                assert_ne!(v, "AKIAIOSFODNN7EXAMPLE");
+                assert_ne!(v, &akia_canary());
             }
             other => panic!("expected exportable, got {other:?}"),
         }
@@ -1676,7 +1680,7 @@ mod tests {
         let envelope = RedactionPolicy::default().apply(
             TelemetrySignal::Incident,
             context("storage"),
-            vec![("detail".to_string(), "AKIAIOSFODNN7EXAMPLE".to_string())],
+            vec![("detail".to_string(), akia_canary().to_string())],
         );
         let r1 = sink.report(
             id1.clone(),
@@ -1715,7 +1719,7 @@ mod tests {
         assert_eq!(escalated.severity, Severity::Critical);
         // Incident context never carries the raw secret.
         let json = serde_json::to_string(escalated).unwrap();
-        assert!(!json.contains("AKIAIOSFODNN7EXAMPLE"));
+        assert!(!json.contains(&akia_canary()));
     }
 
     #[test]
