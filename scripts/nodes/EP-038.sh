@@ -11,7 +11,7 @@ case "$mode" in
   M1) sh scripts/ep038-m1-tests.sh ;;
   M2) sh scripts/ep038-m2-tests.sh ;;
   M3) sh scripts/ep038-m3-tests.sh ;;
-  M4) python3 scripts/node-artifact-check.py EP-038 M4; cargo test --locked -p nexus-observability ep038_failure ;;
+  M4) sh scripts/ep038-m4-tests.sh ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-038 M5
       cargo test --locked -p nexus-observability

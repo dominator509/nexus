@@ -1,0 +1,27 @@
+[package]
+name = "nexus-observability-ops-tests"
+version = "0.1.0"
+edition = "2021"
+description = "EP-038 M4 real-provider failure proofs: forced failures, abuse cases, and observability against a REAL ephemeral GlitchTip fixture (SPEC-007; node contract)"
+license = "MIT"
+publish = false
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-observability = { path = "../../crates/nexus-observability", version = "0.1.0" }
+nexus-otel = { path = "../../infra/otel", version = "0.1.0" }
+nexus-glitchtip = { path = "../../infra/glitchtip", version = "0.1.0" }
+nexus-observability-ops = { path = "../../infra/observability", version = "0.1.0" }
+serde_json = "1.0"
+
+[[test]]
+name = "ep038_m4_failures"
+path = "tests/ep038_m4_failures.rs"
+
+[[test]]
+name = "ep038_m4_revoked"
+path = "tests/ep038_m4_revoked.rs"
+
+[[test]]
+name = "ep038_m4_stopped"
+path = "tests/ep038_m4_stopped.rs"

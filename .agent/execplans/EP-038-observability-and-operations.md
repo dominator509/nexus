@@ -449,6 +449,91 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   providers, production monitoring deployment, real fleet incident
   operations beyond the exercised fixture.
 
+## M4 progress (observed)
+
+- Fence (`.agent/milestone-files/EP-038-M4.txt`): M4 owns
+  `infra/observability/` - forced failures, abuse cases, and
+  observability; node `scripts/nodes/EP-038.sh M4` must emit
+  `EP-038 M4: ok`; commit theme `forced failures, abuse cases, and
+  observability`.
+- Created `infra/observability/` - crate `nexus-observability-ops`
+  (workspace member; deps only nexus-domain + nexus-observability +
+  nexus-otel + nexus-glitchtip + serde + serde_json; no vendor
+  telemetry SDK):
+  - `runtime.rs` - `ObservabilityRuntime` composing M1 contracts
+    (RedactionPolicy, MetricRegistry, CompositeHealthAggregator,
+    WindowedSloEvaluator, RecordingIncidentSink) with M2 writers
+    (structured log, Prometheus text 0.0.4) and M3 provider
+    (GlitchTipIncidentSink); redaction-first incident pipeline with
+    local quarantine (incident never lost on provider failure);
+    metric catalog validation rejects unbounded/secret-shaped labels;
+    health composes never-healthy-from-stale; SLO NoData != Met.
+  - `diag.rs` - operations diagnostic ladder CONFIGURED != REACHABLE
+    != RESPONDING != READY over the real production probe; READY only
+    via real envelope POST + real readback (`run_with_readback`),
+    never config alone.
+  - `recovery.rs` - bounded recovery command: monotonic deadline +
+    max-attempt budget + last-observed-failure; permanent failures
+    stop immediately; budget exhaustion fails closed with truthful
+    description; `classify_recovery` retries only Unavailable/Timeout/
+    ExternalProvider, never Authorization/Policy.
+  - `audit.rs` - bounded redacted audit records; secret-shaped values
+    rejected at construction; JSON-lines serialization.
+- Integration proofs in `tests/observability-ops/` (crate
+  `nexus-observability-ops-tests`, workspace member): 3 binaries -
+  `ep038_m4_failures.rs` (6 live-provider proofs: incident delivery +
+  audit correlation, duplicate-request dedupe, secret canary never
+  egresses, diag READY with real readback, metric cardinality denied,
+  SLO no-data), `ep038_m4_revoked.rs` (explicit revoked-token phase),
+  `ep038_m4_stopped.rs` (stopped-provider: refused -> Unavailable +
+  budget fail-closed). No in-test skips; missing phase env panics
+  loudly.
+- Gate `scripts/ep038-m4-tests.sh` (non-vacuous): provisions REAL
+  postgres:18.4 + redis:7-alpine (network alias redis) + glitchtip:6.1.8
+  (SERVER_ROLE=all_in_one + GLITCHTIP_EMBED_WORKER=true) with
+  runtime-generated credentials, Django shell provisioning (org/
+  project/ProjectKey/APIToken scopes=1153), mode-600 env/token files,
+  unit 16/16, integration 6/6, revoked-token phase 1/1 (token deleted
+  in DB -> readback 401 -> diag NOT READY), stopped phase 1/1
+  (container stopped -> Unavailable + bounded recovery budget
+  exhausted), restart-recovery probe 1/1 (same provider restarted,
+  fresh token minted, production probe READY), exact pass-count vacuity
+  guards, orphan guard (owned containers/network/volume/temp files),
+  trap teardown on every exit path. Node M4 rewired from artifact-check
+  masking to the real gate.
+- Real defects found + fixed by real-provider proofs: (1) `docker exec`
+  without `-i` silently swallowed the heredoc -> token revoke never
+  happened; (2) revoked GlitchTip token readback returns 401 (verified
+  empirically); (3) recovery budget-exhaustion flag must bind on
+  attempt limit, not only deadline; (4) revoked-token proof moved to a
+  dedicated binary so the shared live suite is not poisoned by phase
+  selection.
+- Test counts: M4 unit 16/16 green; M4 live-provider integration 6/6;
+  revoked phase 1/1; stopped phase 1/1; restart-recovery 1/1; M1
+  regression green; M2 regression green; M3 regression green (40/40 +
+  4/4 + 1/1); EP-037 M4 regression gate green (21/21 + M1-M3);
+  workspace battery green on approved scope (excluding only the
+  fixture-driven EP-038 test crates + destructive EP-037 M4 crate,
+  each with its own self-provisioned gate proof); clippy -D warnings
+  clean (workspace); fmt clean; security/license/dependency-audit/
+  reality/scope-audit/blueprint gates green.
+- Resource hygiene: gate trap removes every owned container/network/
+  named volume/temp file; zero M4-owned residue after each run.
+  Expected-files full-list check still defers `dashboards/` to M5
+  (same as M1/M2/M3 pattern).
+- Certification boundary (honest): nexus-observability-ops runtime
+  INTERNAL CONTRACT CERTIFIED for the exact exercised surface
+  (redaction-first incident pipeline, quarantine, bounded recovery,
+  health/SLO semantics); ops diagnostic ladder CERTIFIED for the exact
+  exercised real GlitchTip 6.1.8 fixture (envelope POST + readback);
+  stopped-provider handling CERTIFIED for the exact stopped fixture
+  phase; revoked-token authorization semantics CERTIFIED for the exact
+  revoked fixture phase. NOT ASSERTED: Prometheus production server,
+  Grafana dashboards in production, OpenTelemetry collector production
+  pipeline, Loki/Tempo/Jaeger production deployment, PagerDuty/Slack/
+  email delivery, real fleet-wide telemetry, production monitoring
+  operations (M5 owns dashboards/ + node closure).
+
 # 12. Surprises & Discoveries
 
 - 2026-08-23 (M3, real GlitchTip 6.1.8): envelope HTTP 200 != processed.

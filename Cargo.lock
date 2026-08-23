@@ -2012,6 +2012,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-observability-ops"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-glitchtip",
+ "nexus-observability",
+ "nexus-otel",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-observability-ops-tests"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-glitchtip",
+ "nexus-observability",
+ "nexus-observability-ops",
+ "nexus-otel",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-observability-tests"
 version = "0.1.0"
 dependencies = [

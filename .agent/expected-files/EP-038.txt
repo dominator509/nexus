@@ -12,6 +12,8 @@ alerts/
 infra/otel/
 infra/glitchtip/
 infra/observability/
+tests/observability-ops/
+scripts/ep038-m4-tests.sh
 dashboards/
 alerts/
 tests/observability/
