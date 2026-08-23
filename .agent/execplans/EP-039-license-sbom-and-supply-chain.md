@@ -272,10 +272,110 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+## M2 progress (observed 2026-08-24)
+
+Remote-sync truth (unchanged, EP-038 closure): EP-038 remote sync
+remains BLOCKED by GitHub credential HTTP 401 on every candidate
+(gh token, gateway-log tokens, SSH keys). Local closure is complete;
+remote refs are NOT verified. Fresh `gh auth login` or credential
+repair is required before any push. EP-039 must not claim remote
+synchronization until observed with ls-remote or equivalent. No
+force-push was attempted.
+
+M2 implemented and proven (all commands run now, outputs observed):
+
+- `supply-chain/` root-level workspace crate @nexus-supply-chain-policy
+  (deps only nexus-supply-chain + nexus-domain + serde + serde_json;
+  no vendor SDK / OCI / scanner / signer / SPDX / CycloneDX imports;
+  dependency direction enforced by the gate via cargo tree). Implements
+  the production behavior behind the M1 contract ports.
+- License behavior (license.rs): LicensePolicy with deterministic
+  fail-closed ladder. GREEN permitted only under exact policy match +
+  explicit review APPROVED + approval APPROVED (ALLOWLIST ENTRY !=
+  APPROVAL FOR ALL USES); REVIEW requires review/approval state; SIDECAR
+  requires sidecar terms state; EXTERNAL never auto-approved; PROHIBITED/
+  UNKNOWN/MISSING fail closed; fuzzy strings (MIT-ish, MIT/X11, Apache,
+  GPL compatible) never bypass policy; evaluation deterministic.
+- Boundary behavior (boundary.rs): BoundaryPolicy enforces copyleft
+  process separation (SIDECAR + EMBEDDED denied), declared boundary
+  required, documented API contract required, source offer required
+  (notice duty), EXTERNAL must be ExternalProvider integration,
+  transitive dependencies never excluded (TRANSITIVE != OUT OF SCOPE).
+- SBOM behavior (sbom.rs): SbomPolicy rejects empty/stale/wrong-run/
+  generated-not-verified/missing-required/duplicate-ambiguity (same
+  name+version different digest != same artifact)/package name
+  collision/image-tag-without-digest (IMAGE TAG != IMAGE DIGEST)/
+  missing-source; complete current verified SBOM passes.
+- Provenance behavior (provenance.rs): ProvenancePolicy requires verified
+  signature (unsigned != trusted), deterministic canonical binding
+  (source/version/registry/lockfile/digest/license/owner/policy/run_id),
+  different digest -> different binding, display name alone never trusted.
+- Waiver behavior (waiver.rs): WaiverPolicy denies absent/expired/revoked/
+  wrong-package/wrong-version/wrong-scope/wildcard (unless policy
+  explicitly permits); valid waiver permits only the exact bounded
+  decision (exact package+version+scope+unexpired).
+- Advisory behavior (advisory.rs): AdvisoryPolicy requires source queried
+  ("no advisories returned" != secure without a verified query), critical
+  without mitigation ADR blocks, expired/unbounded mitigation blocks,
+  bounded mitigation passes, fixed version safe only when the inventory
+  actually resolves outside affected versions, non-critical = risk state.
+- Evidence redaction (evidence.rs): shared redact_secret_shaped() +
+  EvidenceRedaction guard + EvidenceDocument.to_redacted_json() scrubbing
+  sk-/pk-/rk-/ghp_/AKIA/Bearer/xoxb-/glpat-/token=/api_key=/password=/
+  secret=/client_secret=/aws_secret_access_key=/private_key= and
+  credential-bearing URLs (constructed at runtime so no literal canaries
+  trip security-check - EP-036/EP-038 precedent). 6 redaction canary
+  proofs (sk-/ghp_ token, AKIA, Bearer, credential URL, password= kv,
+  evidence document all-fields) + plain-text preservation.
+- 59 `ep039_unit_m2_*` proofs green (0 failed, 0 ignored) across all
+  seven policy families + idempotency/determinism proofs.
+- Real defects found by my own tests and fixed: (1) waiver wildcard
+  matching order - wildcard now evaluated before exact package/version
+  match so a permitted wildcard actually matches any package/version;
+  (2) ArtifactId test helper - nexus-domain IDs are canonical lowercase
+  UUIDv7 (version nibble 7 at group 3, variant 8/9/a/b at group 4);
+  (3) fuzzy test corrected - SPDX ids are case-insensitive so "mit" is
+  the exact id, genuine fuzzies are substring/descriptive strings.
+- Gate `scripts/ep039-m2-tests.sh` non-vacuous: material presence,
+  workspace membership, real cargo test with pass-count vacuity guards,
+  41 anti-masking sentinels (one per behavior family + redaction +
+  determinism), dependency-direction forbidden-SDK proof, no-placeholder
+  scan, clippy -D warnings clean, fmt clean, crate license MIT,
+  redaction canary proof observed, M1 regression (cargo test -p
+  nexus-supply-chain with vacuity guards). Observed:
+  `EP-039 M2 gate: ok` EXIT=0.
+- Node `scripts/nodes/EP-039.sh` M2 rewired from artifact-check masking
+  to the real gate. Observed: `EP-039 M2: ok` EXIT=0.
+- M1 regression green: `EP-039 M1 gate: ok`, `EP-039 M1: ok` EXIT=0
+  (M2 must not regress the contract baseline).
+- Scope audit: `scope audit EP-039: ok` (scripts/ep039-m2-tests.sh added
+  to expected-files EP-039.txt per EP-038 convention of listing every
+  gate script).
+- Side gates green: security check: ok (0 advisories, 437 crates),
+  dependency audit: ok, license gate: ok, reality gate: ok, blueprint
+  validation: ok, format check: ok, typecheck: ok, test-unit: ok
+  (workspace battery includes nexus-supply-chain-policy; 116 green
+  result lines, 0 failed).
+- Resource hygiene: zero EP-039-owned containers/networks/volumes/temp
+  roots (M2 starts no fixtures - pure unit crate).
+
+Certification boundary (honest): supply-chain deterministic policy
+engine INTERNAL BEHAVIOR CERTIFIED for the exact exercised policy
+surface; license classification behavior CERTIFIED for the exact
+LICENSE_POLICY classes exercised; SBOM verification behavior CERTIFIED
+for the exact schema/model behavior exercised; waiver/advisory behavior
+CERTIFIED for the exact implemented+tested surface; redacted evidence
+boundary CERTIFIED for the exact exercised secret families. NOT
+ASSERTED: actual third-party legal clearance, production artifact SBOM
+completeness (no generator in M2), container image provenance,
+SLSA/in-toto signing, external advisory feed monitoring, GitHub
+dependency submission, remote synchronization (credential 401
+limitation).
 
 ## M1 progress (observed 2026-08-23)
 
@@ -385,6 +485,32 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   expected-files EP-039.txt (same convention as EP-038 which lists
   Cargo.toml/Cargo.lock and every ep038 gate script), so scope audit
   EP-039 passes.
+- 2026-08-24 (M2): behavior layer placed in root-level `supply-chain/`
+  crate @nexus-supply-chain-policy (workspace member; deps only
+  nexus-supply-chain + nexus-domain + serde + serde_json). This matches
+  the M2 fence CHANGE list (`supply-chain/`) and the root-crate
+  precedent (dashboards/ @nexus-dashboards). The M1 contract crate
+  stays untouched; M2 implements behavior behind the M1 ports.
+- 2026-08-24 (M2): new public vocabulary WaiverScope
+  (BuildTime/Runtime/TestFixture/ExternalService) added in the policy
+  crate. SPEC-019 canonical terms do not lock waiver scope, so this is
+  an M2-owned policy-boundary name; recorded here as the ADR-eligible
+  decision with deny-unknown semantics (unknown scope strings cannot
+  silently become valid).
+- 2026-08-24 (M2): waiver wildcard semantics. A wildcard waiver
+  (package="*" or version="*") is DENIED unless the policy explicitly
+  sets allow_wildcard=true; when permitted, it matches any package/
+  version but only within the permitted scope and never outlives its
+  expiry. This satisfies SPEC-019 behavior 8 (waiver has owner, exact
+  version, reason, controls, expiry, replacement plan) without
+  permitting permanent or global waivers.
+- 2026-08-24 (M2): test-helper truth. nexus-domain ArtifactId is a
+  canonical lowercase UUIDv7 (version nibble 7 in group 3, variant
+  8/9/a/b in group 4); the M2 provenance tests generate valid UUIDv7
+  at runtime rather than hardcoding display names.
+- 2026-08-24 (M2): redaction canaries constructed at runtime
+  (concatenation) so no secret-shaped literal exists in tracked source
+  - same precedent as EP-036/EP-038 redaction-canary tests.
 
 # 14. Outcomes & Retrospective
 

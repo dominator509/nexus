@@ -1,0 +1,12 @@
+[package]
+name = "nexus-supply-chain-policy"
+version = "0.1.0"
+edition = "2021"
+description = "EP-039 M2 deterministic supply-chain policy engine: license classification behavior, component boundary evaluation, SBOM verification, provenance binding, waiver validation, and advisory evaluation behind the M1 contract ports (SPEC-019; LICENSE_POLICY.md)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../crates/nexus-domain", version = "0.1.0" }
+nexus-supply-chain = { path = "../crates/nexus-supply-chain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

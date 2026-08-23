@@ -44,6 +44,7 @@ members = [
     "crates/nexus-artifacts",
     "crates/nexus-observability",
     "crates/nexus-supply-chain",
+    "supply-chain",
     "infra/otel",
     "infra/glitchtip",
     "infra/observability",
