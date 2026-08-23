@@ -1,0 +1,22 @@
+{
+  "node": "EP-038",
+  "milestone": "M5",
+  "lf_id": "EP-038-M5",
+  "run_id": "ep038-m5-1787508641-4061640b",
+  "git_commit": "f6d0e72342854da9e3d8edb922eaf15e5d9c367d",
+  "dashboard_count": 3,
+  "dashboard_validation": "ALL_VALIDATED",
+  "unit_proofs": 13,
+  "green_on_nodata_rejected": true,
+  "redaction_scan": "CLEAN",
+  "certification_boundary": {
+    "dashboards_config": "VALIDATED (syntax, required Grafana fields, catalog-backed selectors, redaction-safe, no green-on-no-data)",
+    "grafana_server": "NOT ASSERTED - no real Grafana exercised",
+    "prometheus_server": "NOT ASSERTED - no real Prometheus exercised",
+    "otel_collector": "NOT ASSERTED",
+    "loki_tempo_jaeger": "NOT ASSERTED",
+    "pagerduty_slack_email": "NOT ASSERTED",
+    "fleet_telemetry": "NOT ASSERTED",
+    "production_monitoring": "NOT ASSERTED"
+  }
+}

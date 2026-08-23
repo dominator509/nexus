@@ -534,7 +534,103 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   email delivery, real fleet-wide telemetry, production monitoring
   operations (M5 owns dashboards/ + node closure).
 
+## M5 progress (observed)
+
+- Fence (`.agent/milestone-files/EP-038-M5.txt`): M5 owns `dashboards/`
+  - live-fire/operations proof and node closure; node
+  `scripts/nodes/EP-038.sh M5` must emit `EP-038 M5: ok`; commit theme
+  `live-fire, operations, and node closure`.
+- Created `dashboards/` - crate `nexus-dashboards` (workspace member,
+  deps only nexus-domain + nexus-observability + nexus-observability-ops
+  + serde + serde_json; no vendor telemetry SDK):
+  - `src/lib.rs` - minimal Grafana dashboard document model (uid/title/
+    schemaVersion/panels/datasource/templating/targets/fieldConfig) +
+    validator + canonical catalog built from the REAL M4
+    `ops_metric_definitions()`, the M1 canonical fixture metrics, and
+    every rule/slo id declared in `alerts/catalog.yaml` +
+    `alerts/slo-catalog.yaml`. Validator rejects: green-on-no-data
+    (first threshold step mapping null to green), unknown metric
+    selectors, secret-shaped literals anywhere in the JSON, raw
+    high-cardinality label values (uuid/artifact/email-shaped), missing
+    required Grafana fields, empty panels/exprs, malformed JSON
+    (fail-closed, never skipped).
+  - `src/bin/dashboard-validate.rs` - CLI: validates every
+    `dashboards/*.json`, exits non-zero on any finding.
+  - `tests/ep038_m5_dashboards.rs` - 13 proofs: catalog contains M4 ops
+    metrics + M1 canonical + alert/slo ids; all three real dashboards
+    validate; contract metrics build via M1 MetricDefinition::new; and
+    negative proofs for every anti-pattern (green-on-nodata, unknown
+    metric, secret literal, missing fields, no panels, high-cardinality
+    label, empty expr, malformed file).
+  - Real dashboard JSON: `nexus-health-overview.json` (composed health
+    by node; health ladder CONFIGURED!=REACHABLE!=READY!=HEALTHY;
+    no-data renders grey), `nexus-incidents-slo.json` (incident
+    deliveries/failures; SLO error budget; NO_DATA never healthy),
+    `nexus-metrics-ops.json` (request rate, workflow duration, API
+    availability; no-data renders grey). Every panel's first threshold
+    step maps null to grey/blue/red - never green.
+  - `README.md` (certification boundary) + `operations.md` (runbook
+    covering only exercised procedures: stack diagnosis, dashboard
+    validation, redaction policy checks, incident sink diagnosis,
+    GlitchTip stopped-provider, revoked-token, restart recovery, health
+    ladder interpretation, SLO no-data, metric cardinality, cleanup,
+    rollback/disable).
+- Gate `scripts/ep038-m5-tests.sh` (non-vacuous): material guards,
+  anti-phantom (node must run the real gate), no placeholder docs,
+  raw JSON syntax check (python3), real `cargo test -p nexus-dashboards`
+  (13 proofs, zero ignored), 13 anti-masking sentinels observed, real
+  `dashboard-validate` CLI green over the real files (3/3), redaction
+  scan of dashboards + docs, current-run evidence written to
+  `.agent/state/evidence/EP-038-M5-dashboards.json` with
+  node/milestone/run_id/git_commit binding + freshness + redaction scan,
+  expected-files EP-038 full list green (dashboards/ closes the list),
+  M1+M2+M3+M4 regressions green, clippy -D warnings + fmt clean,
+  orphan guard (zero owned containers/volumes/networks).
+- Node M5 rewired from artifact-check masking to the real gate.
+- Observed: direct gate `EP-038 M5 gate: ok` (14 phases, EXIT=0); node
+  `EP-038 M5: ok`; M1/M2/M3/M4 regressions green; EP-037 M4 regression
+  gate green; side gates green (fmt, workspace clippy -D warnings,
+  security check 0 advisories, reality gate, dependency audit, license
+  gate, blueprint validation, scope audit EP-038); workspace battery
+  green on approved scope (2567 passed 0 failed across 371 suites,
+  excluding only fixture-driven EP-038 test crates + destructive
+  EP-037 M4 crate, each proven by its own self-provisioned gate).
+- Real truthfulness finding recorded: M4's canonical ops metrics are
+  dotted ids (`nexus.ops.health.composed`) but the M2 Prometheus text
+  writer validates names as `[a-zA-Z_:][a-zA-Z0-9_:]*` and cannot
+  render dotted ids - proven empirically (export_prometheus_family on
+  the M4 canonical id returns Validation error). M4's own tests only
+  exercised rejection paths, so the happy path was never proven.
+  Dashboards therefore use canonical dotted catalog ids as selectors
+  and the M5 gate does NOT assert the local Prometheus fallback can
+  render them; this boundary is documented in README + Surprises and
+  owned by deployment/ship review (M4 is closed; no M4 code changed).
+- Resource hygiene: gate trap removes all owned temp files; M5 starts
+  no containers; zero EP-038-owned residue after each run.
+- Certification boundary (honest): dashboard CONFIG VALIDATED for the
+  exact exercised surface (syntax, required Grafana fields, catalog-
+  backed selectors, redaction-safe, no green-on-no-data, no high-
+  cardinality labels); dashboard unit proofs INTERNAL CONTRACT
+  CERTIFIED; operations runbook documents only exercised procedures.
+  NOT ASSERTED: Grafana server rendering (no real Grafana exercised),
+  Prometheus server ingestion, OTel collector production pipeline,
+  Loki/Tempo/Jaeger, PagerDuty/Slack/email delivery, fleet-wide
+  telemetry, production monitoring operations.
+
 # 12. Surprises & Discoveries
+
+- 2026-08-23 (M5, dashboard validation): M4's canonical ops metrics
+  are dotted ids (`nexus.ops.health.composed`, `nexus.ops.incidents.*`)
+  but the M2 Prometheus text writer's `validate_metric_name` allows only
+  `[a-zA-Z_:][a-zA-Z0-9_:]*` - dots are rejected. Proven empirically:
+  `export_prometheus_family` on `nexus.ops.health.composed` returns
+  Validation "prometheus metric name must match...". M4's own unit
+  proofs only exercised rejection paths (unknown metric, high-cardinality
+  label), so the happy path for the canonical ids was never proven. M5
+  dashboards reference the canonical dotted catalog ids and do NOT claim
+  the local Prometheus fallback renders them; the boundary gap is
+  recorded here and owned by deployment/ship review. M4 is closed; no
+  M4 code was changed by M5.
 
 - 2026-08-23 (M3, real GlitchTip 6.1.8): envelope HTTP 200 != processed.
   The provider accepts the envelope immediately; the embedded worker

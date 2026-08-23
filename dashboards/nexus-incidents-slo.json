@@ -1,0 +1,74 @@
+{
+  "uid": "nexus-incidents-slo",
+  "title": "Nexus Incidents and SLOs",
+  "schemaVersion": 39,
+  "tags": ["nexus", "ep-038", "incidents", "slo"],
+  "datasource": { "type": "prometheus", "uid": "prometheus" },
+  "templating": {
+    "list": [
+      { "name": "source", "type": "query", "query": "label_values(nexus.ops.incidents.delivered, source)" }
+    ]
+  },
+  "panels": [
+    {
+      "id": 10,
+      "title": "Incidents delivered",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "nexus.ops.incidents.delivered{source=\"$source\"}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "grey", "value": null },
+              { "color": "blue", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Incident delivery failures (no data is not green)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "nexus.ops.incidents.failed" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "grey", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "SLO error budget (NO_DATA never renders healthy)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "nexus.slo.storage.put_success" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "grey", "value": null },
+              { "color": "green", "value": 0.999 }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1542,6 +1542,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-dashboards"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-observability",
+ "nexus-observability-ops",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-data"
 version = "0.1.0"
 dependencies = [

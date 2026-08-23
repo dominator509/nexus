@@ -1,0 +1,56 @@
+{
+  "uid": "nexus-health-overview",
+  "title": "Nexus Health Overview",
+  "schemaVersion": 39,
+  "tags": ["nexus", "ep-038", "health"],
+  "datasource": { "type": "prometheus", "uid": "prometheus" },
+  "templating": {
+    "list": [
+      { "name": "node", "type": "query", "query": "label_values(nexus.ops.health.composed, node)" }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Composed health by node",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "nexus.ops.health.composed{node=\"$node\"}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "grey", "value": null },
+              { "color": "green", "value": 1 },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Health ladder: configured != reachable != ready != healthy",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "nexus.ops.health.composed{node=\"$node\"}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "grey", "value": null },
+              { "color": "green", "value": 4 }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

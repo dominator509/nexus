@@ -1,0 +1,17 @@
+[package]
+name = "nexus-dashboards"
+version = "0.1.0"
+edition = "2021"
+description = "EP-038 M5 dashboards: real validated Grafana-format dashboards backed by the M1 metric/health/SLO catalog semantics (SPEC-007; node contract). Validator proves syntax, required fields, catalog-backed metric selectors, redaction safety, and no green-on-no-data semantics."
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../crates/nexus-domain", version = "0.1.0" }
+nexus-observability = { path = "../crates/nexus-observability", version = "0.1.0" }
+nexus-observability-ops = { path = "../infra/observability", version = "0.1.0" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[[bin]]
+name = "dashboard-validate"
+path = "src/bin/dashboard-validate.rs"

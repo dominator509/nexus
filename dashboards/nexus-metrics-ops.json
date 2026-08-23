@@ -1,0 +1,74 @@
+{
+  "uid": "nexus-metrics-ops",
+  "title": "Nexus Metrics and Ops",
+  "schemaVersion": 39,
+  "tags": ["nexus", "ep-038", "metrics"],
+  "datasource": { "type": "prometheus", "uid": "prometheus" },
+  "templating": {
+    "list": [
+      { "name": "node", "type": "query", "query": "label_values(nexus.ops.health.composed, node)" }
+    ]
+  },
+  "panels": [
+    {
+      "id": 20,
+      "title": "Request rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "rate(nexus.requests.total[5m])" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "grey", "value": null },
+              { "color": "blue", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Workflow duration",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "nexus.workflow.duration" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "grey", "value": null },
+              { "color": "blue", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 22,
+      "title": "API availability",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "nexus.api.availability" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "grey", "value": null },
+              { "color": "green", "value": 0.99 }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

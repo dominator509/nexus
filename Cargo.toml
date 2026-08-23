@@ -46,6 +46,7 @@ members = [
     "infra/otel",
     "infra/glitchtip",
     "infra/observability",
+    "dashboards",
     "connectors/storage-local",
     "connectors/storage-nas",
     "connectors/storage-seaweedfs",
