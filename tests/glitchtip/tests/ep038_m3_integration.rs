@@ -104,7 +104,17 @@ fn readback_issues() -> Result<Vec<serde_json::Value>, String> {
     auth.push(' ');
     auth.push_str(&tok);
 
-    let header_path = std::env::temp_dir().join(format!("ep038-gt-hdr-{}", std::process::id()));
+    // Unique per-call header path: the tests in this binary run in
+    // parallel in the workspace battery (the M3 gate serializes with
+    // --test-threads=1, but the blanket battery does not). A shared
+    // `ep038-gt-hdr-<pid>` path would race -- one test truncating or
+    // removing the file while another test's curl is still reading it
+    // produces an empty response body and a false EOF parse failure.
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static SEQ: AtomicU64 = AtomicU64::new(0);
+    let seq = SEQ.fetch_add(1, Ordering::Relaxed);
+    let header_path =
+        std::env::temp_dir().join(format!("ep038-gt-hdr-{}-{seq}", std::process::id()));
     let write = std::fs::write(&header_path, &auth);
     if write.is_ok() {
         use std::os::unix::fs::PermissionsExt;
