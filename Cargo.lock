@@ -1992,6 +1992,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-observability-tests"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-observability",
+ "nexus-otel",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-opa"
 version = "0.1.0"
 dependencies = [
@@ -2064,6 +2074,15 @@ dependencies = [
  "nexus-sentinel",
  "nexus-sentinel-advanced",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-otel"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-observability",
  "serde_json",
 ]
 

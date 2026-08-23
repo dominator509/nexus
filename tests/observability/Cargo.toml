@@ -1,0 +1,17 @@
+[package]
+name = "nexus-observability-tests"
+version = "0.1.0"
+edition = "2021"
+description = "EP-038 M2 provider-layer proofs: OTLP/JSON wire shape, Prometheus text 0.0.4 fallback, structured-log fallback, redaction-before-egress (SPEC-007)"
+license = "MIT"
+publish = false
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-observability = { path = "../../crates/nexus-observability", version = "0.1.0" }
+nexus-otel = { path = "../../infra/otel", version = "0.1.0" }
+serde_json = "1.0"
+
+[[test]]
+name = "ep038_m2_provider"
+path = "tests/ep038_m2_provider.rs"

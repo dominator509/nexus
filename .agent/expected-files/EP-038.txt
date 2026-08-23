@@ -4,6 +4,7 @@
 .agent/node-contracts/EP-038.md
 scripts/nodes/EP-038.sh
 scripts/ep038-m1-tests.sh
+scripts/ep038-m2-tests.sh
 Cargo.toml
 Cargo.lock
 crates/nexus-observability/

@@ -329,6 +329,61 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   evidence churn from gate reruns reverted per EP-037 closure
   precedent).
 
+## M2 progress (observed)
+
+- Created `infra/otel/` - crate `nexus-otel` (workspace member), the
+  OpenTelemetry provider layer consuming the M1 contracts
+  (`nexus-observability` + `nexus-domain` + `serde_json` only; no
+  vendor telemetry SDK - dependency direction enforced).
+- `src/otlp.rs` - hand-rolled OTLP/JSON serialization for traces,
+  metrics, and logs. Wire-format facts verified against the
+  authoritative `opentelemetry-proto` sources before coding:
+  trace_id = 32 lowercase base16 chars, span_id = 16 base16 chars,
+  camelCase field names (resourceSpans/scopeSpans/traceId/spanId/
+  startTimeUnixNano/severityNumber/...), fixed64 timestamps as
+  decimal strings (proto3 JSON mapping), SpanKind INTERNAL=1,
+  StatusCode UNSET=0/ERROR=2, SeverityNumber DEBUG=5 INFO=9 WARN=13
+  ERROR=17 FATAL=21, Sum CUMULATIVE=2 monotonic for counters.
+- `src/prometheus.rs` - Prometheus text exposition format 0.0.4
+  writer (node-contract fallback): HELP/TYPE lines, label/docstring
+  escaping (backslash, double-quote, newline), sorted labels,
+  trailing LF, Go strconv value formatting (NaN/+Inf/-Inf).
+- `src/structured.rs` - bounded JSON-lines structured-log fallback.
+- `src/export.rs` - export boundary: the ONLY entry points to the
+  serializers; accepts `RedactedEnvelope` only and re-verifies
+  `assert_exportable()` before any byte is produced. No API accepts
+  raw observed events.
+- `tests/observability/` - crate `nexus-observability-tests`
+  (workspace member) with 24 `ep038_unit_*` proofs: OTLP wire shape
+  exactness (camelCase, base16 ids, fixed64 strings, severity
+  mapping), redaction canaries absent from OTLP/JSON/Prometheus/
+  structured output, export boundary rejects non-exportable
+  envelopes, Prometheus escaping + value formatting + name
+  validation, deterministic output + sorted resource attributes,
+  structured-log shape, histogram/distribution truthfully
+  UnsupportedSignal (bucket layout owned by a later milestone).
+- Real defects found and fixed by the proofs: (1) resource
+  attributes were not sorted -> now sorted by key for deterministic
+  wire output; (2) test expectation corrected - the `payload` FIELD
+  NAME may appear with a sha256: fingerprint value; the raw secret
+  never does (Hash redaction action keeps the key, redacts the
+  value).
+- Gate `scripts/ep038-m2-tests.sh` (non-vacuous): material presence,
+  24 anti-masking sentinels, vacuity guards, dependency-direction
+  proof, authoritative wire-field presence check, clippy/fmt, M1
+  regression. Node `scripts/nodes/EP-038.sh M2` rewired from
+  artifact-check masking to the real gate.
+- Test counts: 24 M2 provider proofs green (0 failed/ignored); M1 27
+  regression green; clippy -D warnings clean; fmt clean.
+- Certification boundary: OTLP/JSON serialization for traces/metrics/
+  logs INTERNAL PROVIDER CERTIFIED for exact exercised wire shapes;
+  Prometheus text 0.0.4 writer FORMAT CERTIFIED for exact exercised
+  grammar; structured-log fallback CERTIFIED for exact exercised JSON
+  shape. NOT ASSERTED: a Prometheus server, an OTel collector, OTLP
+  network transport, Grafana, GlitchTip, Loki, Tempo, Jaeger,
+  incident delivery, production monitoring deployment (M3+ own
+  them).
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.

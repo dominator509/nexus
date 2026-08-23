@@ -1,0 +1,11 @@
+[package]
+name = "nexus-otel"
+version = "0.1.0"
+edition = "2021"
+description = "EP-038 M2 OpenTelemetry provider layer: OTLP/JSON serialization for traces/metrics/logs over the canonical nexus-observability contracts, plus local structured-log and Prometheus text 0.0.4 fallback (SPEC-007; node contract fallback)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+nexus-observability = { path = "../../crates/nexus-observability", version = "0.1.0" }
+serde_json = "1.0"
