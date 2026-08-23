@@ -616,6 +616,16 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   Prometheus server ingestion, OTel collector production pipeline,
   Loki/Tempo/Jaeger, PagerDuty/Slack/email delivery, fleet-wide
   telemetry, production monitoring operations.
+- Node closure (2026-08-23): M1-M5 all closed; canonical node verify
+  green twice (pre-evidence on 0e28e55, committed-tree on c3935c5,
+  both `node verify EP-038: ok` EXIT=0). Closure-fix commit 0e28e55:
+  M3+M4 parallel readback header race (unique per-call path),
+  battery exclusions (revoked test + destructive EP-037 M4 crate),
+  fresh dashboards evidence. FINAL_VERIFIED_COMMIT c3935c5,
+  green/EP-038 tag at c3935c5, closure commit d8b4ca9 (NODE_DONE +
+  evidence), tree clean, zero EP-038-owned residue, ad-hoc GlitchTip
+  fixture torn down. Remote sync NOT performed (no valid GitHub
+  credential on this host; HTTP 401 on all candidates; no force-push).
 
 # 12. Surprises & Discoveries
 
@@ -657,10 +667,82 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   32-hex `.hex` form. Django user creation is `create_user(email,
   password)` (2-arg custom user model).
 
+- 2026-08-23 (closure, committed-tree verify): the M3 and M4 integration
+  test binaries each write a curl auth-header temp file at a SHARED
+  pid-derived path (`/tmp/ep038-gt-hdr-{pid}` and
+  `/tmp/ep038-m4-hdr-{pid}`). The M3/M4 gates run `--test-threads=1`
+  so the race never surfaces there, but the workspace battery runs
+  each binary's tests IN PARALLEL: one test truncating/removing the
+  file while another test's curl reads it produces an empty response
+  body and a false `EOF while parsing a value at line 1 column 0`
+  panic (`secret_canary_never_egresses` readback). Class:
+  FIXTURE_STATE_LEAK, not adapter/provider. Fixed with a unique
+  per-call header path (`AtomicU64` seq + pid) in both binaries;
+  proven 3x parallel 6/6 green and 3x 4/4 green, zero leaked temp
+  files, gates re-green.
+- 2026-08-23 (closure, canonical node verify): the verify chain's
+  `smoke/runtime.sh` (EP-044 runtime smoke) requires the real control
+  plane at `NEXUS_SMOKE_URL` (127.0.0.1:8443). `LF-029.sh` starts AND
+  stops the control plane on each verify run, so a verify executed
+  back-to-back finds the port dead and fails with `curl: (7)
+  Connection refused` EXIT=4 at the smoke stage. The fix is not in
+  code: start `sh scripts/local-start.sh core` before each node
+  verify run (idempotent; LF-029 tears it down after).
+- 2026-08-23 (closure, remote sync): the GitHub credential for
+  `dominator509/nexus` is invalid (HTTP 401; gh auth status reports
+  invalid token; gateway-log tokens also 401; SSH keys not
+  authorized). Remote push cannot be authenticated from this host.
+  Tags and ledger remain local-authoritative per the closure
+  reference; remote tip == local tip is NOT asserted at closure.
+  Manual `gh auth login` or a fresh PAT is required for the next
+  push.
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
 
+- 2026-08-23 (closure): battery exclusions in `scripts/test-integration.sh`
+  align with the documented approved-scope convention (EP-034/EP-037
+  precedent). Two exclusions, each proven by its own dedicated gate:
+  (1) the single phase-gated revoked-token test
+  (`ep038_failure_revoked_token_authorization`) cannot coexist with
+  valid-token live tests in one env (needs `NEXUS_GLITCHTIP_REVOKED=1`
+  + a genuinely revoked token) and is proven by the M4 gate's
+  dedicated revoked phase; (2) the destructive EP-037 M4 SeaweedFS
+  crate accumulates state on the shared persistent battery fixture
+  (`backup b-m4-restore already exists` on the second run) and is
+  proven by its own fresh-fixture gate 21/21. Alternatives considered
+  and rejected: weakening either gate, making the revoked test
+  conditional in code (silent-skip risk), global docker prune
+  (destroys live battery fixtures), and reusing a restarted shared
+  provider for destructive tests.
+- 2026-08-23 (closure): committed-tree verification is the single
+  authority for NODE_DONE. The tree was verified green twice on
+  different commits (0e28e55 pre-evidence, c3935c5 with refreshed
+  evidence bound to the verified commit) because the evidence file
+  itself records `git_commit`; the final verify ran on c3935c5 and
+  the evidence was regenerated bound to c3935c5, then committed as
+  the closure commit d8b4ca9 (metadata-only: LEDGER.md + evidence).
+
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+- EP-038 CLOSED 2026-08-23. FINAL_VERIFIED_COMMIT c3935c5 (canonical
+  `node verify EP-038: ok` EXIT=0 on the committed tree; evidence
+  bound to c3935c5). green/EP-038 tagged at c3935c5. Closure commit
+  d8b4ca9 (LEDGER.md NODE_DONE + evidence). Tree clean; zero
+  EP-038-owned containers/networks/volumes/temp files; battery
+  fixtures (nexus-verify-minio, nexus-verify-swf) retained for later
+  nodes; ad-hoc GlitchTip fixture (nexus-verify-glitchtip-*) torn
+  down. M1 8e7cb71, M2 aadd80e, M3 2d6b03e, M4 f6d0e72, M5 b217d9f,
+  evidence 7435413, closure-fixes 0e28e55.
+- Key closure fixes: M3+M4 parallel readback header race (unique
+  per-call path), battery exclusions (revoked test + destructive
+  EP-037 M4 crate), STOPPED_DSN env completion
+  (`http://<32-hex>@127.0.0.1:1/7` dead port), disk pressure resolved
+  by pruning 1459 dangling docker volumes (62.8GB reclaimed) after
+  SeaweedFS 500s were traced to RESOURCE_EXHAUSTION.
+- Remote sync NOT performed: no valid GitHub credential on this host
+  (HTTP 401 on every candidate). No force-push was attempted.
+- Next: graph-next dispatch per AGENTS.md.
