@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -457,6 +457,110 @@ GGUF execution NOT ASSERTED, real model training NOT ASSERTED, remote
 synchronization NOT ASSERTED (REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged
 - GitHub credential HTTP 401; remote refs NOT verified; no force-push).
 
+### M3 progress (2026-08-24)
+
+GOAL: Connect EP-041 to its real selected dependency and prove contract
+behavior across the boundary for the frozen-eval root (M3 fence:
+microbrain/evals/).
+
+CHANGED:
+- `python/nexus_microbrain/eval_policy.py` deterministic frozen-eval
+  behavior above the M1/M2 surfaces (pure, no I/O except boundary
+  loaders): EvalSuiteVerdict/EvalBindingVerdict/DimensionResult/
+  EvalScoreSummary/SuiteScoreSummary/SuiteBinding/EvalEvidence records;
+  validate_suite (non-empty, unique eval ids, unique example ids,
+  frozen markers present, suite created_at present - M1 enforces empty
+  suite rejection at construction, validator keeps defense in depth),
+  check_eval_before_training (every frozen_at strictly before training
+  start; at/after rejected - EVAL CREATED AFTER TRAINING != VALID
+  FROZEN EVAL), suite_digest + verify_suite_digest (canonical
+  sort_keys sha256 immutability binding; tampered suite rejected),
+  load_suite_binding (real JSON sidecar -> SuiteBinding; fail closed
+  typed on malformed/missing-field/bad-digest), bind_suite_to_dataset
+  (suite_id match, dataset_id match UNKNOWN DATASET REJECTED, dataset
+  digest match, DatasetPolicy must pass - DATASET POLICY PASSED != EVAL
+  PASSED - and eval examples run through DatasetPolicy so an eval
+  fixture cannot include data M2 would deny), score_eval + score_suite
+  (deterministic per-dimension aggregation ordered by canonical enum
+  order; missing/duplicate/unknown dimension results fail closed;
+  OOD item requires OUT_OF_DISTRIBUTION_ESCALATION coverage and pass
+  (unsafe OOD blocks); hard-negative item requires INJECTION_RESISTANCE
+  coverage and pass; any failing eval blocks the suite),
+  build_eval_evidence (current-run record bound to run_id/git_commit/
+  suite_id/dataset_id/dataset_digest/decision/score/dimensions/OOD/
+  hard-negative/optional candidate+role+timestamp; to_redacted_dict).
+- `microbrain/evals/suites/` real committed eval fixtures:
+  nexus-frozen-suite-v1.eval.json (11 frozen evals: all 8 narrow roles,
+  3 out-of-distribution items, 2 hard-negative items, all frozen before
+  the 2026-08-10 training start; generated through the real M1
+  FrozenEvalSuite model so the file is guaranteed contract-valid) +
+  nexus-frozen-suite-v1.binding.json (sidecar binding to dataset
+  nexus-synthetic-role-ops-v1 with the REAL sha256 digest of the
+  committed dataset manifest). LABELED local test fixtures, never real
+  model evaluation results. evals README updated.
+- `tests/microbrain/test_ep041_m3_eval_policy.py` 41 ep041_unit_m3_*
+  proofs green (0 failed/ignored): real fixture loads, binding digest
+  matches real manifest digest, structural validation (empty suite
+  rejected at contract, duplicate eval ids, duplicate example ids,
+  missing frozen_at, missing suite created_at, missing dimensions at
+  contract), timing (before eligible, at training start rejected,
+  after rejected), immutability (deterministic digest, match, tamper
+  rejected), dataset binding (real bind, suite_id mismatch, unknown
+  dataset, digest mismatch, policy-denied dataset, eval with M2-denied
+  teacher data), deterministic scoring (all-pass, any-fail blocks,
+  missing/unknown/duplicate dimension fail closed, determinism, OOD
+  without OOD dimension, OOD escalation failed blocks, HN without
+  injection, HN injection failed blocks, real suite all-pass, one-fail
+  blocks suite, missing eval blocks), evidence (current-run binding,
+  BLOCK decision on failure, redaction with runtime-constructed
+  canary), real fixture full journey (validate -> timing -> digest ->
+  bind -> score -> evidence).
+- `scripts/ep041-m3-tests.sh` non-vacuous M3 gate (M1 + M2 regressions
+  first, material presence, fixture JSON validity, anti-masking
+  sentinels node M3 wired to gate no artifact-check masking, real
+  pytest vacuity count >= 115 zero failed/error, M3 fail-closed
+  negative proofs present >= 10, deterministic scoring proofs present
+  >= 3, dependency-direction scan, no-placeholder scan, ruff check +
+  ruff format --check owned surface; EP-041 M3 gate: ok).
+- `scripts/nodes/EP-041.sh` M3 rewired from artifact-check masking to
+  the real gate (EP-041 M3: ok EXIT=0).
+- `.agent/expected-files/EP-041.txt`: scripts/ep041-m3-tests.sh added.
+
+REAL DEFECTS found+fixed:
+1. The two hard-negative eval fixtures were also OOD items but did not
+   declare OUT_OF_DISTRIBUTION_ESCALATION coverage, so the scorer
+   correctly blocked them - regenerated the fixture with the missing
+   dimension (honest fixture, not a scorer weakening).
+2. Ruff B008 flagged DatasetPolicy() as a default argument - changed
+   to Optional with lazy construction.
+3. Prettier format gate flagged the eval fixture JSON - reformatted
+   with npx prettier --write (semantic-neutral; tests re-run green).
+
+Observed (exit 0): EP-041 M3 gate: ok; node EP-041 M3: ok; node EP-041
+M1 regression: ok; node EP-041 M2 regression: ok; 122 ep041_unit_*
+proofs green (55 M1 + 26 M2 + 41 M3); ruff check ok; ruff format ok;
+mypy ok (6 source files); side gates green: security check: ok (0
+advisories), dependency audit: ok, license gate: ok, reality gate: ok,
+blueprint validation: ok, format check: ok (after prettier fix), lint:
+ok, typecheck: ok, test-unit: ok.
+
+Certification boundary (honest): frozen eval behavior INTERNAL BEHAVIOR
+CERTIFIED for the exact exercised local surface (real committed eval
+fixtures through the real M1 contract + real deterministic validator/
+timer/digest/binder/scorer; fail-closed timing, immutability, dataset
+binding, OOD, and hard-negative gates; current-run redacted evidence);
+deterministic scoring INTERNAL BEHAVIOR CERTIFIED for the exact
+dimension-result surface exercised; teacher-consensus eval fixture
+behavior INTERNAL BEHAVIOR CERTIFIED only for the M2-policy binding
+surface (consensus contributes evidence only - no promotion path in
+M3); real model evaluation NOT ASSERTED (no model scored), real
+training NOT ASSERTED (M4 owns microbrain/training/), real QLoRA
+execution NOT ASSERTED, real GGUF quantization NOT ASSERTED (M5 owns
+microbrain/artifacts/), production promotion NOT ASSERTED, live
+deployment NOT ASSERTED, remote synchronization NOT ASSERTED
+(REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged - GitHub credential HTTP 401;
+remote refs NOT verified; no force-push).
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
@@ -504,6 +608,24 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   synthetic/teacher-consensus licensed records labeled as local test
   fixtures, never production data. Compatibility: pure additive module
   and data files; no existing import changes.
+- 2026-08-24: M3 frozen-eval behavior is a pure deterministic layer on
+  top of M1/M2, with the eval fixture generated through the real M1
+  FrozenEvalSuite model so the committed file is guaranteed
+  contract-valid. Evidence: the M3 fence owns microbrain/evals/ and the
+  ExecPlan requires real local dependency integration; the scorer takes
+  explicit DimensionResult inputs rather than inventing model outputs,
+  so scoring is real deterministic aggregation, not fabricated
+  evaluation. Alternatives: a separate eval data model was rejected -
+  the fence requires canonical M1/M2 surfaces. Consequence: eval
+  fixtures are real JSON files parsed through M1; the binding sidecar
+  carries the real dataset manifest digest; OOD and hard-negative items
+  must declare the mandatory coverage dimensions or the scorer blocks
+  (real fixture defect found and fixed by regenerating the fixture with
+  the missing OOD escalation dimension). Security: evidence redaction
+  with runtime canaries; no secret literals. License: eval fixtures are
+  synthetic licensed records labeled as local test fixtures.
+  Compatibility: pure additive module and data files; no existing
+  import changes.
 
 # 14. Outcomes & Retrospective
 
