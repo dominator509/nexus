@@ -6,6 +6,7 @@ scripts/nodes/EP-039.sh
 scripts/ep039-m1-tests.sh
 scripts/ep039-m2-tests.sh
 scripts/ep039-m3-tests.sh
+scripts/ep039-m4-tests.sh
 Cargo.toml
 Cargo.lock
 crates/nexus-supply-chain/
