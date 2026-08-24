@@ -336,7 +336,23 @@ fn ep040_unit_evidence_store_requires_run_context() {
 
 #[test]
 fn ep040_unit_evidence_store_roundtrip_redacted() {
-    let root = std::env::temp_dir().join(format!("ep040-ev-{}", std::process::id()));
+    // Unique per-run root; removed on success AND on panic via a guard so
+    // a failing proof never leaves EP-040-owned residue behind.
+    let root = std::env::temp_dir().join(format!(
+        "ep040-ev-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    struct Cleanup(std::path::PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    let _guard = Cleanup(root.clone());
     let store = FileEvidenceStore::new(&root, "ep040-m2-run", "deadbeef");
     let mut ev = nexus_test_contract::model::TestEvidence::new("ep040_unit_demo", TestLayer::Unit)
         .record_run(TestOutcome::Passed);
@@ -350,18 +366,30 @@ fn ep040_unit_evidence_store_roundtrip_redacted() {
     assert!(content.contains("deadbeef"));
     let marker = format!("sk{}", "-live");
     assert!(!content.contains(&marker), "canary survived redaction");
-    let _ = std::fs::remove_dir_all(&root);
 }
 
 #[test]
 fn ep040_unit_evidence_store_port_object_safe() {
-    let root = std::env::temp_dir().join(format!("ep040-ev-port-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!(
+        "ep040-ev-port-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    struct Cleanup(std::path::PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    let _guard = Cleanup(root.clone());
     let store: Box<dyn nexus_test_contract::EvidencePort> =
         Box::new(FileEvidenceStore::new(&root, "ep040-m2-run", "deadbeef"));
     let ev = nexus_test_contract::model::TestEvidence::new("ep040_unit_demo", TestLayer::Unit)
         .record_run(TestOutcome::Passed);
     store.record(ev).unwrap();
-    let _ = std::fs::remove_dir_all(&root);
 }
 
 // ---------------------------------------------------------------------
