@@ -9,3 +9,5 @@ microbrain/evals/
 microbrain/training/
 microbrain/artifacts/
 tests/microbrain/
+scripts/ep041-m1-tests.sh
+pyproject.toml

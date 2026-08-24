@@ -13,11 +13,11 @@ dependencies = []
 dev = ["pytest>=8", "ruff>=0.9", "mypy>=1.14", "psycopg[binary]>=3.2"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["python/nexus_contracts"]
+packages = ["python/nexus_contracts", "python/nexus_microbrain"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit", "tests/integration", "tests/failure"]
-python_functions = ["test_*", "ep001_unit_*", "ep001_integration_*", "ep001_failure_*", "ep002_unit_*", "ep002_integration_*", "ep002_failure_*"]
+python_functions = ["test_*", "ep001_unit_*", "ep001_integration_*", "ep001_failure_*", "ep002_unit_*", "ep002_integration_*", "ep002_failure_*", "ep041_unit_*", "ep041_integration_*", "ep041_failure_*"]
 
 [tool.ruff]
 line-length = 100

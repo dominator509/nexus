@@ -8,7 +8,7 @@ export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
 case "$mode" in
-  M1) python3 scripts/node-artifact-check.py EP-041 M1 ;;
+  M1) sh scripts/ep041-m1-tests.sh ;;
   M2) python3 scripts/node-artifact-check.py EP-041 M2; uv run --frozen pytest tests/microbrain -q -k ep041_unit ;;
   M3) python3 scripts/node-artifact-check.py EP-041 M3; uv run --frozen pytest tests/microbrain -q -k ep041_integration ;;
   M4) python3 scripts/node-artifact-check.py EP-041 M4; uv run --frozen pytest tests/microbrain -q -k ep041_failure ;;

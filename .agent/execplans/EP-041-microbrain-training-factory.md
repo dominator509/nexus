@@ -273,19 +273,144 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
+### M1 progress (2026-08-24)
+
+GOAL: Create the owned package roots and encode the public contracts for
+the separate Microbrain dataset, frozen evals, teacher consensus, QLoRA
+pipeline, GGUF export, shadow comparison, and canary tooling
+(SPEC-025, SPEC-009; node contract EP-041).
+
+CHANGED:
+- `python/nexus_microbrain/` @nexus_microbrain contract package
+  (stdlib-only; provider-neutral; dependency-direction enforced):
+  `vocabulary.py` deny-unknown canonical enums (Role narrow
+  INTERPRETATION/CAPABILITY_SELECTION/ROUTING/RISK/PRIVACY/AMBIGUITY/
+  QUOTED_INSTRUCTION/ESCALATION, DataProvenance
+  DETERMINISTIC_GENERATION/TEACHER_CONSENSUS/HARD_NEGATIVE/
+  OPTED_IN_SCRUBBED_CORRECTION, EvalDimension 11 SPEC-025 dimensions,
+  QuantizationFormat locked to GGUF, ShadowDecision MATCH/DIFFER/DEFER,
+  PromotionGate SHADOW/LOW_RISK_CANARY/GRADUAL/PROMOTED, PromotionVerdict
+  PROMOTE/DENY/HOLD, OodVerdict IN_DISTRIBUTION/OUT_OF_DISTRIBUTION,
+  LicenseKind six classes, CandidateStatus/QloraStatus/ArtifactStatus
+  ladders; enum.StrEnum with fail-closed parse and typed
+  MICROBRAIN_UNKNOWN_VOCABULARY on unknown values); `errors.py`
+  SPEC-006-style typed error surface (11 MICROBRAIN_CODE_* codes) with
+  runtime-constructed redaction marker families (sk-/ghp_/AKIA/Bearer/
+  pk-/xoxb-/glpat-/token=/password=/secret= + credential URLs + long
+  token runs) and redact_text/redact_value used by error to_dict;
+  `models.py` versioned serialization contracts (schema_version "1",
+  fail-closed unsupported-version, required-field typed codes,
+  __post_init__ validation so direct construction fails closed too,
+  abstract base via ABC) for all 8 public interfaces
+  (MicrobrainDataset, FrozenEvalSuite, TeacherConsensus,
+  TrainingCandidate, QloraRun, QuantizedArtifact, ShadowComparator,
+  PromotionDecision) plus supporting TrainingExample, FrozenEval,
+  ShadowComparison, LicenseRecord; cross-field acceptance obligations
+  encoded at the contract boundary: frozen evals must predate training
+  (MICROBRAIN_FROZEN_SPLIT_VIOLATION), teacher consensus must be
+  filtered + privacy safe + licensed (PRIVACY_VIOLATION/UNLICENSED),
+  candidate role is one narrow canonical Role, GGUF artifact identity
+  is alg:hex >=32 digest (IMAGE TAG != DIGEST), shadow
+  consequential_false_positives cannot be negative, PROMOTE requires
+  zero consequential false positives and never directly from SHADOW
+  (FALSE_POSITIVE_THRESHOLD - SPEC-025 behavior 6 hard failure).
+- `tests/microbrain/` @tests/microbrain test root: conftest.py (python/
+  on sys.path, same pattern as tests/connectors), test_ep041_m1_contracts.py
+  55 ep041_unit_* proofs green (0 failed/ignored): construction of all
+  8 interfaces, serialization roundtrip + determinism + JSON encodable
+  + schema_version preserved/rejected, vocabulary rejection for every
+  enum, required-field rejection, all cross-field acceptance
+  obligations, redaction proofs with runtime-constructed secret
+  canaries (canary never survives error redaction or to_dict),
+  dependency-direction scan (no requests/httpx/boto3/torch/
+  transformers/openai/anthropic/numpy/pandas/nexus_connector_sdk).
+- `microbrain/datasets/`, `microbrain/evals/`, `microbrain/training/`,
+  `microbrain/artifacts/` owned data roots with README ownership notes.
+- `pyproject.toml` (added to expected-files): python/nexus_microbrain
+  registered as wheel package; ep041_unit_*/ep041_integration_*/ep041_failure_*
+  registered in pytest python_functions.
+- `scripts/ep041-m1-tests.sh` non-vacuous M1 gate (material presence of
+  all 10 owned paths, workspace membership, anti-masking sentinels
+  incl node M1 wired to gate and no artifact-check masking, real pytest
+  vacuity guard count >= 50 with zero failed/error, dependency-direction
+  forbidden-import scan, no-placeholder scan excluding __pycache__,
+  ruff check + ruff format --check on owned surface; EP-041 M1 gate: ok).
+- `scripts/nodes/EP-041.sh` M1 rewired from artifact-check masking to
+  the real gate (EP-041 M1: ok EXIT=0).
+- `.agent/expected-files/EP-041.txt`: scripts/ep041-m1-tests.sh and
+  pyproject.toml added (scope-audit requires manifests that changed).
+
+REAL DEFECTS found+fixed:
+1. Dataclass field ordering: schema_version as an instance field with a
+   default made every non-default subclass field illegal - moved to
+   ClassVar on the abstract base.
+2. Direct construction bypassed validation (only from_dict validated) -
+   added __post_init__ so construction fails closed too.
+3. Ruff UP042: str+Enum inheritance -> enum.StrEnum.
+4. Reality gate flagged the base to_dict() raise NotImplementedError as
+   a stub anti-pattern - replaced with abc.ABC + abstractmethod so the
+   base cannot be instantiated and no stub marker exists.
+5. Gate no-placeholder scan tripped on its own docstring word and on
+   __pycache__ binaries - reworded docstring, excluded __pycache__ and
+   restricted scan to *.py.
+
+Observed (exit 0): EP-041 M1 gate: ok; node EP-041 M1: ok; 55
+ep041_unit_* proofs green; ruff check ok; ruff format ok; mypy ok
+(4 source files); side gates green: security check: ok (0 advisories),
+dependency audit: ok, license gate: ok, reality gate: ok (after ABC
+fix), blueprint validation: ok, format check: ok, lint: ok, typecheck:
+ok, test-unit: ok.
+
+Certification boundary (honest): Microbrain contract/vocabulary
+PACKAGE BOUNDARY CERTIFIED for the exact exercised local surface
+(construction, validation, versioned serialization, vocabulary
+rejection, acceptance-obligation invariants, redaction,
+dependency-direction); deterministic behavior of the training
+pipeline/eval engine/shadow comparator NOT ASSERTED (M2 owns core
+behavior); real dataset artifacts NOT ASSERTED (data roots empty by
+truth); real QLoRA/GGUF execution NOT ASSERTED (M3+ own transport and
+live-fire); remote synchronization NOT ASSERTED
+(REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged - GitHub credential HTTP 401;
+remote refs NOT verified; no force-push).
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
+- 2026-08-24: M1 contract surfaces. The node's Interface Map assigns all
+  eight public interfaces to the owned Python boundary, so the versioned
+  serialization contract lives in python/nexus_microbrain/ (stdlib-only
+  dataclasses with to_dict/from_dict and schema_version "1") rather than
+  generated schemas/ bindings - generate-contracts.sh has no microbrain
+  coverage and no cross-language consumer exists yet. The repo reality
+  gate treats raise NotImplementedError as a stub anti-pattern even in
+  an abstract base, so the base uses abc.ABC + abstractmethod. Test
+  count: 55 new ep041_unit_* proofs, zero failed/ignored.
+
 # 13. Decision Log
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+
+- 2026-08-24: M1 contracts are Python-native versioned serialization,
+  not schemas/ JSON Schema generation. Evidence: the M1 fence owns
+  python/nexus_microbrain/ + tests/microbrain/; the interface map says
+  "Defined by EP-041; provider-neutral and versioned"; schemas/
+  generate-contracts.sh has no microbrain support and there is no
+  cross-language consumer in M1. Alternatives: generating JSON Schemas
+  under schemas/ was rejected because the conditional in the M1 fence
+  ("when the node owns cross-language contracts") is not met yet and
+  would touch a non-owned path. Consequence: contracts serialize via
+  to_dict/from_dict with schema_version enforcement; a later milestone
+  can add schemas/ generation if a cross-language consumer appears.
+  Security: redaction is built into the error surface. License: package
+  is MIT under the repo project. Compatibility: pure additive wheel
+  package; no existing imports change.
 
 # 14. Outcomes & Retrospective
 
