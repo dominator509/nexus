@@ -277,7 +277,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -343,6 +343,73 @@ certification runs, remote synchronization (REMOTE_SYNC_BLOCKED_OWNER_AUTH
 unchanged; remote refs NOT verified; fresh gh auth login required before
 any push; no force-push).
 
+### M2 progress (2026-08-24)
+
+M2 implements the exact M2 fence: tests/integration/ +
+tests/accessibility/audit-core/ as workspace members, deterministic test
+execution behavior behind the M1 ports, a non-vacuous gate, and node M2
+rewiring. Prior-node content already in those roots (EP-001 postgres
+integration test; EP-033/EP-034 mobile+web a11y harnesses) is preserved
+untouched; EP-040 crates are additive subroots.
+
+Owned paths:
+- tests/integration/ @nexus-test-execution (deterministic execution core)
+  - src/runner.rs: real subprocess test runner (spawns a real command,
+    captures real stdout/stderr, fails closed on missing summary or
+    non-zero exit), cargo-output line parser (test ... ok/FAILED/ignored/
+    skipped + test result summary), parse_output aggregates TestEvidence
+    + GateResult with REAL counts; ZERO TESTS COLLECTED != GREEN,
+    SKIPPED/IGNORED != PASSED, evidence-bound required for green, passing
+    parse != behavior verified
+  - src/policy.rs: FlakePolicy behind FlakyTestPolicyPort (deny-unknown
+    classes; FLAKE RETRIED GREEN != ROOT CAUSE FIXED) + ConsecutiveVerify
+    (verify passes N consecutive times; any non-green resets; flakes
+    recorded, never erased, fixed only with root cause)
+  - src/evidence.rs: FileEvidenceStore behind EvidencePort (current-run
+    evidence bound to run_id + git_commit, redacted BEFORE serialization
+    so JSON stays valid and canaries never enter the record, roundtrip
+    verification)
+  - tests/ep040_m2_execution.rs: 28 ep040_unit_* proofs
+- tests/accessibility/audit-core/ @nexus-accessibility-audit
+  (deterministic WCAG audit verdict engine)
+  - src/lib.rs: WcagLevel deny-unknown (A/AA/AAA), ViolationFinding
+    criterion@LEVEL parsing fail-closed, DeterministicAuditEngine behind
+    AccessibilityAuditPort (A audit blocks all findings; AA blocks A+AA,
+    AAA advisory does not block AA; AAA blocks everything; unknown
+    standard/level fails closed)
+  - tests/ep040_m2_accessibility.rs: 9 ep040_unit_* proofs
+- scripts/ep040-m2-tests.sh: non-vacuous gate (material presence,
+  workspace membership, real cargo test vacuity guards, 37 anti-masking
+  sentinels, dependency-direction proof, no-placeholder scan, clippy -D
+  warnings, fmt, crate licenses MIT, M1 regression green)
+- scripts/nodes/EP-040.sh M2: rewired from artifact-check + full-verify
+  masking to the real gate with rc propagation
+- .agent/expected-files/EP-040.txt: scripts/ep040-m2-tests.sh added
+
+Observed (exit 0): EP-040 M2 gate: ok; node EP-040 M2: ok; node EP-040
+M1 regression: ok; scope audit EP-040: ok; security check: ok (0
+advisories); dependency audit: ok; license gate: ok; reality gate: ok;
+blueprint validation: ok; format check: ok; lint: ok; typecheck: ok;
+workspace battery pending.
+
+Real defect found+fixed: evidence redaction over the serialized JSON
+window could consume the closing quote and emit malformed JSON (canary
+window overran the string terminator) -> scrub field values BEFORE
+serialization; the roundtrip canary test now proves JSON validity + no
+canary survival.
+
+Certification boundary (honest): deterministic test execution core
+INTERNAL BEHAVIOR CERTIFIED for exact exercised surface (real subprocess
+execution + real output parsing + aggregation); flake/consecutive-verify
+policy INTERNAL BEHAVIOR CERTIFIED; evidence store INTERNAL BEHAVIOR
+CERTIFIED (current-run, redacted, verifiable); WCAG audit verdict engine
+DETERMINISTIC/INTERNAL CERTIFIED. NOT ASSERTED: real chaos injection,
+production hardening, full repository hardening, resilience under live
+failures, security penetration testing, provider/hardware certification
+runs, real browser/axe accessibility scanning (EP-033/EP-034 own the live
+scan harness), remote synchronization (REMOTE_SYNC_BLOCKED_OWNER_AUTH
+unchanged).
+
 # 12. Surprises & Discoveries
 
 - 2026-08-24: M1 crate surfaces. The seven node-contract interfaces map
@@ -351,6 +418,19 @@ any push; no force-push).
   tests/performance/. Both are workspace members; Cargo.toml/Cargo.lock
   added to expected-files per EP-039 convention. Test count: 70 new
   ep040_unit_* proofs (61 contract + 9 performance), zero failed/ignored.
+- 2026-08-24: M2 execution-core surfaces. tests/integration/ and
+  tests/accessibility/ already held prior-node owned content (EP-001
+  postgres integration test; EP-033/EP-034 mobile+web a11y harnesses), so
+  M2 adds its own workspace crates as subroots: tests/integration/
+  @nexus-test-execution (real subprocess runner + parser + aggregation +
+  flake/consecutive-verify policy + evidence store) and
+  tests/accessibility/audit-core/ @nexus-accessibility-audit (deterministic
+  WCAG verdict engine). Real defect found+fixed: redacting serialized
+  evidence JSON could consume the closing quote and produce malformed JSON
+  (canary window overran the string terminator) -> scrub field values
+  BEFORE serialization so JSON stays valid and canaries never enter the
+  record. Test count: 37 new ep040_unit_* proofs (28 execution + 9
+  accessibility), zero failed/ignored.
 
 # 13. Decision Log
 
@@ -364,6 +444,20 @@ any push; no force-push).
   EP-039; no new dependency surface (nexus-domain + serde + serde_json
   only). License: MIT declared on both crates. Compatibility: pure
   additive workspace members; no existing crate touched.
+- 2026-08-24: M2 behavior location = tests/integration/ +
+  tests/accessibility/audit-core/ workspace crates. The prior-node content
+  already in those roots (EP-001 postgres test, EP-033/034 a11y harnesses)
+  is preserved untouched; EP-040 adds its own crates as subroots so scope
+  audit stays green (directory entries authorize descendants). Evidence:
+  .agent/milestone-files/EP-040-M2.txt + git ls-files on both roots.
+  Alternatives: adding a crates/nexus-* behavior crate was rejected
+  because it is outside the EP-040 fence. Consequence: execution core and
+  a11y verdict engine are owned directly by the node's test roots.
+  Reversal: an ADR + fence change. Security: evidence redaction scrubs
+  field values BEFORE serialization (defect found by the roundtrip canary
+  test); no new dependency surface. License: MIT declared on both crates.
+  Compatibility: pure additive workspace members; prior-node content
+  untouched.
 
 # 14. Outcomes & Retrospective
 

@@ -1,0 +1,12 @@
+[package]
+name = "nexus-accessibility-audit"
+version = "0.1.0"
+edition = "2021"
+description = "EP-040 M2 deterministic accessibility audit core: WCAG standard validation, violation classification, fail-closed audit verdicts behind the AccessibilityAuditPort (SPEC-008; TESTING.md)"
+license = "MIT"
+
+[dependencies]
+nexus-test-contract = { path = "../../contract", version = "0.1.0" }
+nexus-domain = { path = "../../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

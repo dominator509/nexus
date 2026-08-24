@@ -49,6 +49,8 @@ members = [
     "tests/supply-chain",
     "tests/contract",
     "tests/performance",
+    "tests/integration",
+    "tests/accessibility/audit-core",
     "infra/otel",
     "infra/glitchtip",
     "infra/observability",

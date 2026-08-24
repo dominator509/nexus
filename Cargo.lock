@@ -1324,6 +1324,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-accessibility-audit"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-test-contract",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-action-gateway"
 version = "0.1.0"
 dependencies = [
@@ -2603,6 +2613,16 @@ name = "nexus-test-contract"
 version = "0.1.0"
 dependencies = [
  "nexus-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-test-execution"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "nexus-test-contract",
  "serde",
  "serde_json",
 ]
