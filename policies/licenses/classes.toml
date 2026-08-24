@@ -1,0 +1,44 @@
+# EP-039 M3 license class mappings (SPEC-019; LICENSE_POLICY.md).
+#
+# Non-GREEN classes. Every id here maps to a class that the deterministic
+# engine handles: REVIEW requires review/approval state, SIDECAR requires
+# process separation + source offer, EXTERNAL requires provider
+# integration, PROHIBITED fails closed. deny_unknown = true: ids not
+# listed in allowlist.toml or here are UNKNOWN and fail closed.
+version = 1
+deny_unknown = true
+
+[review]
+spdx = [
+  "MPL-2.0",
+  "LGPL-2.1",
+  "LGPL-2.1-only",
+  "LGPL-3.0",
+  "LGPL-3.0-only",
+]
+
+[sidecar]
+spdx = [
+  "GPL-2.0",
+  "GPL-2.0-only",
+  "GPL-2.0-or-later",
+  "GPL-3.0",
+  "GPL-3.0-only",
+  "GPL-3.0-or-later",
+  "AGPL-3.0",
+  "AGPL-3.0-only",
+  "AGPL-3.0-or-later",
+]
+
+[external]
+spdx = [
+  "Commercial",
+  "Proprietary",
+  "Commercial API Terms",
+]
+
+[prohibited]
+spdx = [
+  "CC-BY-NC-4.0",
+  "CC-BY-NC-SA-4.0",
+]

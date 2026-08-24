@@ -1,0 +1,15 @@
+# EP-039 M3 waiver registry (SPEC-019 behavior 8; LICENSE_POLICY.md).
+#
+# A waiver requires owner, exact version, reason, controls, expiry, and
+# replacement plan; permanent or global waivers are denied. The registry
+# is currently EMPTY by truth: the real dependency tree passes license
+# policy without waivers. Loading this file yields zero waivers, so any
+# waiver query fails closed (absent waiver -> denied). The schema is
+# loadable and deny-unknown; adding a record here is a real policy
+# action, not a test convenience.
+version = 1
+allow_wildcard = false
+
+# No waivers currently granted. A waiver query therefore always fails
+# closed (absent waiver -> denied). Adding a record below is a real
+# policy action, not a test convenience.

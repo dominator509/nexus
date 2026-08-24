@@ -460,6 +460,109 @@ provenance NOT ASSERTED; SLSA/in-toto signing NOT ASSERTED;
 remote GitHub synchronization NOT ASSERTED until credentials are
 repaired and remote refs verified.
 
+## M3 progress (observed 2026-08-24)
+
+Remote-sync truth (unchanged, EP-038 closure): EP-038 remote sync
+remains BLOCKED by GitHub credential HTTP 401 on every candidate.
+Fresh `gh auth login` or credential repair is required before any push.
+EP-039 must not claim remote synchronization until observed. No
+force-push was attempted.
+
+M3 implemented and proven (all commands run now, outputs observed):
+
+- `policies/licenses/` owns the REAL checked-in policy files AND the
+  transport crate @nexus-supply-chain-policy-io (workspace member;
+  deps only nexus-supply-chain + nexus-supply-chain-policy +
+  nexus-domain + serde + serde_json + toml 1.1.4; no vendor SDK /
+  OCI / scanner / signer / SPDX-tool / CycloneDX; dependency direction
+  enforced by the gate via cargo tree). The transport crate is
+  separate from the M2 policy crate so the M2 dependency-direction gate
+  stays untouched.
+- Policy files (real, checked-in, deny-unknown, aligned with
+  LICENSE_POLICY.md + deny.toml):
+  - allowlist.toml: GREEN class ids, deny_unknown=true, verified by the
+    gate to be EXACTLY aligned with deny.toml [licenses] allow (no
+    silent broadening)
+  - classes.toml: REVIEW (MPL-2.0, LGPL) / SIDECAR (GPL, AGPL) /
+    EXTERNAL (Commercial, Proprietary) / PROHIBITED (CC-BY-NC*)
+  - sidecar-obligations.toml: require_api_contract + require_source_
+    offer + require_process_separation (fed into M2 BoundaryPolicy)
+  - waivers.toml: empty registry by truth - the real tree passes
+    without waivers; absent waiver -> denied
+- Transport (src/):
+  - lockfile.rs: parses the REAL Cargo.lock (446 locked packages after
+    the toml dep addition) via the real `toml` crate; refuses empty
+  - resolve.rs: builds a real workspace manifest index by scanning the
+    repository (crates/, connectors/, providers/, infra/, tests/,
+    supply-chain/, dashboards/, policies/) and resolves each package's
+    REAL license declaration from the real registry cache
+    ($CARGO_HOME/registry/src) or the real workspace manifest,
+    honoring license.workspace inheritance
+  - spdx.rs: SPDX expression parser (OR/AND/WITH/parens/slash,
+    case-insensitive, LicenseRef-* and unknown aliases fail closed);
+    combination semantics fail-closed (AND/OR take the most restrictive
+    branch; an expression containing an unknown id fails closed even
+    when another branch is permissive; WITH only for known exceptions
+    e.g. LLVM-exception)
+  - policy_files.rs: loads the checked-in policy files with
+    deny-unknown schema (serde deny_unknown_fields)
+  - inventory.rs: evaluates EVERY locked package (including
+    transitives) through the M1 classifier + M2 LicensePolicy;
+    license_clear only when the whole expression classifies GREEN;
+    permitted_default always false (ALLOWLIST ENTRY != APPROVAL)
+  - evidence.rs: redacted deterministic evidence through the M2
+    evidence boundary; runtime-constructed canaries
+- Real inventory result (REAL Cargo.lock + REAL registry cache + REAL
+  policy files): 446 packages, 444 resolved, 430 GREEN, 16 denied
+  (14 with license ids outside the canonical tables - MIT-0, CC0-1.0,
+  Zlib, BSL-1.0 - and 2 workspace manifests with NO license field:
+  infra/sentinel/core/Cargo.toml @nexus-sentinel-live-fire and
+  @nexus-sentinel-advanced-live-fire). This is the honest divergence
+  from cargo-deny: cargo-deny accepts OR expressions when ANY branch is
+  in the allow list; the Nexus canonical classifier fails closed on
+  unknown branches (UNKNOWN LICENSE != SAFE). No policy broadening was
+  performed; the findings are recorded, not papered over.
+- Tests: 10 unit + 10 ep039_integration_* proofs, 0 failed / 0 ignored.
+  Integration proofs use the REAL Cargo.lock, REAL registry cache, REAL
+  policy files (no mocks, no simulated providers, no in-memory lists):
+  real lockfile parse, every-package evaluation, policy files load,
+  unknown-license fail-closed, green-license clears policy, inventory
+  determinism (two runs identical), redacted evidence, waiver-absent
+  denied, sidecar obligations enforced, M1 classifier alignment.
+- Gate scripts/ep039-m3-tests.sh non-vacuous: material presence,
+  workspace membership, deny-unknown policy check, allowlist.toml
+  <-> deny.toml alignment proof (python), real cargo test pass-count
+  vacuity guards, 10 anti-masking integration sentinels,
+  dependency-direction forbidden-SDK proof, no-placeholder scan,
+  no-secret-literal scan, clippy -D warnings clean, fmt clean, crate
+  license MIT, redaction + fail-closed proofs observed, M1 + M2
+  regression green. EP-039 M3 gate: ok EXIT=0.
+- Node scripts/nodes/EP-039.sh M3 rewired from artifact-check masking
+  to the real gate with rc propagation. EP-039 M3: ok EXIT=0.
+- M1 regression green (EP-039 M1 gate: ok; EP-039 M1: ok). M2
+  regression green (EP-039 M2 gate: ok; EP-039 M2: ok).
+- Side gates: scope audit EP-039: ok (M3 gate added to expected-files
+  per convention), security check: ok (0 advisories), dependency audit:
+  ok (bans ok after toml 1.1.4 unified winnow to a single version),
+  license gate: ok, reality gate: ok, blueprint validation: ok,
+  format check: ok, lint: ok (clippy), typecheck: ok, test-unit: ok
+  (workspace battery 117 green suites 0 failed includes the new crate).
+- Resource hygiene: zero EP-039-owned containers/networks/volumes/temp
+  roots (no fixture started; all transport is local file + registry
+  cache reads). Foreign LF-* evidence churn from side-gate runs to be
+  reverted before commit (same as M1/M2).
+- Certification (honest): policies/licenses POLICY INTEGRATION
+  CERTIFIED for the exact exercised local surface; real dependency
+  inventory integration CERTIFIED for the exact real Cargo.lock +
+  real registry cache + real workspace manifests exercised (446
+  packages); license policy transport CERTIFIED for the exact local
+  files/sources exercised; the fail-closed divergence from cargo-deny
+  OR-any semantics is a recorded real finding (MIT-0/CC0-1.0/Zlib/
+  BSL-1.0 ids and 2 license-less workspace manifests). NOT ASSERTED:
+  legal clearance, production artifact SBOM completeness, container
+  image provenance, SLSA/in-toto signing, external advisory feed
+  monitoring, GitHub dependency submission, remote synchronization.
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
@@ -471,6 +574,39 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   ghs_, github_pat_, AKIA, Bearer markers) and proved it by test.
 - 2026-08-23 (M1): blueprint validation rejects non-ASCII characters in
   source files (em-dashes in doc comments). Replaced with ASCII.
+
+- 2026-08-24 (M3): cargo-deny's OR-expression semantics accept a
+  package when ANY branch is in the allow list (verified empirically:
+  `cargo deny check licenses` returns `licenses ok` on the real tree
+  even though foldhash declares `Zlib`, ryu declares
+  `Apache-2.0 OR BSL-1.0`, borrow-or-share declares `MIT-0`). The
+  Nexus canonical classifier fails closed on unknown branches
+  (UNKNOWN LICENSE != SAFE); the transport therefore reports 16 real
+  denied packages. This is a recorded divergence, not a defect in
+  either gate - the Nexus policy is intentionally stricter. A future
+  policy action (allowlist addition + ADR + legal review) is required
+  before those ids can clear; M3 does not broaden silently.
+- 2026-08-24 (M3): M1's canonical classifier is ORDER-SENSITIVE for
+  OR expressions (`APACHE-2.0 OR MIT` is GREEN but `MIT OR
+  Apache-2.0` is UNKNOWN). The transport canonicalizes simple
+  two-branch OR expressions (sorted + uppercased) before consulting
+  the M1 table; complex expressions are classified by the transport
+  boundary and fail the M1 engine check only when they cannot be
+  canonicalized. Recorded; M1 contract table unchanged.
+- 2026-08-24 (M3): toml 0.9 pulls BOTH winnow 0.7 (direct) and winnow
+  1.0 (via toml_parser), failing cargo-deny bans. toml 1.1.4 unifies
+  the winnow line to a single version (verified: `cargo deny check
+  bans` ok). deny.toml was NOT modified (not an M3-owned path); the
+  dependency was pinned to the version with a clean ban graph.
+- 2026-08-24 (M3): two real workspace manifests declare NO license
+  field: infra/sentinel/core/Cargo.toml (@nexus-sentinel-live-fire)
+  and its advanced sibling. The transport surfaces them as MISSING
+  LICENSE -> fail closed. Recorded as a real workspace hygiene gap;
+  not fixed in M3 (not an M3-owned path).
+- 2026-08-24 (M3): the first resolver draft only scanned crates/ and
+  a hardcoded list, leaving 116 workspace members unresolved. The real
+  data caught the defect; the resolver now builds a real manifest
+  index by scanning the repository (excluding target/.git/node_modules).
 
 # 13. Decision Log
 
@@ -511,6 +647,36 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 - 2026-08-24 (M2): redaction canaries constructed at runtime
   (concatenation) so no secret-shaped literal exists in tracked source
   - same precedent as EP-036/EP-038 redaction-canary tests.
+
+- 2026-08-24 (M3): the transport crate @nexus-supply-chain-policy-io
+  is a SEPARATE workspace member under policies/licenses/ (the M3
+  fence), not a module of the M2 crate. Rationale: M2's gate enforces
+  a dependency-direction allowlist (nexus-supply-chain + nexus-domain
+  + serde + serde_json only) that forbids toml; the transport needs
+  toml to parse the real Cargo.lock. Keeping the crates separate
+  preserves M2's certification and adds the real parsing dependency at
+  the adapter boundary exactly where the fence places it.
+- 2026-08-24 (M3): real dependency selection - the `toml` crate
+  (v1.1.4+spec-1.1.0, MIT OR Apache-2.0, GREEN, no advisories, cached
+  locally) is the real TOML parser used to read the real Cargo.lock.
+  Alternatives rejected: hand-rolled TOML parser (fragile, no
+  certification), cargo_metadata (heavier, shell-out coupling),
+  toml 0.9 (winnow version split fails cargo-deny bans). Replacement
+  contract: any conformant TOML parser behind the Lockfile reader;
+  version locked in Cargo.lock.
+- 2026-08-24 (M3): SPDX expression semantics at the transport
+  boundary. OR/AND both take the MOST RESTRICTIVE branch; a grant
+  that includes a copyleft or unknown option is never auto-approved
+  (directive I: do not treat all expressions containing MIT as GREEN).
+  WITH accepted only for known exceptions (LLVM-exception); unknown
+  exceptions and LicenseRef-* fail closed. This is stricter than
+  cargo-deny's OR-any semantics and is the documented Nexus policy.
+- 2026-08-24 (M3): license_clear semantics in the inventory report.
+  A package is license_clear ONLY when the whole expression classifies
+  GREEN; permitted_default is always false because the scanned
+  component is never pre-approved (ALLOWLIST ENTRY != APPROVAL; M2
+  engine requires review+approval for any permit). The gate asserts
+  permitted_default_count == 0 on real data.
 
 # 14. Outcomes & Retrospective
 

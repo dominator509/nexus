@@ -1,0 +1,32 @@
+# EP-039 M3 GREEN allowlist (SPEC-019; LICENSE_POLICY.md; deny.toml).
+#
+# Canonical GREEN class per LICENSE_POLICY.md: MIT, Apache-2.0, BSD, ISC,
+# PostgreSQL, PSF, and equivalent permissive licenses may be linked or
+# embedded after security review. This file is the checked-in Nexus
+# policy; the transport loads it and the deterministic engine enforces
+# it. It is aligned with scripts/dependency-audit.sh's deny.toml allow
+# list (the real cargo-deny gate): every SPDX id here is also in
+# deny.toml [licenses] allow.
+#
+# deny_unknown = true: any license id not listed here fails closed. An
+# SPDX expression containing an unknown id fails closed at the transport
+# even if another branch of the expression is listed - UNKNOWN LICENSE
+# != SAFE (M1 invariant). cargo-deny's OR-any semantics may accept such
+# an expression; the Nexus canonical classifier must not silently
+# broaden approval.
+version = 1
+deny_unknown = true
+
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "PostgreSQL",
+  "PSF-2.0",
+  "CDLA-Permissive-2.0",
+  "Unicode-3.0",
+  "Unlicense",
+  "0BSD",
+]

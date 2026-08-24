@@ -1,0 +1,13 @@
+# EP-039 M3 SIDECAR obligations (SPEC-019 behavior 2; LICENSE_POLICY.md).
+#
+# Copyleft components (GPL/AGPL -> SIDECAR) must run process-separated
+# as independent processes or external appliances, communicate through
+# documented APIs, and preserve notices and source-offer duties. The
+# transport loads these flags and the deterministic BoundaryPolicy
+# enforces them: SIDECAR without a process boundary fails, boundary
+# without an API contract fails, boundary without a source offer fails.
+version = 1
+
+require_api_contract = true
+require_source_offer = true
+require_process_separation = true

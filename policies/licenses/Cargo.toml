@@ -1,0 +1,13 @@
+[package]
+name = "nexus-supply-chain-policy-io"
+version = "0.1.0"
+edition = "2021"
+description = "EP-039 M3 real dependency and transport integration: loads checked-in policies/licenses/ files, parses the REAL workspace Cargo.lock, resolves each locked package's REAL license from the real registry cache / workspace manifests, evaluates the real inventory through the M1 classifier and M2 engine, and emits redacted deterministic evidence (SPEC-019; LICENSE_POLICY.md)"
+license = "MIT"
+
+[dependencies]
+nexus-supply-chain = { path = "../../crates/nexus-supply-chain", version = "0.1.0" }
+nexus-supply-chain-policy = { path = "../../supply-chain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+toml = "1.1"
