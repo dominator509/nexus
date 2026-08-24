@@ -719,6 +719,53 @@ remote synchronization NOT ASSERTED (REMOTE_SYNC_BLOCKED_OWNER_AUTH
 unchanged - GitHub credential HTTP 401; remote refs NOT verified; no
 force-push).
 
+Canonical node verify (committed tree dd029d9, 2026-08-24): full chain
+run via `sh scripts/node-verify.sh EP-040` with runtime env exported
+(scripts/env.sh + /tmp/nexus-battery-env.sh + /tmp/ep038-verify-gt.env
++ dead-port STOPPED_DSN + NEXUS_SMOKE_URL) and the EP-044 control plane
+UP (healthz 200 readyz 200 capabilities non-vacuous after
+`sh scripts/local-start.sh core`). Observed: preflight ok; build ok;
+security 0 advisories; dependency audit ok; license gate ok; reality
+gate ok; runtime smoke ok; live-fire ladder ok (LF-001..LF-029 incl
+foreign nodes EP-021/EP-023/EP-025/EP-026/EP-029/EP-031/EP-033/EP-034/
+EP-035/EP-037; LF-029 ok); verify ok; EP-040 M5 gate: ok; EP-040
+verify: ok; node verify EP-040: ok; NODE_VERIFY=0 EXIT=0.
+
+Two defects found during canonical node verify:
+1. FOREIGN_NODE residue: two leftover `nexus-ep035-*` containers from an
+   earlier interrupted verify run tripped the EP-035 M3 orphan guard
+   (foreign node gate). Classified FOREIGN_NODE; removed both
+   containers; EP-035 M3 gate then green. No EP-040 code change.
+2. Gate self-glob false positive: the M5 gate's resource-hygiene check
+   flagged the node-verify harness's own log files
+   (/tmp/ep040-m5-nodeverify*.log) as temp evidence residue because the
+   runner named them with the EP-040 M5 prefix. The gate's residue glob
+   already excluded its own gate log but not the harness logs; resolved
+   on the runner side by naming the verify log outside the owned prefix
+   (/tmp/nv-ep040-nodeverify.log) and removing the stale harness logs.
+   No gate weakening: the residue check still fails on any real
+   /tmp/ep040-m5-* residue.
+
+After verify green: foreign LF-* evidence churn from the verify run
+reverted; expected files EP-040: ok; tree clean at dd029d9; ledger
+M1/M2/M3/M4/M5 MILESTONE_PASS = 1 each; NODE_DONE appended exactly
+once; green tag green/EP-040 -> dd029d9; metadata-only closure commit;
+final tree clean; zero EP-040-owned containers/networks/volumes/temp
+roots (retained fixture containers MinIO/SWF/GlitchTip/EP-002/grafana/
+prometheus untouched).
+
+Final node certification (honest): the full EP-040 ladder (contract
+vocabulary + deterministic execution core + real provider transport +
+security/hardware forced failures + real bounded chaos live-fire) and
+its non-vacuous gates are CERTIFIED for the exact exercised local
+surface and committed-tree reproduction; node closure proof (expected
+files, verify, runtime smoke on the live EP-044 control plane, node
+verify sentinel) CERTIFIED on dd029d9; production hardening NOT
+ASSERTED; penetration testing NOT ASSERTED; real hardware NOT ASSERTED
+(no real hardware exercised); production chaos NOT ASSERTED; broad live
+resilience NOT ASSERTED; remote synchronization NOT ASSERTED
+(REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged).
+
 # 12. Surprises & Discoveries
 
 - 2026-08-24: M1 crate surfaces. The seven node-contract interfaces map
@@ -861,3 +908,76 @@ force-push).
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## Changed files versus the M5 fence
+
+- `tests/chaos/` @nexus-chaos (scenario.rs, failure.rs, injection.rs,
+  evidence.rs, pressure.rs, engine.rs) - M5-owned
+- `.github/workflows/nightly.yml` - M5-owned
+- `scripts/ep040-m5-tests.sh` - M5-owned gate
+- `scripts/nodes/EP-040.sh` - M5/verify branch rewired to the real gate
+- `Cargo.toml` / `Cargo.lock` - workspace membership
+- `.agent/expected-files/EP-040.txt` - gate script listed
+- `.agent/state/LEDGER.md` - M5 MILESTONE_PASS + NODE_DONE (append-only)
+- `.agent/execplans/EP-040-testing-hardening-and-chaos.md` - progress,
+  surprises, decision log, outcomes
+- `green/EP-040` git tag -> FINAL_VERIFIED_COMMIT dd029d9
+
+## Exact commands and observed sentinels
+
+- `sh scripts/ep040-m5-tests.sh` -> `EP-040 M5 gate: ok` (exit 0)
+- `sh scripts/nodes/EP-040.sh M5` -> `EP-040 M5: ok` (exit 0)
+- `sh scripts/nodes/EP-040.sh M1|M2|M3|M4` regressions -> ok each
+- `sh scripts/expected-files.sh EP-040` -> `expected files EP-040: ok`
+- `sh scripts/node-verify.sh EP-040` (env + control plane up)
+  -> `EP-040 M5 gate: ok`, `EP-040 verify: ok`,
+  `node verify EP-040: ok`, NODE_VERIFY=0 (exit 0)
+- cargo test chaos crate: 31 ep040_m5_chaos_* proofs green, 0
+  failed/ignored; workspace battery 255 integration suites / 2957
+  passed / 0 failed with canonical skip+exclude+fixture envs
+- side gates: scope audit, security (0 advisories), dependency audit,
+  license gate, reality gate, blueprint validation, format, lint,
+  typecheck - all ok
+- committed-tree reproduction on dd029d9 green; tree clean;
+  `git status --short` empty after closure commit
+
+## Test and proof evidence
+
+- M1: 61 + 9 ep040_unit_* proofs; M2: 28 + 9; M3: 16 + 7 real-provider;
+  M4: 18 + 12 failure proofs; M5: 31 chaos live-fire proofs - all green,
+  0 failed/ignored, all gates non-vacuous with anti-masking sentinels.
+
+## Assumptions confirmed or changed
+
+- Confirmed: docker kill (not rm -f) is the honest recoverable
+  terminate; ephemeral host ports change across kill/start; chaos
+  injection succeeded != resilience certified.
+- Changed: none of the locked invariants were weakened; the M4
+  disk-exhaustion lesson is now a real statvfs pressure probe.
+
+## Provider and hardware status
+
+- Real provider: postgres:18.4 digest-pinned (COMPONENT_REGISTRY)
+  exercised through the published host port across M3/M4/M5; chaos
+  kill/start recovery proven against it.
+- Hardware: NO real hardware exercised. Hardware certification model
+  CERTIFIED for simulator/capability-blocked behavior only; real
+  hardware certification NOT ASSERTED.
+
+## Remaining risks
+
+- Remote synchronization blocked (REMOTE_SYNC_BLOCKED_OWNER_AUTH -
+  GitHub credential HTTP 401); remote refs NOT verified; fresh gh auth
+  login required before any push; no force-push. Recorded truthfully.
+- Production hardening, penetration testing, production chaos, broad
+  live resilience: NOT ASSERTED - outside the exercised local surface.
+- Legal clearance / production SBOM completeness / container image
+  provenance / SLSA-in-toto: owned by later nodes (EP-039 boundaries
+  preserved).
+
+## Green tag
+
+- `green/EP-040` -> dd029d9 (FINAL_VERIFIED_COMMIT)
+- Node closure: NODE_DONE appended exactly once; metadata-only closure
+  commit; final tree clean; zero EP-040-owned containers/networks/
+  volumes/temp roots.
