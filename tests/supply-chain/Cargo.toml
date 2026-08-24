@@ -1,0 +1,14 @@
+[package]
+name = "nexus-supply-chain-live-fire"
+version = "0.1.0"
+edition = "2021"
+description = "EP-039 M5 final live-fire composition: real repo state -> real Cargo.lock inventory -> real policy files -> M1 contract -> M2 deterministic engine -> M3 transport -> M4 scripts/sbom evidence -> verification against current tree -> redacted observability -> final certified/non-certified decision -> current-run evidence (SPEC-019; LICENSE_POLICY.md)"
+license = "MIT"
+
+[dependencies]
+nexus-supply-chain = { path = "../../crates/nexus-supply-chain", version = "0.1.0" }
+nexus-supply-chain-policy = { path = "../../supply-chain", version = "0.1.0" }
+nexus-supply-chain-policy-io = { path = "../../policies/licenses", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10"

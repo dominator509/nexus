@@ -46,6 +46,7 @@ members = [
     "crates/nexus-supply-chain",
     "supply-chain",
     "policies/licenses",
+    "tests/supply-chain",
     "infra/otel",
     "infra/glitchtip",
     "infra/observability",

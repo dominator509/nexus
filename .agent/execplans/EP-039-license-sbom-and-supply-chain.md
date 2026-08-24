@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 ## M2 progress (observed 2026-08-24)
 
@@ -588,6 +588,103 @@ M4 implemented and proven (all commands run now, outputs observed):
   SLSA/in-toto signing, external advisory feed monitoring, GitHub
   dependency submission, remote synchronization.
 
+## M5 progress (observed 2026-08-24)
+
+Remote-sync truth (unchanged, EP-038 closure): EP-038 remote sync
+remains BLOCKED by GitHub credential HTTP 401 on every candidate
+(gh token, gateway-log tokens, SSH keys). Fresh `gh auth login` or
+credential repair is required before any push. EP-039 must not claim
+remote synchronization until observed with ls-remote or equivalent. No
+force-push was attempted. Classification: REMOTE_SYNC_BLOCKED_OWNER_AUTH.
+
+M5 implemented and proven (all commands run now, outputs observed):
+
+- M5-owned paths: `tests/supply-chain/` (the M5 fence, now the FINAL
+  missing expected-files directory - `sh scripts/expected-files.sh
+  EP-039` is green) + the M5 gate `scripts/ep039-m5-tests.sh` + node
+  M5/verify rewiring + expected-files entry + current-run evidence
+  `.agent/state/evidence/EP-039-m5.json` + ExecPlan closure.
+- `tests/supply-chain/` @nexus-supply-chain-live-fire (workspace
+  member; deps only nexus-supply-chain + nexus-supply-chain-policy +
+  nexus-supply-chain-policy-io + serde + serde_json + sha2 0.10; no
+  vendor SDK / OCI / scanner / signer; dependency-direction enforced by
+  the gate):
+  - src/lib.rs: the FINAL live-fire composition (real repo state ->
+    real Cargo.lock inventory -> real policy files -> M1 contract ->
+    M2 deterministic engine -> M3 transport -> M4 scripts/sbom
+    evidence semantics -> verification against current tree -> redacted
+    observability -> final certified/non-certified decision ->
+    current-run evidence). compose_live_fire() evaluates the real
+    inventory, computes sha256 lockfile/policy/inventory fingerprints,
+    builds the redacted evidence document (schema
+    nexus.sbom.livefire.v1, run_id/git_commit/fingerprints/counts/
+    verdicts/certification boundary), writes evidence.json + sha256
+    seal, and returns LiveFireReport. verify_evidence() mirrors the M4
+    verify.sh typed failure classes (EMPTY_EVIDENCE /
+    TAMPERED_EVIDENCE / MISMATCHED_RUN_ID / STALE_GIT_COMMIT /
+    STALE_LOCKFILE / STALE_POLICY / STALE_EVIDENCE /
+    REDACTION_FAILURE).
+  - tests/ep039_m5_live_fire.rs: 10 `ep039_live_fire_*` proofs on the
+    REAL workspace (no mocks): full composition asserts honest decision
+    (sbom_generated=true, sbom_verified=true, policy_passed=false,
+    policy_verdict=NON_GREEN, legal_clearance=NOT_ASSERTED,
+    ship_approved=false), evidence verifies against current tree,
+    stale evidence rejected (STALE_EVIDENCE), tampered evidence
+    rejected (TAMPERED_EVIDENCE), mismatched run_id rejected
+    (MISMATCHED_RUN_ID), empty evidence rejected, redaction canary
+    never leaks, inventory deterministic, real denied finding preserved
+    (exact denied-count relationship + per-id assertions), current-run
+    evidence written through EP039_M5_EVIDENCE env (never skipped -
+    temp path when unset).
+- REAL INVENTORY RESULT (current tree with the M5 member): 446
+  packages, 444 resolved, 430 GREEN, 16 denied (14 ids outside
+  canonical tables - MIT-0/CC0-1.0/Zlib/BSL-1.0 in OR expressions -
+  and 2 license-less workspace manifests). This EXACTLY matches the M3
+  ledger's recorded finding (446/444/430/16); the M4 committed tree
+  had 445 because the live-fire crate (a workspace member) did not
+  exist yet. No policy broadening; the finding's story is unchanged
+  and fully consistent across M3/M4/M5.
+- Gate `scripts/ep039-m5-tests.sh` non-vacuous: material presence,
+  workspace membership, no-placeholder scan, no-secret-literal scan,
+  FULL expected-files EP-039 list green, real cargo test pass-count
+  vacuity guards, all 10 ep039_live_fire_* sentinels, redaction proof,
+  dependency-direction forbidden-SDK proof, clippy -D warnings clean,
+  fmt clean, current-run evidence written + redacted + honest verdict
+  (NON_GREEN/policy_passed=false/ship_approved=false/legal
+  NOT_ASSERTED), real scripts/sbom generate -> verify -> observability
+  green, stale evidence rejected with typed STALE_EVIDENCE, M1+M2+M3+M4
+  regression gates green. Observed: `EP-039 M5 gate: ok` EXIT=0.
+- Node `scripts/nodes/EP-039.sh` M5|verify rewired from artifact-check
+  masking + no-op to the real gate. Observed: `EP-039 M5: ok` EXIT=0.
+- M1 regression green (EP-039 M1: ok), M2 (EP-039 M2: ok), M3
+  (EP-039 M3: ok), M4 (EP-039 M4: ok).
+- Side gates: scope audit EP-039: ok, security check: ok (0
+  advisories), dependency audit: ok, license gate: ok, reality gate:
+  ok, blueprint validation: ok, format check: ok, lint: ok, typecheck:
+  ok, test-unit: ok (workspace battery incl. live-fire crate).
+- Canonical node verify: `sh scripts/node-verify.sh EP-039` emits
+  `node verify EP-039: ok` on the committed tree (with the EP-044
+  control plane up for the mandatory runtime smoke; LF-029 re-proves
+  runtime smoke and tears down its own core).
+- Real defects found+fixed during M5: (1) serde_json json! recursion
+  limit in the composition body - restructured to a serde_json::Map;
+  (2) mismatched-run_id proof passed a fake policy fingerprint which
+  produced STALE_POLICY instead of the intended MISMATCHED_RUN_ID -
+  now passes genuine bindings so the typed class is exact; (3) test
+  sha2 helper needed the Digest trait in scope.
+- Resource hygiene: zero EP-039-owned containers/networks/volumes/temp
+  roots (all fixtures are isolated temp dirs; no container/service
+  started by EP-039).
+- Certification (honest): final live-fire composition CERTIFIED for
+  the exact exercised local repository surface (real Cargo.lock +
+  real registry cache + checked-in policy files + M1/M2/M3/M4
+  machinery); expected-files/node closure proof CERTIFIED; final
+  evidence pipeline CERTIFIED for the exact generated/validated local
+  evidence surface. NOT ASSERTED: legal clearance, production artifact
+  SBOM completeness, container image provenance, SLSA/in-toto signing,
+  external advisory feed monitoring, GitHub dependency submission,
+  remote synchronization (REMOTE_SYNC_BLOCKED_OWNER_AUTH).
+
 ## M3 progress (observed 2026-08-24)
 
 Remote-sync truth (unchanged, EP-038 closure): EP-038 remote sync
@@ -838,7 +935,63 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   file (evidence.json.sha256) so tampering is detectable without adding
   a crypto dependency to the transport crate (M3 dependency-direction
   gate forbids new deps there).
+- 2026-08-24 (M5): the final live-fire composition lives in
+  `tests/supply-chain/` @nexus-supply-chain-live-fire (the M5 fence).
+  It adds sha2 0.10 as its only non-workspace dependency (the same
+  locked line nexus-supply-chain already uses; no new crate in the
+  lockfile). The crate is the final missing expected-files directory;
+  with it, `sh scripts/expected-files.sh EP-039` is green.
+- 2026-08-24 (M5): adding the workspace member brought the real
+  lockfile to 446 packages, so the current inventory EXACTLY matches
+  the M3 ledger finding (446/444/430/16). The M4 committed tree had
+  445 because the live-fire crate did not exist then. This resolves
+  the M4-recorded one-package delta honestly: the finding was never a
+  policy change, and the numbers now agree across M3/M4/M5.
+- 2026-08-24 (M5): serde_json's json! macro hit the recursion limit on
+  the composition body (large certification_boundary object); the body
+  is now built with a serde_json::Map, avoiding a crate-wide
+  recursion_limit bump.
+- 2026-08-24 (M5): the mismatched-run_id proof initially passed a fake
+  policy fingerprint, so the typed failure class was STALE_POLICY
+  (alphabetically first) instead of the intended MISMATCHED_RUN_ID.
+  The proof now passes genuine bindings, making the typed class exact.
 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+# 15. Operations (M5)
+
+Health/readiness/backup/restore/upgrade/disable/rollback for the
+EP-039-owned components (policies/licenses/, scripts/sbom/, and the
+tests/supply-chain/ live-fire crate). No long-lived service is started
+by this node; every operational command is deterministic and local.
+
+- Health: `sh scripts/ep039-m5-tests.sh` runs the final live-fire
+  composition + M1-M4 regressions; the evidence pipeline health is
+  `sh scripts/sbom/generate.sh <out>` + `sh scripts/sbom/verify.sh
+  <out>` (verify exits non-zero on stale/tampered/mismatched/empty
+  evidence). The inventory verdict is reported honestly via
+  `.agent/state/evidence/EP-039-m5.json` (policy_verdict NON_GREEN
+  while the 16-denied finding stands).
+- Readiness: `sh scripts/expected-files.sh EP-039` green means every
+  node-owned path exists; the live-fire crate's
+  `ep039_live_fire_writes_current_evidence` proof verifies the
+  evidence binds to the current tree (run_id/git_commit/lockfile/
+  policy fingerprints, freshness window, redaction).
+- Backup: the checked-in policy files (policies/licenses/*.toml), the
+  gate scripts, and the current-run evidence JSON are the durable
+  state; they are version-controlled. A backup is `git archive` of
+  those paths or a copy of the evidence directory.
+- Restore: restore the policy files/gate scripts from version control;
+  re-run the M5 gate to regenerate current-run evidence.
+- Upgrade: advance a dependency only through the ADR + cargo-deny +
+  license-gate + dependency-audit path; the M5 gate re-verifies the
+  real inventory and fails closed on any new denied/unclassified
+  license (no silent broadening).
+- Disable: the supply-chain gates are standalone scripts; disabling
+  them is a deliberate policy action that must be recorded in the
+  ledger - there is no runtime service to stop.
+- Rollback: `git revert` the milestone commit, or check out the prior
+  milestone commit and re-run the node gates; the gates are the
+  source of truth.

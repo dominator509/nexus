@@ -2545,6 +2545,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-supply-chain-live-fire"
+version = "0.1.0"
+dependencies = [
+ "nexus-supply-chain",
+ "nexus-supply-chain-policy",
+ "nexus-supply-chain-policy-io",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "nexus-supply-chain-policy"
 version = "0.1.0"
 dependencies = [
