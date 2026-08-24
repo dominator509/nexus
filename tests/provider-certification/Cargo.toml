@@ -1,0 +1,12 @@
+[package]
+name = "nexus-provider-certification"
+version = "0.1.0"
+edition = "2021"
+description = "EP-040 M3 real provider certification transport: real ephemeral PostgreSQL 18.4 container, ProviderCertificationPort with mock/real distinction, readiness/cancellation/timeout/idempotency/event emission/audit/cleanup across the boundary (SPEC-008; TESTING.md; COMPONENT_REGISTRY.yaml)"
+license = "MIT"
+
+[dependencies]
+nexus-test-contract = { path = "../contract", version = "0.1.0" }
+postgres = { version = "0.19.14", features = ["with-serde_json-1"] }
+serde.workspace = true
+serde_json.workspace = true

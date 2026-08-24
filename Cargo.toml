@@ -51,6 +51,8 @@ members = [
     "tests/performance",
     "tests/integration",
     "tests/accessibility/audit-core",
+    "tests/provider-certification",
+    "tests/e2e/transport",
     "infra/otel",
     "infra/glitchtip",
     "infra/observability",

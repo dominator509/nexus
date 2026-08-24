@@ -410,6 +410,84 @@ runs, real browser/axe accessibility scanning (EP-033/EP-034 own the live
 scan harness), remote synchronization (REMOTE_SYNC_BLOCKED_OWNER_AUTH
 unchanged).
 
+### M3 progress (2026-08-24)
+
+M3 fence: tests/e2e/ + tests/provider-certification/ (real dependency and
+transport integration per ExecPlan M3: connect EP-040 to its real selected
+dependency from COMPONENT_REGISTRY.yaml and prove contract behavior across
+the boundary).
+
+Built:
+
+- tests/provider-certification/ @nexus-provider-certification: real
+transport to the digest-pinned postgres:18.4 container
+(sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636,
+COMPONENT_REGISTRY.yaml). Container spawned by the REAL docker CLI with a
+runtime-generated password and unique EP-040-owned name
+(nexus-ep040-m3-<nanos>); readiness proven by connecting through the
+PUBLISHED HOST PORT (EP-001 M5 flake-fix pattern). RealProviderCertifier
+implements ProviderCertificationPort: REAL probe evidence certifies only
+for the exact provider/version/interface exercised; MOCK/SIMULATED
+provenance -> MockOnlyCertification; stale run_id/git_commit evidence
+rejected; missing evidence rejected; suite provider must match probed
+provider; secret-shaped evidence rejected at the suite layer (M1) and at
+the certifier layer (defense in depth).
+- tests/e2e/transport/ @nexus-e2e-transport: one real end-to-end journey
+composing M1 contract suite + M2 execution core + M3 real provider
+transport (container -> probe -> roundtrip -> NOTIFY/LISTEN event
+emission -> current-run evidence -> certification -> teardown with
+zero-residue verification). M2 runner composition: run_tests executes a
+real subprocess and parse_output consumes real output; parsed green is
+not behavior verification (production_path stays false); missing summary
+fails closed; stale/empty evidence never green; redaction proven with a
+runtime-constructed secret canary.
+
+Proofs: 23 new (16 provider-certification, 7 e2e-transport), zero
+failed/ignored. Real-container proofs exercised: real probe observes the
+18.4 engine banner; real roundtrip; readiness through host port;
+statement_timeout cancels pg_sleep(30) and connection recovers; UNIQUE
+idempotency_key rejects duplicate; NOTIFY payload observed by real
+LISTENer; drop removes container with zero residue; wrong password
+rejected by the real engine.
+
+Real defect found+fixed: the postgres Notifications API is a
+FallibleIterator - naive .next() on the nonblocking iter() polls without
+waiting for network arrival; switched to timeout_iter(200ms) with the
+fallible-iterator trait in scope (postgres re-exports it) so the NOTIFY
+payload is actually awaited. Second fix: e2e journey teardown originally
+left the evidence root in /tmp; teardown now removes the evidence root and
+the journey test asserts zero temp residue.
+
+Gate: scripts/ep040-m3-tests.sh - material presence of both crates and all
+owned sources, workspace membership, real component registered with
+digest, docker CLI live, real cargo test with vacuity guards (non-zero
+pass, zero failed/ignored), 23 anti-masking sentinels, real-container
+wiring verified (docker run + EP-040-owned names + pinned image), no
+placeholder scan, dependency-direction proof (canonical surfaces + real
+postgres client only), clippy -D warnings, fmt, crate licenses MIT,
+resource hygiene (zero EP-040-owned containers/temp evidence), M1 + M2
+regressions green.
+
+Observed (exit 0): EP-040 M3 gate: ok; node EP-040 M3: ok; node EP-040 M1
+regression: ok; node EP-040 M2 regression: ok; scope audit EP-040: ok;
+security check: ok (0 advisories); dependency audit: ok; license gate: ok;
+reality gate: ok; blueprint validation: ok (docker --format templates
+replaced with plain ps + awk to avoid double-brace placeholder flags);
+format check: ok; lint: ok; typecheck: ok; workspace battery: 302 green
+binaries / 0 failed (122 unit + 180 integration; prior-unit-count
+convention matches M2's 122; M3 adds the two new crates' suites green).
+
+Certification boundary (honest): real provider transport and
+ProviderCertificationPort behavior CERTIFIED for the exact exercised local
+surface (real postgres:18.4 container through the published host port;
+readiness/cancellation/timeout/idempotency/event emission/audit/cleanup);
+e2e transport journey CERTIFIED for the exact generated/validated local
+evidence surface. NOT ASSERTED: production accessibility certification,
+real site-wide accessibility compliance, real hardware certification,
+penetration testing, live resilience, real chaos injection, production
+hardening, remote synchronization (REMOTE_SYNC_BLOCKED_OWNER_AUTH
+unchanged).
+
 # 12. Surprises & Discoveries
 
 - 2026-08-24: M1 crate surfaces. The seven node-contract interfaces map
@@ -431,6 +509,15 @@ unchanged).
   BEFORE serialization so JSON stays valid and canaries never enter the
   record. Test count: 37 new ep040_unit_* proofs (28 execution + 9
   accessibility), zero failed/ignored.
+- 2026-08-24: M3 real-transport surfaces. tests/provider-certification/
+  and tests/e2e/transport/ connect EP-040 to its real selected dependency
+  (postgres:18.4 digest-pinned) via the real docker CLI. The postgres
+  Notifications API is a FallibleIterator: naive .next() on nonblocking
+  iter() polls without waiting, so NOTIFY payloads are missed; the fix is
+  timeout_iter(200ms) with the fallible-iterator trait (re-exported by
+  postgres) in scope. Test count: 23 new ep040_integration_* proofs (16
+  provider + 7 e2e), zero failed/ignored. Real containers exercised and
+  torn down with zero residue.
 
 # 13. Decision Log
 
@@ -458,6 +545,22 @@ unchanged).
   test); no new dependency surface. License: MIT declared on both crates.
   Compatibility: pure additive workspace members; prior-node content
   untouched.
+- 2026-08-24: M3 real-transport location = tests/provider-certification/
+  + tests/e2e/transport/ workspace crates. The real selected dependency is
+  postgres:18.4 (digest-pinned, COMPONENT_REGISTRY.yaml, TRANSPORT_CERTIFIED
+  since EP-035); M3 proves the ProviderCertificationSuite port across that
+  boundary with real containers. Evidence: .agent/milestone-files/
+  EP-040-M3.txt + docker ps zero-residue proofs in the gate. Alternatives:
+  MinIO/NATS were considered but Postgres is the canonical controlled
+  fixture with the strongest prior certification chain; a browser/axe
+  harness was rejected because the M3 fence names tests/e2e/ +
+  tests/provider-certification/, and EP-033/EP-034 own the live a11y
+  scanning harness. Consequence: provider transport + e2e journey live
+  under the node's test roots; prior e2e/web + e2e/mobile content
+  untouched. Security: runtime-generated DB password, never a tracked
+  literal; evidence redacted; no credential in logs. License: MIT on both
+  crates; postgres client already locked (0.19.14, MIT). Compatibility:
+  pure additive workspace members.
 
 # 14. Outcomes & Retrospective
 
