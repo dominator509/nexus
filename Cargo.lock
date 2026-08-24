@@ -1481,6 +1481,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-chaos"
+version = "0.1.0"
+dependencies = [
+ "nexus-provider-certification",
+ "nexus-security-core",
+ "nexus-test-contract",
+ "nexus-test-execution",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-compute"
 version = "0.1.0"
 dependencies = [

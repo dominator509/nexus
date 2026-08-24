@@ -1,0 +1,14 @@
+[package]
+name = "nexus-chaos"
+version = "0.1.0"
+edition = "2021"
+description = "EP-040 M5 chaos live-fire: real bounded failure injection with typed observation, recovery assertions, resource-pressure detection, and current-run evidence (SPEC-008; M5 fence tests/chaos/)"
+license = "MIT"
+
+[dependencies]
+nexus-test-contract = { path = "../contract", version = "0.1.0" }
+nexus-test-execution = { path = "../integration", version = "0.1.0" }
+nexus-provider-certification = { path = "../provider-certification", version = "0.1.0" }
+nexus-security-core = { path = "../security", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

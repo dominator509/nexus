@@ -55,6 +55,7 @@ members = [
     "tests/e2e/transport",
     "tests/security",
     "tests/hardware",
+    "tests/chaos",
     "infra/otel",
     "infra/glitchtip",
     "infra/observability",

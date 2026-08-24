@@ -597,6 +597,127 @@ NOT ASSERTED; real chaos injection NOT ASSERTED (tests/chaos/ is M5);
 production hardening NOT ASSERTED; remote synchronization NOT ASSERTED
 (REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged).
 
+### M5 progress (2026-08-24)
+
+GOAL: Live-fire, operations, and node closure (M5 fence
+`.agent/milestone-files/EP-040-M5.txt`: `tests/chaos/` +
+`.github/workflows/nightly.yml`).
+
+CHANGED:
+- `tests/chaos/` @nexus-chaos (workspace member; deps only
+  nexus-test-contract + nexus-test-execution + nexus-provider-certification
+  + nexus-security-core + serde + serde_json - canonical M1/M2/M3/M4
+  surfaces only; dependency-direction enforced): real bounded chaos
+  live-fire composing the whole EP-040 ladder. `scenario.rs` the full
+  9-scenario catalog with complete M1 ChaosScenario safety models
+  (owner EP-040, Single blast radius, timeout budget, rollback path,
+  safety preconditions, observability requirement, expected failure
+  class, recovery assertion, cleanup assertion, prohibited targets);
+  `failure.rs` typed ChaosFailureClass vocabulary (14 exact EP-040
+  classes: OWNER_CODE_REGRESSION / FIXTURE_STATE_LEAK /
+  RESOURCE_EXHAUSTION / RUNTIME_ORDERING / FOREIGN_NODE /
+  GLOBAL_VERIFY_DEFECT / ENVIRONMENT / AUTH_BLOCKED /
+  CAPABILITY_BLOCKED / TIMEOUT / UNAVAILABLE / POLICY_DENIED /
+  SECURITY_FAILURE / HARDWARE_NOT_ASSERTED - FromStr+serde fail-closed);
+  `injection.rs` real injection mechanisms: terminate_and_recover (real
+  docker kill SIGKILLs the provider main process -> next connect fails
+  closed typed Unavailable -> docker start restores the SAME container ->
+  REAL discovery: the ephemeral host port CHANGES across kill/start so
+  the port is re-read from the docker daemon -> reconnect + SELECT 1
+  roundtrip; M4 proved the failure, M5 proves the recovery+cleanup),
+  unavailable_port_probe (real connect to a closed loopback port ->
+  typed Unavailable), silent_peer_accept (real listener accepts but
+  never answers -> bounded typed Timeout), revoke_runtime_credential
+  (real M4 RuntimeToken revoked -> use denied, fresh works),
+  corrupt_evidence_bytes (real serialized JSON byte-flip -> parse fails
+  closed); `pressure.rs` the M4 disk-exhaustion lesson encoded:
+  probe_disk_pressure (real statvfs syscall, low-water detection,
+  owned-prefix /tmp/ep040-m5-* residue scan, attribution check),
+  remove_owned_temp_root (bounded cleanup REFUSES anything outside the
+  owned prefix); `evidence.rs` ChaosEvidenceStore current-run evidence
+  bound to run_id + git_commit, redacted BEFORE serialization, stale
+  run_id/git_commit rejected (Verification), missing binding rejected
+  (MissingEvidence), roundtrip verification proves canaries never enter
+  the record; `engine.rs` ChaosEngine validate -> inject -> observe ->
+  classify -> recover -> cleanup -> current-run evidence, typed
+  observed-class matching, certification state always conservative
+  OBSERVED_LOCAL_ONLY (CHAOS INJECTION SUCCEEDED != RESILIENCE
+  CERTIFIED); 31 ep040_m5_chaos_* proofs green (0 failed/ignored).
+- `.github/workflows/nightly.yml` nightly workflow: cron schedule +
+  workflow_dispatch, runs the real M5 gate + scope audit + expected
+  files + security/dependency/license/reality gates + integration;
+  zero double-brace expressions (blueprint-safe, matches ci.yml
+  convention).
+- `scripts/ep040-m5-tests.sh` non-vacuous M5 gate (material presence
+  chaos crate + all 8 owned sources, workspace membership, nightly
+  workflow real + blueprint-safe, M1/M2/M3/M4 surface composition, docker
+  CLI live, real mechanisms wired docker kill/start + port re-read +
+  TCP probes + RuntimeToken + bounded owned-prefix cleanup + pressure
+  probe, real cargo test pass-count vacuity guards, 31 anti-masking
+  sentinels, no-placeholder scan, dependency-direction proof, clippy -D
+  warnings clean, fmt clean, crate license MIT, resource hygiene zero
+  EP-040-owned containers/temp evidence, M1 + M2 + M3 + M4 regression
+  green, expected-files EP-040 lists M5-owned paths; EP-040 M5 gate: ok).
+- `scripts/nodes/EP-040.sh` node M5/verify rewired from artifact-check +
+  full-verify masking to the real gate with rc propagation
+  (EP-040 M5: ok EXIT=0).
+- `.agent/expected-files/EP-040.txt`: scripts/ep040-m5-tests.sh added
+  (tests/chaos/ + .github/workflows/nightly.yml were already listed).
+
+REAL DEFECTS found+fixed:
+1. The first terminate-recover implementation used docker rm -f then
+   docker start, which CANNOT recover a removed container - the honest
+   mechanism is docker kill (SIGKILL to PID 1, container object
+   retained) then docker start restores the SAME container identity.
+2. REAL discovery: docker re-publishes the ephemeral host port on a NEW
+   number across kill/start (observed 51860 -> 51861); recovery must
+   re-read the port from the docker daemon or the reconnect targets a
+   dead port (60s timeout). Fixed with re_read_host_port after start.
+3. Path::starts_with is component-wise, not string-wise: the evidence
+   root ownership check compared components so /tmp/ep040-m5-evidence
+   did NOT start with /tmp/ep040-m5- as a Path - fixed with string
+   prefix comparison.
+4. Parallel test races on shared /tmp roots (one test removed another's
+   evidence root mid-write) - fixed with unique nanos-suffixed roots
+   per scenario/test and a with_root engine constructor.
+5. verify_clean() means container-gone, so it must run AFTER docker
+   rm -f (was asserted before cleanup).
+6. The gate's own log file matched the /tmp/ep040-m5-* residue glob -
+   excluded from the residue scan.
+7. The gate's double-brace check contained the literal '{{' which
+   tripped the blueprint placeholder validator itself - rewritten with
+   a character-class regex '[\{][\{]' so the literal never appears.
+
+Observed (exit 0): EP-040 M5 gate: ok; node EP-040 M5: ok; node EP-040
+M1 regression: ok; node EP-040 M2 regression: ok; node EP-040 M3
+regression: ok; node EP-040 M4 regression: ok; scope audit EP-040: ok
+(after gate added to expected-files); expected files EP-040: ok
+(full list); security check: ok (0 advisories); dependency audit: ok;
+license gate: ok; reality gate: ok; blueprint validation: ok (after
+char-class brace check fix); format check: ok; lint: ok; typecheck: ok;
+workspace battery: integration 255 green suites / 0 failed / 2957
+passed with the canonical documented skip + exclude + retained fixture
+envs (MinIO /tmp/nexus-battery-env.sh, GlitchTip /tmp/ep038-verify-gt.env
+with dead-port STOPPED_DSN for the stopped-provider proof), unit battery
+green incl dart/flutter shims; EP-044 control plane restarted per
+convention (LF-029 may tear it down) and verified healthy
+(/healthz healthy /readyz true /v1/capabilities non-vacuous) for
+canonical node verify.
+
+Certification boundary (honest): chaos live-fire CERTIFIED for the exact
+exercised local surface (real docker kill/start recovery of a real
+provider container with port re-read, real TCP refusal + silent-peer
+timeout, real runtime credential revocation, real byte corruption,
+real temp-leak injection + bounded owned-prefix cleanup, real statvfs
+pressure probe); resilience/recovery CERTIFIED only for the exact
+injected failures exercised; hardware/simulator distinction preserved
+from M4; real hardware NOT ASSERTED (no real hardware exercised);
+penetration testing NOT ASSERTED; production hardening NOT ASSERTED;
+production chaos NOT ASSERTED; broad live resilience NOT ASSERTED;
+remote synchronization NOT ASSERTED (REMOTE_SYNC_BLOCKED_OWNER_AUTH
+unchanged - GitHub credential HTTP 401; remote refs NOT verified; no
+force-push).
+
 # 12. Surprises & Discoveries
 
 - 2026-08-24: M1 crate surfaces. The seven node-contract interfaces map
@@ -639,6 +760,18 @@ production hardening NOT ASSERTED; remote synchronization NOT ASSERTED
   provider container, runtime token revocation, controlled byte
   corruption, budget exhaustion, deny-default authorization, real
   secret-literal scanning with runtime-constructed canaries.
+- 2026-08-24: M5 chaos live-fire surfaces. tests/chaos/ @nexus-chaos
+  composes the whole ladder into a final live-fire with recovery
+  assertions. REAL discovery: docker re-publishes the ephemeral host
+  port on a NEW number across kill/start (observed 51860 -> 51861), so
+  recovery must re-read the port from the docker daemon; and docker
+  rm -f cannot be recovered by docker start (the honest terminate
+  mechanism is docker kill, which SIGKILLs PID 1 while retaining the
+  container object). The M4 disk-exhaustion lesson is encoded as real
+  pressure detection with owned-prefix attribution and bounded cleanup
+  (global prune is never a test mechanism). Test count: 31 new
+  ep040_m5_chaos_* proofs, zero failed/ignored. The nightly workflow
+  runs the M5 gate every night on CI.
 
 # 13. Decision Log
 
@@ -700,6 +833,29 @@ production hardening NOT ASSERTED; remote synchronization NOT ASSERTED
   crates. Compatibility: pure additive workspace members; path deps
   declare version = "0.1.0" exactly like M3 crates so cargo-deny bans
   stay green.
+- 2026-08-24: M5 chaos live-fire location = tests/chaos/ workspace crate
+  + .github/workflows/nightly.yml. M5 owns real bounded chaos injection
+  with recovery assertions and the nightly CI workflow; the fence names
+  those exact paths and no others. Evidence:
+  .agent/milestone-files/EP-040-M5.txt + expected-files EP-040.txt
+  (tests/chaos/ + nightly workflow already listed; gate script added).
+  Alternatives: reusing M4's rm -f terminate was rejected because a
+  removed container cannot be recovered by docker start - the honest
+  terminate mechanism for a recoverable provider is docker kill
+  (SIGKILL to PID 1, container object retained); relying on the
+  pre-kill host port was rejected because REAL observation proved docker
+  re-publishes the ephemeral port on a new number across kill/start.
+  Global docker prune as a pressure test was rejected - the M4
+  disk-exhaustion lesson is encoded as real statvfs pressure detection
+  with owned-prefix attribution and bounded cleanup that REFUSES
+  foreign roots. Consequence: real chaos live-fire lives under the
+  node's test root and runs nightly on CI. Security: runtime-constructed
+  canaries only; evidence redacted before serialization; docker kill
+  only ever targets the EP-040-owned container; the gate's double-brace
+  check uses a character-class regex so the gate itself never trips the
+  blueprint placeholder scan. License: MIT on the crate. Compatibility:
+  pure additive workspace member; path deps declare version = "0.1.0"
+  exactly like M3/M4 crates.
 
 # 14. Outcomes & Retrospective
 

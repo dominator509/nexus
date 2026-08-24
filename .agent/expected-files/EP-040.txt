@@ -7,6 +7,7 @@ scripts/ep040-m1-tests.sh
 scripts/ep040-m2-tests.sh
 scripts/ep040-m3-tests.sh
 scripts/ep040-m4-tests.sh
+scripts/ep040-m5-tests.sh
 Cargo.toml
 Cargo.lock
 tests/contract/

@@ -1,0 +1,79 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  chaos-gate:
+    name: EP-040 M5 chaos gate (nightly)
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install locked toolchain (mise)
+        uses: jdx/mise-action@v2
+        with:
+          version: 2026.8.5
+          install: true
+          cache: true
+
+      - name: Preflight
+        run: sh scripts/preflight.sh
+
+      - name: Blueprint validation
+        run: python3 scripts/blueprint_validate.py
+
+      - name: EP-040 M5 gate (chaos live-fire)
+        run: sh scripts/ep040-m5-tests.sh
+
+      - name: Scope audit EP-040
+        run: sh scripts/scope-audit.sh EP-040
+
+      - name: Expected files EP-040
+        run: sh scripts/expected-files.sh EP-040
+
+      - name: Security check
+        run: sh scripts/security-check.sh
+
+      - name: Dependency audit
+        run: sh scripts/dependency-audit.sh
+
+      - name: License gate
+        run: sh scripts/license-gate.sh
+
+      - name: Reality gate
+        run: sh scripts/reality-gate.sh
+
+  integration:
+    name: Nightly integration (real providers)
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install locked toolchain (mise)
+        uses: jdx/mise-action@v2
+        with:
+          version: 2026.8.5
+          install: true
+          cache: true
+
+      - name: Preflight
+        run: sh scripts/preflight.sh
+
+      - name: Integration tests
+        run: sh scripts/test-integration.sh
+
+      - name: Format check
+        run: sh scripts/format-check.sh
+
+      - name: Lint
+        run: sh scripts/lint.sh
+
+      - name: Typecheck
+        run: sh scripts/typecheck.sh
