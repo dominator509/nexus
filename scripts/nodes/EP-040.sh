@@ -11,7 +11,7 @@ case "$mode" in
   M1) sh scripts/ep040-m1-tests.sh ;;
   M2) sh scripts/ep040-m2-tests.sh ;;
   M3) sh scripts/ep040-m3-tests.sh ;;
-  M4) python3 scripts/node-artifact-check.py EP-040 M4; sh scripts/verify.sh ;;
+  M4) sh scripts/ep040-m4-tests.sh ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-040 M5
       sh scripts/verify.sh

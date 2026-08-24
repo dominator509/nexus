@@ -1740,6 +1740,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-hardware-certification"
+version = "0.1.0"
+dependencies = [
+ "nexus-test-contract",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "nexus-harness-adapters"
 version = "0.1.0"
 dependencies = [
@@ -2382,6 +2391,16 @@ name = "nexus-roku-home"
 version = "0.1.0"
 dependencies = [
  "nexus-vision",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-security-core"
+version = "0.1.0"
+dependencies = [
+ "nexus-provider-certification",
+ "nexus-test-contract",
  "serde",
  "serde_json",
 ]

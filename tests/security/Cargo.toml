@@ -1,0 +1,12 @@
+[package]
+name = "nexus-security-core"
+version = "0.1.0"
+edition = "2021"
+description = "EP-040 M4 security test behavior: real secret-literal scanning, redaction, authorization, insecure-config rejection, scanner-unavailable capability blocking, stale/empty evidence rejection, mock-only distinction, and real abuse-case failure injection (SPEC-008; SECURITY.md)"
+license = "MIT"
+
+[dependencies]
+nexus-test-contract = { path = "../contract", version = "0.1.0" }
+nexus-provider-certification = { path = "../provider-certification", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

@@ -53,6 +53,8 @@ members = [
     "tests/accessibility/audit-core",
     "tests/provider-certification",
     "tests/e2e/transport",
+    "tests/security",
+    "tests/hardware",
     "infra/otel",
     "infra/glitchtip",
     "infra/observability",
