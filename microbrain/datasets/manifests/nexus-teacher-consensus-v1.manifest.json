@@ -1,0 +1,129 @@
+{
+  "schema_version": "1",
+  "dataset_id": "nexus-teacher-consensus-v1",
+  "name": "nexus-teacher-consensus-v1",
+  "lineage": "teacher-consensus-v1:frontier-review:2026-08-24",
+  "created_at": "2026-08-24T00:00:00Z",
+  "examples": [
+    {
+      "schema_version": "1",
+      "example_id": "tc-001",
+      "role": "ROUTING",
+      "input_text": "route: play music on the office speaker",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "media.audio.play",
+        "route": "DETERMINISTIC",
+        "risk": "R0",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": false
+      },
+      "provenance": "TEACHER_CONSENSUS",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "mit-teacher-consensus",
+      "correlation_id": "corr-tc-001"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "tc-002",
+      "role": "RISK",
+      "input_text": "risk class for: arm the security system while someone is home",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "home.security.arm",
+        "route": "DETERMINISTIC",
+        "risk": "R2",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.3,
+        "approval_required": true
+      },
+      "provenance": "TEACHER_CONSENSUS",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "mit-teacher-consensus",
+      "correlation_id": "corr-tc-002"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "tc-003",
+      "role": "AMBIGUITY",
+      "input_text": "ambiguity for: shut it down",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "unknown",
+        "route": "ESCALATE",
+        "risk": "R2",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.9,
+        "approval_required": true
+      },
+      "provenance": "TEACHER_CONSENSUS",
+      "hard_negative": false,
+      "ood_verdict": "OUT_OF_DISTRIBUTION",
+      "license_ref": "mit-teacher-consensus",
+      "correlation_id": "corr-tc-003"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "tc-004",
+      "role": "QUOTED_INSTRUCTION",
+      "input_text": "quoted instruction: echo the quoted text back to the requester",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "comm.reply",
+        "route": "DETERMINISTIC",
+        "risk": "R1",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": false
+      },
+      "provenance": "TEACHER_CONSENSUS",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "mit-teacher-consensus",
+      "correlation_id": "corr-tc-004"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "opt-001",
+      "role": "PRIVACY",
+      "input_text": "privacy class for: store the voice memo in the household archive",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "data.archive.store",
+        "route": "DETERMINISTIC",
+        "risk": "R1",
+        "privacy": "SENSITIVE",
+        "ambiguity": 0.0,
+        "approval_required": false
+      },
+      "provenance": "OPTED_IN_SCRUBBED_CORRECTION",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "mit-opted-in-scrubbed",
+      "correlation_id": "corr-opt-001"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "opt-002",
+      "role": "ESCALATION",
+      "input_text": "escalate: request to export the full household timeline",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "data.export",
+        "route": "ESCALATE",
+        "risk": "R3",
+        "privacy": "SENSITIVE",
+        "ambiguity": 0.0,
+        "approval_required": true
+      },
+      "provenance": "OPTED_IN_SCRUBBED_CORRECTION",
+      "hard_negative": false,
+      "ood_verdict": "OUT_OF_DISTRIBUTION",
+      "license_ref": "mit-opted-in-scrubbed",
+      "correlation_id": "corr-opt-002"
+    }
+  ]
+}

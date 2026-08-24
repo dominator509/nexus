@@ -274,7 +274,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 # 11. Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -379,6 +379,84 @@ live-fire); remote synchronization NOT ASSERTED
 (REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged - GitHub credential HTTP 401;
 remote refs NOT verified; no force-push).
 
+### M2 progress (2026-08-24)
+
+GOAL: Implement the production behavior and deterministic invariants
+owned by EP-041 for the dataset boundary (M2 fence: microbrain/datasets/).
+
+CHANGED:
+- `python/nexus_microbrain/dataset_policy.py` deterministic dataset
+  policy engine above the M1 contract (pure, no I/O): DatasetVerdict
+  (usable/reasons/licensed/privacy_safe/counts by provenance+role/
+  hard-negative/OOD) with to_dict + to_redacted_dict; DatasetPolicy
+  with eight fail-closed rules - non-empty (DATASET EXISTS != USABLE),
+  every example licensed (MISSING LICENSE -> DENIED), no prohibited
+  license (default cc-by-nc-4.0; PROHIBITED LICENSE -> DENIED), no
+  unknown license (unknown/unlicensed prefixes; UNKNOWN LICENSE ->
+  DENIED), hard_negative flag consistency (flag true requires
+  HARD_NEGATIVE provenance), provenance known, role known (defense in
+  depth), teacher/opted-in examples licensed; boundary helpers
+  load_manifest (real JSON file -> M1 MicrobrainDataset, fails closed
+  typed on missing/malformed/non-object/unsupported-version),
+  sha256_manifest (sha256:hex of real file bytes), verify_manifest_file
+  (digest binding; mismatch -> verified False, missing file -> typed
+  MISSING_REQUIRED).
+- `microbrain/datasets/manifests/` real committed manifest fixtures:
+  nexus-synthetic-role-ops-v1.manifest.json (12 examples: 10
+  deterministic + 2 hard negatives; all 8 narrow roles; 4
+  out-of-distribution) and nexus-teacher-consensus-v1.manifest.json
+  (6 examples: 4 TEACHER_CONSENSUS + 2 OPTED_IN_SCRUBBED_CORRECTION
+  with license refs + correlation ids). LABELED local test fixtures,
+  never production training data. datasets README updated.
+- `tests/microbrain/test_ep041_m2_dataset_policy.py` 26 ep041_unit_m2_*
+  proofs green (0 failed/ignored): real manifest loads, policy positive
+  on both real manifests (usable/licensed/privacy_safe, provenance and
+  role counts, determinism), fail-closed negatives (empty dataset,
+  missing license, prohibited license, unknown license, hard_negative
+  flag inconsistency, custom prohibited set, custom unknown prefix,
+  mixed denials list all reasons), digest verification (sha256 alg:hex,
+  match, mismatch denied, current-run recorded, missing file typed),
+  composition load->verify->evaluate, redaction of verdict payloads
+  with runtime-constructed secret canaries.
+- `scripts/ep041-m2-tests.sh` non-vacuous M2 gate (M1 regression via
+  ep041-m1-tests.sh, material presence, manifest JSON validity via
+  python3 -m json.tool, anti-masking sentinels node M2 wired to gate
+  no artifact-check masking, real pytest vacuity count >= 75 zero
+  failed/error, M2 fail-closed negative proofs present >= 6,
+  dependency-direction forbidden-import scan, no-placeholder scan
+  excluding __pycache__, ruff check + ruff format --check owned
+  surface; EP-041 M2 gate: ok).
+- `scripts/nodes/EP-041.sh` M2 rewired from artifact-check masking to
+  the real gate (EP-041 M2: ok EXIT=0).
+- `.agent/expected-files/EP-041.txt`: scripts/ep041-m2-tests.sh added.
+
+REAL DEFECTS found+fixed:
+1. Gate negative-proof sentinel counted from pytest -q output (dots
+   only, no test names) - count from the test source instead.
+2. Prettier format gate flagged the two JSON manifests - reformatted
+   with npx prettier --write (semantic-neutral reflow; tests re-run
+   green after).
+
+Observed (exit 0): EP-041 M2 gate: ok; node EP-041 M2: ok; node EP-041
+M1 regression: ok; 81 ep041_unit_* proofs green (55 M1 + 26 M2); ruff
+check ok; ruff format ok; mypy ok (5 source files); side gates green:
+security check: ok (0 advisories), dependency audit: ok, license gate:
+ok, reality gate: ok, blueprint validation: ok, format check: ok
+(after prettier fix), lint: ok, typecheck: ok, test-unit: ok.
+
+Certification boundary (honest): dataset policy behavior INTERNAL
+BEHAVIOR CERTIFIED for the exact exercised local surface (real
+committed manifest fixtures parsed through the real M1 contract and
+evaluated through the real deterministic policy; fail-closed negative
+cases; digest binding; redaction); frozen eval behavior NOT ASSERTED
+(M3 owns microbrain/evals/), teacher consensus scoring beyond the M1
+contract fields NOT ASSERTED, training candidate eligibility behavior
+NOT ASSERTED (M4 owns microbrain/training/), shadow comparator /
+promotion gate behavior NOT ASSERTED (later milestones), real QLoRA /
+GGUF execution NOT ASSERTED, real model training NOT ASSERTED, remote
+synchronization NOT ASSERTED (REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged
+- GitHub credential HTTP 401; remote refs NOT verified; no force-push).
+
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
@@ -411,6 +489,21 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   Security: redaction is built into the error surface. License: package
   is MIT under the repo project. Compatibility: pure additive wheel
   package; no existing imports change.
+- 2026-08-24: M2 dataset policy is a pure deterministic layer above the
+  M1 contract, not a new data model. Evidence: the M2 fence owns
+  microbrain/datasets/ and the ExecPlan requires domain rules pure with
+  I/O behind ports; the policy consumes M1 MicrobrainDataset and
+  TrainingExample unchanged. Alternatives: a parallel dataset model in
+  microbrain/datasets/ was rejected - the fence says canonical truth
+  remains in python/nexus_microbrain/. Consequence: manifests are real
+  JSON files parsed through M1 from_dict; policy rules fail closed with
+  typed codes; license governance (missing/prohibited/unknown) sits in
+  the policy layer while the M1 contract permits construction of
+  unlicensed deterministic examples. Security: verdict redaction with
+  runtime canaries; no secret literals. License: manifest fixtures are
+  synthetic/teacher-consensus licensed records labeled as local test
+  fixtures, never production data. Compatibility: pure additive module
+  and data files; no existing import changes.
 
 # 14. Outcomes & Retrospective
 

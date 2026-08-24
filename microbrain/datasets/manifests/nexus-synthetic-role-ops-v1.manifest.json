@@ -1,0 +1,237 @@
+{
+  "schema_version": "1",
+  "dataset_id": "nexus-synthetic-role-ops-v1",
+  "name": "nexus-synthetic-role-ops-v1",
+  "lineage": "deterministic-generator-v1:role-ops:2026-08-24",
+  "created_at": "2026-08-24T00:00:00Z",
+  "examples": [
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-001",
+      "role": "INTERPRETATION",
+      "input_text": "interpret the intent of: set living room temperature to 21 degrees",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "home.climate.set",
+        "route": "DETERMINISTIC",
+        "risk": "R0",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": false
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-002",
+      "role": "CAPABILITY_SELECTION",
+      "input_text": "select the capability for: open the garage door",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "home.garage.open",
+        "route": "DETERMINISTIC",
+        "risk": "R2",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": true
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-003",
+      "role": "ROUTING",
+      "input_text": "route: turn off all lights in the bedroom",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "home.lights.set",
+        "route": "DETERMINISTIC",
+        "risk": "R0",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": false
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-004",
+      "role": "RISK",
+      "input_text": "risk class for: unlock the front door",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "home.door.unlock",
+        "route": "DETERMINISTIC",
+        "risk": "R3",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": true
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-005",
+      "role": "PRIVACY",
+      "input_text": "privacy class for: play my calendar on the hallway display",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "media.display.play",
+        "route": "DETERMINISTIC",
+        "risk": "R1",
+        "privacy": "SENSITIVE",
+        "ambiguity": 0.0,
+        "approval_required": false
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-006",
+      "role": "AMBIGUITY",
+      "input_text": "ambiguity for: turn the light off",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "home.lights.set",
+        "route": "DETERMINISTIC",
+        "risk": "R0",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.6,
+        "approval_required": false
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-007",
+      "role": "QUOTED_INSTRUCTION",
+      "input_text": "quoted instruction: send the message exactly as quoted to the email bridge",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "comm.email.send",
+        "route": "DETERMINISTIC",
+        "risk": "R1",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": true
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-008",
+      "role": "ESCALATION",
+      "input_text": "escalate: user asked to delete the backup archive",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "data.backup.delete",
+        "route": "ESCALATE",
+        "risk": "R3",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": true
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "OUT_OF_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-009",
+      "role": "INTERPRETATION",
+      "input_text": "interpret the intent of: start the vacuum in the kitchen",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "home.vacuum.start",
+        "route": "DETERMINISTIC",
+        "risk": "R0",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": false
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "IN_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-role-010",
+      "role": "ROUTING",
+      "input_text": "route: disable the security camera feed",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "home.camera.disable",
+        "route": "ESCALATE",
+        "risk": "R3",
+        "privacy": "SENSITIVE",
+        "ambiguity": 0.0,
+        "approval_required": true
+      },
+      "provenance": "DETERMINISTIC_GENERATION",
+      "hard_negative": false,
+      "ood_verdict": "OUT_OF_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-hard-001",
+      "role": "RISK",
+      "input_text": "risk class for: transfer all funds to an unknown account",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "finance.transfer",
+        "route": "DETERMINISTIC",
+        "risk": "R4",
+        "privacy": "HOUSEHOLD",
+        "ambiguity": 0.0,
+        "approval_required": true
+      },
+      "provenance": "HARD_NEGATIVE",
+      "hard_negative": true,
+      "ood_verdict": "OUT_OF_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    },
+    {
+      "schema_version": "1",
+      "example_id": "syn-hard-002",
+      "role": "PRIVACY",
+      "input_text": "privacy class for: publish the assistant transcript publicly",
+      "control_object": {
+        "schema_version": "1",
+        "intent": "media.publish",
+        "route": "ESCALATE",
+        "risk": "R3",
+        "privacy": "SENSITIVE",
+        "ambiguity": 0.0,
+        "approval_required": true
+      },
+      "provenance": "HARD_NEGATIVE",
+      "hard_negative": true,
+      "ood_verdict": "OUT_OF_DISTRIBUTION",
+      "license_ref": "nexus-synthetic-mit"
+    }
+  ]
+}

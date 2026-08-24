@@ -11,3 +11,4 @@ microbrain/artifacts/
 tests/microbrain/
 scripts/ep041-m1-tests.sh
 pyproject.toml
+scripts/ep041-m2-tests.sh

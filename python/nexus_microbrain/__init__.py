@@ -13,6 +13,15 @@ serialization, and vocabulary rejection.
 
 from __future__ import annotations
 
+from .dataset_policy import (
+    DEFAULT_PROHIBITED_LICENSE_REFS,
+    DatasetPolicy,
+    DatasetVerdict,
+    ManifestVerification,
+    load_manifest,
+    sha256_manifest,
+    verify_manifest_file,
+)
 from .errors import (
     MICROBRAIN_CODE_FALSE_POSITIVE_THRESHOLD,
     MICROBRAIN_CODE_FROZEN_SPLIT_VIOLATION,
@@ -58,7 +67,10 @@ from .vocabulary import (
 __all__ = [
     "ArtifactStatus",
     "CandidateStatus",
+    "DEFAULT_PROHIBITED_LICENSE_REFS",
     "DataProvenance",
+    "DatasetPolicy",
+    "DatasetVerdict",
     "EvalDimension",
     "FrozenEval",
     "FrozenEvalSuite",
@@ -70,9 +82,10 @@ __all__ = [
     "MICROBRAIN_CODE_MISSING_REQUIRED",
     "MICROBRAIN_CODE_PRIVACY_VIOLATION",
     "MICROBRAIN_CODE_ROLE_EXCEEDED",
-    "MICROBRAIN_CODE_UNLICENSED",
     "MICROBRAIN_CODE_UNKNOWN_VOCABULARY",
+    "MICROBRAIN_CODE_UNLICENSED",
     "MICROBRAIN_CODE_UNSUPPORTED_VERSION",
+    "ManifestVerification",
     "MicrobrainDataset",
     "MicrobrainError",
     "OodVerdict",
@@ -90,5 +103,8 @@ __all__ = [
     "TeacherConsensus",
     "TrainingCandidate",
     "TrainingExample",
+    "load_manifest",
     "redact_text",
+    "sha256_manifest",
+    "verify_manifest_file",
 ]
