@@ -47,6 +47,8 @@ members = [
     "supply-chain",
     "policies/licenses",
     "tests/supply-chain",
+    "tests/contract",
+    "tests/performance",
     "infra/otel",
     "infra/glitchtip",
     "infra/observability",

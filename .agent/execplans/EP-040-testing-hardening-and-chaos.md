@@ -276,19 +276,94 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
+### M1 progress (2026-08-24)
+
+M1 implements the exact M1 fence: tests/contract/ + tests/performance/ as
+workspace members (Cargo.toml/Cargo.lock), the seven EP-040 public
+interfaces, the testing/hardening/chaos vocabulary and models, a
+non-vacuous gate, and node M1 rewiring.
+
+Owned paths:
+- tests/contract/ @nexus-test-contract (contract crate)
+  - src/error.rs: TestingErrorCode (SPEC-006 + ZERO_TEST_COLLECTION,
+    REQUIRED_TEST_SKIPPED, REQUIRED_TEST_IGNORED, VACUOUS_GATE,
+    RESOURCE_RESIDUE, BLAST_RADIUS_EXCEEDED, ROLLBACK_UNAVAILABLE,
+    FLAKE_UNRESOLVED, MOCK_ONLY_CERTIFICATION, MISSING_EVIDENCE),
+    redact_secret_shaped, to_redacted_json
+  - src/vocabulary.rs: deny-unknown TestLayer/TestOutcome/
+    FlakeClassification/FailureInjectionKind/BlastRadius/ResourceKind/
+    HardeningControlState/CertificationStatus (FromStr + serde fail closed)
+  - src/model.rs: TestEvidence (TEST EXISTS != TEST RAN; TEST RAN !=
+    BEHAVIOR VERIFIED; MOCK PASSED != PRODUCTION PATH VERIFIED),
+    GateResult (ZERO TESTS != GREEN; SKIPPED/IGNORED != PASSED),
+    TestMatrix (zero-test guard), ChaosScenario (bounded blast radius +
+    rollback + cleanup + expected failure class + observability),
+    HardeningControl (DEFINED != APPLIED != VERIFIED != REGRESSED),
+    FixtureOwnership, ResourceResidue (CLEANUP ATTEMPTED != CLEAN),
+    FlakeRecord (RETRIED GREEN != ROOT CAUSE FIXED),
+    RegressionRequirement, ProviderCertificationSuite,
+    HardwareCertificationSuite, AccessibilityAudit, PerformanceBudget
+    (BUILD PASSED != RUNTIME SAFE)
+  - src/port.rs: TestMatrixPort, ChaosScenarioPort, GateRunnerPort,
+    EvidencePort, ProviderCertificationPort, HardwareCertificationPort,
+    PerformanceBudgetPort, AccessibilityAuditPort, FlakyTestPolicyPort
+  - tests/ep040_m1_contract.rs: 61 ep040_unit_* proofs
+- tests/performance/ @nexus-test-performance (performance budget
+  evaluation root): DeterministicBudgetEvaluator behind
+  PerformanceBudgetPort (fail-closed on missing observation, typed
+  Policy failure on exceed, deterministic); tests/ep040_m1_performance.rs:
+  9 ep040_unit_performance_* proofs
+- scripts/ep040-m1-tests.sh: non-vacuous gate (material presence,
+  workspace membership, real cargo test vacuity guards, 39 anti-masking
+  sentinels, dependency-direction proof, no-placeholder scan, clippy -D
+  warnings, fmt, crate licenses MIT)
+- scripts/nodes/EP-040.sh M1: rewired from artifact-check masking to the
+  real gate with rc propagation
+
+Observed (exit 0): EP-040 M1 gate: ok; node EP-040 M1: ok; scope audit
+EP-040: ok; security check: ok (0 advisories); dependency audit: ok;
+license gate: ok; reality gate: ok; blueprint validation: ok; format
+check: ok; lint: ok; typecheck: ok; workspace battery pending.
+
+Certification boundary (honest): EP-040 testing/hardening/chaos contract
+CONTRACT CERTIFIED; test evidence model CONTRACT CERTIFIED; chaos safety
+model CONTRACT CERTIFIED; hardening control model CONTRACT CERTIFIED;
+resource hygiene model CONTRACT CERTIFIED; performance budget evaluation
+DETERMINISTIC/INTERNAL CERTIFIED where tested. NOT ASSERTED: real chaos
+injection, production hardening, full repository hardening, resilience
+under live failures, security penetration testing, provider/hardware
+certification runs, remote synchronization (REMOTE_SYNC_BLOCKED_OWNER_AUTH
+- GitHub credential HTTP 401 limitation from EP-038/EP-039 remains
+unchanged; remote refs NOT verified; fresh gh auth login required before
+any push; no force-push).
+
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-24: M1 crate surfaces. The seven node-contract interfaces map
+  cleanly onto the owned test roots: contract types live in
+  tests/contract/ and the deterministic PerformanceBudget evaluator in
+  tests/performance/. Both are workspace members; Cargo.toml/Cargo.lock
+  added to expected-files per EP-039 convention. Test count: 70 new
+  ep040_unit_* proofs (61 contract + 9 performance), zero failed/ignored.
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-24: M1 contract location = tests/contract/ + tests/performance/
+  workspace crates (not crates/): the M1 fence and expected-files own
+  those exact roots. Evidence: .agent/milestone-files/EP-040-M1.txt +
+  .agent/expected-files/EP-040.txt. Alternatives: a crates/nexus-*
+  contract crate was rejected because it is outside the EP-040 fence.
+  Consequence: the node owns its test-contract surface directly. Reversal:
+  an ADR + fence change. Security: redaction boundary carried from
+  EP-039; no new dependency surface (nexus-domain + serde + serde_json
+  only). License: MIT declared on both crates. Compatibility: pure
+  additive workspace members; no existing crate touched.
 
 # 14. Outcomes & Retrospective
 

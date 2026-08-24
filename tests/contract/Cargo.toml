@@ -1,0 +1,11 @@
+[package]
+name = "nexus-test-contract"
+version = "0.1.0"
+edition = "2021"
+description = "EP-040 provider-neutral testing/hardening/chaos contract: TestMatrix, ChaosScenario, ProviderCertificationSuite, HardwareCertificationSuite, PerformanceBudget, AccessibilityAudit, FlakyTestPolicy (SPEC-008; TESTING.md)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true

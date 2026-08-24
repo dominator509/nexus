@@ -3,6 +3,9 @@
 .agent/expected-files/EP-040.txt
 .agent/node-contracts/EP-040.md
 scripts/nodes/EP-040.sh
+scripts/ep040-m1-tests.sh
+Cargo.toml
+Cargo.lock
 tests/contract/
 tests/integration/
 tests/e2e/
