@@ -375,9 +375,10 @@ dependency-direction); deterministic behavior of the training
 pipeline/eval engine/shadow comparator NOT ASSERTED (M2 owns core
 behavior); real dataset artifacts NOT ASSERTED (data roots empty by
 truth); real QLoRA/GGUF execution NOT ASSERTED (M3+ own transport and
-live-fire); remote synchronization NOT ASSERTED
-(REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged - GitHub credential HTTP 401;
-remote refs NOT verified; no force-push).
+live-fire); remote synchronization NOT ASSERTED at M1 time
+(REMOTE_SYNC_BLOCKED_OWNER_AUTH - GitHub credential HTTP 401).
+RESOLVED 2026-08-24: gh auth repaired; origin/master pushed and
+verified == local HEAD (3d1c393); unpushed count 0.
 
 ### M2 progress (2026-08-24)
 
@@ -454,8 +455,9 @@ contract fields NOT ASSERTED, training candidate eligibility behavior
 NOT ASSERTED (M4 owns microbrain/training/), shadow comparator /
 promotion gate behavior NOT ASSERTED (later milestones), real QLoRA /
 GGUF execution NOT ASSERTED, real model training NOT ASSERTED, remote
-synchronization NOT ASSERTED (REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged
-- GitHub credential HTTP 401; remote refs NOT verified; no force-push).
+synchronization NOT ASSERTED at M2 time (REMOTE_SYNC_BLOCKED_OWNER_AUTH
+- GitHub credential HTTP 401). RESOLVED 2026-08-24: gh auth repaired;
+origin/master pushed and verified == local HEAD (3d1c393).
 
 ### M3 progress (2026-08-24)
 
@@ -557,9 +559,11 @@ M3); real model evaluation NOT ASSERTED (no model scored), real
 training NOT ASSERTED (M4 owns microbrain/training/), real QLoRA
 execution NOT ASSERTED, real GGUF quantization NOT ASSERTED (M5 owns
 microbrain/artifacts/), production promotion NOT ASSERTED, live
-deployment NOT ASSERTED, remote synchronization NOT ASSERTED
-(REMOTE_SYNC_BLOCKED_OWNER_AUTH unchanged - GitHub credential HTTP 401;
-remote refs NOT verified; no force-push).
+deployment NOT ASSERTED, remote synchronization NOT ASSERTED at M3
+time (REMOTE_SYNC_BLOCKED_OWNER_AUTH - GitHub credential HTTP 401).
+RESOLVED 2026-08-24: gh auth repaired with fresh PAT; origin/master
+pushed and verified == local HEAD (3d1c393) via git ls-remote;
+unpushed count 0; no force-push used.
 
 # 12. Surprises & Discoveries
 
@@ -574,6 +578,14 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   gate treats raise NotImplementedError as a stub anti-pattern even in
   an abstract base, so the base uses abc.ABC + abstractmethod. Test
   count: 55 new ep041_unit_* proofs, zero failed/ignored.
+- 2026-08-24: remote-sync limitation cleared. The long-standing GitHub
+  HTTP 401 (REMOTE_SYNC_BLOCKED_OWNER_AUTH) was repaired by a fresh
+  PAT via `gh auth login --with-token`. Origin/master pushed (range
+  b416769..3d1c393) and remote ref verified == local HEAD with
+  `git ls-remote origin refs/heads/master`; unpushed count 0; no
+  force-push. 25 commits (EP-039 closure through EP-041 M3) reached
+  GitHub. All prior "remote refs NOT verified" caveats in this ExecPlan
+  are superseded as of this date.
 
 # 13. Decision Log
 
@@ -626,6 +638,20 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   synthetic licensed records labeled as local test fixtures.
   Compatibility: pure additive module and data files; no existing
   import changes.
+- 2026-08-24: remote-sync auth repaired with a fresh GitHub PAT via
+  `gh auth login --with-token` (previous token invalid, HTTP 401).
+  Evidence: `gh auth status` shows account dominator509 active with
+  repo scope; `git push origin master` succeeded (b416769..3d1c393);
+  `git ls-remote origin refs/heads/master` returned
+  3d1c393da32837ff64fb2d6e48c7a3dfc7f893ff == local HEAD; unpushed
+  count 0. Alternatives: none - owner supplied the new token; no
+  force-push was used or needed. Consequence: the
+  REMOTE_SYNC_BLOCKED_OWNER_AUTH limitation is cleared and all prior
+  "remote refs NOT verified" caveats are superseded; future milestones
+  may claim remote synchronization when verified. Security: token was
+  supplied in-chat, consumed via stdin into gh (never written to a
+  tracked file or echoed); /root/.config/gh/hosts.yml updated by gh.
+  License/compatibility: no repo code or behavior change.
 
 # 14. Outcomes & Retrospective
 
