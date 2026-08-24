@@ -221,6 +221,132 @@ FALLBACK: Retain DeepSeek as the ReflexProvider and publish no Microbrain artifa
 
 COMMIT: `git add -A && git commit -m "[EP-041][M4] forced failures, abuse cases, and observability"`
 
+### M4 progress (2026-08-24)
+
+GOAL: Prove EP-041 fails safely under candidate/dataset/eval/leakage
+faults for the training-candidate root (M4 fence: microbrain/training/).
+
+CHANGED:
+- `python/nexus_microbrain/training_policy.py` deterministic
+  training-candidate behavior above the M1/M2/M3 canonical surfaces
+  (pure; boundary loaders only): CandidateEligibilityVerdict/
+  TrainingPlan/PlanVerdict/QloraRunVerdict/LeakageVerdict/
+  TrainingEvidence records; narrow_role (exactly one of the 8 canonical
+  roles - freeform/broad strings rejected by the deny-unknown
+  vocabulary), check_candidate_eligibility (missing dataset reference
+  denied, unknown dataset reference denied, dataset policy fail denied,
+  dataset digest missing/malformed/mismatch denied, missing eval
+  reference denied, missing eval suite binding denied, eval not frozen
+  before training denied, eval policy fail denied, missing eval score
+  denied, role unknown/too broad denied, missing model identity denied
+  at the M1 contract boundary - CANDIDATE OBJECT EXISTS != ELIGIBLE TO
+  TRAIN), build_training_plan + plan_digest + verify_plan_digest
+  (canonical sort_keys sha256 determinism; tamper denied),
+  training_plan_verdict (PLAN_READY only - never carries QLoRA
+  success/artifact/promotion language; missing hyperparameters,
+  unknown quantization format, unsupported target role all fail
+  closed - TRAINING PLAN EXISTS != TRAINING EXECUTED),
+  qlora_run_verdict (declared PENDING/RUNNING not executed; FAILED not
+  certified; unknown status fails closed via QloraStatus.parse; run
+  after invalid candidate denied; training output digest missing or
+  malformed denied; start/end evidence required; metrics alone never
+  certify - QLORA RUN EXISTS != TRAINING CERTIFIED),
+  check_no_eval_leakage (eval example id reused as training example
+  denied, same correlation_id train/eval collision denied, same example
+  digest train/eval collision denied, missing suite or dataset evidence
+  fails closed - absence of leakage must be evidenced, not asserted),
+  build_training_evidence (current-run record bound to run_id/
+  git_commit/candidate_id/dataset_id/dataset_digest/eval_suite_id/
+  eval_suite_digest/role/plan_digest/eligibility/leakage_clean/
+  qlora_status/decision; to_redacted_dict).
+- `microbrain/training/plans/` real committed training fixtures
+  LABELED local test fixtures never production training data:
+  nexus-candidate-v1.candidate.json (real TrainingCandidate contract
+  record, role INTERPRETATION, dataset_ref nexus-synthetic-role-ops-v1,
+  status CANDIDATE) + nexus-training-plan-v1.plan.json (real
+  deterministic TrainingPlan, GGUF, rank 16 / alpha 32 / seed 7, with
+  its canonical plan_digest); both generated through the real M1/M4
+  models so the files are guaranteed contract-valid (regenerator:
+  scripts/microbrain-gen-fixtures.py). training README updated.
+- `tests/microbrain/test_ep041_m4_training_policy.py` 46
+  ep041_unit_m4_* proofs green (0 failed/ignored): real fixture loads
+  (candidate + plan, digest matches), candidate real full journey
+  eligible (real dataset + real eval suite + real binding + real
+  digest + real score), dataset policy gate (custom prohibited set),
+  fail-closed negatives (missing dataset reference, unknown dataset
+  reference, dataset digest mismatch, malformed digest, missing eval
+  reference, missing eval binding, eval not frozen before training,
+  eval policy fail, missing eval score, role unknown via
+  MICROBRAIN_UNKNOWN_VOCABULARY, role too broad strings, narrow-role
+  holds 8 roles, missing model identity at contract, redacted verdict
+  no secret leak), training plan (PLAN_READY only never executed,
+  digest deterministic, tamper denied, missing hyperparameters
+  rejected, unknown quantization format rejected, non-GGUF rejected,
+  unsupported target role rejected, plan does not create run or
+  promotion), QLoRA contract (declared not executed, missing evidence
+  not certified, failed not certified, unknown status fails closed,
+  after invalid candidate denied, output digest missing denied,
+  output digest malformed denied, metrics alone never certify, full
+  evidence certifies contract), leakage (clean on real fixtures, eval
+  reuse denied, correlation collision denied, digest collision denied,
+  missing evidence fails closed, OOD pass does not override eval
+  failure), evidence (current-run bound, BLOCK on failure, redacted no
+  secret leak, redaction canary scrubbed).
+- `scripts/ep041-m4-tests.sh` non-vacuous M4 gate (M1 + M2 + M3
+  regressions first, material presence, training fixture JSON validity,
+  anti-masking sentinels node M4 wired to gate no artifact-check
+  masking, real pytest vacuity count >= 160 zero failed/error, M4
+  fail-closed negative proofs present >= 15 counted from source,
+  training-plan-not-executed proofs present >= 4, leakage negative
+  proofs present >= 3, dependency-direction scan, no-placeholder scan,
+  ruff check + ruff format --check owned surface; EP-041 M4 gate: ok).
+- `scripts/nodes/EP-041.sh` M4 rewired from artifact-check masking to
+  the real gate (EP-041 M4: ok EXIT=0).
+- `.agent/expected-files/EP-041.txt`: scripts/ep041-m4-tests.sh +
+  scripts/microbrain-gen-fixtures.py added.
+
+REAL DEFECTS found+fixed:
+1. Fixture generator parents[2] resolved to /root instead of the repo
+   root (script lives at scripts/) - parents[1] fixed.
+2. ruff I001 import sorting + line-length + unused suite vars in the
+   leakage tests - fixed and re-run green.
+3. missing_model_identity test tried to construct an invalid candidate
+   directly - M1 already fails closed at construction, so the test now
+   proves the contract boundary denial (typed code) rather than a
+   gate-only path.
+4. Blueprint validation flagged non-ASCII em-dashes in the training
+   README - replaced with ASCII hyphens.
+
+Observed (exit 0): EP-041 M4 gate: ok; node EP-041 M4: ok; node EP-041
+M1 regression: ok; node EP-041 M2 regression: ok; node EP-041 M3
+regression: ok; 168 ep041_unit_* proofs green (55 M1 + 26 M2 + 41 M3 +
+46 M4); ruff check ok; ruff format ok; mypy ok (7 source files); side
+gates green: scope audit EP-041: ok (M4 gate + generator added to
+expected-files), expected files EP-041: ok, security check: ok (0
+advisories), dependency audit: ok, license gate: ok, reality gate: ok,
+blueprint validation: ok (after ASCII fix), format check: ok, lint: ok,
+typecheck: ok, test-unit: ok.
+
+Certification boundary (honest): training candidate behavior INTERNAL
+BEHAVIOR CERTIFIED for the exact exercised local surface (real
+committed candidate/plan fixtures through the real M1 contract + real
+deterministic eligibility/timing/leakage/plan gates; fail-closed
+negatives; current-run redacted evidence); training plan behavior
+INTERNAL BEHAVIOR CERTIFIED (PLAN_READY only, deterministic digest,
+tamper denied); train/eval leakage checks INTERNAL BEHAVIOR CERTIFIED
+for the exact fixture surface exercised; QloraRun contract behavior
+CONTRACT/ELIGIBILITY CERTIFIED only - no real QLoRA execution occurred
+and no adapter artifact or training log was fabricated; real model
+training NOT ASSERTED (no training executed), real QLoRA execution NOT
+ASSERTED, real adapter artifact NOT ASSERTED, real GGUF quantization
+NOT ASSERTED (M5 owns microbrain/artifacts/), real model evaluation NOT
+ASSERTED (no model scored), production promotion NOT ASSERTED, live
+deployment NOT ASSERTED, remote synchronization NOT ASSERTED at M4 time
+(REMOTE_SYNC_BLOCKED_OWNER_AUTH - GitHub credential HTTP 401).
+RESOLVED 2026-08-24: gh auth repaired with fresh PAT; origin/master
+pushed and verified == local HEAD; unpushed count 0; no force-push
+used.
+
 ### M5: Live-fire, operations, and node closure
 
 GOAL: Complete operational proof, documentation, and immutable node evidence for EP-041.
@@ -586,6 +712,15 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   force-push. 25 commits (EP-039 closure through EP-041 M3) reached
   GitHub. All prior "remote refs NOT verified" caveats in this ExecPlan
   are superseded as of this date.
+- 2026-08-24: M4 training-candidate behavior. The M1 contract already
+  fails closed on empty model_ref/base_model, so the eligibility gate
+  can never observe an unprovenanced candidate - the honest proof is
+  the contract boundary denial itself (typed MICROBRAIN_INVALID_INPUT),
+  not a gate-only path. TrainingPlan.from_dict also fails closed on
+  freeform role strings at parse, so plan.validate()'s NARROW_ROLES
+  check is defense-in-depth; the observable fail-closed surface is the
+  deny-unknown vocabulary. Test count: 46 new ep041_unit_m4_* proofs,
+  zero failed/ignored (168 total).
 
 # 13. Decision Log
 
@@ -638,6 +773,25 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   synthetic licensed records labeled as local test fixtures.
   Compatibility: pure additive module and data files; no existing
   import changes.
+- 2026-08-24: M4 training-candidate behavior is a pure deterministic
+  layer on top of M1/M2/M3 canonical surfaces, not a training executor.
+  Evidence: the M4 fence owns microbrain/training/ and the ExecPlan M4
+  section requires forced-failure/abuse-case proofs without real QLoRA
+  execution; the M1 contract already locks candidate model identity and
+  narrow roles, and the eligibility gate consumes the real M2
+  DatasetPolicy + real M3 eval binding/scoring. Alternatives: a
+  parallel training model was rejected - the fence requires canonical
+  surfaces; a real QLoRA invocation was rejected because no GPU/weights
+  exist and M5 owns artifacts (real training NOT ASSERTED). Consequence:
+  candidate eligibility, training plan (PLAN_READY only), QloraRun
+  contract honesty, and leakage checks are certified INTERNAL BEHAVIOR
+  only; no adapter artifact or training log was fabricated; plan/run
+  verdicts deliberately carry no promotion language (TRAINING PLAN
+  EXISTS != TRAINING EXECUTED). Security: evidence redaction with
+  runtime canaries; no secret literals. License: candidate/plan
+  fixtures are synthetic licensed records labeled as local test
+  fixtures. Compatibility: pure additive module and data files; no
+  existing import changes.
 - 2026-08-24: remote-sync auth repaired with a fresh GitHub PAT via
   `gh auth login --with-token` (previous token invalid, HTTP 401).
   Evidence: `gh auth status` shows account dominator509 active with

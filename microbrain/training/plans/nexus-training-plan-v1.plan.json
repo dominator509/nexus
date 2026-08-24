@@ -1,0 +1,15 @@
+{
+  "base_model": "deepseek-v3-base",
+  "candidate_ref": "nexus-candidate-v1",
+  "created_at": "2026-08-11T00:00:00Z",
+  "hyperparameters": {
+    "alpha": 32,
+    "rank": 16,
+    "seed": 7
+  },
+  "plan_digest": "sha256:02885846c835fd3bb4e5f63b28e030497a6d1cafb39a7d24c86b281a679439de",
+  "plan_id": "nexus-training-plan-v1",
+  "quantization_format": "GGUF",
+  "role": "INTERPRETATION",
+  "schema_version": "1"
+}

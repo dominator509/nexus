@@ -1,0 +1,9 @@
+{
+  "base_model": "deepseek-v3-base",
+  "candidate_id": "nexus-candidate-v1",
+  "dataset_ref": "nexus-synthetic-role-ops-v1",
+  "model_ref": "nexus-microbrain-interpretation-1",
+  "role": "INTERPRETATION",
+  "schema_version": "1",
+  "status": "CANDIDATE"
+}
