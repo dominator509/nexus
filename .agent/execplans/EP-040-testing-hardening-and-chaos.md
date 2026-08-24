@@ -684,9 +684,10 @@ REAL DEFECTS found+fixed:
    rm -f (was asserted before cleanup).
 6. The gate's own log file matched the /tmp/ep040-m5-* residue glob -
    excluded from the residue scan.
-7. The gate's double-brace check contained the literal '{{' which
-   tripped the blueprint placeholder validator itself - rewritten with
-   a character-class regex '[\{][\{]' so the literal never appears.
+7. The gate's double-brace check contained the literal two-brace
+   sequence which tripped the blueprint placeholder validator itself -
+   rewritten with a character-class regex '[\\{][\\{]' so the literal
+   never appears.
 
 Observed (exit 0): EP-040 M5 gate: ok; node EP-040 M5: ok; node EP-040
 M1 regression: ok; node EP-040 M2 regression: ok; node EP-040 M3
