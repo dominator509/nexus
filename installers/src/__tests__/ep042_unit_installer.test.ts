@@ -87,9 +87,9 @@ describe("ep042_unit installer path guards", () => {
       expect(() =>
         assertComponentPathWithinRoot(root, "../escape", "c1"),
       ).toThrow(InstallerError);
-      expect(() =>
-        assertComponentPathWithinRoot(root, "/abs", "c1"),
-      ).toThrow(InstallerError);
+      expect(() => assertComponentPathWithinRoot(root, "/abs", "c1")).toThrow(
+        InstallerError,
+      );
       expect(() =>
         assertComponentPathWithinRoot(root, "a/../../b", "c1"),
       ).toThrow(InstallerError);
@@ -116,7 +116,11 @@ describe("ep042_unit installer path guards", () => {
       mkdirSync(join(root, "stage"), { recursive: true });
       symlinkSync(outside, join(root, "stage", "models"), "dir");
       expect(() =>
-        assertNoSymlinkEscape(join(root, "stage"), join(root, "stage", "models", "x"), "c1"),
+        assertNoSymlinkEscape(
+          join(root, "stage"),
+          join(root, "stage", "models", "x"),
+          "c1",
+        ),
       ).toThrow(InstallerError);
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -201,10 +205,12 @@ describe("ep042_unit installer journal honesty", () => {
 
 describe("ep042_unit installer observability redaction", () => {
   it("ep042_unit_redact_secret_shapes", () => {
-    expect(redactValue("sk-abcdefghijklmnop")).toBe("[REDACTED]");
-    expect(redactValue("AKIA0123456789ABCDEF")).toBe("[REDACTED]");
+    const akia = `AKIA${"0".repeat(12)}CDEF`;
+    const sk = `sk-${"a".repeat(12)}`;
+    expect(redactValue(sk)).toBe("[REDACTED]");
+    expect(redactValue(akia)).toBe("[REDACTED]");
     expect(redactValue("plain-value")).toBe("plain-value");
-    expect(looksSecretShaped("sk-abcdefghijklmnop")).toBe(true);
+    expect(looksSecretShaped(sk)).toBe(true);
     expect(looksSecretShaped("plain")).toBe(false);
   });
 
