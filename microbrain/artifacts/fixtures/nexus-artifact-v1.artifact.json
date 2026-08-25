@@ -1,0 +1,11 @@
+{
+  "artifact_id": "nexus-artifact-v1",
+  "candidate_ref": "nexus-candidate-v1",
+  "digest": "sha256:b529534fb94932b0d538be78df8311867849599172ba52123a4060df563cc836",
+  "format": "GGUF",
+  "license_ref": "nexus-synthetic-mit",
+  "quantization": "Q4_K_M",
+  "schema_version": "1",
+  "size_bytes": 201,
+  "status": "BUILT"
+}

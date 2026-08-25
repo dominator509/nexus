@@ -384,6 +384,142 @@ FALLBACK: Retain DeepSeek as the ReflexProvider and publish no Microbrain artifa
 
 COMMIT: `git add -A && git commit -m "[EP-041][M5] live-fire, operations, and node closure"`
 
+### M5 progress (2026-08-24)
+
+GOAL: Complete artifact/GGUF/shadow/promotion closure, final live-fire
+composition, and immutable node evidence for EP-041 (M5 fence:
+microbrain/artifacts/).
+
+CHANGED:
+- `python/nexus_microbrain/artifact_policy.py` deterministic
+  artifact/shadow/promotion behavior above the M1/M2/M3/M4 canonical
+  surfaces (pure; boundary loaders only): ArtifactVerdict/
+  ArtifactFileVerification/ShadowGateVerdict/PromotionPrerequisites/
+  PromotionEvidence records; validate_artifact (missing digest denied
+  at the M1 contract boundary, malformed digest denied at the contract
+  boundary, digest mismatch denied, unsupported/non-GGUF format denied,
+  artifact from failed QLoRA run denied, artifact from declared-only
+  run denied, artifact without run binding denied, artifact from wrong
+  candidate denied - ARTIFACT EXISTS != ARTIFACT VERIFIED),
+  sha256_file + verify_artifact_file (real bytes digest binding;
+  missing file typed MISSING_REQUIRED; mismatch denied - DIGEST
+  PRESENT != ARTIFACT VERIFIED), shadow_gate_verdict (missing
+  comparator fails closed, missing comparison evidence fails closed,
+  low exact-match rate blocks, consequential false positives > 0
+  blocks, DIFFER comparisons block; a pass advances only to
+  LOW_RISK_CANARY, never PROMOTE - SHADOW PASSED != PROMOTED),
+  promotion_gate_decision (PROMOTE requires every owned prerequisite:
+  dataset policy passed, frozen eval passed, eval frozen before
+  training, candidate eligible, no eval leakage, training run
+  certified, artifact verified, shadow gate passed, zero consequential
+  false positives, OOD safe; any unmet prerequisite -> DENY with typed
+  reason; decision gate GRADUAL, never PROMOTED - PROMOTION DECISION
+  != AUTONOMOUS DEPLOYMENT), promotion_decision_never_deploys.
+- `microbrain/artifacts/fixtures/` real committed artifact fixtures
+  LABELED local test fixtures never production output:
+  nexus-artifact-v1.gguf.marker (fixture-only GGUF marker - NOT a real
+  quantized model; real GGUF quantization NOT ASSERTED) +
+  nexus-artifact-v1.artifact.json (real QuantizedArtifact contract
+  record, GGUF Q4_K_M, candidate_ref nexus-candidate-v1, digest = REAL
+  sha256 of the committed marker file bytes); generated through the
+  real M1/M5 models (regenerator: scripts/microbrain-gen-artifact.py).
+  artifacts README updated.
+- `tests/microbrain/test_ep041_m5_artifact_policy.py` 42
+  ep041_unit_m5_* proofs green (0 failed/ignored): real fixture loads
+  (artifact + digest matches marker bytes + fixture-only label),
+  artifact fail-closed negatives (missing path typed, missing digest
+  at contract, malformed digest at contract, digest mismatch, non-GGUF
+  rejected, failed run denied, declared-only run denied, no run
+  binding denied, wrong candidate denied, candidate mismatch denied,
+  real fixture verified with completed run + file verification, file
+  digest mismatch denied, redacted verdict no secret leak), QLoRA
+  honesty (metrics alone never certify, adapter digest binding via M4
+  verdict), shadow (pass advances to canary not promote, missing
+  evidence fails closed, empty comparisons fails closed, false
+  positives block, low match rate blocks, differ blocks, unknown
+  decision fails closed, cannot promote directly from shadow, cannot
+  promote with false positives), promotion (all prerequisites met
+  PROMOTE at GRADUAL, each missing prerequisite denies: dataset
+  policy/frozen eval/timing/candidate/leakage/run/artifact/shadow/
+  false positives/OOD, decision never deploys), final live-fire
+  composition (whole M1-M5 surface composes honestly to DENY because
+  the declared-only QLoRA run means no certified training - truthful
+  non-promotion, not forced), current-run redacted promotion evidence,
+  redaction canary scrubbed.
+- `scripts/ep041-m5-tests.sh` non-vacuous M5 gate (M1 + M2 + M3 + M4
+  regressions first, material presence, artifact fixture JSON validity,
+  fixture-only marker labeled, anti-masking sentinels node M5 wired to
+  gate no artifact-check masking, real pytest vacuity count >= 205
+  zero failed/error, artifact digest negative proofs present >= 12,
+  shadow-not-promotion proofs present >= 4, promotion prerequisite
+  negative proofs present >= 6, final live-fire proofs present >= 2,
+  dependency-direction scan, no-placeholder scan, ruff check + ruff
+  format --check owned surface; EP-041 M5 gate: ok).
+- `scripts/nodes/EP-041.sh` M5|verify rewired from artifact-check
+  masking to the real gate (EP-041 M5: ok EXIT=0).
+- `.agent/expected-files/EP-041.txt`: scripts/ep041-m5-tests.sh +
+  scripts/microbrain-gen-artifact.py added (full list closes green).
+
+REAL DEFECTS found+fixed:
+1. M1 contract already rejects empty/malformed QuantizedArtifact
+   digests at construction, so the missing/malformed digest tests were
+   reframed as contract-boundary denial proofs (typed
+   MICROBRAIN_INVALID_INPUT) - honest, not a gate weakening.
+2. ruff SIM102 nested-if simplifications + unused vars in the evidence
+   test - fixed and re-run green.
+3. Canonical node verify required the battery env: MinIO env from
+   /tmp/nexus-battery-env.sh and GlitchTip env from
+   /tmp/ep038-verify-gt.env; the GlitchTip env file had been lost, so
+   it was reconstructed from the running fixture's provisioned keyhex/
+   project/token (battery prov output) with STOPPED_DSN = same key on a
+   verified-closed port (canonical convention).
+
+Observed (exit 0): EP-041 M5 gate: ok; node EP-041 M5: ok; node EP-041
+M1/M2/M3/M4 regressions: ok; 210 ep041_unit_* proofs green (55 M1 + 26
+M2 + 41 M3 + 46 M4 + 42 M5); ruff check ok; ruff format ok; mypy ok (8
+source files); side gates green: scope audit EP-041: ok (M5 gate +
+artifact generator added to expected-files), expected files EP-041: ok
+(full list), security check: ok (0 advisories), dependency audit: ok,
+license gate: ok, reality gate: ok, blueprint validation: ok, format
+check: ok, lint: ok, typecheck: ok, test-unit: ok; canonical node
+verify EP-041: ok on committed tree (see closure notes below).
+
+Certification boundary (honest): artifact/GGUF manifest behavior
+INTERNAL BEHAVIOR CERTIFIED for the exact exercised local surface (real
+committed fixture-only GGUF marker + real QuantizedArtifact record with
+REAL byte-digest binding; fail-closed negatives; current-run redacted
+evidence); shadow comparator behavior INTERNAL BEHAVIOR CERTIFIED for
+the exact local surface (pass advances only to LOW_RISK_CANARY, never
+PROMOTE; false positives block); promotion gate behavior INTERNAL
+BEHAVIOR CERTIFIED for the exact local surface (PROMOTE requires all
+owned prerequisites; DENY on any unmet); final microbrain live-fire
+composition INTERNAL BEHAVIOR CERTIFIED for the exact exercised local
+surface (M1-M5 compose honestly; truthful non-promotion because the
+declared-only QLoRA run means no certified training); real model
+training NOT ASSERTED, real QLoRA execution NOT ASSERTED, real adapter
+artifact creation NOT ASSERTED, real GGUF quantization NOT ASSERTED
+(fixture-only marker labeled as such), real model quality NOT ASSERTED,
+autonomous production promotion NOT ASSERTED, live deployment NOT
+ASSERTED, remote synchronization verified for M5/closure commits via
+ls-remote (no force-push).
+
+### M5 live-fire closure notes (2026-08-24)
+
+- Final live-fire composition (test ep041_unit_m5_final_live_fire_
+  composition_honest_not_promoted): M1 contract -> M2 DatasetPolicy ->
+  M3 frozen eval scoring -> M4 candidate eligibility + leakage ->
+  M5 artifact/shadow/promotion. The honest result is DENY: the real
+  committed QLoRA run record is declared-only (PENDING, no execution),
+  so training_run_certified=false and the artifact is not verifiable
+  from that run. The node closes with a truthful non-promoted decision,
+  not a forced PROMOTE.
+- Canonical node verify EP-041: ok (expected-files + full verify +
+  node M5|verify gate) on the committed tree with battery env (MinIO
+  fixture nexus-verify-minio 127.0.0.1:19190, GlitchTip fixture
+  nexus-verify-glitchtip 127.0.0.1:18011, control plane
+  http://127.0.0.1:8443 healthz healthy readyz true capabilities
+  non-empty).
+
 
 # 9. Validation and Acceptance
 
@@ -402,7 +538,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 ### M1 progress (2026-08-24)
@@ -721,6 +857,15 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
   check is defense-in-depth; the observable fail-closed surface is the
   deny-unknown vocabulary. Test count: 46 new ep041_unit_m4_* proofs,
   zero failed/ignored (168 total).
+- 2026-08-24: M5 artifact closure. The M1 contract already rejects
+  empty/malformed QuantizedArtifact digests at construction, so the
+  missing/malformed-digest proofs are contract-boundary denials (typed
+  MICROBRAIN_INVALID_INPUT), not gate-only paths - same honest pattern
+  as M4's missing-model-identity proof. The final live-fire honestly
+  ends DENY (declared-only QLoRA run = no certified training), and
+  that truthful non-promotion is the correct node-closing state rather
+  than a forced PROMOTE. Test count: 42 new ep041_unit_m5_* proofs,
+  zero failed/ignored (210 total).
 
 # 13. Decision Log
 
@@ -792,6 +937,26 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
   fixtures are synthetic licensed records labeled as local test
   fixtures. Compatibility: pure additive module and data files; no
   existing import changes.
+- 2026-08-24: M5 artifact/shadow/promotion behavior is a pure
+  deterministic layer on M1-M4 canonical surfaces with a fixture-only
+  GGUF marker, not a real quantization or promotion executor.
+  Evidence: the M5 fence owns microbrain/artifacts/; no GPU/weights
+  exist and no real QLoRA/GGUF command was available, so the fixture
+  marker is labeled fixture-only and real quantization is NOT ASSERTED;
+  the final live-fire composes the whole M1-M5 surface and honestly
+  ends DENY because the committed QLoRA run record is declared-only
+  (PENDING) - a truthful non-promotion, never a forced PROMOTE.
+  Alternatives: a real quantization invocation was rejected (no
+  runtime); a forced PROMOTE to close the node was rejected (would
+  fabricate success). Consequence: artifact/GGUF manifest behavior,
+  shadow comparator behavior, promotion gate behavior, and the final
+  microbrain live-fire composition are INTERNAL BEHAVIOR CERTIFIED for
+  the exact exercised local surface; real training/QLoRA/GGUF/
+  adapter/model quality/autonomous promotion/deployment NOT ASSERTED.
+  Security: evidence redaction with runtime canaries; no secret
+  literals. License: artifact fixtures are synthetic licensed records
+  labeled as local test fixtures. Compatibility: pure additive module
+  and data files; no existing import changes.
 - 2026-08-24: remote-sync auth repaired with a fresh GitHub PAT via
   `gh auth login --with-token` (previous token invalid, HTTP 401).
   Evidence: `gh auth status` shows account dominator509 active with

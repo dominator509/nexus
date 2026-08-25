@@ -13,6 +13,19 @@ serialization, and vocabulary rejection.
 
 from __future__ import annotations
 
+from .artifact_policy import (
+    ArtifactFileVerification,
+    ArtifactVerdict,
+    PromotionEvidence,
+    PromotionPrerequisites,
+    ShadowGateVerdict,
+    promotion_decision_never_deploys,
+    promotion_gate_decision,
+    sha256_file,
+    shadow_gate_verdict,
+    validate_artifact,
+    verify_artifact_file,
+)
 from .dataset_policy import (
     DEFAULT_PROHIBITED_LICENSE_REFS,
     DatasetPolicy,
@@ -102,7 +115,9 @@ from .vocabulary import (
 )
 
 __all__ = [
+    "ArtifactFileVerification",
     "ArtifactStatus",
+    "ArtifactVerdict",
     "CandidateEligibilityVerdict",
     "CandidateStatus",
     "DEFAULT_PROHIBITED_LICENSE_REFS",
@@ -147,7 +162,9 @@ __all__ = [
     "OodVerdict",
     "PlanVerdict",
     "PromotionDecision",
+    "PromotionEvidence",
     "PromotionGate",
+    "PromotionPrerequisites",
     "PromotionVerdict",
     "QloraRun",
     "QloraRunVerdict",
@@ -158,6 +175,7 @@ __all__ = [
     "ShadowComparison",
     "ShadowComparator",
     "ShadowDecision",
+    "ShadowGateVerdict",
     "TeacherConsensus",
     "TrainingCandidate",
     "TrainingEvidence",
@@ -170,11 +188,17 @@ __all__ = [
     "load_manifest",
     "narrow_role",
     "plan_digest",
+    "promotion_decision_never_deploys",
+    "promotion_gate_decision",
     "qlora_run_verdict",
     "redact_text",
+    "sha256_file",
     "sha256_manifest",
+    "shadow_gate_verdict",
     "suite_digest_of",
     "training_plan_verdict",
+    "validate_artifact",
+    "verify_artifact_file",
     "verify_manifest_file",
     "verify_plan_digest",
 ]

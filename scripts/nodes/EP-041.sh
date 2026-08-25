@@ -13,9 +13,7 @@ case "$mode" in
   M3) sh scripts/ep041-m3-tests.sh ;;
   M4) sh scripts/ep041-m4-tests.sh ;;
   M5|verify)
-      python3 scripts/node-artifact-check.py EP-041 M5
-      uv run --frozen pytest tests/microbrain -q -k ep041
-      :
+      sh scripts/ep041-m5-tests.sh
       ;;
   *) echo "EP-041: FAIL - unknown mode $mode" >&2; exit 2;;
 esac

@@ -1,0 +1,4 @@
+# EP-041 M5 fixture-only GGUF marker (local test fixture)
+# This is NOT a real quantized model. Real GGUF quantization NOT
+# ASSERTED. Do not certify this file as production model output.
+fixture-only

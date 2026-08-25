@@ -14,4 +14,6 @@ pyproject.toml
 scripts/ep041-m2-tests.sh
 scripts/ep041-m3-tests.sh
 scripts/ep041-m4-tests.sh
+scripts/ep041-m5-tests.sh
 scripts/microbrain-gen-fixtures.py
+scripts/microbrain-gen-artifact.py
