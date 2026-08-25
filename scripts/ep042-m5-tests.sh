@@ -67,10 +67,25 @@ pressure >> "$log"
 ok "resource preflight passed (disk_free=${disk_free})"
 
 # --- control plane readiness (fence U: EP-044 stage is DONE) ---------------
+# The gate provisions its own runtime prerequisite: canonical node verify
+# runs LF-029 (runtime-smoke live-fire) before this gate, and LF-029 shuts
+# the control plane down gracefully at its end. Requiring a pre-running
+# control plane here would make the canonical node verify unpassable by
+# construction. So when the runtime is unhealthy we bring it up through the
+# canonical local-start (compose core profile + real readiness loop), then
+# smoke it. The gate still fails closed if the runtime cannot be brought
+# healthy; this is not a weakening, it is the same fixture-provisioning
+# pattern EP-037/EP-038 gates use for their MinIO/GlitchTip prerequisites.
 if sh scripts/stage.sh at-least EP-044 >/dev/null 2>&1; then
-  if ! NEXUS_SMOKE_URL="${NEXUS_SMOKE_URL:-http://127.0.0.1:8443}" \
-    sh scripts/smoke/runtime.sh >>"$log" 2>&1; then
-    fail "EP-044 control plane not healthy - restart core before node verify" "$log"
+  export NEXUS_SMOKE_URL="${NEXUS_SMOKE_URL:-http://127.0.0.1:8443}"
+  if ! sh scripts/smoke/runtime.sh >>"$log" 2>&1; then
+    ok "control plane not running - bringing up core profile (canonical local-start)"
+    if ! sh scripts/local-start.sh core >>"$log" 2>&1; then
+      fail "EP-044 control plane could not be brought healthy - restart core before node verify" "$log"
+    fi
+  fi
+  if ! sh scripts/smoke/runtime.sh >>"$log" 2>&1; then
+    fail "EP-044 control plane not healthy after local-start - restart core before node verify" "$log"
   fi
   ok "control plane runtime smoke green (healthz/readyz/capabilities)"
 else
