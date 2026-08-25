@@ -975,3 +975,49 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## EP-041 closure outcomes (2026-08-24)
+
+Changed files versus the machine fence: M1 python/nexus_microbrain/ +
+tests/microbrain/ + data roots + pyproject.toml + scripts/ep041-m1-tests.sh
++ node script + expected-files; M2 microbrain/datasets/ + dataset_policy.py
++ M2 gate + fixtures; M3 microbrain/evals/ + eval_policy.py + M3 gate +
+fixtures; M4 microbrain/training/ + training_policy.py + M4 gate + fixtures
++ generator; M5 microbrain/artifacts/ + artifact_policy.py + M5 gate +
+fixtures + generator + README. All within the milestone fences.
+
+Exact commands and observed sentinels: `sh scripts/nodes/EP-041.sh
+M1|M2|M3|M4|M5` each printed `EP-041 M<k>: ok` exit 0; `sh
+scripts/node-verify.sh EP-041` printed `node verify EP-041: ok` exit 0 on
+committed tree c2faed5; side gates all printed their `ok` sentinels
+(security check / dependency audit / license gate / reality gate /
+blueprint validation / format check / lint / typecheck / test-unit / ruff
+check / ruff format / mypy); scope audit EP-041: ok; expected files
+EP-041: ok (full list).
+
+Test and proof evidence: 210 ep041_unit_* proofs (55 M1 + 26 M2 + 41 M3 +
+46 M4 + 42 M5), 0 failed/ignored; workspace battery 440+ green suites 0
+failed on committed verify; final live-fire composes the whole M1-M5
+surface and honestly ends DENY (declared-only QLoRA run = no certified
+training).
+
+Assumptions confirmed or changed: canonical truth stays in
+python/nexus_microbrain/ (stdlib-only, provider-neutral); fixtures are
+real committed JSON/records generated through the real M1 models, labeled
+local test fixtures never production data; no real QLoRA/GGUF/training
+execution exists on this host (no GPU/weights), so those capabilities
+remain NOT ASSERTED with fixture-only markers where files exist.
+
+Provider and hardware status: no external provider or hardware was
+exercised by this node; all behavior is internal deterministic policy
+over real local fixtures.
+
+Remaining risks: real training/QLoRA/GGUF/quantization and any promotion
+require a real runtime (GPU/weights) not present on this host; the
+Microbrain factory will remain non-promoting until that runtime exists and
+is live-fired (DeepSeek remains the functioning V1 provider per the
+ExecPlan fallback).
+
+Green tag: green/EP-041 -> c2faed5 (FINAL_VERIFIED_COMMIT; the tree that
+emitted `node verify EP-041: ok` exit 0). Remote sync verified via
+ls-remote after M5 and closure commits (no force-push).
