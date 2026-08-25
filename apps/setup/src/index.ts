@@ -16,3 +16,4 @@ export * from "./contracts/enrollment";
 export * from "./contracts/discovery";
 export * from "./contracts/integration";
 export * from "./contracts/recovery";
+export * from "./update";

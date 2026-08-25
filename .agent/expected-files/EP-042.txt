@@ -11,6 +11,11 @@ offline-bundle/
 .github/workflows/release.yml
 tests/release/
 scripts/ep042-m1-tests.sh
+scripts/ep042-m2-tests.sh
 references/ADR-028-deployment-release-update-vocabulary.md
 Cargo.toml
 Cargo.lock
+pnpm-workspace.yaml
+pnpm-lock.yaml
+apps/setup/src/index.ts
+.agent/milestone-files/EP-042-M2.txt

@@ -1,2 +1,4 @@
 apps/setup/src/update/
 tests/release/
+scripts/ep042-m2-tests.sh
+pnpm-workspace.yaml

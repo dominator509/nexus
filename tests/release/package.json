@@ -1,0 +1,21 @@
+{
+  "name": "@nexus/release-tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "EP-042 M2 deterministic update behavior proofs: manifest validation, compatibility evaluation, update planning, backup-before-update policy, rollback preconditions, canary/manual promotion gate, and redacted evidence over the @nexus/setup update core (SPEC-016, SPEC-024).",
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/setup": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}

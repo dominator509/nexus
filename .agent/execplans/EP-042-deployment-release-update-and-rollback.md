@@ -297,7 +297,7 @@ M1: Contract, vocabulary, and package boundary.
 - No graph-next after M1 (graph-next is the scheduler's authority, not a per-milestone tool).
 
 - [x] M1: Contract, vocabulary, and package boundary
-- [ ] M2: Core behavior and deterministic invariants
+- [x] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
@@ -320,6 +320,20 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - Security impact: redaction-first error surface; signature key material and secret-shaped values never appear in error messages (runtime-constructed canary test).
 - License impact: none (MIT crate, no new third-party dependency beyond sha2 already in the workspace).
 - Compatibility impact: schema_version fixed at 1; serde deny_unknown_fields on every record; roundtrip tests preserve schema_version.
+
+## 2026-08-25 - EP-042 M2 decisions
+
+- Decision: M2 deterministic update behavior lives in apps/setup/src/update/ as pure TypeScript modules (boundary adaptation of the canonical M1 Rust contracts) with proofs in tests/release/ (new @nexus/release-tests vitest workspace package). Evidence: M2 fence (apps/setup/src/update/ + tests/release/); EP-035 vitest package convention; tests/livefire/deployment TS test package pattern; ARCHITECTURE.md canonical-truth-in-Rust + boundary adaptation. Alternatives: extending crates/nexus-release in M2 (rejected - M1 owns that crate; fence assigns M2 to the TS surface); Rust test crate at tests/release (rejected - the update core is TS in the setup app). Consequence: canonical contracts stay in crates/nexus-release; the TS core adapts the wire format with deny-unknown parsing and mirrors the M1 invariants. Reversal: ADR + fence amendment.
+- Decision: Update core reuses EP-035 canonical ReleaseChannel/DeploymentMode bindings from contracts/deployment instead of redefining them (TS2308 barrel collision forced the choice; ARCHITECTURE.md forbids duplicating canonical domain names). Evidence: apps/setup/src/contracts/deployment.ts already mirrors schemas/deployment-profile.schema.json. Consequence: one canonical binding for channel/mode across EP-035 and EP-042.
+- Decision: parseUpdatePlan enforces backup-first step (M1 contract parity) and state PLANNED only; the planner emits canonical steps BACKUP/MIGRATE/CANARY/OBSERVE/ROLLBACK (rollback as declared contingency), never PROMOTE. Evidence: M1 UpdatePlan::new backup-first; SPEC-016 behavior 6; fence G (missing backup precondition denied, missing rollback path denied). Consequence: no plan without backup-first can exist through the typed boundary.
+- Decision: digest binding uses Web Crypto (globalThis.crypto.subtle) - pure, framework-neutral, no node builtin imports. Evidence: dependency-direction gate; TS2345 fixed with Uint8Array<ArrayBuffer> typing. Consequence: sha256Hex is real 64-char hex; contentDigest is strip-then-digest over canonical JSON.
+- Decision: backup-before-update policy evaluates a BackupProof {backup_id, install_id, digest, completed_at, state}; digest format validated with isDigestString (real defect: initial check accepted "not-a-digest" - fixed). Evidence: fence I; test ep042_unit_backup_proof_bad_digest_denied.
+- Decision: rollback preconditions require plan rollback path + receipt bound to plan/versions + backup_ref + drill evidence; drill NOT_RUN/absent = NOT_PROVEN. Evidence: fence J; tests.
+- Decision: promotion gate (evaluatePromotionGate / evaluateFullPromotionGate) returns only LOCKED/AWAITING_HUMAN_APPROVAL/APPROVED_MANUAL_ONLY and enforces backup+rollback preconditions before approval. Evidence: fence K; tests.
+- Decision: evidence builder redacts secret-shaped values (runtime-constructed canaries in tests); redaction_applied flag reflects canary treatment. Evidence: fence L; tests.
+- Security impact: redaction-first; no tracked secret literals (canaries runtime-constructed); no node builtins in update core.
+- License impact: none (no new third-party dependency; vitest/typescript already in workspace).
+- Compatibility impact: wire format matches M1 serde (snake_case, SCREAMING_SNAKE_CASE, deny-unknown); pnpm-lock.yaml updated for the new workspace package.
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
 
