@@ -298,9 +298,23 @@ M1: Contract, vocabulary, and package boundary.
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
+
+## EP-042 M3 DISPATCH (2026-08-25)
+
+M3: Real dependency and transport integration.
+
+- M3-owned exact paths: `infra/release/` (new workspace package @nexus/release-infra: src/errors.ts, src/sigv4.ts, src/s3.ts, src/transport.ts, src/cli.ts, src/index.ts, scripts/release-probe.sh, scripts/release-publish.sh, scripts/release-fetch.sh, providers/seaweedfs.yaml, containers/seaweedfs.yaml, fixtures/release-manifest.json + fixtures/components/{nexus-core,nexus-model}, README.md, package.json, tsconfig.json, tsconfig.build.json), `tests/release/src/integration/ep042_integration_transport.test.ts` + `tests/release/vitest.integration.config.ts`, gate `scripts/ep042-m3-tests.sh`, node `scripts/nodes/EP-042.sh` M3 branch, `.agent/expected-files/EP-042.txt` (+EP-042-M3.txt, +scripts/ep042-m3-tests.sh), ExecPlan, ledger.
+- M3 invariants: DIGEST PRESENT != ARTIFACT VERIFIED (fetch recomputes sha256 over real bytes, fails closed on mismatch); TRANSPORT CONFIG EXISTS != TRANSPORT EXECUTED; UPDATE PLAN EXISTS != UPDATE EXECUTED (transport never executes); RELEASE MANIFEST EXISTS != RELEASE VERIFIED; SIGNATURE FIELD EXISTS != SIGNATURE VERIFIED.
+- Real component used: SeaweedFS 4.43 (chrislusf/seaweedfs:4.43@sha256:4d5118...) from COMPONENT_REGISTRY (PROVIDER CERTIFIED S3 gateway in EP-037 M4); M3 gate runs a REAL digest-pinned container with runtime credentials.
+- Non-vacuous gate `scripts/ep042-m3-tests.sh`: resource preflight, M1+M2 regressions, material presence, workspace+registry registration, node M3 anti-masking, sh -n, real container start + healthz, real transport probe (probe_verified: true), real release-publish.sh + release-fetch.sh with cmp-verified bytes, vitest integration suite (>= 14 passed zero failed), anti-masking sentinels (8 proof classes), no-placeholder scan, typecheck, zero EP-042 M3 residue after teardown.
+- Integration proofs (14, all real container): readiness (healthz + probe), publish/fetch roundtrip + head, digest binding negatives (bytes mismatch, missing declared digest, malformed manifest, corrupted stored bytes, missing object), wrong-secret auth denied, unreachable timeout, cancellation, idempotency (re-publish one object same digest), audit redaction (runtime secret canary never leaks).
+- Regression requirement: M1 gate + M2 gate rerun green inside the M3 gate (EP-042 M1: ok, EP-042 M2: ok); side gates: format ok, typecheck ok, unit ok, security ok, dependency audit ok, license gate ok, reality gate ok, blueprint ok, scope audit EP-042 ok.
+- Committed-tree reproduction: rerun the full gate + node M3 on the committed tree.
+- Certification boundary: REAL SigV4 transport over a real SeaweedFS S3 gateway INTERNAL BEHAVIOR CERTIFIED for exact exercised local surface; real signature verification NOT ASSERTED (no key store/verifier); update execution NOT ASSERTED; canary rollout / backup-restore / rollback drills / offline bundle production / release build / deployment / remote synchronization NOT ASSERTED; external clouds (R2/B2/AWS) NOT ASSERTED.
+- No graph-next after M3 (scheduler authority).
 
 # 12. Surprises & Discoveries
 
@@ -334,6 +348,17 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - Security impact: redaction-first; no tracked secret literals (canaries runtime-constructed); no node builtins in update core.
 - License impact: none (no new third-party dependency; vitest/typescript already in workspace).
 - Compatibility impact: wire format matches M1 serde (snake_case, SCREAMING_SNAKE_CASE, deny-unknown); pnpm-lock.yaml updated for the new workspace package.
+
+## 2026-08-25 - EP-042 M3 decisions
+
+- Decision: M3 real release transport lives in infra/release/ as a new workspace package @nexus/release-infra (pnpm glob infra/* already registered). It implements real AWS SigV4 request signing over Web Crypto (HMAC-SHA256) and a minimal S3 client over global fetch, with digest-bound publish/fetch of release manifests + component artifacts, a readiness probe (healthz + PUT/GET/digest/DELETE), idempotent publish, timeout/cancellation, and current-run redacted audit events. Evidence: M3 fence (infra/release/); ExecPlan M3 CONTENT 1 (use selected open-source component from COMPONENT_REGISTRY); COMPONENT_REGISTRY id seaweedfs (digest-pinned, PROVIDER CERTIFIED for S3-gateway in EP-037 M4). Alternatives: Python boto3 transport (rejected - boto3 not a repo dependency; repo is Rust+TS); curl+openssl SigV4 (rejected - no SDK-free shell SigV4 path); Rust connector reuse (rejected - fence assigns infra/release/, not connectors/). Consequence: real transport over the certified S3-gateway surface with zero new third-party deps.
+- Decision: transport scripts (release-probe.sh, release-publish.sh, release-fetch.sh) are real POSIX sh that invoke the transport CLI (node src/cli.ts) with runtime env credentials; the CLI runs under Node 24 native TS type-stripping. Evidence: fence N (infra/release owned scripts actually execute, no echo-only); real probe/publish/fetch output observed in gate; cmp-verified fetched bytes. Consequence: scripts are not mocks; failures exit nonzero.
+- Decision: integration proofs live in tests/release/src/integration/ep042_integration_transport.test.ts with a dedicated vitest.integration.config.ts so the M2 gate's unit-only run stays untouched. Evidence: fence N/O/P (M2 regression must stay green); M2 gate runs vitest run src/__tests__ only. Consequence: 14 ep042_integration_* proofs run only under the M3 gate with the real container.
+- Decision: SeaweedFS container is digest-pinned (sha256:4d5118...) with runtime-generated credentials in a temp s3.config; exact EP-042 M3 ownership naming (nexus-ep042-m3-*) and teardown verified to zero residue. Evidence: fence B/R; EP-037 M4 precedent; gate pressure + residue checks. Consequence: no shared fixture mutation, no broad prune.
+- Decision: real defects found+fixed by the M3 suite: (1) SigV4 canonical URI encoded the leading slash (%2F...) - fixed to encode path segments and rejoin with '/'; (2) SigV4 canonical query double-encoded pre-encoded prefixes and the URL.search setter re-encoded %2F - canonical query is now computed once by signRequest and used verbatim for the href; (3) SeaweedFS createBucket returns 403 without bucket existence - probe creates the bucket first; (4) fetch output dirs must exist - scripts mkdir -p; (5) manifest digests are canonical sha256:hex - extractDeclaredDigests strips the prefix; (6) redaction shape regex missed short runtime secrets - audit() scrubs exact configured credential values plus shapes.
+- Security impact: redaction-first audit; no tracked secret literals (runtime-constructed s3.config, canary test proves zero credential leakage in audit events); no-placeholder scan clean; security-check green.
+- License impact: none (no new third-party npm or cargo dependency; SeaweedFS Apache-2.0 already recorded in COMPONENT_REGISTRY).
+- Compatibility impact: @nexus/release-infra depends only on Web Crypto + global fetch (no node builtins in src except CLI I/O); tests/release gains workspace dep; pnpm-lock.yaml updated.
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
 

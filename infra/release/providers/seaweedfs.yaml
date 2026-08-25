@@ -1,0 +1,41 @@
+# EP-042 M3 release transport provider manifest (SPEC-024 ArtifactStore)
+
+# The release transport publishes and fetches release manifests and
+# component artifacts over a real S3-compatible object store. SeaweedFS
+# is the selected component (COMPONENT_REGISTRY.yaml id: seaweedfs) and
+# is already PROVIDER CERTIFIED for the exact exercised S3-gateway
+# runtime/interface by EP-037 M4. R2 / B2 / AWS S3 external cloud are
+# NOT ASSERTED and remain unavailable until certified.
+
+provider: seaweedfs
+capability: artifact.object-store
+component: chrislusf/seaweedfs:4.43@sha256:4d5118c198a6b9c0470c04b1822a0671459301625d995d1764c352bb553b3160
+license: Apache-2.0 (verified upstream LICENSE)
+source: https://github.com/seaweedfs/seaweedfs
+replacement_contract: "ArtifactStore contract; local filesystem/NAS default, R2/B2/S3 fallback"
+integration_mode: sidecar
+certification: "PROVIDER CERTIFIED for exact exercised S3-gateway runtime/interface (EP-037 M4 gate + EP-042 M3 release transport gate); filer HTTP API / volume server API / filesystem mount NOT ASSERTED; R2/B2/AWS S3 external cloud NOT ASSERTED"
+
+# Transport surface exercised by EP-042 M3:
+interface:
+  endpoint: "127.0.0.1:8333 (S3 gateway; path-style HTTP/1.1)"
+  auth: "AWS SigV4 over Web Crypto (infra/release/src/sigv4.ts)"
+  operations:
+    - healthz
+    - createBucket
+    - putObject
+    - getObject
+    - headObject
+    - deleteObject
+    - listObjectsV2
+
+# Runtime configuration is environment-supplied by the gate script
+# (scripts/ep042-m3-tests.sh). No secret-shaped literals are stored.
+runtime_env:
+  - NEXUS_RELEASE_S3_ENDPOINT
+  - NEXUS_RELEASE_ACCESS_KEY
+  - NEXUS_RELEASE_SECRET_KEY
+  - NEXUS_RELEASE_BUCKET
+  - NEXUS_RELEASE_RUN_ID
+  - NEXUS_RELEASE_GIT_COMMIT
+  - NEXUS_RELEASE_TIMEOUT_MS

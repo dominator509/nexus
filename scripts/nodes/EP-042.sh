@@ -10,7 +10,7 @@ mode="${1:-verify}"
 case "$mode" in
   M1) sh scripts/ep042-m1-tests.sh ;;
   M2) sh scripts/ep042-m2-tests.sh ;;
-  M3) python3 scripts/node-artifact-check.py EP-042 M3; cargo test --locked -p nexus-release ep042_integration ;;
+  M3) sh scripts/ep042-m3-tests.sh ;;
   M4) python3 scripts/node-artifact-check.py EP-042 M4; cargo test --locked -p nexus-release ep042_failure ;;
   M5|verify)
       python3 scripts/node-artifact-check.py EP-042 M5

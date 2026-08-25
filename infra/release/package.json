@@ -1,0 +1,22 @@
+{
+  "name": "@nexus/release-infra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "EP-042 M3 release transport infrastructure (SPEC-016, SPEC-024): real SigV4 S3 transport over Web Crypto + global fetch, digest-bound publish/fetch of release manifests and component artifacts against a real S3-compatible object store (SeaweedFS), readiness probe, timeout/cancellation, idempotent publish, current-run redacted audit events, and fail-closed config validation. Canonical release truth remains in crates/nexus-release (M1) and apps/setup/src/update/ (M2); this package is the transport boundary only.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}

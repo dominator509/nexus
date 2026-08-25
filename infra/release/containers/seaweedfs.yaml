@@ -1,0 +1,27 @@
+# EP-042 M3 release transport container configuration (SPEC-024)
+#
+# REAL ephemeral single-node SeaweedFS container used by the EP-042 M3
+# integration gate. Digest-pinned; s3.config is written at runtime by
+# scripts/ep042-m3-tests.sh with runtime-generated credentials (never a
+# tracked secret literal).
+
+image: chrislusf/seaweedfs:4.43@sha256:4d5118c198a6b9c0470c04b1822a0671459301625d995d1764c352bb553b3160
+container_name: nexus-ep042-m3-seaweedfs
+
+ports:
+  - "127.0.0.1:19443:8333" # S3 gateway
+  - "127.0.0.1:19444:8888" # filer
+  - "127.0.0.1:19445:8080" # volume
+
+command: >-
+  server -master.port=9333 -volume.port=8080 -filer.port=8888 -s3.port=8333
+  -filer -s3 -s3.config=/etc/seaweedfs/s3.json -volume.max=256 -dir=/data
+
+volumes:
+  - /tmp/nexus-ep042-m3-s3cfg:/etc/seaweedfs:ro
+
+readiness:
+  healthz: "http://127.0.0.1:19443/healthz"
+  probe: "release transport probe (PUT -> GET -> digest verify -> DELETE)"
+
+cleanup: exact EP-042 M3 ownership only; never a broad prune

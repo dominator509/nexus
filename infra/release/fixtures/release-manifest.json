@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "release_id": "nexus-1.0.0-rc1",
+  "release_channel": "STABLE",
+  "deployment_profile": "FULLY_LOCAL",
+  "manifest_digest": "unbound-fixture-value",
+  "components": [
+    {
+      "component_id": "nexus-core",
+      "name": "nexus-core",
+      "version": "1.0.0",
+      "artifact_ref": {
+        "backend": "seaweedfs",
+        "bucket": "nexus-release-fixtures",
+        "key": "releases/nexus-1.0.0-rc1/components/nexus-core"
+      },
+      "digest": "sha256:8f0890cc919c925cb12ab3d514dcc237a417a25a04bb33f79728cc8e2ed3f26a",
+      "signature": {
+        "algorithm": "ED25519",
+        "value_b64": "unbound-fixture-signature",
+        "key_ref": "fixture-key"
+      },
+      "sbom_ref": {
+        "backend": "seaweedfs",
+        "bucket": "nexus-release-fixtures",
+        "key": "releases/nexus-1.0.0-rc1/sbom/nexus-core.sbom"
+      },
+      "license_ref": "Apache-2.0",
+      "size_bytes": 56
+    },
+    {
+      "component_id": "nexus-model",
+      "name": "nexus-model",
+      "version": "1.0.0",
+      "artifact_ref": {
+        "backend": "seaweedfs",
+        "bucket": "nexus-release-fixtures",
+        "key": "releases/nexus-1.0.0-rc1/components/nexus-model"
+      },
+      "digest": "sha256:cceba172627079d46c81c6de0acf30ec1ade6b1878ff2cf292a432c1c612cc9c",
+      "signature": {
+        "algorithm": "ED25519",
+        "value_b64": "unbound-fixture-signature",
+        "key_ref": "fixture-key"
+      },
+      "sbom_ref": {
+        "backend": "seaweedfs",
+        "bucket": "nexus-release-fixtures",
+        "key": "releases/nexus-1.0.0-rc1/sbom/nexus-model.sbom"
+      },
+      "license_ref": "Apache-2.0",
+      "size_bytes": 57
+    }
+  ]
+}
