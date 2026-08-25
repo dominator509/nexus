@@ -300,7 +300,7 @@ M1: Contract, vocabulary, and package boundary.
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 ## EP-042 M3 DISPATCH (2026-08-25)
 
@@ -413,3 +413,21 @@ Append date, decision, evidence, alternatives, consequence, reversal, security, 
 # 14. Outcomes & Retrospective
 
 At completion record changed files versus the machine fence, exact commands and observed sentinels, test and proof evidence, assumptions confirmed or changed, provider and hardware status, remaining risks, and the green tag.
+
+## EP-042 Outcomes (2026-08-25)
+
+Node complete: EP-042 Deployment, Release, Update, and Rollback (SPEC-016, SPEC-024). M1 CLOSED `5837f57`, M2 CLOSED `2b61ade`, M3 CLOSED `1876ff9`, M4 CLOSED `03813e3`, M5 CLOSED (behavior `8212dd8` + build fix `29d0aa4` + gate provisioning `5414d97` + residue hardening `932e769`). FINAL_VERIFIED_COMMIT = `8b75264` (evidence refresh bound to 932e769); green/EP-042 -> 8b75264. Closure commit metadata-only (ledger NODE_DONE + ExecPlan outcomes).
+
+Exact commands and observed sentinels: `sh scripts/nodes/EP-042.sh M1|M2|M3|M4|M5` each printed `EP-042 M<k>: ok` exit 0; `sh scripts/node-verify.sh EP-042` printed `node verify EP-042: ok` exit 0 on committed tree 8b75264 (expected-files EP-042 full list ok; verify: ok 15-gate ladder incl control-plane runtime smoke against 127.0.0.1:8443, EP-037 MinIO battery env from /tmp/nexus-battery-env.sh, EP-038 GlitchTip battery env from /tmp/ep038-verify-gt.env, live-fire ladder 440+ green suites 0 failed; node EP-042 verify: ok; M5 gate ok with real bundle produce/verify/offline-install/rollback/tamper/traversal denials + current-run redacted evidence). M1-M5 regressions green; side gates green: scope audit EP-042: ok, expected files EP-042: ok (full list), security check: ok (0 advisories), dependency audit: ok, license gate: ok, reality gate: ok, blueprint validation: ok, format check: ok, lint: ok, typecheck: ok, test-unit: ok.
+
+Test and proof evidence: 76 ep042_unit_* M1 proofs + 99 ep042_unit_* M2 proofs + 14 ep042_integration_* M3 proofs (real SeaweedFS S3 gateway) + 17 transport units + 21 ep042_failure_* M4 proofs (real chattr EACCES, real container termination, real byte corruption) + 12 installer units + 19 ep042_bundle_* M5 proofs + 7 offline-bundle units; workspace battery 440+ green suites 0 failed on committed verify; M5 gate executes the real bundle-produce/verify/install/rollback scripts with cmp-verified bytes.
+
+Real defects found and fixed during M5 closure: (1) tests/release/tsconfig.build.json duplicated compiler options without allowImportingTsExtensions -> TS5097 during workspace build; fixed by extending the base tsconfig (latent M3-era defect, commit 29d0aa4). (2) Canonical node verify composition: LF-029 (runtime-smoke live-fire) shuts the EP-044 control plane down before the M5 gate runs, making the gate unpassable by construction when it required a pre-running runtime; the M5 gate now provisions the runtime itself through canonical local-start and fails closed if it cannot be brought healthy (proven with runtime up AND with runtime down; commit 5414d97). (3) M5 gate temp-residue cleanup/check only covered FIXTURE_BASE/EVIDENCE_BASE globs, missing the per-proof nexus-ep042-m5-<label>-<ts>-<rand> vitest roots; hardened cleanup + fail-closed check to the whole owned glob (proven with pre-seeded residue; commit 932e769). (4) Two canonical-verify invocation defects (my environment setup, not code): battery env files must be sourced (MinIO /tmp/nexus-battery-env.sh + GlitchTip /tmp/ep038-verify-gt.env) and NEXUS_SMOKE_URL must be exported for the runtime smoke; after sourcing, verify went fully green. (5) Environment event: MinIO battery fixture OOM-killed twice (11GB RAM, no swap) - classified RESOURCE_EXHAUSTION, not code; mitigated by terminating ~10 stale tsserver/LSP processes (~5.3GB recovered); retained battery fixtures verified intact.
+
+Assumptions confirmed: canonical battery env files retained at /tmp/nexus-battery-env.sh + /tmp/ep038-verify-gt.env (EP-040/EP-041 convention); NEXUS_SMOKE_URL=http://127.0.0.1:8443 for local control-plane smoke; foreign LF evidence churn (EP-031/033/035/037 run_ids rebound by live-fire reruns) reverted before each commit, never committed.
+
+Provider and hardware status: real SeaweedFS 4.43 S3 gateway (digest-pinned) exercised in M3/M4 gates and battery; real MinIO exercised in EP-037 battery; control plane runtime (EP-044) exercised over real HTTP in smoke + M5 gate; no external cloud provider (AWS/R2/B2) contacted - transport to external clouds NOT ASSERTED.
+
+Remaining risks: production host upgrade, real release-signature verification (no key store/verifier exists), production canary rollout, production backup/restore, production rollback, production deployment, offline production install, remote AWS/R2/B2 transport, arbitrary production environments - all NOT ASSERTED; NODE_DONE does not expand these certifications.
+
+Green tag: green/EP-042 -> 8b75264 (FINAL_VERIFIED_COMMIT; the tree that emitted `node verify EP-042: ok` exit 0). Remote sync: deferred to closure push per repository convention; verify via ls-remote after push (no force-push).
