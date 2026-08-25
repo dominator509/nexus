@@ -108,6 +108,22 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(supports-color@8.1.1)(terser@5.50.0)
 
+  installers:
+    dependencies:
+      '@nexus/setup':
+        specifier: workspace:*
+        version: link:../apps/setup
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.1
+      typescript:
+        specifier: ~5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(supports-color@8.1.1)(terser@5.50.0)
+
   packages/connector-sdk:
     dependencies:
       '@nexus/contracts':
@@ -342,6 +358,9 @@ importers:
 
   tests/release:
     dependencies:
+      '@nexus/installers':
+        specifier: workspace:*
+        version: link:../../installers
       '@nexus/release-infra':
         specifier: workspace:*
         version: link:../../infra/release

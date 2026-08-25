@@ -299,7 +299,7 @@ M1: Contract, vocabulary, and package boundary.
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 ## EP-042 M3 DISPATCH (2026-08-25)
@@ -319,6 +319,12 @@ M3: Real dependency and transport integration.
 # 12. Surprises & Discoveries
 
 Append dated evidence-backed discoveries. Do not use this section for speculation.
+
+## 2026-08-25 - EP-042 M4 discoveries
+
+- Discovery: Node native TypeScript type-stripping cannot load the canonical @nexus/setup update core directly because its relative imports are extensionless (bundler resolution) and it uses TS enums. A resolution-only ESM loader (installers/scripts/ts-resolve-loader.mjs) + `--experimental-transform-types` lets the installer CLI execute the REAL canonical code with zero bundler and zero duplicated logic. The relative loader URL itself was treated as a package by Node - an absolute loader path is required.
+- Discovery: chattr +i provides a real EACCES-equivalent permission denial even when running as root; the M4 failure suite uses it for the denied-permission proof (no mock).
+- Discovery: symlink-escape detection must resolve the deepest existing ancestor of the target path, not the target itself (the staged file does not exist at check time); a parent-directory symlink to outside was otherwise only caught after the write, which was too late.
 
 # 13. Decision Log
 
@@ -359,6 +365,16 @@ Append dated evidence-backed discoveries. Do not use this section for speculatio
 - Security impact: redaction-first audit; no tracked secret literals (runtime-constructed s3.config, canary test proves zero credential leakage in audit events); no-placeholder scan clean; security-check green.
 - License impact: none (no new third-party npm or cargo dependency; SeaweedFS Apache-2.0 already recorded in COMPONENT_REGISTRY).
 - Compatibility impact: @nexus/release-infra depends only on Web Crypto + global fetch (no node builtins in src except CLI I/O); tests/release gains workspace dep; pnpm-lock.yaml updated.
+
+## 2026-08-25 - EP-042 M4 decisions
+
+- Decision: M4 real local installer lives in installers/ as a new workspace package @nexus/installers (pnpm glob added as exact "installers" entry, not "installers/*" - the package.json sits at the package root like apps/setup). It implements a REAL transactional installer: canonical manifest validation (parseReleaseManifest + verifyManifestDigestBinding from @nexus/setup), backup-before-update (real bytes copied, real sha256 digest, verified; backup failure denies the update), staged replacement (real bytes, digest-checked), validation, atomic switch (rename), rollback (restore prior bytes + verify), quarantine, typed failure classification (17 classes), abuse-case guards (path traversal, symlink escape via deepest-existing-ancestor realpath, duplicate overwrite, foreign-root cleanup), append-only journal, redacted observability, ops diagnostic + bounded recovery (installer-recover.sh). Evidence: M4 fence (installers/); ExecPlan M4 CONTENT 1-6; SPEC-016 behavior 6; SPEC-024. Alternatives: extending crates/nexus-release (rejected - M1 owns the contract crate); pure policy in apps/setup (rejected - fence assigns installers/). Consequence: canonical truth stays in M1/M2; installers/ is the local execution boundary. Reversal: ADR + fence amendment.
+- Decision: M4 failure proofs (ep042_failure_*) use REAL failure mechanisms, never mocks: unavailable dependency (declared component with no artifact bytes -> UNAVAILABLE; real container termination in the gate -> UNREACHABLE/TIMEOUT), timeout (pre-aborted AbortController -> STAGING_FAILED, staged state removed), malformed input (corrupt manifest -> MANIFEST_INVALID), duplicate request (same install id re-install), denied permission (chattr +i on the staging root - real EACCES even as root), cancelled work (AbortController mid-install -> old state valid, no partial success), partial side effect (backup completed + install failed -> old state remains), backup failure (immutable backup root -> BACKUP_FAILED, update denied), staged digest mismatch, rollback (prior state restored + verified; missing/corrupt source denied), path traversal, symlink escape, duplicate overwrite, foreign-root cleanup, forged receipt (journal honesty), redaction canary, observability journal ladder. Evidence: fence I-L; tests all green 21/21; gate executes real installer scripts with cmp-verified bytes.
+- Decision: installer scripts invoke the CLI under node --experimental-transform-types with a resolution-only ESM loader (installers/scripts/ts-resolve-loader.mjs) because Node native type-stripping cannot load the canonical @nexus/setup update core directly (extensionless relative imports + TS enums). The loader resolves extensionless specifiers to .ts/.tsx/index.ts without rewriting content; the CLI executes the REAL canonical code. Evidence: discovery documented; loader path must be absolute (Node treats a relative loader URL as a package); 12 unit proofs + 21 failure proofs + gate green.
+- Decision: real container termination proof lives in the M4 gate (start SeaweedFS, publish fixture release, docker rm -f the container, prove fetch fails closed UNREACHABLE/TIMEOUT) rather than in the vitest suite, mirroring EP-040 M4. Evidence: gate output; fence CONTENT 2 (terminate a test container as a real mechanism).
+- Security impact: redaction-first journal/evidence; runtime-constructed canaries; no tracked secret literals; chattr +i runtime only; no-placeholder scan clean; security-check green.
+- License impact: none (no new third-party dependency; SeaweedFS Apache-2.0 already recorded).
+- Compatibility impact: pnpm-workspace.yaml + pnpm-lock.yaml updated for @nexus/installers; tests/release gains workspace dep; M1/M2/M3 regressions stay green.
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
 

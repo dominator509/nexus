@@ -21,3 +21,5 @@ apps/setup/src/index.ts
 .agent/milestone-files/EP-042-M2.txt
 .agent/milestone-files/EP-042-M3.txt
 scripts/ep042-m3-tests.sh
+.agent/milestone-files/EP-042-M4.txt
+scripts/ep042-m4-tests.sh

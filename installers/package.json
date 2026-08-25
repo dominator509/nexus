@@ -1,0 +1,24 @@
+{
+  "name": "@nexus/installers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "EP-042 M4 local installer (SPEC-016, SPEC-024): transactional install with backup-before-update, staged validation, atomic switch, rollback, quarantine, typed failure classification, abuse-case guards (path traversal, symlink escape, duplicate overwrite, foreign-root cleanup, forged receipts), append-only installer journal, redacted current-run observability, and an operations diagnostic + bounded recovery command. Canonical release/update truth remains in crates/nexus-release (M1) and apps/setup/src/update/ (M2); transport boundary in infra/release/ (M3).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/setup": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}

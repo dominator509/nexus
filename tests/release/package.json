@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@nexus/release-infra": "workspace:*",
-    "@nexus/setup": "workspace:*"
+    "@nexus/setup": "workspace:*",
+    "@nexus/installers": "workspace:*"
   },
   "devDependencies": {
     "typescript": "~5.9.0",

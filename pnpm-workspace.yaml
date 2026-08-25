@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "infra/*"
+  - "installers"
   - "tests/workflows"
   - "tests/e2e/web"
   - "tests/accessibility/web"
