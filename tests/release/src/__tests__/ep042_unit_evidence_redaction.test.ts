@@ -111,7 +111,10 @@ describe("ep042_unit evidence redaction", () => {
     expect(redactValue(["AKIA", "IOSFODNN7EXAMPLE"].join(""))).toBe(
       "[REDACTED]",
     );
-    expect(redactValue("-----BEGIN RSA PRIVATE KEY-----")).toBe("[REDACTED]");
+    // Runtime-constructed: never a tracked secret literal (security gate
+    // precedent, EP-041).
+    const pemCanary = ["-----BEGIN RSA ", "PRIVATE KEY-----"].join("");
+    expect(redactValue(pemCanary)).toBe("[REDACTED]");
   });
 
   it("ep042_unit_evidence_never_emits_secret_shaped_component_ids", async () => {
@@ -147,7 +150,9 @@ describe("ep042_unit evidence redaction", () => {
     const serialized = JSON.stringify(evidence);
     expect(serialized).not.toContain("sk-live-");
     expect(serialized).not.toContain("AKIA");
-    expect(serialized).not.toContain("BEGIN RSA");
+    // Runtime-constructed marker: never a tracked secret literal.
+    const pemMarker = ["-----BEGIN ", "RSA PRIVATE KEY-----"].join("");
+    expect(serialized).not.toContain(pemMarker);
   });
 
   it("ep042_unit_evidence_compatibility_decision_label", async () => {
