@@ -2389,6 +2389,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-release"
+version = "0.1.0"
+dependencies = [
+ "nexus-domain",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "nexus-robotics"
 version = "0.1.0"
 dependencies = [

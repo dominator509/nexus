@@ -10,3 +10,7 @@ installers/
 offline-bundle/
 .github/workflows/release.yml
 tests/release/
+scripts/ep042-m1-tests.sh
+references/ADR-028-deployment-release-update-vocabulary.md
+Cargo.toml
+Cargo.lock

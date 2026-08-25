@@ -1,0 +1,40 @@
+name: Release
+
+# EP-042 M1: signed-release CI surface.
+#
+# This workflow builds and tests the release contract crate on version
+# tags. It never deploys: production deployment is not authorized
+# (AGENTS.md stop conditions; SPEC-016 promotion remains an exact manual
+# action). The M1 surface is contract + vocabulary + package boundary;
+# installers, offline bundles, and rollback drills are owned by later
+# EP-042 milestones and are intentionally absent here.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  contract:
+    name: Release contract gate
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install locked toolchain (mise)
+        uses: jdx/mise-action@v2
+        with:
+          version: 2026.8.5
+          install: true
+          cache: true
+
+      - name: Preflight
+        run: sh scripts/preflight.sh
+
+      - name: Release contract M1 gate
+        run: sh scripts/ep042-m1-tests.sh
+
+      - name: Workspace unit battery
+        run: sh scripts/test-unit.sh

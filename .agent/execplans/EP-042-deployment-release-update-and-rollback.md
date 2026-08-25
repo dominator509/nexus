@@ -275,7 +275,28 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+## EP-042 M1 DISPATCH (boot 2026-08-25, lease 178c364)
+
+M1: Contract, vocabulary, and package boundary.
+
+- M1-owned exact paths: `.agent/execplans/EP-042-*.md`, `.agent/state/LEDGER.md`, `.agent/expected-files/EP-042.txt`, `.agent/node-contracts/EP-042.md`, `scripts/nodes/EP-042.sh`, `crates/nexus-release/`, `.github/workflows/release.yml`, plus M1-added `scripts/ep042-m1-tests.sh` (gate) and `references/ADR-028-deployment-release-update-vocabulary.md` (vocabulary ADR), and workspace manifest `Cargo.toml`/`Cargo.lock` (EP-038 M1 precedent).
+- M1 invariants (encoded in the crate and proven by tests):
+  - RELEASE MANIFEST EXISTS != RELEASE VERIFIED; SIGNATURE PRESENT != SIGNATURE VALID
+  - UPDATE PLAN EXISTS != UPDATE EXECUTED; first update step is BACKUP (backup-before-update); plans never contain PROMOTE (promotion is manual)
+  - CANARY OBSERVING != PROMOTED; canary verdicts never deploy
+  - PROMOTION DECISION != DEPLOYMENT; ManualPromotion requires a human approval ref and never performs deployment
+  - ROLLBACK RECEIPT REQUIRES BACKUP REF; receipt != rollback verified
+  - OFFLINE BUNDLE EXISTS != OFFLINE BUNDLE VERIFIED; bundles require approved image + model + license + SBOM contents
+  - One signed ReleaseManifest supports MANAGED/BYOC/EXISTING_SSH/HYBRID/FULLY_LOCAL profiles (channel vocabulary from schemas/deployment-profile.schema.json)
+  - Every public vocabulary deny-unknown; versioned serialization preserves/rejects schema_version; digest = alg:hex with >=32 hex chars
+- Anti-fabrication: production code has no placeholder/demo/sample-success/hidden fallback; test-double code stays in #[cfg(test)]; no claim of signature validity, update execution, promotion, or deployment - M1 certifies contract/vocabulary only.
+- Non-vacuous gate `scripts/ep042-m1-tests.sh`: material presence, real `cargo test -p nexus-release --locked` with >= 30 passed / zero failed / zero ignored, per-interface anti-masking sentinels, dependency-direction (nexus-domain + serde + serde_json + sha2 only, no provider SDK), no-placeholder scan, clippy -D warnings, fmt check, node M1 wired to gate (no artifact-check masking).
+- Regression requirement: EP-041 node gates remain green (node verify EP-041: ok) - M1 adds a workspace member and must not break the workspace battery.
+- Committed-tree reproduction: after the M1 commit, rerun the gate on the committed tree and confirm `EP-042 M1: ok` + side gates (scope audit, expected files, security, license, dependency audit, reality gate, format, lint, typecheck, test-unit, blueprint validation).
+- Certification boundary: M1 certifies the nexus-release contract/vocabulary package boundary only. NOT ASSERTED: real signature verification against keys, update execution, canary rollout, backup/restore, rollback drills, offline bundle production, release build, deployment, provider certification.
+- No graph-next after M1 (graph-next is the scheduler's authority, not a per-milestone tool).
+
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -286,6 +307,19 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 Append dated evidence-backed discoveries. Do not use this section for speculation.
 
 # 13. Decision Log
+
+## 2026-08-25 - EP-042 M1 decisions
+
+- Decision: crates/nexus-release is a Rust contract crate (mirrors nexus-observability EP-038 pattern) owning all 8 node-contract interfaces; deps limited to nexus-domain + serde + serde_json + sha2. Evidence: node contract interface map (all owning package nexus-release); EP-038 M1 precedent; dependency-direction gate. Alternatives: Python package (rejected - ARCHITECTURE.md assigns Rust contract layer); schemas-generated bindings (rejected - no cross-language contract in M1; deployment-profile.schema.json already canonicalizes mode/release_channel). Consequence: M1 provides typed Rust contract surface; later milestones add installers/update engine in TS/Rust apps without duplicating canonical names. Reversal: ADR + vocabulary update in the same milestone.
+- Decision: Digest format gate = `sha256:` + lowercase hex >= 32 chars (EP-041 artifact-identity precedent). Evidence: node contract identity rule alg:hex >=32; tests prove rejection of missing prefix, unsupported alg, short hex, non-hex, uppercase hex. Consequence: real content digests computed by the crate are exactly 64 chars.
+- Decision: content_digest() excludes the self-referential digest field (manifest_digest/bundle_digest set to None before serialization). Evidence: without it the binding is unverifiable (chicken-and-egg); test ep042_unit_manifest_exists_not_verified caught the naive implementation. Consequence: digest binds content excluding its own field - verifiable and deterministic. Reversal: strip-then-digest is the canonical form; keep.
+- Decision: UpdateStepKind has NO PROMOTE variant; UpdatePlan requires first step BACKUP; RollbackReceipt.backup_ref is mandatory (not Option); CanaryVerdict has NO PROMOTED variant; ManualPromotion requires approval_ref and carries exact_manual_command only. Evidence: SPEC-016 behaviors 6/7; node contract acceptance obligations 2 and 4; vocabulary + construction tests. Consequence: promotion and deployment cannot be expressed inside the update engine surface - they remain exact manual actions.
+- Decision: CompatibilityEntry.version must exactly match SignedComponent.version in matrix.check(); min/max bound range checking applies to update compatibility. Evidence: matrix tests; a release declares exact component versions, bounds guide updates. Consequence: unknown/mismatched/out-of-range versions fail closed.
+- Decision: Provider names stay free-form strings (ObjectRef.backend); no provider enum in domain contracts. Evidence: ARCHITECTURE.md forbidden moves (provider names in domain capabilities). Consequence: M1 contract surface is provider-neutral; installers may normalize at the boundary (M3+).
+- Decision: M1 gate scripts/ep042-m1-tests.sh is the authoritative gate (no artifact-check masking); node M1 branch rewired. Evidence: EP-041/EP-038 precedent; anti-masking sentinels; vacuity guards. Consequence: committed-tree reproduction is a real gate run, not a file existence check.
+- Security impact: redaction-first error surface; signature key material and secret-shaped values never appear in error messages (runtime-constructed canary test).
+- License impact: none (MIT crate, no new third-party dependency beyond sha2 already in the workspace).
+- Compatibility impact: schema_version fixed at 1; serde deny_unknown_fields on every record; roundtrip tests preserve schema_version.
 
 Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
 

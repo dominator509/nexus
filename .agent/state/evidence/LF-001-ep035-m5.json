@@ -2,9 +2,9 @@
   "lf_id": "LF-001",
   "node": "EP-035",
   "milestone": "M5",
-  "run_id": "ep035-m5-1787609613371-95787e12",
+  "run_id": "ep035-m5-1787634600193-a71016d8",
   "slug": "one-package-deployment",
-  "git_commit": "30ce2d2cd74d3b13ca08fc6d1a01b5e6d0b48ade",
+  "git_commit": "178c36486fff4075e05ed59aaab0a6b4182e7ed1",
   "artifact_hash": "70941249de20f68046c6bdfe8d42406bfc711238a1c29ec7ec1cf2e4fa77254b",
   "artifact_path": "/root/nexus/.agent/state/livefire/ep035-bundle",
   "deployment_mode": "FULLY_LOCAL",
@@ -43,5 +43,5 @@
     "real LAN discovery": "NOT ASSERTED",
     "ship readiness": "NOT ASSERTED until its designated owner"
   },
-  "written_at_unix_s": 1787609620
+  "written_at_unix_s": 1787634608
 }

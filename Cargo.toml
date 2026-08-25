@@ -43,6 +43,7 @@ members = [
     "crates/nexus-compute",
     "crates/nexus-artifacts",
     "crates/nexus-observability",
+    "crates/nexus-release",
     "crates/nexus-supply-chain",
     "supply-chain",
     "policies/licenses",

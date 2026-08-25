@@ -1,0 +1,12 @@
+[package]
+name = "nexus-release"
+version = "0.1.0"
+edition = "2021"
+description = "EP-042 provider-neutral deployment/release/update/rollback contracts: ReleaseManifest, SignedComponent, CompatibilityMatrix, UpdatePlan, CanaryRing, RollbackReceipt, OfflineBundle, ManualPromotion (SPEC-016, SPEC-024)"
+license = "MIT"
+
+[dependencies]
+nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10"
