@@ -11,9 +11,10 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@nexus/installers": "workspace:*",
+    "@nexus/offline-bundle": "workspace:*",
     "@nexus/release-infra": "workspace:*",
-    "@nexus/setup": "workspace:*",
-    "@nexus/installers": "workspace:*"
+    "@nexus/setup": "workspace:*"
   },
   "devDependencies": {
     "typescript": "~5.9.0",

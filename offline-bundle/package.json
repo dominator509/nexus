@@ -1,0 +1,25 @@
+{
+  "name": "@nexus/offline-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "EP-042 M5 offline bundle (SPEC-016 behavior 5, SPEC-024): real offline-bundle production from real files, digest-bound bundle verification (missing/changed/malformed/duplicate/path-traversal/symlink/wrong-release denied), offline installation that composes the canonical M1/M2 release surfaces and the M4 transactional installer with NO transport dependency, rollback drill with receipt only after verified restoration, and current-run redacted evidence. Canonical release/update/install truth remains in crates/nexus-release (M1), apps/setup/src/update/ (M2), infra/release/ (M3), installers/ (M4).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nexus/installers": "workspace:*",
+    "@nexus/setup": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}

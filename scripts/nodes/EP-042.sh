@@ -12,11 +12,7 @@ case "$mode" in
   M2) sh scripts/ep042-m2-tests.sh ;;
   M3) sh scripts/ep042-m3-tests.sh ;;
   M4) sh scripts/ep042-m4-tests.sh ;;
-  M5|verify)
-      python3 scripts/node-artifact-check.py EP-042 M5
-      cargo test --locked -p nexus-release
-      :
-      ;;
+  M5|verify) sh scripts/ep042-m5-tests.sh ;;
   *) echo "EP-042: FAIL - unknown mode $mode" >&2; exit 2;;
 esac
 echo "EP-042 $mode: ok"

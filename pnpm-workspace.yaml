@@ -2,6 +2,7 @@ packages:
   - "packages/*"
   - "infra/*"
   - "installers"
+  - "offline-bundle"
   - "tests/workflows"
   - "tests/e2e/web"
   - "tests/accessibility/web"

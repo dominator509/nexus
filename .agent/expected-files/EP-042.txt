@@ -23,3 +23,6 @@ apps/setup/src/index.ts
 scripts/ep042-m3-tests.sh
 .agent/milestone-files/EP-042-M4.txt
 scripts/ep042-m4-tests.sh
+.agent/milestone-files/EP-042-M5.txt
+scripts/ep042-m5-tests.sh
+offline-bundle/
