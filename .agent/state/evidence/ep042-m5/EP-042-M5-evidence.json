@@ -1,8 +1,8 @@
 {
   "node": "EP-042",
   "milestone": "M5",
-  "run_id": "ep042-m5-closure-1787678845",
-  "git_commit": "5414d97b62cef275d991cfad63721fc4cf16d0d7",
+  "run_id": "ep042-m5-closure-1787683949",
+  "git_commit": "932e769d18a5167e80f1b8db4f4f694fe0beb3e7",
   "release_id": "release-1",
   "install_id": "install-1",
   "bundle_id": "bundle-m5",
@@ -22,6 +22,6 @@
     "real signature verification NOT ASSERTED"
   ],
   "redaction_result": "REDACTED",
-  "timestamp": "2026-08-25T17:27:26.276Z",
-  "evidence_digest": "sha256:02af85ce9193a55b5276573bf681f3b1fa6887bd30b52a607d251ebd7b145815"
+  "timestamp": "2026-08-25T18:52:29.999Z",
+  "evidence_digest": "sha256:d8ecbed4e7e593eb10a3250524836c3778218a16fe631abf41cfec02a410d803"
 }
