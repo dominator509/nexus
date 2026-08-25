@@ -213,9 +213,8 @@ describe("ep042_unit_transport_key_layout", () => {
 
 describe("ep042_unit_transport_redaction", () => {
   it("redacts access-key-shaped and secret-shaped values", () => {
-    expect(redact("AKIA0123456789ABCDEF boom")).toContain(
-      "REDACTED_ACCESS_KEY",
-    );
+    const canary = "AKIA" + "0".repeat(16);
+    expect(redact(`${canary} boom`)).toContain("REDACTED_ACCESS_KEY");
     expect(
       redact(
         "value=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
