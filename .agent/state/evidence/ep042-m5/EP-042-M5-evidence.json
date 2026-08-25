@@ -1,8 +1,8 @@
 {
   "node": "EP-042",
   "milestone": "M5",
-  "run_id": "ep042-m5-closure-1787672000",
-  "git_commit": "08d792c7e747dd49e6d6a67d7f764e0745e5853f",
+  "run_id": "ep042-m5-closure-1787678845",
+  "git_commit": "5414d97b62cef275d991cfad63721fc4cf16d0d7",
   "release_id": "release-1",
   "install_id": "install-1",
   "bundle_id": "bundle-m5",
@@ -18,9 +18,10 @@
   "offline_install_state": "OFFLINE_INSTALL_VERIFIED",
   "signature_state": "SIGNATURE_PRESENT_NOT_VERIFIED",
   "certification_boundary": [
-    "INTERNAL BEHAVIOR CERTIFIED for exact exercised local surface"
+    "INTERNAL BEHAVIOR CERTIFIED for exact exercised local surface",
+    "real signature verification NOT ASSERTED"
   ],
   "redaction_result": "REDACTED",
-  "timestamp": "2026-08-25T15:23:00.596Z",
-  "evidence_digest": "sha256:1f732e1566b98f77c948e92db7d24bf4ba6ba9e5811ae3160529ea4089c69a50"
+  "timestamp": "2026-08-25T17:27:26.276Z",
+  "evidence_digest": "sha256:02af85ce9193a55b5276573bf681f3b1fa6887bd30b52a607d251ebd7b145815"
 }
