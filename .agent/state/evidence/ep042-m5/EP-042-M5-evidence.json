@@ -1,0 +1,26 @@
+{
+  "node": "EP-042",
+  "milestone": "M5",
+  "run_id": "ep042-m5-1787668914",
+  "git_commit": "8212dd88415a93152430990d693d7ff3d8d9c78b",
+  "release_id": "release-1",
+  "install_id": "install-1",
+  "bundle_id": "bundle-m5",
+  "manifest_digest": "sha256:4a905922d94c1228423d53805efd8d5756d14d27b76ab5aad04db3ed5dffdaf1",
+  "bundle_digest": "sha256:0cb92de3c4f87fafca8d12da06c7518098838e6473f2d02db1f481772f1d075c",
+  "component_digests": [
+    "sha256:0d4f32ddaf034379e78d900f3190962049b67bfba0e0467b22aa19e00472763b",
+    "sha256:9a01e7d921b7388c327429a99319440bb60ab472338e6b03d645754e26c1c58f"
+  ],
+  "bundle_verification_state": "VERIFIED",
+  "install_state": "INSTALLED",
+  "rollback_state": "VERIFIED",
+  "offline_install_state": "OFFLINE_INSTALL_VERIFIED",
+  "signature_state": "SIGNATURE_PRESENT_NOT_VERIFIED",
+  "certification_boundary": [
+    "INTERNAL BEHAVIOR CERTIFIED for exact exercised local surface"
+  ],
+  "redaction_result": "REDACTED",
+  "timestamp": "2026-08-25T14:51:47.212Z",
+  "evidence_digest": "sha256:20b256d8596b93b768e76a9863ec8644d0964fba660839b8d61f140adbdec081"
+}
