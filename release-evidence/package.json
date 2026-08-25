@@ -1,0 +1,22 @@
+{
+  "name": "@nexus/release-evidence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "EP-043 M1 production readiness and ship contract package (SPEC-008): provider-neutral versioned contracts for ShipGate, ReleaseEvidence, ManualDeployHandoff, and ProductionReadinessDecision with deny-unknown vocabularies and fail-closed invariants. Canonical release/update/install truth remains in crates/nexus-release (EP-042 M1), apps/setup/src/update/ (EP-042 M2), infra/release/ (EP-042 M3), installers/ (EP-042 M4), offline-bundle/ (EP-042 M5).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run src/__tests__",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}

@@ -271,7 +271,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 11. Progress
 
-- [ ] M1: Contract, vocabulary, and package boundary
+- [x] M1: Contract, vocabulary, and package boundary
 - [ ] M2: Core behavior and deterministic invariants
 - [ ] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
@@ -279,11 +279,44 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 # 12. Surprises & Discoveries
 
-Append dated evidence-backed discoveries. Do not use this section for speculation.
+- 2026-08-25: M1 gate regression strategy. The EP-042 M5 gate carries a
+  node-fenced scope audit that cannot pass once EP-043 files exist (the
+  audit compares against EP-042's own expected-files). Correct regression
+  mechanism is the predecessor's owned test surfaces (cargo test
+  -p nexus-release + tests/release vitest), not the predecessor's full
+  gate. Recorded in gate header.
+- 2026-08-25: Prettier + blueprint ASCII rules apply to the new package;
+  em-dashes in model.ts comments tripped blueprint validation. Fixed.
+- 2026-08-25: lint.sh resolves flutter via mise shims only after sourcing
+  scripts/env.sh; direct `sh scripts/lint.sh` from a bare shell fails on
+  `flutter: not found`. Canonical verify sources env.sh first (verify.sh
+  does this).
 
 # 13. Decision Log
 
-Append date, decision, evidence, alternatives, consequence, reversal, security, license, and compatibility impact.
+- 2026-08-25: M1 package language/layer. release-evidence/ is a TypeScript
+  workspace package (@nexus/release-evidence) mirroring the EP-042 release
+  chain convention (infra/release, installers, offline-bundle). Evidence:
+  pnpm-workspace.yaml registration + tsconfig/build conventions identical
+  to offline-bundle. Alternatives: Rust crate (rejected: the ship boundary
+  composes TS release surfaces), Python (rejected: no ship tooling in
+  Python). Consequence: zero new third-party deps; Web Crypto-compatible
+  sha256; vitest proofs. Reversal: new ADR.
+- 2026-08-25: Redaction patterns. Broadened sk-/ghp_/AKIA patterns to
+  match dotted runtime canary shapes (sk-liv...7890) after the M1 suite
+  caught 4 failures. Evidence: ep043_unit_error_redacts_secrets +
+  ep043_unit_evidence_redacts_secret_shaped_content now green. Security
+  impact: broader redaction is strictly safer. License/compat: none.
+- 2026-08-25: Evidence digest binding. buildEvidence test helper originally
+  applied overrides AFTER digest computation, producing objects whose
+  digest did not bind their content; the M1 suite caught the inconsistency
+  (ep043_unit_evidence_digest_binds_content). Fixed by passing overrides
+  into the constructor. Consequence: test helpers construct canonical
+  objects only.
+- 2026-08-25: ShipGate verdict + readiness decision are computed, never
+  trusted from input; parsers recompute and reject mismatches. This
+  encodes SPEC-008 authority (GATE PASSED != SHIPPED; DECISION MADE !=
+  SHIPPED) at the wire boundary.
 
 # 14. Outcomes & Retrospective
 

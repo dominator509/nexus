@@ -8,7 +8,7 @@ export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 mode="${1:-verify}"
 case "$mode" in
-  M1) python3 scripts/node-artifact-check.py EP-043 M1 ;;
+  M1) sh scripts/ep043-m1-tests.sh ;;
   M2) python3 scripts/node-artifact-check.py EP-043 M2; sh scripts/verify.sh ;;
   M3) python3 scripts/node-artifact-check.py EP-043 M3; sh scripts/verify.sh ;;
   M4) python3 scripts/node-artifact-check.py EP-043 M4; sh scripts/verify.sh ;;

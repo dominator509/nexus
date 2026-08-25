@@ -2,7 +2,10 @@
 .agent/state/LEDGER.md
 .agent/expected-files/EP-043.txt
 .agent/node-contracts/EP-043.md
+.agent/milestone-files/EP-043-M1.txt
 scripts/nodes/EP-043.sh
+scripts/ep043-m1-tests.sh
+references/ADR-029-production-readiness-and-ship-vocabulary.md
 release-evidence/
 PRODUCTION_READINESS.md
 OPERATIONS.md
@@ -10,3 +13,5 @@ RELEASE.md
 ROLLBACK.md
 .agent/state/
 dist/release/
+pnpm-workspace.yaml
+pnpm-lock.yaml

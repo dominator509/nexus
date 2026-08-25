@@ -3,6 +3,7 @@ packages:
   - "infra/*"
   - "installers"
   - "offline-bundle"
+  - "release-evidence"
   - "tests/workflows"
   - "tests/e2e/web"
   - "tests/accessibility/web"
