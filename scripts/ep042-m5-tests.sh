@@ -55,6 +55,9 @@ cleanup() {
   rm -rf "$FIXTURE_BASE" "$EVIDENCE_BASE"
   rm -rf /tmp/nexus-ep042-m5-root-*
   rm -rf /tmp/nexus-ep042-m5-evidence-*
+  # Per-proof temp roots created by the vitest bundle suite
+  # (nexus-ep042-m5-<label>-<ts>-<rand>) and any other owned glob.
+  rm -rf /tmp/nexus-ep042-m5-*
 }
 trap cleanup EXIT
 
@@ -436,6 +439,13 @@ nets=$(owned_networks)
 [ "$nets" -eq 0 ] || fail "EP-042 M5 network residue: $nets"
 [ ! -d "$FIXTURE_BASE" ] || fail "EP-042 M5 fixture residue"
 [ ! -d "$EVIDENCE_BASE" ] || fail "EP-042 M5 evidence residue"
+# The vitest bundle proofs create per-proof temp roots under /tmp with the
+# nexus-ep042-m5-<label>-<ts>-<rand> shape. Cleanup removes all
+# nexus-ep042-m5-* temp roots; the check below is non-vacuous for the whole
+# owned glob, not just FIXTURE_BASE/EVIDENCE_BASE.
+if [ -n "$(ls -d /tmp/nexus-ep042-m5-* 2>/dev/null)" ]; then
+  fail "EP-042 M5 temp residue: $(ls -d /tmp/nexus-ep042-m5-* 2>/dev/null | wc -l) dirs remain"
+fi
 ok "zero EP-042 M5-owned residue (containers/volumes/networks/temp)"
 
 echo "EP-042 M5 gate: ok"
