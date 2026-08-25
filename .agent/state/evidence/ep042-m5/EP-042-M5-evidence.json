@@ -1,8 +1,8 @@
 {
   "node": "EP-042",
   "milestone": "M5",
-  "run_id": "ep042-m5-1787668914",
-  "git_commit": "8212dd88415a93152430990d693d7ff3d8d9c78b",
+  "run_id": "ep042-m5-closure-1787672000",
+  "git_commit": "08d792c7e747dd49e6d6a67d7f764e0745e5853f",
   "release_id": "release-1",
   "install_id": "install-1",
   "bundle_id": "bundle-m5",
@@ -21,6 +21,6 @@
     "INTERNAL BEHAVIOR CERTIFIED for exact exercised local surface"
   ],
   "redaction_result": "REDACTED",
-  "timestamp": "2026-08-25T14:51:47.212Z",
-  "evidence_digest": "sha256:20b256d8596b93b768e76a9863ec8644d0964fba660839b8d61f140adbdec081"
+  "timestamp": "2026-08-25T15:23:00.596Z",
+  "evidence_digest": "sha256:1f732e1566b98f77c948e92db7d24bf4ba6ba9e5811ae3160529ea4089c69a50"
 }
