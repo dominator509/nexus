@@ -275,7 +275,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
 - [x] M4: Forced failures, abuse cases, and observability
-- [ ] M5: Live-fire, operations, and node closure
+- [x] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
 
@@ -480,12 +480,64 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   directory output target fails closed with no partial file, unknown
   flags rejected, unknown manifest fields rejected, redaction of
   runtime-constructed canaries, and run_id/git_commit correlation fields.
-- 2026-08-26: M4 verdict remains NOT_READY (EP-043 not DONE,
-  RELEASE-BLOCKING-PENDING rows, no fresh-clone acceptance rerun). M4
-  certifies the operational/failure path for the exact exercised local
-  surface only. NOT ASSERTED: cryptographic signing verification, ship
-  gate PASSED/AUTHORIZED, signed certification rows, fresh-clone
-  acceptance rerun (M5), production readiness declaration, deployment.
+- 2026-08-26: M5 rollback drill. scripts/ep043-rollback-drill.sh is a
+  REAL bounded drill in a throwaway clone: capture state A (committed
+  PRODUCTION_READINESS.md sha256 + canonical manifest component
+  digests), apply state B (forged READY report + corrupted manifest),
+  verify B differs, execute rollback (git restore committed report +
+  regenerate manifest from canonical state), verify exact A restored
+  (report sha256 equal + component digests equal + verify-manifest ok),
+  and only then write dated evidence. First attempt captured state A
+  from the dev working tree while git restore produced the committed
+  bytes (mismatch) - fixed by capturing A inside the clone. Evidence
+  uses a stable filename bound to the current commit (like
+  PRODUCTION_READINESS.md), avoiding per-run churn.
+- 2026-08-26: M5 real shared-gate defect. The fresh-clone acceptance
+  exposed security-check.sh's boolean chain bug: on a clean tree with
+  NO .env, `[ ! -f .env ] || ... && { FAIL }` short-circuits true into
+  the FAIL branch, so any fresh checkout without .env failed security.
+  The dev tree only passed because its untracked .env made the || chain
+  false. Fixed to an explicit `if [ -f .env ] && git ls-files
+  --error-unmatch .env` guard (fail only when .env is actually
+  tracked). Shared-script fix required by the acceptance; classified as
+  a real defect, not an EP-043 gate weakening.
+- 2026-08-26: M5 fresh-clone acceptance. scripts/ep043-freshclone-accept.sh
+  clones the candidate commit into a throwaway dir, asserts HEAD + clean
+  tree, restores deps from frozen files (pnpm install --frozen-lockfile
+  --prefer-offline, 1.7s warm store), runs the EP-043 M1-M4 gates inside
+  the clone with EP043_TEST_ROOT pointing at the clone (kills the
+  source-tree leak from hardcoded /root/nexus in the integration and
+  failure suites), runs readiness/manifest/verify-manifest CLIs in the
+  clone, and proves no development-tree path appears in any acceptance
+  log. Acceptance semantics require the COMMITTED tree, so the
+  authoritative gate run is the committed-tree reproduction (validated
+  pre-commit against a staging repo).
+- 2026-08-26: M5 final readiness. The canonical adapter now reads
+  fresh-clone acceptance evidence (collectFreshCloneEvidence on the
+  evidence dir, same mechanism as drills/reviews) instead of hardcoded
+  false. After M5, the readiness report clears the fresh-clone and
+  rollback-drill blockers but remains honestly NOT_READY: certification
+  rows stay RELEASE-BLOCKING-PENDING (no fabricated signing), the other
+  five drill kinds (RESTORE/PROVIDER_FAILOVER/IDENTITY_RECOVERY/
+  SENTINEL_CONTAINMENT/UPDATE_FAILURE) have no evidence, the nine
+  mandatory reviews are NOT_RUN, and EP-044/EP-045 are not DONE. Node
+  closure certifies truthful enforcement; it does not force READY.
+
+- 2026-08-26: M5 shared-script security fix. security-check.sh's .env
+  guard was `[ ! -f .env ] || git ls-files --error-unmatch .env && FAIL
+  || true`, which shell-precedence makes fail on clean trees (no .env).
+  Rewrote as an explicit if-guard: fail only when .env exists AND is
+  tracked. Untracked local .env stays allowed (matches prior behavior
+  and the local-secrets policy). This is a correctness fix to a shared
+  gate required by the fresh-clone acceptance; it does not weaken
+  security (the tracked-secret pattern scan is unchanged).
+- 2026-08-26: M5 fresh-clone adapter read. freshCloneRerun was hardcoded
+  false in collectReadinessInputs; M5 replaces it with
+  collectFreshCloneEvidence(paths), which reads the evidence dir for a
+  committed ep043-freshclone evidence file - the same mechanism the
+  adapter already uses for drills and reviews. This lets the real M5
+  acceptance rerun clear the fresh-clone blocker through the canonical
+  engine instead of editing the verdict.
 
 # 14. Outcomes & Retrospective
 

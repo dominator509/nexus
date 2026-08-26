@@ -6,7 +6,15 @@ export GIT_PAGER=cat
 export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
-[ ! -f .env ] || git ls-files --error-unmatch .env >/dev/null 2>&1 && { echo "security check: FAIL - .env is tracked" >&2; exit 1; } || true
+# Fail only when a tracked .env exists. The previous boolean chain
+# short-circuited into the FAIL branch on clean trees (no .env at all),
+# which the EP-043 M5 fresh-clone acceptance exposed: a fresh checkout
+# without .env failed security. Untracked local .env remains allowed;
+# a tracked .env is a hard failure. (EP-043 M5 decision log entry.)
+if [ -f .env ] && git ls-files --error-unmatch .env >/dev/null 2>&1; then
+  echo "security check: FAIL - .env is tracked" >&2
+  exit 1
+fi
 patterns='AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_-]{24,}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|AGE-SECRET-KEY-1[A-Z0-9]{20,}'
 tracked=$(git ls-files 2>/dev/null || true)
 if [ -n "$tracked" ]; then

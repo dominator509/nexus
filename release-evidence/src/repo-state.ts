@@ -269,6 +269,19 @@ export function collectReadinessInputs(paths: RepoPaths): ReadinessInputs {
     drills,
     releaseTag,
     manualDeployCommand,
-    freshCloneRerun: false,
+    freshCloneRerun: collectFreshCloneEvidence(paths),
   };
+}
+
+/**
+ * M5 fresh-clone acceptance read. The final acceptance rerun writes a
+ * dated evidence file `ep043-freshclone-<run>.md` under the evidence
+ * dir (bound to the exact candidate commit). Presence of that committed
+ * evidence is the canonical signal that the fresh-clone-equivalent
+ * rerun passed; absence means the obligation remains unmet and
+ * readiness stays NOT_READY. This is the same evidence-dir mechanism
+ * the adapter already uses for drills and reviews.
+ */
+export function collectFreshCloneEvidence(paths: RepoPaths): boolean {
+  return findEvidenceFile(paths.evidenceDir, "ep043-freshclone").length > 0;
 }

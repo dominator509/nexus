@@ -12,7 +12,8 @@ case "$mode" in
   M2) sh scripts/ep043-m2-tests.sh ;;
   M3) sh scripts/ep043-m3-tests.sh ;;
   M4) sh scripts/ep043-m4-tests.sh ;;
-  M5|verify)
+  M5) sh scripts/ep043-m5-tests.sh ;;
+  verify)
       # Gate-composition guard (same defect class as EP-042 M5): the
       # canonical node verify runs verify.sh twice; LF-029 (EP-044's
       # live-fire proof) starts the control plane, asserts it, and shuts
@@ -33,7 +34,7 @@ case "$mode" in
           exit 4
         fi
       fi
-      python3 scripts/node-artifact-check.py EP-043 M5
+      sh scripts/ep043-m5-tests.sh
       sh scripts/verify.sh
       :
       ;;
