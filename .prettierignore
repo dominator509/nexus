@@ -12,6 +12,10 @@ build/
 .dart_tool/
 coverage/
 
+# Generated report (EP-043 M2): produced by the readiness CLI from real
+# repository state; reformatting it is out of scope for the format gate.
+PRODUCTION_READINESS.md
+
 # Pack-controlled documentation. These are L2 specs, L4 plans, and L1/L5
 # control-plane records shipped by the blueprint pack; reformatting them
 # is out of scope for any node (see ADR-005). The format gate validates

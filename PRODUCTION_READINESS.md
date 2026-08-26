@@ -1,59 +1,107 @@
 # PRODUCTION READINESS
 
-A checkbox is completed only by observed evidence from the named command or artifact in the current release candidate.
+Node: EP-043
+Run: ep043-readiness-1787704629568
+Git commit: e1caad4cc9ac0b0f3ff66fb9530765018fe12ce1
+Generated: 2026-08-26T00:37:09.569Z
 
-## Functional
+## Decision: NOT_READY
 
-- [ ] Every required row in LIVE_FIRE_PROOFS.md passes under `NEXUS_REQUIRE_ALL_PROOFS=1 sh scripts/live-fire.sh`.
-- [ ] Every accepted specification requirement is mapped and green in TESTING.md and `tests/traceability/`.
-- [ ] Optional providers shown as certified have current evidence in `provider-certification/RESULTS.md`.
-- [ ] Hardware shown as supported has current evidence in `hardware/COMPATIBILITY_MATRIX.md`.
-- [ ] Non-goals remain excluded by `sh scripts/scope-gate.sh`.
+Ship gate verdict: BLOCKED
 
-## Testing and reality
+Production readiness is NOT declared. The following blocking
+reasons must be resolved before a ship decision:
 
-- [ ] `sh scripts/verify.sh` prints `verify: ok` in a fresh clone equivalent.
-- [ ] `sh scripts/reality-gate.sh` prints `reality gate: ok`.
-- [ ] Required CI has no ignored, warning-only, or continue-on-error gate.
-- [ ] Regression coverage includes every live-fire outcome and every prior critical incident.
+- graph node EP-043 is not DONE
+- LF-006 has no evidence file
+- LF-007 has no evidence file
+- LF-008 has no evidence file
+- LF-012 has no evidence file
+- LF-013 has no evidence file
+- LF-018 has no evidence file
+- LF-019 has no evidence file
+- LF-024 has no evidence file
+- LF-026 has no evidence file
+- LF-028 has no evidence file
+- LF-029 has no evidence file
+- certification row provider-1-DeepSeek-is-required-for is RELEASE-BLOCKING-PENDING
+- certification row hardware-1-Full-release-requires-th is RELEASE-BLOCKING-PENDING
+- review SECURITY is not PASS
+- review PRIVACY is not PASS
+- review PERFORMANCE is not PASS
+- review ACCESSIBILITY is not PASS
+- review OBSERVABILITY is not PASS
+- review BACKUP is not PASS
+- review RESTORE is not PASS
+- review UPDATE is not PASS
+- review ROLLBACK is not PASS
+- fresh-clone-equivalent rerun has not been executed
 
-## Security and privacy
+## Acceptance Obligations
 
-- [ ] `sh scripts/security-check.sh` prints `security check: ok`.
-- [ ] `sh scripts/dependency-audit.sh` prints `dependency audit: ok`.
-- [ ] `sh scripts/license-gate.sh` prints `license gate: ok`.
-- [ ] Threat model, trust boundaries, OpenFGA model, OPA policies, and step-up matrix are reviewed.
-- [ ] No secret, prompt, raw audio, private image, or customer content appears in logs or support bundles.
-- [ ] Export, deletion, retention, backup, and API egress are demonstrated.
-- [ ] No unvalidated compliance claim appears in product copy.
+### all graph nodes are DONE
 
-## Performance and resilience
+Status: NOT MET
 
-- [ ] Reference control-plane load meets OBSERVABILITY.md SLOs.
-- [ ] Certified home-edge hardware meets local command and voice targets.
-- [ ] DeepSeek cache replay and staging traffic meet the 0.97 token-hit target.
-- [ ] Provider failover, internet loss, edge loss, NATS loss, Temporal worker loss, and database restart are tested.
-- [ ] Restore, update rollback, identity recovery, and Sentinel containment drills have dated evidence.
+- graph node EP-043 is not DONE
 
-## Accessibility
+### all live-fire proofs pass
 
-- [ ] Web and desktop WCAG 2.2 AA automated and manual core-flow checks pass.
-- [ ] iOS and Android VoiceOver or TalkBack, large text, switch or keyboard, captions, and haptics pass.
-- [ ] Critical flows remain available without speech and without color-only status.
+Status: NOT MET
 
-## Observability and operations
+- LF-006 has no evidence file
+- LF-007 has no evidence file
+- LF-008 has no evidence file
+- LF-012 has no evidence file
+- LF-013 has no evidence file
+- LF-018 has no evidence file
+- LF-019 has no evidence file
+- LF-024 has no evidence file
+- LF-026 has no evidence file
+- LF-028 has no evidence file
+- LF-029 has no evidence file
 
-- [ ] Dashboards load from deployment manifests.
-- [ ] Synthetic alerts reach the right owner and link the correct runbook.
-- [ ] Support bundle is encrypted, previewable, and redacted.
-- [ ] Incident, backup, restore, certificate, secret, provider, and update runbooks are current.
+### required provider and hardware certification rows are signed
 
-## Deployment and release
+Status: NOT MET
 
-- [ ] Signed OCI, desktop, mobile, offline, SBOM, provenance, license, and release manifests exist.
-- [ ] Setup wizard deploys local, existing SSH, and one BYOC provider profile.
-- [ ] Staging install, upgrade, backup, restore, and rollback pass.
-- [ ] Exact manual production command is generated but not executed.
-- [ ] Human release sign-off records owner, date, version, evidence hash, and accepted risks.
+- certification row provider-1-DeepSeek-is-required-for is RELEASE-BLOCKING-PENDING
+- certification row hardware-1-Full-release-requires-th is RELEASE-BLOCKING-PENDING
 
-The only passing command is `sh scripts/production-readiness-check.sh`, which must print `production readiness: ok`.
+### security, privacy, performance, accessibility, observability, backup, restore, update, and rollback reviews pass
+
+Status: NOT MET
+
+- review SECURITY is not PASS
+- review PRIVACY is not PASS
+- review PERFORMANCE is not PASS
+- review ACCESSIBILITY is not PASS
+- review OBSERVABILITY is not PASS
+- review BACKUP is not PASS
+- review RESTORE is not PASS
+- review UPDATE is not PASS
+- review ROLLBACK is not PASS
+
+### a release tag and exact manual deploy command are produced without deploying production
+
+Status: MET
+
+## Evidence
+
+Evidence is machine-readable and bound to the exact run in
+`.agent/state/evidence/`. Redaction is mandatory; secret-shaped
+content is never written into this report.
+
+## Certification Boundary
+
+This report certifies behavior for the exact exercised local
+surfaces recorded in the evidence index. It does NOT assert:
+- production host upgrades
+- real release signature verification (no key store/verifier)
+- production canary rollout
+- production backup/restore/rollback
+- production deployment
+- AWS/R2/B2 transport
+
+Production deployment is not authorized from the coding graph.
+The exact manual deploy command is recorded in the handoff.

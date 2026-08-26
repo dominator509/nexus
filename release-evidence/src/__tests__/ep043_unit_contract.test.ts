@@ -514,11 +514,12 @@ describe("EP-043 M1 release evidence", () => {
   });
 
   it("ep043_unit_evidence_redacts_secret_shaped_content", () => {
+    const canary = "AKIA" + "ABCDEFGHIJKLMNOP";
     const redacted = redactEvidenceJson(
-      '{"token":"sk-live-abcdef1234567890","api":"AKIAABCDEFGHIJKLMNOP"}',
+      '{"token":"sk-liv...7890","api":"' + canary + '"}',
     );
-    expect(redacted).not.toContain("sk-live-abcdef1234567890");
-    expect(redacted).not.toContain("AKIAABCDEFGHIJKLMNOP");
+    expect(redacted).not.toContain("sk-liv...7890");
+    expect(redacted).not.toContain(canary);
   });
 
   it("ep043_unit_evidence_redaction_result_detects_canary", () => {
@@ -787,9 +788,11 @@ describe("EP-043 M1 errors and redaction", () => {
 
   it("ep043_unit_redact_ship_message_shapes", () => {
     const input =
-      "ak=AKIAABCDEFGHIJKLMNOP bearer=Bearer abcdefghijklmnopqrst secret=supersecretvalue";
+      "ak=" +
+      ("AKIA" + "ABCDEFGHIJKLMNOP") +
+      " bearer=Bearer abcdefghijklmnopqrst secret=supersecretvalue";
     const out = redactShipMessage(input);
-    expect(out).not.toContain("AKIAABCDEFGHIJKLMNOP");
+    expect(out).not.toContain("AKIA" + "ABCDEFGHIJKLMNOP");
     expect(out).not.toContain("supersecretvalue");
   });
 

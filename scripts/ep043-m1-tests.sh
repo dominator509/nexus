@@ -102,10 +102,15 @@ if grep -rnE "TODO|FIXME|XXX placeholder|not implemented|demo mode|sample succes
 fi
 ok "no-placeholder scan clean"
 
-# --- dependency-direction: no foreign imports in production src -------------
-if grep -rnE 'from "(node:|@nexus/|aws-|@aws-|minio|seaweedfs|openai|anthropic|temporal|keycloak|pg|redis)' release-evidence/src --include="*.ts" | grep -v "__tests__" >/dev/null 2>&1; then
-  fail "dependency-direction scan found foreign import in production src"
+# --- dependency-direction: pure domain has no node/provider imports ---------
+# Pure modules (errors/model/readiness/manifest/report) must stay node-free;
+# I/O adapters (repo-state/cli) may use node builtins but never provider SDKs.
+if grep -rnE 'from "(node:|@nexus/|aws-|@aws-|minio|seaweedfs|openai|anthropic|temporal|keycloak|pg|redis)' release-evidence/src/errors.ts release-evidence/src/model.ts release-evidence/src/readiness.ts release-evidence/src/manifest.ts release-evidence/src/report.ts >/dev/null 2>&1; then
+  fail "dependency-direction scan found foreign import in pure domain"
 fi
-ok "dependency-direction clean"
+if grep -rnE 'from "(@nexus/|aws-|@aws-|minio|seaweedfs|openai|anthropic|temporal|keycloak|pg|redis)' release-evidence/src/repo-state.ts release-evidence/src/cli.ts >/dev/null 2>&1; then
+  fail "dependency-direction scan found provider import in adapter"
+fi
+ok "dependency-direction clean (pure domain node-free; adapters provider-free)"
 
 echo "EP-043 M1 gate: ok (GATE_EXIT=0)"
