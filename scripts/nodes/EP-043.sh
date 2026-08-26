@@ -11,7 +11,7 @@ case "$mode" in
   M1) sh scripts/ep043-m1-tests.sh ;;
   M2) sh scripts/ep043-m2-tests.sh ;;
   M3) sh scripts/ep043-m3-tests.sh ;;
-  M4) python3 scripts/node-artifact-check.py EP-043 M4; sh scripts/verify.sh ;;
+  M4) sh scripts/ep043-m4-tests.sh ;;
   M5|verify)
       # Gate-composition guard (same defect class as EP-042 M5): the
       # canonical node verify runs verify.sh twice; LF-029 (EP-044's

@@ -132,6 +132,10 @@ function parseCertificationText(
   const rows: CertificationMatrixInput["providerRows"] = [];
   // RELEASE-BLOCKING-PENDING marker on a line names a pending row.
   const re = /^\s*(RELEASE-BLOCKING-PENDING|PENDING|SIGNED)\s*:?\s*(.+)$/gm;
+  // M4 fail-closed conflict detection: a certification row label that
+  // appears more than once with different states is a contradiction the
+  // operator must resolve; identical duplicates are collapsed to one.
+  const seenByLabel = new Map<string, string>();
   let match: RegExpExecArray | null;
   while ((match = re.exec(text)) !== null) {
     const state = match[1]! as
@@ -139,6 +143,18 @@ function parseCertificationText(
       | "PENDING"
       | "SIGNED";
     const label = match[2]!.trim();
+    const labelKey = label.toLowerCase().replace(/\s+/g, " ").trim();
+    const prior = seenByLabel.get(labelKey);
+    if (prior !== undefined && prior !== state) {
+      throw new ShipError(
+        "CONFLICT",
+        `conflicting certification rows for "${label.slice(0, 60)}" (${prior} vs ${state})`,
+      );
+    }
+    if (prior !== undefined) {
+      continue;
+    }
+    seenByLabel.set(labelKey, state);
     rows.push({
       rowId: `${domain.toLowerCase()}-${rows.length + 1}-${label.slice(0, 24).replace(/[^A-Za-z0-9]+/g, "-")}`,
       domain,

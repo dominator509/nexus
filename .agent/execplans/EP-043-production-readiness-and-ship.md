@@ -274,7 +274,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
 - [x] M3: Real dependency and transport integration
-- [ ] M4: Forced failures, abuse cases, and observability
+- [x] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
 # 12. Surprises & Discoveries
@@ -329,6 +329,35 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   cannot be brought healthy. Not an EP-043 code regression - the
   readiness/manifest/operations surface was already green in the first
   ladder pass.
+
+- 2026-08-26: M4 structured-error surface. The CLI previously failed
+  with a raw Node stack trace. M4 wraps main() with a catch that emits
+  one redacted JSON line (code/class/message/redacted) and exits 1.
+  JSON.parse failures in verify-manifest now yield VALIDATION_FAILED
+  instead of an unstructured SyntaxError.
+- 2026-08-26: M4 operator-bypass hardening. flag() only matched the
+  exact "--name value" form, so "--output=/tmp/x" silently fell back to
+  the default and unknown flags/positionals were silently ignored. Now
+  flag() supports both forms, rejectUnknownFlags() rejects any flag not
+  declared by the command and any positional argument, and output paths
+  that exist as directories fail closed (VALIDATION_FAILED) before any
+  write.
+- 2026-08-26: M4 atomic writes. readiness and manifest now write via
+  temp file + rename (writeAtomic); a cancelled or failed run can never
+  leave a partial target file (only a .tmp-<pid> strand, which the
+  cancellation proof asserts never appears in the repo after a run).
+- 2026-08-26: M4 certification conflict detection. parseCertificationText
+  now collapses identical duplicate rows and throws CONFLICT when the
+  same row label carries different states (SIGNED vs
+  RELEASE-BLOCKING-PENDING). The real RESULTS.md files are unaffected
+  (single rows). Malformed/unparseable certification files fail closed
+  as PENDING rows that keep readiness NOT_READY.
+- 2026-08-26: M4 gate real-forgery execution. The gate builds a temp
+  repo with a hand-forged PRODUCTION_READINESS.md claiming READY and
+  proves ship-gate-status still reports NOT_READY: the decision engine
+  never reads the rendered report, so editing markdown cannot change
+  canonical truth. Requires the CLI path in the gate to be absolute
+  (relative path broke after cd into the temp tree; fixed).
 
 # 13. Decision Log
 
@@ -427,6 +456,36 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   available in OPERATIONS.md; signing remains
   SIGNATURE_PRESENT_NOT_VERIFIED. Ship-gate execution/signing and
   production deploy/rollback are M5-owned and NOT ASSERTED.
+- 2026-08-26: M4 RELEASE.md scope. RELEASE.md gains the release
+  procedure (real commands), release-blocking condition list, ship-gate
+  semantics (BLOCKED/PASSED/AUTHORIZED/SIGNED never collapsed), signing
+  boundary (PRESENT_NOT_VERIFIED preserved; crypto verification NOT
+  ASSERTED), emergency abort/rollback triggers (ROLLBACK.md + OPERATIONS.md
+  are the rollback owners), fresh-clone prerequisite (acceptance rerun
+  remains M5/PENDING), artifact checklist, readiness observability
+  fields, and the diagnostic/recovery mapping (ship-gate-status +
+  certification-rows are the diagnostic; readiness/manifest/verify-
+  manifest are bounded recovery). No new public vocabulary names were
+  added, so no ADR was required.
+- 2026-08-26: M4 failure suite. 19 ep043_failure_* proofs exercise REAL
+  failure mechanisms: missing GRAPH (UNAVAILABLE), broken manifest JSON
+  (VALIDATION_FAILED), tampered digest (VERIFICATION_FAILED), missing
+  artifact bytes (NOT_FOUND), unreadable graph path (EISDIR ->
+  UNAVAILABLE), conflicting certification rows (CONFLICT), malformed
+  certification text (PENDING row stays blocking), pending row keeps
+  BLOCKED/NOT_READY, forged READY report and stale/wrong-commit evidence
+  are not trusted, ship gate never inferred PASSED, signature presence
+  never upgraded to verified, FIFO blocked dependency exhausts a bounded
+  budget (timeout), SIGTERM cancellation leaves no partial output, a
+  directory output target fails closed with no partial file, unknown
+  flags rejected, unknown manifest fields rejected, redaction of
+  runtime-constructed canaries, and run_id/git_commit correlation fields.
+- 2026-08-26: M4 verdict remains NOT_READY (EP-043 not DONE,
+  RELEASE-BLOCKING-PENDING rows, no fresh-clone acceptance rerun). M4
+  certifies the operational/failure path for the exact exercised local
+  surface only. NOT ASSERTED: cryptographic signing verification, ship
+  gate PASSED/AUTHORIZED, signed certification rows, fresh-clone
+  acceptance rerun (M5), production readiness declaration, deployment.
 
 # 14. Outcomes & Retrospective
 

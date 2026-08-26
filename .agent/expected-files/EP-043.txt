@@ -4,10 +4,14 @@
 .agent/node-contracts/EP-043.md
 .agent/milestone-files/EP-043-M1.txt
 .agent/milestone-files/EP-043-M2.txt
+.agent/milestone-files/EP-043-M3.txt
+.agent/milestone-files/EP-043-M4.txt
+.agent/milestone-files/EP-043-M5.txt
 scripts/nodes/EP-043.sh
 scripts/ep043-m1-tests.sh
 scripts/ep043-m2-tests.sh
 scripts/ep043-m3-tests.sh
+scripts/ep043-m4-tests.sh
 references/ADR-029-production-readiness-and-ship-vocabulary.md
 release-evidence/
 PRODUCTION_READINESS.md

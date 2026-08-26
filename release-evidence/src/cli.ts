@@ -18,7 +18,13 @@
  * Runs under Node 24 native TS with the resolution-only ESM loader.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import {
   collectCertifications,
@@ -40,6 +46,12 @@ import { redactShipMessage, ShipError } from "./errors.ts";
 const [command, ...args] = process.argv.slice(2);
 
 function flag(name: string): string | undefined {
+  // Support both --name value and --name=value forms; --name=value
+  // silently falling back to a default would misdirect evidence.
+  const eq = `--${name}=`;
+  for (const arg of args) {
+    if (arg.startsWith(eq)) return arg.slice(eq.length);
+  }
   const index = args.indexOf(`--${name}`);
   if (index === -1 || index + 1 >= args.length) return undefined;
   return args[index + 1];
@@ -48,9 +60,80 @@ function flag(name: string): string | undefined {
 function requireFlag(name: string): string {
   const value = flag(name);
   if (!value) {
-    throw new Error(`missing required flag --${name}`);
+    throw new ShipError("VALIDATION_FAILED", `missing required flag --${name}`);
   }
   return value;
+}
+
+/**
+ * Reject unknown flags for a command (M4 operator-bypass protection).
+ * A command must declare every flag it accepts; anything else fails
+ * closed so a forged --force/--override can never be silently ignored.
+ */
+function rejectUnknownFlags(allowed: readonly string[]): void {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]!;
+    if (arg.startsWith("--")) {
+      const name = arg.slice(2).split("=")[0]!;
+      if (!allowed.includes(name)) {
+        throw new ShipError("VALIDATION_FAILED", `unknown flag --${name}`);
+      }
+      // Consume the separate value form (--name value) so the value is
+      // not misread as a positional argument.
+      if (
+        !arg.includes("=") &&
+        index + 1 < args.length &&
+        !args[index + 1]!.startsWith("--")
+      ) {
+        index += 1;
+      }
+    } else {
+      throw new ShipError("VALIDATION_FAILED", `unexpected argument: ${arg}`);
+    }
+  }
+}
+
+/** Reject an output path that exists but is a directory (EISDIR class). */
+function rejectDirectoryTarget(target: string): void {
+  try {
+    if (statSync(target).isDirectory()) {
+      throw new ShipError(
+        "VALIDATION_FAILED",
+        `output path is a directory: ${target}`,
+      );
+    }
+  } catch (error) {
+    if (error instanceof ShipError) throw error;
+    // statSync errors (ENOENT etc.) mean the target does not exist yet,
+    // which is the normal case for an output path.
+  }
+}
+
+/** Reject an output directory that exists but is not a directory. */
+function rejectFileTarget(target: string): void {
+  try {
+    if (!statSync(target).isDirectory()) {
+      throw new ShipError(
+        "VALIDATION_FAILED",
+        `output path is not a directory: ${target}`,
+      );
+    }
+  } catch (error) {
+    if (error instanceof ShipError) throw error;
+    // ENOENT is the normal case: the directory will be created.
+  }
+}
+
+/**
+ * Write a file atomically (temp file + rename) so cancelled or failed
+ * work never leaves a partial target file (M4 partial-side-effect
+ * guarantee). The temp path is owned by this process and removed by
+ * the rename; a kill mid-write can only strand a .tmp-<pid> file.
+ */
+function writeAtomic(target: string, content: string): void {
+  const tmp = `${target}.tmp-${process.pid}`;
+  writeFileSync(tmp, content, "utf8");
+  renameSync(tmp, target);
 }
 
 function runId(prefix: string): string {
@@ -76,6 +159,7 @@ function gitCommit(): string {
 }
 
 async function commandReadiness(): Promise<void> {
+  rejectUnknownFlags(["output"]);
   const output = flag("output") ?? "PRODUCTION_READINESS.md";
   const root = process.cwd();
   const paths = defaultRepoPaths(root);
@@ -89,7 +173,9 @@ async function commandReadiness(): Promise<void> {
     generatedAt: new Date().toISOString(),
   });
   const safe = redactShipMessage(report);
-  writeFileSync(resolve(root, output), safe, "utf8");
+  const target = resolve(root, output);
+  rejectDirectoryTarget(target);
+  writeAtomic(target, safe);
   // eslint-disable-next-line no-console
   console.log(
     `readiness: ${evaluation.decision} (${evaluation.blockingReasons.length} blocking reasons)`,
@@ -99,10 +185,12 @@ async function commandReadiness(): Promise<void> {
 }
 
 async function commandManifest(): Promise<void> {
+  rejectUnknownFlags(["output-dir", "release-id"]);
   const outputDir = flag("output-dir") ?? "dist/release";
   const releaseId = flag("release-id") ?? "nexus-1.0.0-rc1";
   const root = process.cwd();
   const outPath = resolve(root, outputDir);
+  rejectFileTarget(outPath);
   mkdirSync(outPath, { recursive: true });
 
   const componentInputs: ManifestComponentInput[] = [
@@ -153,10 +241,9 @@ async function commandManifest(): Promise<void> {
     components: componentInputs,
   });
 
-  writeFileSync(
+  writeAtomic(
     join(outPath, "RELEASE_MANIFEST.json"),
     JSON.stringify(manifest, null, 2),
-    "utf8",
   );
   // eslint-disable-next-line no-console
   console.log(
@@ -170,6 +257,7 @@ async function commandManifest(): Promise<void> {
 
 /** Inspect the ship gate: obligations, verdict, exact blocking reasons. */
 async function commandShipGateStatus(): Promise<void> {
+  rejectUnknownFlags([]);
   const root = process.cwd();
   const paths = defaultRepoPaths(root);
   const inputs = collectReadinessInputs(paths);
@@ -195,6 +283,7 @@ async function commandShipGateStatus(): Promise<void> {
 
 /** List certification rows read from the real RESULTS.md files. */
 async function commandCertificationRows(): Promise<void> {
+  rejectUnknownFlags([]);
   const root = process.cwd();
   const paths = defaultRepoPaths(root);
   const certifications = collectCertifications(paths);
@@ -221,6 +310,7 @@ async function commandCertificationRows(): Promise<void> {
  * manifest digest. Fails closed on tamper or missing dependency.
  */
 async function commandVerifyManifest(): Promise<void> {
+  rejectUnknownFlags(["manifest"]);
   const manifestPath = flag("manifest") ?? "dist/release/RELEASE_MANIFEST.json";
   const root = process.cwd();
   const fullPath = resolve(root, manifestPath);
@@ -230,12 +320,19 @@ async function commandVerifyManifest(): Promise<void> {
   } catch {
     throw new ShipError(
       "NOT_FOUND",
-      `release manifest not found: ${manifestPath}`,
+      `release manifest not found or unreadable: ${manifestPath}`,
     );
   }
-  const manifest: ReleaseManifestWire = parseReleaseManifestWire(
-    JSON.parse(raw) as unknown,
-  );
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw new ShipError(
+      "VALIDATION_FAILED",
+      `release manifest is not valid JSON: ${manifestPath}`,
+    );
+  }
+  const manifest: ReleaseManifestWire = parseReleaseManifestWire(parsed);
   if (!verifyManifestDigest(manifest)) {
     throw new ShipError(
       "VERIFICATION_FAILED",
@@ -300,4 +397,21 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+void main().catch((error: unknown) => {
+  // Structured fail-closed error surface (M4): every failure emits one
+  // redacted JSON line with SPEC-006 code, class, message, and the
+  // redaction flag so operators and incident tooling can correlate.
+  const shape =
+    error instanceof ShipError
+      ? error.toShape()
+      : {
+          code: "INTERNAL_INVARIANT" as const,
+          class: "ShipError",
+          message: redactShipMessage(
+            error instanceof Error ? error.message : String(error),
+          ),
+          redacted: true,
+        };
+  process.stderr.write(`${JSON.stringify(shape)}\n`);
+  process.exitCode = 1;
+});
