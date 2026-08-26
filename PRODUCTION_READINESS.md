@@ -1,9 +1,9 @@
 # PRODUCTION READINESS
 
 Node: EP-043
-Run: ep043-readiness-1787723910554
-Git commit: 90976bd5a35287e32578f23e705f60143feda967
-Generated: 2026-08-26T05:58:30.554Z
+Run: ep043-readiness-1787734389038
+Git commit: ddaa9c148f0abb5d3db93bbce02584f9a29e4ed7
+Generated: 2026-08-26T08:53:09.039Z
 
 ## Decision: NOT_READY
 
@@ -35,7 +35,6 @@ reasons must be resolved before a ship decision:
 - review RESTORE is not PASS
 - review UPDATE is not PASS
 - review ROLLBACK is not PASS
-- fresh-clone-equivalent rerun has not been executed
 
 ## Acceptance Obligations
 

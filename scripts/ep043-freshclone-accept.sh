@@ -99,7 +99,7 @@ cd "$repo_root"
 
 # --- acceptance evidence (only after every step passed) -------------------------
 mkdir -p "$evidence_dir"
-evidence="$evidence_dir/ep043-freshclone.md"
+evidence="$evidence_dir/ep043-freshclone-m5.md"
 cat > "$evidence" <<EOF
 # FRESH-CLONE ACCEPTANCE EVIDENCE
 

@@ -116,7 +116,7 @@ cd "$repo_root"
 
 # --- evidence only after verification ------------------------------------------
 mkdir -p "$evidence_dir"
-evidence="$evidence_dir/ep043-drill-rollback.md"
+evidence="$evidence_dir/ep043-drill-rollback-m5.md"
 cat > "$evidence" <<EOF
 # ROLLBACK DRILL EVIDENCE
 
