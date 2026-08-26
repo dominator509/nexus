@@ -315,6 +315,20 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 - 2026-08-26: mktemp/os.tmpdir() probe: with TMPDIR unset, both land in
   /tmp in this environment; the repo tmp/ debris was purely the
   join()-bug artifact, not an environment TMPDIR override.
+- 2026-08-26: GLOBAL_VERIFY_DEFECT (composition) - node-verify.sh runs
+  verify.sh twice (once directly, once via scripts/nodes/EP-043.sh
+  verify). LF-029 (EP-044's live-fire proof) starts the control plane,
+  asserts it, then shuts it down gracefully. Now that EP-044 is
+  at-least, the runtime smoke stage is mandatory and fails closed; the
+  second verify.sh therefore failed with the plane down (VERIFY_EXIT=4,
+  curl: Failed to connect 127.0.0.1:8443 after reality-gate). Same
+  defect class EP-042 fixed in its M5 gate. Fix (EP-043-owned):
+  scripts/nodes/EP-043.sh verify branch provisions the runtime via
+  canonical local-start when unhealthy and re-smokes, mirroring the
+  EP-037/EP-038 fixture-provisioning pattern; fails closed if the plane
+  cannot be brought healthy. Not an EP-043 code regression - the
+  readiness/manifest/operations surface was already green in the first
+  ladder pass.
 
 # 13. Decision Log
 

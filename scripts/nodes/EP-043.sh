@@ -13,6 +13,26 @@ case "$mode" in
   M3) sh scripts/ep043-m3-tests.sh ;;
   M4) python3 scripts/node-artifact-check.py EP-043 M4; sh scripts/verify.sh ;;
   M5|verify)
+      # Gate-composition guard (same defect class as EP-042 M5): the
+      # canonical node verify runs verify.sh twice; LF-029 (EP-044's
+      # live-fire proof) starts the control plane, asserts it, and shuts
+      # it down gracefully. When EP-044 is at-least the runtime smoke is
+      # mandatory, so the second verify.sh would fail closed with the
+      # plane down. Provision the runtime through canonical local-start
+      # when unhealthy, then re-smoke. Fails closed if it cannot be
+      # brought healthy; this mirrors the fixture-provisioning pattern
+      # EP-037/EP-038 gates use for MinIO/GlitchTip.
+      if sh scripts/stage.sh at-least EP-044 >/dev/null 2>&1; then
+        export NEXUS_SMOKE_URL="${NEXUS_SMOKE_URL:-http://127.0.0.1:8443}"
+        if ! sh scripts/smoke/runtime.sh >/dev/null 2>&1; then
+          echo "control plane not running - bringing up core profile (canonical local-start)"
+          sh scripts/local-start.sh core >/dev/null 2>&1 || true
+        fi
+        if ! sh scripts/smoke/runtime.sh >/dev/null 2>&1; then
+          echo "EP-043: FAIL - control plane not healthy after local-start (restart core before node verify)" >&2
+          exit 4
+        fi
+      fi
       python3 scripts/node-artifact-check.py EP-043 M5
       sh scripts/verify.sh
       :
