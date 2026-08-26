@@ -192,10 +192,8 @@ ok "final evidence valid and bound"
 missing=""
 while IFS= read -r expected; do
   [ -z "$expected" ] && continue
-  case "$expected" in
-    *.txt|*.md|*.sh|*.yaml|*.yml) [ -e "$expected" ] || missing="$missing $expected" ;;
-    *) [ -e "$expected" ] || missing="$missing $expected" ;;
-  esac
+  case "$expected" in \#*) continue ;; esac
+  [ -e "$expected" ] || missing="$missing $expected"
 done < .agent/expected-files/EP-043.txt
 if [ -n "$missing" ]; then
   fail "expected-files missing:$missing"
