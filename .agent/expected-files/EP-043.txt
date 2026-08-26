@@ -7,6 +7,7 @@
 scripts/nodes/EP-043.sh
 scripts/ep043-m1-tests.sh
 scripts/ep043-m2-tests.sh
+scripts/ep043-m3-tests.sh
 references/ADR-029-production-readiness-and-ship-vocabulary.md
 release-evidence/
 PRODUCTION_READINESS.md

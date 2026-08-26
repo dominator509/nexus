@@ -1,25 +1,41 @@
 /**
- * EP-043 M2 production readiness CLI (SPEC-008).
+ * EP-043 M2/M3 production readiness CLI (SPEC-008).
  *
  * Real commands:
- *   readiness  collect real repository state, evaluate acceptance
- *              obligations, write PRODUCTION_READINESS.md
- *   manifest   build dist/release/RELEASE_MANIFEST.json from real
- *              component bytes with real sha256 digests
+ *   readiness        collect real repository state, evaluate acceptance
+ *                    obligations, write PRODUCTION_READINESS.md
+ *   manifest         build dist/release/RELEASE_MANIFEST.json from real
+ *                    component bytes with real sha256 digests
+ *   ship-gate-status inspect the ship gate: obligations, verdict, and
+ *                    exact blocking reasons from real repository state
+ *   certification-rows
+ *                    list certification rows read from the real
+ *                    provider and hardware RESULTS.md files
+ *   verify-manifest  verify dist/release/RELEASE_MANIFEST.json against
+ *                    the real artifact bytes and the manifest digest;
+ *                    fails closed on tamper or missing dependency
  *
  * Runs under Node 24 native TS with the resolution-only ESM loader.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { collectReadinessInputs, defaultRepoPaths } from "./repo-state.ts";
+import {
+  collectCertifications,
+  collectReadinessInputs,
+  defaultRepoPaths,
+} from "./repo-state.ts";
 import { evaluateReadiness, validateReadinessInputs } from "./readiness.ts";
 import { renderProductionReadinessReport } from "./report.ts";
 import {
   buildReleaseManifest,
+  digestBytes,
+  parseReleaseManifestWire,
+  verifyManifestDigest,
   type ManifestComponentInput,
+  type ReleaseManifestWire,
 } from "./manifest.ts";
-import { redactShipMessage } from "./errors.ts";
+import { redactShipMessage, ShipError } from "./errors.ts";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -73,7 +89,7 @@ async function commandReadiness(): Promise<void> {
     generatedAt: new Date().toISOString(),
   });
   const safe = redactShipMessage(report);
-  writeFileSync(join(root, output), safe, "utf8");
+  writeFileSync(resolve(root, output), safe, "utf8");
   // eslint-disable-next-line no-console
   console.log(
     `readiness: ${evaluation.decision} (${evaluation.blockingReasons.length} blocking reasons)`,
@@ -86,7 +102,7 @@ async function commandManifest(): Promise<void> {
   const outputDir = flag("output-dir") ?? "dist/release";
   const releaseId = flag("release-id") ?? "nexus-1.0.0-rc1";
   const root = process.cwd();
-  const outPath = join(root, outputDir);
+  const outPath = resolve(root, outputDir);
   mkdirSync(outPath, { recursive: true });
 
   const componentInputs: ManifestComponentInput[] = [
@@ -152,6 +168,112 @@ async function commandManifest(): Promise<void> {
   );
 }
 
+/** Inspect the ship gate: obligations, verdict, exact blocking reasons. */
+async function commandShipGateStatus(): Promise<void> {
+  const root = process.cwd();
+  const paths = defaultRepoPaths(root);
+  const inputs = collectReadinessInputs(paths);
+  validateReadinessInputs(inputs);
+  const evaluation = evaluateReadiness(inputs);
+  // eslint-disable-next-line no-console
+  console.log(`ship-gate verdict: ${evaluation.shipGateVerdict}`);
+  // eslint-disable-next-line no-console
+  console.log(`readiness decision: ${evaluation.decision}`);
+  for (const obligation of evaluation.obligations) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `obligation: ${obligation.obligation}: ${obligation.met ? "MET" : "NOT MET"}`,
+    );
+  }
+  // eslint-disable-next-line no-console
+  console.log(`blocking reasons (${evaluation.blockingReasons.length}):`);
+  for (const reason of evaluation.blockingReasons) {
+    // eslint-disable-next-line no-console
+    console.log(`  - ${redactShipMessage(reason)}`);
+  }
+}
+
+/** List certification rows read from the real RESULTS.md files. */
+async function commandCertificationRows(): Promise<void> {
+  const root = process.cwd();
+  const paths = defaultRepoPaths(root);
+  const certifications = collectCertifications(paths);
+  const rows = [...certifications.providerRows, ...certifications.hardwareRows];
+  if (rows.length === 0) {
+    // eslint-disable-next-line no-console
+    console.log("certification rows: none");
+    return;
+  }
+  for (const row of rows) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `${row.domain} ${row.rowId} ${row.state}${
+        row.evidenceRef ? ` ${row.evidenceRef}` : ""
+      }`,
+    );
+  }
+  // eslint-disable-next-line no-console
+  console.log(`certification rows: ${rows.length}`);
+}
+
+/**
+ * Verify the release manifest against real artifact bytes and the
+ * manifest digest. Fails closed on tamper or missing dependency.
+ */
+async function commandVerifyManifest(): Promise<void> {
+  const manifestPath = flag("manifest") ?? "dist/release/RELEASE_MANIFEST.json";
+  const root = process.cwd();
+  const fullPath = resolve(root, manifestPath);
+  let raw: string;
+  try {
+    raw = readFileSync(fullPath, "utf8");
+  } catch {
+    throw new ShipError(
+      "NOT_FOUND",
+      `release manifest not found: ${manifestPath}`,
+    );
+  }
+  const manifest: ReleaseManifestWire = parseReleaseManifestWire(
+    JSON.parse(raw) as unknown,
+  );
+  if (!verifyManifestDigest(manifest)) {
+    throw new ShipError(
+      "VERIFICATION_FAILED",
+      "manifest digest mismatch (tampered manifest)",
+    );
+  }
+  const componentDir = join(root, "infra", "release", "fixtures", "components");
+  let verified = 0;
+  for (const component of manifest.components) {
+    const artifactPath = join(componentDir, component.component_id);
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(readFileSync(artifactPath));
+    } catch {
+      throw new ShipError(
+        "NOT_FOUND",
+        `artifact bytes missing for ${component.component_id}: ${artifactPath}`,
+      );
+    }
+    const actual = digestBytes(bytes);
+    if (actual !== component.digest) {
+      throw new ShipError(
+        "VERIFICATION_FAILED",
+        `component ${component.component_id} digest mismatch (tampered artifact)`,
+      );
+    }
+    verified += 1;
+  }
+  // eslint-disable-next-line no-console
+  console.log(
+    `verify-manifest: ok (${verified} components verified against real artifact bytes)`,
+  );
+  // eslint-disable-next-line no-console
+  console.log(
+    `verify-manifest: manifest digest ${manifest.manifest_digest} valid`,
+  );
+}
+
 async function main(): Promise<void> {
   switch (command) {
     case "readiness":
@@ -160,10 +282,19 @@ async function main(): Promise<void> {
     case "manifest":
       await commandManifest();
       break;
+    case "ship-gate-status":
+      await commandShipGateStatus();
+      break;
+    case "certification-rows":
+      await commandCertificationRows();
+      break;
+    case "verify-manifest":
+      await commandVerifyManifest();
+      break;
     default:
       // eslint-disable-next-line no-console
       console.error(
-        "usage: release-evidence-cli <readiness|manifest> [--output FILE] [--output-dir DIR]",
+        "usage: release-evidence-cli <readiness|manifest|ship-gate-status|certification-rows|verify-manifest> [--output FILE] [--output-dir DIR] [--manifest FILE]",
       );
       process.exitCode = 2;
   }

@@ -273,7 +273,7 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
 
 - [x] M1: Contract, vocabulary, and package boundary
 - [x] M2: Core behavior and deterministic invariants
-- [ ] M3: Real dependency and transport integration
+- [x] M3: Real dependency and transport integration
 - [ ] M4: Forced failures, abuse cases, and observability
 - [ ] M5: Live-fire, operations, and node closure
 
@@ -291,6 +291,30 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   scripts/env.sh; direct `sh scripts/lint.sh` from a bare shell fails on
   `flutter: not found`. Canonical verify sources env.sh first (verify.sh
   does this).
+
+- 2026-08-26: M3 real defect - absolute output path mangling. The M2
+  CLI used path.join(root, output) for --output/--output-dir/--manifest;
+  join() treats an absolute second argument as a relative segment, so
+  operators passing absolute paths (e.g. --output /tmp/x/PR.md) got
+  /root/nexus/tmp/x/PR.md. The M3 integration suite exposed it (first
+  run: 7 failures, ENOENT). Fixed all three sites to path.resolve()
+  (absolute wins). M2 gate never caught it because it used relative
+  paths only.
+- 2026-08-26: M3 test-infrastructure defect - vitest NODE_OPTIONS leak.
+  Integration tests spawn the real CLI via execFile/spawn; vitest
+  injects its own loader through NODE_OPTIONS, which the child node
+  process inherited and conflicted with the CLI's --import loader
+  (exit 1). Fixed by passing env with NODE_OPTIONS="" to child
+  processes. Same pattern required for the cancellation proof (spawn).
+- 2026-08-26: M3 residue lesson - pre-fix integration runs left parallel
+  dirs under <repo>/tmp/<mkdtemp-name> because the join() bug made the
+  CLI create output dirs at the mangled path while the test afterEach
+  removed only the /tmp originals. Post-fix runs leave zero residue.
+  Removed the stale tmp/ tree; format/scope gates green after cleanup.
+  This is the same whole-owned-glob residue class as EP-042 M5.
+- 2026-08-26: mktemp/os.tmpdir() probe: with TMPDIR unset, both land in
+  /tmp in this environment; the repo tmp/ debris was purely the
+  join()-bug artifact, not an environment TMPDIR override.
 
 # 13. Decision Log
 
@@ -354,6 +378,41 @@ Resume cold by running the boot sequence, confirming the lease, reading Progress
   trusted from input; parsers recompute and reject mismatches. This
   encodes SPEC-008 authority (GATE PASSED != SHIPPED; DECISION MADE !=
   SHIPPED) at the wire boundary.
+- 2026-08-26: M3 OPERATIONS.md real command surface. OPERATIONS.md gains
+  the EP-043 release operations section: readiness generation, manifest
+  build, verify-manifest, ship-gate-status, certification-rows, runtime
+  health check, evidence refresh, fresh-clone procedure, rollback
+  reference, exit/sentinel semantics, component facts, and an honest
+  NOT-available list. Every documented command resolves to the real
+  release-evidence CLI and is executed by the gate. Command
+  documentation without execution is not claimed (COMMAND DOCUMENTED !=
+  COMMAND EXECUTED).
+- 2026-08-26: M3 CLI subcommands. Three real subcommands added so the
+  operations surface is real, not aspirational: ship-gate-status
+  (inspect obligations/verdict/blocking reasons from real repo state;
+  exit 0 = inspection succeeded, verdict carries truth),
+  certification-rows (list real RESULTS.md rows),
+  verify-manifest (recompute digests from real artifact bytes + manifest
+  digest; fails closed on tamper/missing). This is the fence's
+  "generated clients required by the exact changed-file fence".
+- 2026-08-26: M3 integration suite. ep043_integration_* tests exercise
+  the REAL CLI against the REAL repository: real repo state reads,
+  real artifact digests, OPERATIONS.md command resolution, NOT_READY
+  preservation, fail-closed negative proofs (missing GRAPH -> UNAVAILABLE,
+  tampered manifest -> VERIFICATION_FAILED, ghost artifact -> NOT_FOUND,
+  bad args -> exit 2, cancellation -> no partial write), idempotent
+  component digests, bounded timeout, audit fields, deterministic event
+  emission, and a real fresh-clone temp checkout (git clone --depth 1
+  file:///root/nexus) proving the operational path with no hidden local
+  state. The full fresh-clone-equivalent rerun as an acceptance
+  obligation remains M5 / NOT ASSERTED.
+- 2026-08-26: M3 transport truth. The real dependency boundary is the
+  local repository state + artifact bytes (file transport), matching
+  COMPONENT_REGISTRY's local ArtifactStore default. Cloud transport
+  (AWS S3/R2/B2) is NOT exercised and is explicitly listed NOT
+  available in OPERATIONS.md; signing remains
+  SIGNATURE_PRESENT_NOT_VERIFIED. Ship-gate execution/signing and
+  production deploy/rollback are M5-owned and NOT ASSERTED.
 
 # 14. Outcomes & Retrospective
 
