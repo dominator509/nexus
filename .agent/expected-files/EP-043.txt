@@ -15,6 +15,11 @@ scripts/ep043-m4-tests.sh
 scripts/ep043-m5-tests.sh
 scripts/ep043-rollback-drill.sh
 scripts/ep043-freshclone-accept.sh
+# EP-043 M5 owns a bounded one-file fix to the shared security gate:
+# scripts/security-check.sh's .env boolean chain failed on clean trees
+# (no .env), which the fresh-clone acceptance exposed. Registered here
+# so the scope audit recognizes the owned change (Decision Log entry).
+scripts/security-check.sh
 references/ADR-029-production-readiness-and-ship-vocabulary.md
 release-evidence/
 PRODUCTION_READINESS.md
