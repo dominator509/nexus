@@ -128,30 +128,38 @@ grep -q "ep043-m4-tests.sh ok" .agent/state/evidence/ep043-freshclone-m5.md \
   || fail "fresh-clone evidence missing owned gate results"
 ok "real fresh-clone acceptance executed with isolation proof"
 
-# --- canonical readiness rerun: honest NOT_READY with real blockers cleared ----------
+# --- canonical readiness rerun: closure REQUIRES READY (AUD-080 root-cause fix) ----
+# A node whose own production-readiness result is NOT_READY / BLOCKED can never
+# close. The previous gate required preservation of NOT_READY and exited ok,
+# certifying a non-ready state (AUD-080). Now NOT_READY is a hard gate failure.
 readiness_out=$(mktemp /tmp/ep043-m5-readiness.XXXXXX)
 if ! $CLI_INVOKE readiness --output "$readiness_out" >>"$log" 2>&1; then
   fail "readiness CLI failed" "$log"
 fi
-grep -q "Decision: NOT_READY" "$readiness_out" \
-  || fail "readiness did not preserve honest NOT_READY"
-if grep -q "fresh-clone-equivalent rerun has not been executed" "$readiness_out"; then
-  fail "fresh-clone blocker not cleared by real acceptance evidence"
+if grep -q "Decision: NOT_READY" "$readiness_out"; then
+  fail "closure gate: readiness is NOT_READY - node cannot close (AUD-080)"
 fi
-grep -q "RELEASE-BLOCKING-PENDING" "$readiness_out" \
-  || fail "pending certification no longer blocking (must remain NOT_READY)"
+grep -q "Decision: READY" "$readiness_out" \
+  || fail "closure gate: readiness decision is not READY"
+if grep -q "RELEASE-BLOCKING-PENDING" "$readiness_out"; then
+  fail "closure gate: certification rows still RELEASE-BLOCKING-PENDING"
+fi
+if grep -q "fresh-clone-equivalent rerun has not been executed" "$readiness_out"; then
+  fail "closure gate: fresh-clone-equivalent rerun missing"
+fi
 rm -f "$readiness_out"
-ok "canonical readiness: NOT_READY preserved, fresh-clone blocker cleared"
+ok "canonical readiness: READY required for closure (AUD-080 fixed)"
 
 # --- ship-gate and signing honesty ---------------------------------------------------
 ship_out=$(mktemp /tmp/ep043-m5-ship.XXXXXX)
 if ! $CLI_INVOKE ship-gate-status >"$ship_out" 2>>"$log"; then
   fail "ship-gate-status CLI failed" "$log"
 fi
-grep -q "ship-gate verdict: BLOCKED" "$ship_out" \
-  || fail "ship gate not honestly BLOCKED"
-grep -q "readiness decision: NOT_READY" "$ship_out" \
-  || fail "ship gate did not preserve NOT_READY"
+if grep -q "ship-gate verdict: BLOCKED" "$ship_out"; then
+  fail "closure gate: ship gate BLOCKED - node cannot close (AUD-080)"
+fi
+grep -q "ship-gate verdict: PASSED" "$ship_out" \
+  || fail "closure gate: ship-gate verdict is not PASSED"
 rm -f "$ship_out"
 manifest_dir=$(mktemp -d /tmp/ep043-m5-manifest.XXXXXX)
 manifest_out=$(mktemp /tmp/ep043-m5-manifestout.XXXXXX)
