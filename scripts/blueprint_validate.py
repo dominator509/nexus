@@ -84,6 +84,11 @@ for path in ROOT.rglob("*"):
         continue
     if ".agent/state/evidence" in str(path.relative_to(ROOT)):
         continue
+    # Remediation evidence logs are generated machine output (verify ladders,
+    # vitest/tool output) captured by the remediation graph. Same class as
+    # .agent/state/evidence: evidence stores are not blueprint source.
+    if ".agent/remediation/evidence" in str(path.relative_to(ROOT)):
+        continue
     data = path.read_bytes()
     try:
         text = data.decode("utf-8")

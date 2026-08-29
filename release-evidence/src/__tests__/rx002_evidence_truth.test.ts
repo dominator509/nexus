@@ -33,7 +33,9 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-function validEvidence(overrides: Partial<ExecutionEvidence> = {}): ExecutionEvidence {
+function validEvidence(
+  overrides: Partial<ExecutionEvidence> = {},
+): ExecutionEvidence {
   return {
     schema_version: 1,
     proof_id: "LF-001",
@@ -177,7 +179,9 @@ describe("RX-002 live-fire evidence truth (AUD-071)", () => {
 
   it("rx002_collect_livefire_reads_structured_evidence", () => {
     const dir = makeRepo({
-      "LF-001-ep035-m5.json": JSON.stringify(validEvidence({ proof_id: "LF-001" })),
+      "LF-001-ep035-m5.json": JSON.stringify(
+        validEvidence({ proof_id: "LF-001" }),
+      ),
     });
     const proofs = collectLiveFireProofs(pathsFor(dir));
     // The collector must find evidence by either naming scheme and expose

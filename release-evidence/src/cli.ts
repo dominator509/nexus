@@ -31,7 +31,11 @@ import {
   collectReadinessInputs,
   defaultRepoPaths,
 } from "./repo-state.ts";
-import { evaluateReadiness, validateReadinessInputs, liveFireProofsToGateProofs } from "./readiness.ts";
+import {
+  evaluateReadiness,
+  validateReadinessInputs,
+  liveFireProofsToGateProofs,
+} from "./readiness.ts";
 import { renderProductionReadinessReport } from "./report.ts";
 import {
   buildReleaseManifest,

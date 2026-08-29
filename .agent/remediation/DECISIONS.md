@@ -23,3 +23,13 @@ AUD-080 readiness reason instead of the yanked-crate denial.
 frozen at exactly AUD-001...AUD-090, so it is recorded here and owned by the
 RX-009 supply-chain scope (dependency/license gate truth) rather than as a new
 register leaf.
+
+## D-002: blueprint validator skips remediation evidence dirs (RX-002)
+
+The ASCII/double-brace scan of scripts/blueprint_validate.py already exempts
+.agent/state/evidence as generated machine output. RX-002's closure evidence
+lives in .agent/remediation/evidence (verify logs captured from live ladder
+runs, vitest/tool output). Same class: evidence stores are not authored
+blueprint source. Extended the same exemption. No gate weakening: the scan
+still covers all first-party authored text, and the evidence content itself
+is validated by node-close-v2 digest pinning.

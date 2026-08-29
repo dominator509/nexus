@@ -85,7 +85,10 @@ export function parseExecutionEvidence(raw: string): ExecutionEvidence {
       "execution evidence exit_code must be a number",
     );
   }
-  if (typeof obj["artifact_digests"] !== "object" || obj["artifact_digests"] === null) {
+  if (
+    typeof obj["artifact_digests"] !== "object" ||
+    obj["artifact_digests"] === null
+  ) {
     throw new ShipError(
       "VALIDATION_FAILED",
       "execution evidence artifact_digests must be an object",
@@ -139,7 +142,10 @@ export function validateExecutionEvidence(
       : [options.requiredResult]
     : ["PASS", "VERIFIED", "APPROVED", "READY", "DATED_EVIDENCE"];
   if (!okResults.includes(evidence.result)) return false;
-  if (options.expectedCommit && evidence.git_commit !== options.expectedCommit) {
+  if (
+    options.expectedCommit &&
+    evidence.git_commit !== options.expectedCommit
+  ) {
     return false;
   }
   const maxAge = options.maxAgeMs ?? DEFAULT_MAX_AGE_MS;

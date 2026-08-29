@@ -328,3 +328,10 @@
 2026-08-29T05:23:08Z | ipman | RX-001 | MILESTONE_PASS | [M3] node-close-v2.sh + closure attestation schema + green-v2 tags
 2026-08-29T05:23:08Z | ipman | RX-001 | MILESTONE_PASS | [M4] hostile battery 18/18 green (forged NODE_DONE/tag drift/stale evidence/copied manifest/zero+skipped tests)
 2026-08-29T13:45:51Z | ipman | RX-001 | MILESTONE_PASS | [M5] AUD-080 gate hardening: readiness required for closure; hostile battery 18/18; LF-008 media live-fire green (firewall fix: docker-bridge 8554/8555 ACCEPT); full canonical verify ladder green
+2026-08-29T13:49:11Z | ipman | RX-002 | LEASE | Evidence Truth Engine: replace filename/string presence with structured execution evidence (AUD-071..075, 087, 002)
+2026-08-29T18:10:00Z | ipman | RX-002 | MILESTONE_PASS | [M1] evidence.ts structured execution evidence schema: parse/validate/load (14 required fields, deny-unknown); regression suite rx002_evidence_truth RED->GREEN
+2026-08-29T18:10:00Z | ipman | RX-002 | MILESTONE_PASS | [M2] collectors rewired: live-fire requires validated structured record, reviews require structured PASS, drills require dated evidence refs, fresh-clone requires VERIFIED record
+2026-08-29T18:10:00Z | ipman | RX-002 | MILESTONE_PASS | [M3] evaluateDrillsObligation wired into evaluateReadiness: six obligations, all six drill classes gated
+2026-08-29T18:10:00Z | ipman | RX-002 | MILESTONE_PASS | [M4] AUD-074 certification verified only by structured record; AUD-087 CLI binds authoritative ProductionReadinessDecision (gate+evidence+handoff); legacy tests updated to current truth
+2026-08-29T18:10:00Z | ipman | RX-002 | MILESTONE_PASS | [M5] full release-evidence suite 149/149 green; register leaves updated; closure evidence written
+2026-08-29T18:29:28Z | ipman | RX-002 | NODE_DONE | RX-002 closed under V2: closure_commit=fc8c392 green-v2/RX-002/fc8c392; evidence-suite 149/149, register 90/90, canonical ladder RX002_VERIFY_EXIT=0, expected-files ok; AUD-002 VERIFIED_FIXED; AUD-071..075/087 FIXED_UNVERIFIED (RX-021/RX-022 co-owners); AUD-080 VERIFIED_FIXED; evidence tests.tsv/proofs.tsv bound

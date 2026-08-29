@@ -1,0 +1,5 @@
+verify-log	.agent/remediation/evidence/RX-002/verify.log	sha256:470c40698dc3c3f9f3250e167454f4cba14c091e6c0c14df16cbbc6d64429ddf
+ladder-script	.agent/remediation/evidence/RX-002/ladder.sh	sha256:a08e91d7314c953f85729b26f36307098f515b2ff17eb779fee17452f4750f79
+register	.agent/remediation/verify-remediation-register.sh	sha256:9237a73978427681553817301057bd9c2631809a85057b8070686c7027e0c0c6
+evidence-module	release-evidence/src/evidence.ts	sha256:29160868bf6c6addacb007ddf0cab556ee183dfa91dc7cacf1d5cf930887ee89
+readiness-module	release-evidence/src/readiness.ts	sha256:62aa023cf241d4f189aaf920fcc1536512bd94105f4890860b85ae3bc970a419
