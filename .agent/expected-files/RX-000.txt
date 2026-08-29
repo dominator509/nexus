@@ -1,0 +1,7 @@
+.agent/remediation/REMEDIATION_STATE.env
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/register_data.py
+.agent/remediation/import_register.py
+.agent/remediation/verify-remediation-register.sh
+.agent/remediation/GAPS.md
+.agent/remediation/REMEDIATION_DAG.txt
