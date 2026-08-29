@@ -1,0 +1,3 @@
+scripts/node-close-v2.sh
+.agent/state/closures/
+.agent/remediation/evidence/

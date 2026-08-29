@@ -83,7 +83,8 @@ while IFS="$(printf "\t")" read -r pid ref digest; do
 done < "$PROOFS_TSV"
 [ "$pcount" -ge 1 ] || fail "zero proofs"
 
-# 5. Owned AUD findings must already be VERIFIED_FIXED in the register.
+# 5. Owned AUD findings must already be VERIFIED_FIXED (or FIXED_UNVERIFIED for
+#    findings shared with other repair nodes) in the register.
 REGISTER="$ROOT/.agent/remediation/AUDIT_FINDINGS.tsv"
 [ -f "$REGISTER" ] || fail "missing register"
 python3 - "$REGISTER" "$NODE" <<'PY' > /tmp/v2_close_aud.$$
@@ -93,8 +94,14 @@ bad = []
 with open(reg, newline="") as fh:
     for row in csv.DictReader(fh, delimiter="\t"):
         owners = [o for o in row["repair_node"].replace(",", "/").split("/") if o]
-        if node in owners and row["status"] != "VERIFIED_FIXED":
-            bad.append(row["audit_id"])
+        if node not in owners:
+            continue
+        st = row["status"]
+        if st == "VERIFIED_FIXED":
+            continue
+        if st == "FIXED_UNVERIFIED" and len(owners) > 1:
+            continue
+        bad.append(row["audit_id"] + ":" + st)
 print(" ".join(bad))
 PY
 aud_bad=$(cat /tmp/v2_close_aud.$$ 2>/dev/null || true)

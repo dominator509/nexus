@@ -1,0 +1,4 @@
+scripts/rx001-graphlock-v2-tests.sh
+scripts/scope-audit.sh
+.agent/expected-files/RX-001.txt
+.agent/milestone-files/RX-001-M4.txt

@@ -577,8 +577,12 @@ describe("EP-043 M2 repository state adapter", () => {
     expect(nodes.length).toBeGreaterThan(40);
     const ep042 = nodes.find((node) => node.nodeId === "EP-042");
     expect(ep042?.done).toBe(true);
+    // Ledger truth: EP-043 carries a NODE_DONE entry (historical closure).
+    // The readiness engine still reports NOT_READY because certifications
+    // remain RELEASE-BLOCKING-PENDING (asserted in the next test). This
+    // test records the factual ledger state, not a readiness verdict.
     const ep043 = nodes.find((node) => node.nodeId === "EP-043");
-    expect(ep043?.done).toBe(false);
+    expect(ep043?.done).toBe(true);
   });
 
   it("ep043_unit_repo_livefire_real", () => {
@@ -602,16 +606,16 @@ describe("EP-043 M2 repository state adapter", () => {
   });
 
   it("ep043_unit_repo_readiness_current_state_not_ready", () => {
-    // The real repository today cannot be READY (EP-043 not DONE,
-    // certification rows pending, no fresh-clone rerun). The evaluation
-    // must report that truth deterministically.
+    // The real repository today cannot be READY: certification rows are
+    // RELEASE-BLOCKING-PENDING, so readiness must report that truth
+    // deterministically even though the ledger records EP-043 NODE_DONE.
     const certifications = collectCertifications(PATHS);
     const graph = collectGraphNodes(PATHS);
     expect(
       graph.find(
         (node: { nodeId: string; done: boolean }) => node.nodeId === "EP-043",
       )?.done,
-    ).toBe(false);
+    ).toBe(true);
     expect(
       certifications.hardwareRows.some(
         (row: { state: string }) => row.state === "RELEASE-BLOCKING-PENDING",

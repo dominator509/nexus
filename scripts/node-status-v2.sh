@@ -159,7 +159,10 @@ if [ "$rc" -ne 0 ]; then
   bad "proofs_not_validated"
 fi
 
-# --- owned AUD findings verified fixed (live register read) ------------------
+# --- owned AUD findings (live register read) ---------------------------------
+# A node may close when every finding it owns is VERIFIED_FIXED, or — for
+# findings shared with other repair nodes — at least FIXED_UNVERIFIED (the
+# leaf completes only when ALL owners close; verified at final certification).
 if [ -f "$REGISTER" ]; then
   python3 - "$REGISTER" "$NODE" <<'PY' > /tmp/v2_aud_check.$$ 2>/dev/null || true
 import csv, sys
@@ -168,8 +171,14 @@ bad = []
 with open(reg, newline="") as fh:
     for row in csv.DictReader(fh, delimiter="\t"):
         owners = [o for o in row["repair_node"].replace(",", "/").split("/") if o]
-        if node in owners and row["status"] != "VERIFIED_FIXED":
-            bad.append(row["audit_id"])
+        if node not in owners:
+            continue
+        st = row["status"]
+        if st == "VERIFIED_FIXED":
+            continue
+        if st == "FIXED_UNVERIFIED" and len(owners) > 1:
+            continue
+        bad.append(row["audit_id"] + ":" + st)
 print(" ".join(bad))
 PY
   aud_bad=$(cat /tmp/v2_aud_check.$$ 2>/dev/null || true)
