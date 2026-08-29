@@ -114,5 +114,31 @@ else
 fi
 
 echo "---"
+# LF-029 state-preserving teardown (composition defect caught by AUD-062):
+# the runtime smoke must not destroy shared infrastructure it did not
+# create. When the control plane is already running, LF-029 must leave it
+# running afterwards so consecutive full verify passes can succeed.
+if grep -q "was_up" scripts/live-fire/LF-029.sh && grep -q '\[ "\$was_up" != true \]' scripts/live-fire/LF-029.sh; then
+  note "LF-029 is state-preserving (tears down only what it created)"
+else
+  bad "LF-029 tears down shared runtime unconditionally (composition defect)"
+fi
+if [ -f infra/compose/core.yaml ] && docker compose -f infra/compose/core.yaml ps -q control-plane 2>/dev/null | grep -q .; then
+  before=$(docker compose -f infra/compose/core.yaml ps -q control-plane)
+  if sh scripts/live-fire/LF-029.sh >/tmp/rx004-lf029.log 2>&1; then
+    after=$(docker compose -f infra/compose/core.yaml ps -q control-plane 2>/dev/null)
+    if [ -n "$after" ] && [ "$before" = "$after" ]; then
+      note "LF-029 preserves a pre-existing running control plane"
+    else
+      bad "LF-029 removed a pre-existing running control plane"
+    fi
+  else
+    bad "LF-029 failed against a pre-existing running control plane (see /tmp/rx004-lf029.log)"
+  fi
+else
+  note "LF-029 state-preservation skipped (no running control plane)"
+fi
+
+echo "---"
 echo "RX-004 battery: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

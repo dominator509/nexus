@@ -19,6 +19,14 @@ set -a
 . /tmp/ep038-m5-battery.env
 . /tmp/ep038-verify-gt.env
 set +a
+export NEXUS_SMOKE_URL="${NEXUS_SMOKE_URL:-http://127.0.0.1:8443}"
+# The M5 gate runs the full canonical verify ladder three times (AUD-062).
+# The runtime smoke inside verify.sh needs the control plane; ensure it is
+# up first (state-preserving: start only when absent, never tear down -
+# LF-029 owns the state-preserving teardown doctrine).
+if ! docker compose -f infra/compose/core.yaml ps -q control-plane 2>/dev/null | grep -q .; then
+  sh scripts/local-start.sh core >> "$LOG" 2>&1 || { echo "RX-004 verify: FAIL (runtime start)" >> "$LOG"; exit 1; }
+fi
 sh scripts/ep040-m5-tests.sh >> "$LOG" 2>&1 || { echo "RX-004 verify: FAIL (M5 gate)" >> "$LOG"; exit 1; }
 
 echo "=== RX-004 canonical verify ladder ===" >> "$LOG"

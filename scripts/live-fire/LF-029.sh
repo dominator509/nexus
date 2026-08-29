@@ -22,7 +22,16 @@ base="$NEXUS_SMOKE_URL"
 
 # Bring up the runtime deterministically (compose core profile when
 # available, else the real binary via local-start's readiness loop).
+# Capture prior runtime state: the smoke MUST NOT destroy shared
+# infrastructure it did not create. When the control plane is already
+# running (e.g. a canonical verify ladder that runs this proof multiple
+# times back-to-back), leave it running afterwards; only tear down when
+# this proof itself brought it up.
+was_up=false
 if [ -f infra/compose/core.yaml ]; then
+  if docker compose -f infra/compose/core.yaml ps -q control-plane 2>/dev/null | grep -q .; then
+    was_up=true
+  fi
   sh scripts/local-start.sh core >> "$log" 2>&1 || {
     echo "LF-029: FAIL - local start core failed" >&2
     tail -20 "$log" >&2
@@ -38,8 +47,11 @@ curl --fail --silent --show-error --max-time 10 "$base/readyz" | jq -e '.ready =
 curl --fail --silent --show-error --max-time 10 "$base/v1/capabilities" | jq -e '.capabilities | length > 0' >/dev/null \
   || { echo "LF-029: FAIL - /v1/capabilities empty" >&2; tail -20 "$log" >&2; exit 1; }
 
-# Tear down deterministically (strict cleanup doctrine).
-if [ -f infra/compose/core.yaml ]; then
+# Tear down deterministically ONLY when this proof created the runtime
+# (strict cleanup doctrine, state-preserving). Shared infrastructure
+# that was already running before this proof must remain running for
+# subsequent ladder passes.
+if [ -f infra/compose/core.yaml ] && [ "$was_up" != true ]; then
   sh scripts/local-stop.sh core >> "$log" 2>&1 || true
 fi
 
