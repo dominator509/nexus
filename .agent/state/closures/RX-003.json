@@ -1,0 +1,84 @@
+{
+  "attestation_digest": "sha256:22a23f1e7ace33f8f7b97d0ded970d02f7108ac90fd4259e3f692b22ab5e1d16",
+  "closure_commit": "ec0600001ad92096ec31d2586b75bb063a32aa16",
+  "created_at": "2026-08-29T19:26:29Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:0a3e49c76deea0937c198a07ff4472166c0ecda7e537cd1f08708f6a35f26873",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-003/ec0600001ad92096ec31d2586b75bb063a32aa16",
+  "milestones": {
+    "max": 5,
+    "passed": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "node": "RX-003",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:e70355fed718e140b224c9cb4db15721aea9206af9fd7fb15cf0b1b7649a3007",
+      "id": "verify-log",
+      "ref": ".agent/remediation/evidence/RX-003/verify.log"
+    },
+    {
+      "digest": "sha256:a93ef0b0f4d97f918c12ef60bc6c2dae18bf1c41998dd2c99bb0a16585ac6853",
+      "id": "ladder-script",
+      "ref": ".agent/remediation/evidence/RX-003/ladder.sh"
+    },
+    {
+      "digest": "sha256:1bbe7ccf1e75e1bca9fe18a47ef82eb0f1e8af4feee7ea45eacc2c88c0049225",
+      "id": "battery-script",
+      "ref": "scripts/rx003-ci-authority-tests.sh"
+    },
+    {
+      "digest": "sha256:ad6abf9cd82d0471053aef02b25add79bfc247d694a85cd19ff574add59a27a0",
+      "id": "ci-workflow",
+      "ref": ".github/workflows/ci.yml"
+    },
+    {
+      "digest": "sha256:9e9024999c32bf5f423820d4c5281465b150d11294633db0c1d55b40c81bda7b",
+      "id": "release-workflow",
+      "ref": ".github/workflows/release.yml"
+    },
+    {
+      "digest": "sha256:0f00402f7186bca5d500da53eada6ea3591c56d33fab3676a5d9e6cfe46840e9",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-003.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:0a3e49c76deea0937c198a07ff4472166c0ecda7e537cd1f08708f6a35f26873",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "ci-battery",
+        "passed": 18
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "canonical-verify",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 110
+  },
+  "verify_log": ".agent/remediation/evidence/RX-003/verify.log|sha256:e70355fed718e140b224c9cb4db15721aea9206af9fd7fb15cf0b1b7649a3007",
+  "verify_sentinel": "verify: ok"
+}
