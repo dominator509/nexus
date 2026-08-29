@@ -1,0 +1,57 @@
+{
+  "attestation_digest": "sha256:1b6b373ddeb867be9b656d151a7f9d32f76814d869201bb19074e006fff0bb88",
+  "closure_commit": "88090f0241e748e4c656d77e08236fff516459dd",
+  "created_at": "2026-08-29T05:23:27Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:321670e87f7cc0e3cc46ce5c0ff9943d24756bd16fc5441a289e058412c8f16c",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-000/88090f0241e748e4c656d77e08236fff516459dd",
+  "milestones": {
+    "max": 3,
+    "passed": [
+      1,
+      2,
+      3
+    ]
+  },
+  "node": "RX-000",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:b4ede5fd89c31d06f76eefa4b65d5b4438f1494b6e06f93e747c2fd4dc99fed9",
+      "id": "verify-log",
+      "ref": ".agent/remediation/evidence/RX-000/verify.log"
+    },
+    {
+      "digest": "sha256:59f8cc2e1340bf311f55bdd1be47aeb75578084e26ddeb0eebc01bac635dbeb3",
+      "id": "register",
+      "ref": ".agent/remediation/AUDIT_FINDINGS.tsv"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:321670e87f7cc0e3cc46ce5c0ff9943d24756bd16fc5441a289e058412c8f16c",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "quarantine",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 3
+  },
+  "verify_log": "/root/nexus/.agent/remediation/evidence/RX-000/verify.log|sha256:b4ede5fd89c31d06f76eefa4b65d5b4438f1494b6e06f93e747c2fd4dc99fed9",
+  "verify_sentinel": "verify: ok"
+}

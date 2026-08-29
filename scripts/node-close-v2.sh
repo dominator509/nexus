@@ -107,8 +107,9 @@ ef_digest=$(v2_list_digest "$ROOT/.agent/expected-files/$NODE.txt")
 vlog_digest=$(v2_file_digest "$VERIFY_LOG")
 
 # 7. Assemble closure JSON with canonical attestation digest.
+vlog_rel=$(printf '%s' "$VERIFY_LOG" | sed "s|^$ROOT/||")
 python3 - "$NODE" "$closure_commit" "$ef_digest" "$vlog_digest" "$max_m" \
-  "$TESTS_TSV" "$PROOFS_TSV" "$VERIFY_LOG" "$ROOT/.agent/state/closures/$NODE.json" <<'PY'
+  "$TESTS_TSV" "$PROOFS_TSV" "$vlog_rel" "$ROOT/.agent/state/closures/$NODE.json" <<'PY'
 import json, sys, hashlib, csv
 node, commit, ef_digest, vlog_digest, max_m = sys.argv[1:6]
 tests_tsv, proofs_tsv, vlog_path, out = sys.argv[6:11]
