@@ -57,7 +57,7 @@ grep -q "node verify $NODE: ok\|$NODE verify: ok\|RX-.*verify: ok" "$VERIFY_LOG"
 # 3. Test summary: nonzero, zero failures, all required families present.
 [ -f "$TESTS_TSV" ] || fail "missing tests.tsv"
 tpass=0; tfail=0
-while IFS=$'\t' read -r fam passed failed; do
+while IFS="$(printf "\t")" read -r fam passed failed; do
   [ -n "$fam" ] || continue
   tpass=$((tpass + passed))
   tfail=$((tfail + failed))
@@ -74,7 +74,7 @@ fi
 # 4. Proofs manifest: at least one proof, each ref exists with matching digest.
 [ -f "$PROOFS_TSV" ] || fail "missing proofs.tsv"
 pcount=0
-while IFS=$'\t' read -r pid ref digest; do
+while IFS="$(printf "\t")" read -r pid ref digest; do
   [ -n "$pid" ] || continue
   pcount=$((pcount + 1))
   [ -f "$ROOT/$ref" ] || fail "proof ref missing: $ref"
