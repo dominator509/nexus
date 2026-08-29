@@ -26,6 +26,19 @@ fi
 if [ -f Cargo.lock ]; then cargo audit --deny warnings; fi
 if [ -f pnpm-lock.yaml ]; then pnpm audit --audit-level=high --prod; fi
 if [ -f uv.lock ] && [ -f scripts/python_security_audit.py ]; then uv run --frozen python scripts/python_security_audit.py; fi
+# Static analysis (Rust): clippy -D warnings across the workspace.
+if [ -f Cargo.toml ]; then cargo clippy --workspace --all-targets --all-features --locked -- -D warnings; fi
+# Policy / scanner / authorization tests: the real nexus-security-core
+# failure battery (secrets, deny-by-default policy, authz, redaction,
+# container termination). Zero tests here is a failure, not a pass.
+if [ -f Cargo.toml ] && [ -d tests/security ]; then
+  sec=$(cargo test -p nexus-security-core --locked 2>&1 || true)
+  printf '%s\n' "$sec"
+  if ! printf '%s\n' "$sec" | grep -qE 'test result: ok\. [1-9][0-9]* passed'; then
+    echo "security check: FAIL - nexus-security-core policy battery did not pass" >&2
+    exit 1
+  fi
+fi
 sh scripts/license-gate.sh >/dev/null
 sh scripts/reality-gate.sh >/dev/null
 echo "security check: ok"

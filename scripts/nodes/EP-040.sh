@@ -14,6 +14,7 @@ case "$mode" in
   M4) sh scripts/ep040-m4-tests.sh ;;
   M5|verify)
       sh scripts/ep040-m5-tests.sh
+      sh scripts/ep040-consecutive-verify.sh
       ;;
   *) echo "EP-040: FAIL - unknown mode $mode" >&2; exit 2;;
 esac
