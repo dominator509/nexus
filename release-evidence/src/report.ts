@@ -12,7 +12,13 @@ import type { ReadinessEvaluation } from "./readiness.ts";
 /** Render the production readiness report as markdown. */
 export function renderProductionReadinessReport(
   evaluation: ReadinessEvaluation,
-  meta: { node: string; runId: string; gitCommit: string; generatedAt: string },
+  meta: {
+    node: string;
+    runId: string;
+    gitCommit: string;
+    generatedAt: string;
+    decision: "READY" | "NOT_READY";
+  },
 ): string {
   const lines: string[] = [];
   lines.push("# PRODUCTION READINESS");
@@ -22,7 +28,7 @@ export function renderProductionReadinessReport(
   lines.push(`Git commit: ${meta.gitCommit}`);
   lines.push(`Generated: ${meta.generatedAt}`);
   lines.push("");
-  lines.push(`## Decision: ${evaluation.decision}`);
+  lines.push(`## Decision: ${meta.decision}`);
   lines.push("");
   lines.push(`Ship gate verdict: ${evaluation.shipGateVerdict}`);
   lines.push("");

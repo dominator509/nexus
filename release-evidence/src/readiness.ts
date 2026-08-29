@@ -211,6 +211,12 @@ export function evaluateCertificationObligation(
       reasons.push(
         `certification row ${row.rowId} signed without evidence ref`,
       );
+    } else if (row.state === "SIGNED" && row.verified !== true) {
+      // AUD-074: a textual SIGNED marker is never verification. The row
+      // must be backed by a validated structured verification record.
+      reasons.push(
+        `certification row ${row.rowId} signed without verified structured record`,
+      );
     }
   }
   return {

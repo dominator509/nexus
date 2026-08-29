@@ -498,6 +498,13 @@ export interface CertificationRow {
   state: CertificationRowState;
   /** Path to the signed evidence artifact; required when SIGNED. */
   evidenceRef?: string;
+  /**
+   * True only when the SIGNED state is backed by a validated structured
+   * verification record. A textual SIGNED marker in RESULTS.md is never
+   * verification (AUD-074); collectors set verified=false when no
+   * structured record validates.
+   */
+  verified?: boolean;
 }
 
 /** Dated drill evidence (SPEC-008 behavior 5). */

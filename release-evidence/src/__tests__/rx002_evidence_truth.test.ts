@@ -16,10 +16,12 @@ import {
   collectLiveFireProofs,
   collectReviews,
   collectDrills,
+  collectCertifications,
   collectFreshCloneEvidence,
   evaluateLiveFireObligation,
   evaluateReviewsObligation,
   evaluateDrillsObligation,
+  evaluateCertificationObligation,
   evaluateReadiness,
   defaultRepoPaths,
   type ExecutionEvidence,
@@ -261,22 +263,45 @@ describe("RX-002 drill obligations (AUD-072)", () => {
 
 describe("RX-002 certification truth (AUD-074)", () => {
   it("rx002_certification_text_signed_is_not_verified", () => {
-    const certs = {
-      providerRows: [
-        {
-          rowId: "provider-1",
-          domain: "PROVIDER" as const,
-          state: "SIGNED" as const,
-          evidenceRef: "provider-certification/RESULTS.md",
-        },
-      ],
-      hardwareRows: [],
-    };
-    // A SIGNED row whose evidence is not a structured verification record
-    // must not count as verified.
-    expect(
-      evaluateCertificationRowsVerified(certs),
-    ).toBe(false);
+    // A SIGNED textual marker in RESULTS.md with no structured
+    // verification record must not count as verified (AUD-074).
+    const dir = makeRepo({});
+    mkdirSync(join(dir, "provider-certification"), { recursive: true });
+    writeFileSync(
+      join(dir, "provider-certification", "RESULTS.md"),
+      "SIGNED: provider-aws-eu\n",
+    );
+    const certs = collectCertifications(pathsFor(dir));
+    expect(certs.providerRows.length).toBeGreaterThan(0);
+    const evaluation = evaluateCertificationObligation(certs);
+    expect(evaluation.met).toBe(false);
+    expect(evaluation.reasons.join(" ")).toContain(
+      "without verified structured record",
+    );
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("rx002_certification_structured_record_is_verified", () => {
+    // The same SIGNED marker becomes verified when a structured
+    // execution evidence record validates for that row.
+    const dir = makeRepo({
+      "ep043-cert-provider-1-provider-aws-eu-x.json": JSON.stringify(
+        validEvidence({
+          proof_id: "ep043-cert-provider-1-provider-aws-eu",
+          result: "VERIFIED",
+          command: "scripts/certify-provider.sh",
+        }),
+      ),
+    });
+    mkdirSync(join(dir, "provider-certification"), { recursive: true });
+    writeFileSync(
+      join(dir, "provider-certification", "RESULTS.md"),
+      "SIGNED: provider-aws-eu\n",
+    );
+    const certs = collectCertifications(pathsFor(dir));
+    const evaluation = evaluateCertificationObligation(certs);
+    expect(evaluation.met).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
   });
 });
 
@@ -304,18 +329,3 @@ describe("RX-002 fresh-clone truth (AUD-075)", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 });
-
-// Small local helper: a SIGNED certification row is verified only when its
-// evidence ref resolves to a structured verification record.
-function evaluateCertificationRowsVerified(certs: {
-  providerRows: { rowId: string; domain: "PROVIDER"; state: "SIGNED"; evidenceRef: string }[];
-  hardwareRows: unknown[];
-}): boolean {
-  for (const row of certs.providerRows) {
-    if (row.state !== "SIGNED") return false;
-    if (!row.evidenceRef) return false;
-    // Structured verification record required; a bare RESULTS.md path is not.
-    if (row.evidenceRef.endsWith("RESULTS.md")) return false;
-  }
-  return true;
-}

@@ -135,9 +135,37 @@ export function collectCertifications(
   const providerText = readIfExists(paths.providerCertPath) ?? "";
   const hardwareText = readIfExists(paths.hardwareCertPath) ?? "";
   return {
-    providerRows: parseCertificationText(providerText, "PROVIDER"),
-    hardwareRows: parseCertificationText(hardwareText, "HARDWARE"),
+    providerRows: parseCertificationText(providerText, "PROVIDER").map((row) =>
+      verifyCertificationRow(row, paths),
+    ),
+    hardwareRows: parseCertificationText(hardwareText, "HARDWARE").map((row) =>
+      verifyCertificationRow(row, paths),
+    ),
   };
+}
+
+/**
+ * AUD-074: a SIGNED textual marker is never verification. A row is
+ * verified only when a structured execution evidence record with a
+ * VERIFIED/SIGNED/PASS result validates for that row's proof id. The
+ * evidenceRef is then the structured record path; otherwise the row
+ * stays SIGNED with verified=false so the obligation fails closed.
+ */
+function verifyCertificationRow(
+  row: CertificationMatrixInput["providerRows"][number],
+  paths: RepoPaths,
+): CertificationMatrixInput["providerRows"][number] {
+  if (row.state !== "SIGNED") return row;
+  const proofId = `ep043-cert-${row.rowId}`;
+  const record = loadValidatedEvidence(paths.evidenceDir, proofId, {
+    expectedCommit: currentGitCommit(paths.root),
+    requiredResult: ["VERIFIED", "SIGNED", "PASS"],
+  });
+  if (!record) {
+    return { ...row, verified: false };
+  }
+  const file = findEvidenceFile(paths.evidenceDir, proofId);
+  return { ...row, verified: true, evidenceRef: file };
 }
 
 function parseCertificationText(

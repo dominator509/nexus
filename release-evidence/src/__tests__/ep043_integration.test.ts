@@ -103,6 +103,11 @@ describe("EP-043 M3 real dependency and transport integration", () => {
     const body = await readFile(report, "utf8");
     expect(body).toContain("EP-043");
     expect(body).toContain("certification row");
+    // AUD-087: the report decision is bound through the authoritative
+    // ProductionReadinessDecision constructor and matches the CLI verdict.
+    expect(body).toMatch(/## Decision: (READY|NOT_READY)/);
+    const decisionLine = body.match(/## Decision: (\w+)/)?.[1];
+    expect(decisionLine).toBe("NOT_READY");
   });
 
   it("ep043_integration_manifest_digests_real_artifact_bytes", async () => {

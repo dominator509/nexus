@@ -31,7 +31,7 @@ import {
   collectReadinessInputs,
   defaultRepoPaths,
 } from "./repo-state.ts";
-import { evaluateReadiness, validateReadinessInputs } from "./readiness.ts";
+import { evaluateReadiness, validateReadinessInputs, liveFireProofsToGateProofs } from "./readiness.ts";
 import { renderProductionReadinessReport } from "./report.ts";
 import {
   buildReleaseManifest,
@@ -41,6 +41,12 @@ import {
   type ManifestComponentInput,
   type ReleaseManifestWire,
 } from "./manifest.ts";
+import {
+  createManualDeployHandoff,
+  createProductionReadinessDecision,
+  createReleaseEvidence,
+  createShipGate,
+} from "./model.ts";
 import { redactShipMessage, ShipError } from "./errors.ts";
 
 const [command, ...args] = process.argv.slice(2);
@@ -166,11 +172,50 @@ async function commandReadiness(): Promise<void> {
   const inputs = collectReadinessInputs(paths);
   validateReadinessInputs(inputs);
   const evaluation = evaluateReadiness(inputs);
+  // AUD-087: the production readiness decision must be bound through the
+  // authoritative M1 decision constructor (gate verdict, fresh-clone
+  // rerun, every drill DATED_EVIDENCE, exact manual command), not only
+  // derived from the six acceptance obligations.
+  const runIdValue = runId("ep043-readiness");
+  const gitCommitValue = gitCommit();
+  const gate = createShipGate({
+    gateId: "ep043-ship-gate",
+    releaseKind: "CORE_RELEASE",
+    phase: "SHIP_DECISION",
+    requiredProofs: liveFireProofsToGateProofs(inputs.liveFireProofs),
+    freshCloneRerun: inputs.freshCloneRerun,
+  });
+  const evidence = createReleaseEvidence({
+    node: "EP-043",
+    runId: runIdValue,
+    gitCommit: gitCommitValue,
+    releaseId: "nexus-1.0.0-rc1",
+    certifications: [
+      ...inputs.certifications.providerRows,
+      ...inputs.certifications.hardwareRows,
+    ],
+    drills: inputs.drills,
+    reviews: inputs.reviews,
+  });
+  const handoff = createManualDeployHandoff({
+    handoffId: "ep043-deploy-handoff",
+    releaseId: "nexus-1.0.0-rc1",
+    profile: "core",
+    exactCommand: inputs.manualDeployCommand,
+  });
+  const decision = createProductionReadinessDecision({
+    decisionId: "ep043-production-readiness",
+    releaseId: "nexus-1.0.0-rc1",
+    gate,
+    evidence,
+    handoff,
+  });
   const report = renderProductionReadinessReport(evaluation, {
     node: "EP-043",
-    runId: runId("ep043-readiness"),
-    gitCommit: gitCommit(),
+    runId: runIdValue,
+    gitCommit: gitCommitValue,
     generatedAt: new Date().toISOString(),
+    decision: decision.decision,
   });
   const safe = redactShipMessage(report);
   const target = resolve(root, output);
@@ -178,7 +223,7 @@ async function commandReadiness(): Promise<void> {
   writeAtomic(target, safe);
   // eslint-disable-next-line no-console
   console.log(
-    `readiness: ${evaluation.decision} (${evaluation.blockingReasons.length} blocking reasons)`,
+    `readiness: ${decision.decision} (${evaluation.blockingReasons.length} blocking reasons)`,
   );
   // eslint-disable-next-line no-console
   console.log(`wrote ${output} (${safe.length} bytes)`);
