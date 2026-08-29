@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# GraphLock V2 node close — writes the closure attestation and green-v2 tag.
+# GraphLock V2 node close - writes the closure attestation and green-v2 tag.
 #
 # FAILS CLOSED: no attestation is written unless every DONE condition already
 # holds (verified via node-status-v2.sh). NODE_DONE is an OUTPUT of this

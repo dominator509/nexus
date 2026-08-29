@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# RX-000 node verify — remediation baseline and release quarantine.
+# RX-000 node verify - remediation baseline and release quarantine.
 set -eu
 export CI=true
 export GIT_TERMINAL_PROMPT=0

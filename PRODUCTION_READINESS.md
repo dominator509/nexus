@@ -1,9 +1,9 @@
 # PRODUCTION READINESS
 
 Node: EP-043
-Run: ep043-readiness-1787734389038
-Git commit: ddaa9c148f0abb5d3db93bbce02584f9a29e4ed7
-Generated: 2026-08-26T08:53:09.039Z
+Run: ep043-readiness-1788008835073
+Git commit: 15194acd35d245b2dfdbbd6865185faed0a5b030
+Generated: 2026-08-29T13:07:15.073Z
 
 ## Decision: NOT_READY
 
@@ -12,7 +12,6 @@ Ship gate verdict: BLOCKED
 Production readiness is NOT declared. The following blocking
 reasons must be resolved before a ship decision:
 
-- graph node EP-043 is not DONE
 - LF-006 has no evidence file
 - LF-007 has no evidence file
 - LF-008 has no evidence file
@@ -40,9 +39,7 @@ reasons must be resolved before a ship decision:
 
 ### all graph nodes are DONE
 
-Status: NOT MET
-
-- graph node EP-043 is not DONE
+Status: MET
 
 ### all live-fire proofs pass
 

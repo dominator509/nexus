@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:d0bb2dc16f161f6560388924b3353100e0134dd3017d2e3ae4b5e4d12198e56b",
+  "attestation_digest": "sha256:ca8838835c404cd7b8dabd7ed9bb434ee706a2f993993343adeedf732d2fdcbe",
   "closure_commit": "2da8f4b0bd0ed65540c63ffc85d45d02f7ce1410",
   "created_at": "2026-08-29T05:23:46Z",
   "created_by": "node-close-v2.sh",
@@ -21,11 +21,6 @@
       "digest": "sha256:b4ede5fd89c31d06f76eefa4b65d5b4438f1494b6e06f93e747c2fd4dc99fed9",
       "id": "verify-log",
       "ref": ".agent/remediation/evidence/RX-000/verify.log"
-    },
-    {
-      "digest": "sha256:59f8cc2e1340bf311f55bdd1be47aeb75578084e26ddeb0eebc01bac635dbeb3",
-      "id": "register",
-      "ref": ".agent/remediation/AUDIT_FINDINGS.tsv"
     }
   ],
   "schema_version": 2,

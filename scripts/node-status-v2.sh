@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# GraphLock V2 node status — the only closure authority in generation 2.
+# GraphLock V2 node status - the only closure authority in generation 2.
 #
 # A node is DONE only when ALL of the following are simultaneously true:
 #   milestones_passed
@@ -160,8 +160,8 @@ if [ "$rc" -ne 0 ]; then
 fi
 
 # --- owned AUD findings (live register read) ---------------------------------
-# A node may close when every finding it owns is VERIFIED_FIXED, or — for
-# findings shared with other repair nodes — at least FIXED_UNVERIFIED (the
+# A node may close when every finding it owns is VERIFIED_FIXED, or - for
+# findings shared with other repair nodes - at least FIXED_UNVERIFIED (the
 # leaf completes only when ALL owners close; verified at final certification).
 if [ -f "$REGISTER" ]; then
   python3 - "$REGISTER" "$NODE" <<'PY' > /tmp/v2_aud_check.$$ 2>/dev/null || true

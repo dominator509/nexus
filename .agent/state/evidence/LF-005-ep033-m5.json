@@ -2,7 +2,7 @@
   "node": "EP-033",
   "milestone": "M5",
   "proof": "LF-005 accessibility-scan",
-  "run_id": "ep033-m5-1787637358785-19jm4adx",
+  "run_id": "ep033-m5-1788009927474-3dhlnd54",
   "standard": "WCAG 2.2 A/AA (axe-core rule set)",
   "scope": "Owned surfaces: DashboardShellView, ApprovalCardView, StatusBadge, CapabilityButton, ChatComposer rendered by react-dom/server",
   "tool": {
@@ -20,5 +20,5 @@
     "skip_link_present": true,
     "main_landmark_present": true
   },
-  "timestamp_unix_s": 1787637361
+  "timestamp_unix_s": 1788009928
 }

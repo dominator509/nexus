@@ -327,3 +327,4 @@
 2026-08-29T05:23:08Z | ipman | RX-001 | MILESTONE_PASS | [M2] node-status-v2.sh: 12-condition independent closure truth
 2026-08-29T05:23:08Z | ipman | RX-001 | MILESTONE_PASS | [M3] node-close-v2.sh + closure attestation schema + green-v2 tags
 2026-08-29T05:23:08Z | ipman | RX-001 | MILESTONE_PASS | [M4] hostile battery 18/18 green (forged NODE_DONE/tag drift/stale evidence/copied manifest/zero+skipped tests)
+2026-08-29T13:45:51Z | ipman | RX-001 | MILESTONE_PASS | [M5] AUD-080 gate hardening: readiness required for closure; hostile battery 18/18; LF-008 media live-fire green (firewall fix: docker-bridge 8554/8555 ACCEPT); full canonical verify ladder green

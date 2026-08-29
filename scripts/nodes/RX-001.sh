@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# RX-001 node verify — GraphLock V2 completion authority.
+# RX-001 node verify - GraphLock V2 completion authority.
 set -eu
 export CI=true
 export GIT_TERMINAL_PROMPT=0

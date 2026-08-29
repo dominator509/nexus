@@ -1,0 +1,79 @@
+{
+  "attestation_digest": "sha256:63d3fee73d32da86344c618c112a7e0829a329cb0882906628637435f7a7f4ac",
+  "closure_commit": "15194acd35d245b2dfdbbd6865185faed0a5b030",
+  "created_at": "2026-08-29T13:46:57Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:f4953933593b4d145c02425dda0ed3bdea455218b395603ffbe1d65131b8c2f6",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-001/15194acd35d245b2dfdbbd6865185faed0a5b030",
+  "milestones": {
+    "max": 5,
+    "passed": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "node": "RX-001",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:61679fbfd0724d34f1c88bb1e8969d90cd538a7a3985270010b2376add4d7074",
+      "id": "verify-log",
+      "ref": ".agent/remediation/evidence/RX-001/verify.log"
+    },
+    {
+      "digest": "sha256:f13964d2dcd7b9f68e4c24aa15e90ac55c463c0668f45fce4ee277440f15b4c0",
+      "id": "battery-script",
+      "ref": "scripts/rx001-graphlock-v2-tests.sh"
+    },
+    {
+      "digest": "sha256:7ca3629eff608f7356e96321fe449d8b7a9ef928472c4468169af233ed4de76f",
+      "id": "status-v2",
+      "ref": "scripts/node-status-v2.sh"
+    },
+    {
+      "digest": "sha256:0b4494be301cbae2f7c82927e99bb9fb63faced7c00352af42b825c635ed65a4",
+      "id": "close-v2",
+      "ref": "scripts/node-close-v2.sh"
+    },
+    {
+      "digest": "sha256:0f245133e3b15991999bdf2f4e0a9acd8d1918ed9add54d83fb43cc6420024d9",
+      "id": "scheduler-v2",
+      "ref": "scripts/graph-next-v2.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:f4953933593b4d145c02425dda0ed3bdea455218b395603ffbe1d65131b8c2f6",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "hostile-battery",
+        "passed": 18
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "canonical-verify",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 21
+  },
+  "verify_log": ".agent/remediation/evidence/RX-001/verify.log|sha256:61679fbfd0724d34f1c88bb1e8969d90cd538a7a3985270010b2376add4d7074",
+  "verify_sentinel": "verify: ok"
+}

@@ -1,10 +1,10 @@
 # FRESH-CLONE ACCEPTANCE EVIDENCE
 
-Run: ep043-freshclone-1787734419
-Git commit: ddaa9c148f0abb5d3db93bbce02584f9a29e4ed7
-Generated: 2026-08-26T08:57:06Z
+Run: ep043-freshclone-1788008863
+Git commit: 15194acd35d245b2dfdbbd6865185faed0a5b030
+Generated: 2026-08-29T13:10:55Z
 
-Checkout: git clone --depth 1 file:///root/nexus (HEAD == ddaa9c148f0abb5d3db93bbce02584f9a29e4ed7)
+Checkout: git clone --depth 1 file:///root/nexus (HEAD == 15194acd35d245b2dfdbbd6865185faed0a5b030)
 Tree at checkout: clean
 Dependency restore: pnpm install --frozen-lockfile (prefer-offline)
 EP-043 gates in clone: ep043-m1-tests.sh ok, ep043-m2-tests.sh ok,

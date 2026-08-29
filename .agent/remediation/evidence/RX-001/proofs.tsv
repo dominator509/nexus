@@ -1,0 +1,5 @@
+verify-log	.agent/remediation/evidence/RX-001/verify.log	sha256:61679fbfd0724d34f1c88bb1e8969d90cd538a7a3985270010b2376add4d7074
+battery-script	scripts/rx001-graphlock-v2-tests.sh	sha256:f13964d2dcd7b9f68e4c24aa15e90ac55c463c0668f45fce4ee277440f15b4c0
+status-v2	scripts/node-status-v2.sh	sha256:7ca3629eff608f7356e96321fe449d8b7a9ef928472c4468169af233ed4de76f
+close-v2	scripts/node-close-v2.sh	sha256:0b4494be301cbae2f7c82927e99bb9fb63faced7c00352af42b825c635ed65a4
+scheduler-v2	scripts/graph-next-v2.sh	sha256:0f245133e3b15991999bdf2f4e0a9acd8d1918ed9add54d83fb43cc6420024d9

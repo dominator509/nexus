@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# GraphLock V2 scheduler — the only scheduling authority in generation 2.
+# GraphLock V2 scheduler - the only scheduling authority in generation 2.
 #
 # Node truth is recomputed independently via node-status-v2.sh (12 conditions).
 # The ledger NODE_DONE event is NEVER accepted as DONE input. A forged ledger
