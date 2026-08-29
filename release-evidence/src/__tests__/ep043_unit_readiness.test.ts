@@ -61,6 +61,7 @@ function allProofs(count = 3): LiveFireProofResult[] {
     ownerNode: `EP-0${i + 1}`,
     slug: `proof-${i + 1}`,
     ownerDone: true,
+    validated: true,
     evidenceRef: `.agent/state/evidence/LF-${String(i + 1).padStart(3, "0")}-x.json`,
   }));
 }
@@ -103,6 +104,7 @@ function allDrills(): {
     kind,
     status: "DATED_EVIDENCE" as const,
     datedAt: "2026-08-25T00:00:00.000Z",
+    evidenceRef: `.agent/state/evidence/drill-${kind.toLowerCase()}.json`,
   }));
 }
 
@@ -176,6 +178,7 @@ describe("EP-043 M2 readiness evaluation", () => {
       ownerNode: "EP-001",
       slug: "x",
       ownerDone: false,
+      validated: true,
       evidenceRef: "",
     };
     const evaluation = evaluateReadiness(inputs);
@@ -190,6 +193,7 @@ describe("EP-043 M2 readiness evaluation", () => {
       ownerNode: "EP-002",
       slug: "x",
       ownerDone: true,
+      validated: true,
       evidenceRef: "",
     };
     const evaluation = evaluateReadiness(inputs);
@@ -337,9 +341,9 @@ describe("EP-043 M2 readiness evaluation", () => {
     expect(evaluation.blockingReasons.join(" ")).toContain("manual deploy");
   });
 
-  it("ep043_unit_readiness_obligation_count_is_five", () => {
+  it("ep043_unit_readiness_obligation_count_is_six", () => {
     const evaluation = evaluateReadiness(readyInputs());
-    expect(evaluation.obligations).toHaveLength(5);
+    expect(evaluation.obligations).toHaveLength(6);
   });
 
   it("ep043_unit_readiness_validate_rejects_unknown_review", () => {
@@ -403,9 +407,9 @@ describe("EP-043 M2 readiness evaluation", () => {
     expect(evaluateReleaseObligation("green/EP-043", "").met).toBe(false);
   });
 
-  it("ep043_unit_readiness_livefire_obligation_empty_fails_open", () => {
+  it("ep043_unit_readiness_livefire_obligation_empty_fails", () => {
     const result = evaluateLiveFireObligation([]);
-    expect(result.met).toBe(true); // no proofs means nothing to fail
+    expect(result.met).toBe(false); // empty live-fire is not readiness proof
   });
 });
 

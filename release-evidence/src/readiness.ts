@@ -40,6 +40,8 @@ export interface LiveFireProofResult {
   ownerDone: boolean;
   /** evidence file relative path; empty when missing. */
   evidenceRef: string;
+  /** true only when the evidence file is a validated structured record. */
+  validated: boolean;
 }
 
 /** Graph node status as collected from GRAPH.md + LEDGER. */
@@ -113,7 +115,9 @@ export function liveFireProofsToGateProofs(
     family: "LIVE_FIRE",
     proofId: result.lfId,
     status:
-      result.ownerDone && result.evidenceRef.length > 0 ? "PASS" : "NOT_RUN",
+      result.ownerDone && result.validated && result.evidenceRef.length > 0
+        ? "PASS"
+        : "NOT_RUN",
     evidenceRef: result.evidenceRef,
   }));
 }
@@ -135,16 +139,23 @@ export function evaluateGraphObligation(
   };
 }
 
-/** Obligation 2: all live-fire proofs pass. */
+/** Obligation 2: all live-fire proofs pass with validated evidence. */
 export function evaluateLiveFireObligation(
   proofs: LiveFireProofResult[],
 ): ObligationResult {
   const reasons: string[] = [];
+  if (proofs.length === 0) {
+    reasons.push("no live-fire proofs registered (vacuity guard)");
+  }
   for (const proof of proofs) {
     if (!proof.ownerDone) {
       reasons.push(`${proof.lfId} owner ${proof.ownerNode} is not DONE`);
     } else if (proof.evidenceRef.length === 0) {
       reasons.push(`${proof.lfId} has no evidence file`);
+    } else if (!proof.validated) {
+      reasons.push(
+        `${proof.lfId} evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)`,
+      );
     }
   }
   return {
@@ -154,7 +165,30 @@ export function evaluateLiveFireObligation(
   };
 }
 
-/** Obligation 3: required certification rows signed. */
+/** Obligation 3: all six required drill classes have dated, validated evidence. */
+export function evaluateDrillsObligation(
+  drills: DrillInput[],
+): ObligationResult {
+  const reasons: string[] = [];
+  for (const kind of DRILL_KINDS) {
+    const drill = drills.find((item) => item.kind === kind);
+    if (!drill) {
+      reasons.push(`drill ${kind} is missing`);
+    } else if (drill.status !== "DATED_EVIDENCE") {
+      reasons.push(`drill ${kind} has no dated evidence (${drill.status})`);
+    } else if (!drill.evidenceRef || drill.evidenceRef.length === 0) {
+      reasons.push(`drill ${kind} dated evidence has no evidence ref`);
+    }
+  }
+  return {
+    obligation:
+      "restore, rollback, provider-failover, identity-recovery, sentinel-containment, and update-failure drills pass with dated evidence",
+    met: reasons.length === 0,
+    reasons,
+  };
+}
+
+/** Obligation 4: required certification rows signed. */
 export function evaluateCertificationObligation(
   input: CertificationMatrixInput,
 ): ObligationResult {
@@ -239,6 +273,7 @@ export function evaluateReadiness(
   const obligations: ObligationResult[] = [
     evaluateGraphObligation(inputs.graphNodes),
     evaluateLiveFireObligation(inputs.liveFireProofs),
+    evaluateDrillsObligation(inputs.drills),
     evaluateCertificationObligation(inputs.certifications),
     evaluateReviewsObligation(inputs.reviews),
     evaluateReleaseObligation(inputs.releaseTag, inputs.manualDeployCommand),

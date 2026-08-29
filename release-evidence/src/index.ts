@@ -19,3 +19,4 @@ export * from "./readiness";
 export * from "./manifest";
 export * from "./report";
 export * from "./repo-state";
+export * from "./evidence";
