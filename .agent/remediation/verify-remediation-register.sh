@@ -54,6 +54,17 @@ while IFS=$'\t' read -r aid sev title paths cause owner status rest; do
   fi
 done < <(tail -n +2 "$TSV")
 
+# RX-000 exit criterion: quarantine must be active (generation 2, release not allowed)
+ENV_FILE="$(cd "$(dirname "$0")" && pwd)/REMEDIATION_STATE.env"
+if [ -f "$ENV_FILE" ]; then
+  GEN=$(grep -E '^REMEDIATION_GENERATION=' "$ENV_FILE" | cut -d= -f2)
+  ALLOW=$(grep -E '^RELEASE_ALLOWED=' "$ENV_FILE" | cut -d= -f2)
+  [ "$GEN" = "2" ] || { echo "remediation_generation == 2: FAIL (got $GEN)"; FAIL=1; }
+  [ "$ALLOW" = "false" ] || { echo "release_allowed == false: FAIL (got $ALLOW)"; FAIL=1; }
+else
+  echo "quarantine state file present: FAIL"; FAIL=1
+fi
+
 if [ "$FAIL" -eq 0 ]; then
   echo "VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)"
   exit 0

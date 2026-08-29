@@ -1,26 +1,25 @@
 # RX-000 Gap Log — logged first, fixed one at a time, reported after each
 
-## GAP-001 (BLOCKING) — Authoritative AUD-001…AUD-065 register unavailable
+## GAP-001 (RESOLVED) — Authoritative AUD-001…AUD-065 register was unavailable locally
 
-**Status:** OPEN
-**Severity:** BLOCKING — RX-000 exit requires "audit findings: 90/90 registered" with
-descriptions "exactly as recorded in the audit". Fabricating 65 finding descriptions from
-memory violates the remediation doctrine and Dominic's honesty requirement.
+**Status:** RESOLVED 2026-08-29
+**Severity:** was BLOCKING
 
-**Searched and exhausted (real tool output):**
-- `/root/nexus` (baseline 0460cc65f97868a80722ca7814d94be7cd6120e4): no AUD-* references outside scripts (grep -rl "AUD-")
-- `/root/wiremudder-repo`: no AUD register
-- GitHub via gh (dominator509): repo list, issue search, code search for AUD-090 — no hits
-- Hermes session DB (`/root/.hermes/state.db`, 82,291 messages / 3,312 sessions): only this remediation document mentions AUD-090
-- `/root/.hermes/cache/documents`: only the two copies of the remediation graph itself
-- git history (log --all --grep audit, deleted-file scan): nothing
+**Resolution:** Dominic provided the audit source: ChatGPT share
+https://chatgpt.com/share/6a926876-0c84-83e8-a9da-4f3d53dd1ddc ("Audit Nexus Repository").
+The full conversation was extracted (React Router single-flight stream decoded) and
+all 90 findings imported verbatim into `register_data.py` / `AUDIT_FINDINGS.tsv`:
 
-**What is authoritative today:** remediation graph section 12 gives AUD-066…AUD-090
-titles + repair owners. Those 25 rows are materialized verbatim. AUD-001…AUD-065 are
-materialized as OPEN rows with `PENDING_AUTHORITATIVE_IMPORT` markers so the verifier
-stays red — no silent rename, no reconstruction, no false green.
+- AUD-001…006 from the master audit report
+- AUD-007…012 compute-fabric continuation
+- AUD-013…026 EP-037 storage/DR + communications + Sentinel continuation
+- AUD-027…041 EP-030/031 Sentinel + client continuation
+- AUD-042…065 setup/bootstrap + storage + observability + supply-chain + EP-040/041 continuation
+- AUD-066…090 EP-042 update path / EP-043 / EP-044 continuation
 
-**Unblocking decision required from Dominic:**
-1. Provide the audit register file (best — verbatim import, doctrine-compliant), or
-2. Authorize reconstruction from in-repo audit evidence (violates §"import verbatim" — needs his explicit call), or
-3. Confirm the 90-finding register exists somewhere else (other machine, other chat).
+Cumulative severities match the audit exactly: P0 0, P1 72, P2 18 (total 90).
+Repair-node ownership: §12 of the remediation graph (AUD-066…090) + RX-node
+ownership language (AUD-001…065). All rows OPEN; verifier green.
+
+**Verifier:** `.agent/remediation/verify-remediation-register.sh` → PASS
+(90/90 registered, quarantine active: generation 2, release not allowed).
