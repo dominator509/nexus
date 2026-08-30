@@ -84,5 +84,23 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
   52/52; workspace check clean (0 errors, 0 warnings).
 
 ### GAP-002c (AUD-023, P2) - Temporal does not enforce permanent/transient retry classification
-- `toTemporalRetry()` maps only backoff/maximumAttempts; never supplies `nonRetryableErrorTypes` or non-retryable `ApplicationFailure`.
-- Permanent failures (VALIDATION/POLICY/AUTH) get up to five attempts.
+
+**RESOLVED 2026-08-30 (VERIFIED_FIXED, commit pending)**
+- `ERROR_CODE_CLASS` added to `@nexus/workflows`: canonical SPEC-006 code ->
+  retry class (PERMANENT for VALIDATION/AUTHENTICATION/AUTHORIZATION/POLICY/
+  EXTERNAL_PROVIDER/VERIFICATION/COMPENSATION/INTERNAL_INVARIANT;
+  UNAVAILABLE/TIMEOUT/RATE_LIMIT/TRANSIENT(CONFLICT) otherwise).
+  `NexusWorkflowError.isRetryable()` now derives from it - one source of
+  truth, no drift.
+- `toTemporalRetry` now supplies `nonRetryableErrorTypes` derived from the
+  policy: every SPEC-006 code whose retry class is NOT in
+  `retryableErrorClasses` is declared non-retryable. Under the default
+  policy VALIDATION/POLICY/AUTH can never consume the five attempts.
+- New `failure.ts` classifier + `NexusFailureInterceptor` wired into the
+  activity worker: `NexusWorkflowError` is rethrown at the activity
+  boundary as `ApplicationFailure` with type = SPEC-006 code and
+  `nonRetryable` per the code's class, so both the failure itself and the
+  policy agree.
+- Proof: temporal 74/74 (8 retry mapping tests incl. permanent/narrow/
+  empty-class classification, 5 failure-classifier tests), workflows
+  109/109 after the errors.ts refactor, typecheck exit 0.

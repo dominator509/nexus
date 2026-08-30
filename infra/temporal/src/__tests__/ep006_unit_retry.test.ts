@@ -44,4 +44,53 @@ describe("ep006_unit_retry", () => {
       }),
     ).toThrow(/PERMANENT/);
   });
+
+  it("ep006_unit_retry_declares_permanent_types_non_retryable", () => {
+    const mapped = toTemporalRetry(DEFAULT_RETRY_POLICY);
+    expect(mapped.nonRetryableErrorTypes).toBeDefined();
+    // Permanent SPEC-006 codes are declared non-retryable: they must
+    // never consume the five attempts (AUD-023).
+    for (const code of [
+      "VALIDATION",
+      "AUTHENTICATION",
+      "AUTHORIZATION",
+      "POLICY",
+      "EXTERNAL_PROVIDER",
+      "VERIFICATION",
+      "COMPENSATION",
+      "INTERNAL_INVARIANT",
+    ]) {
+      expect(mapped.nonRetryableErrorTypes).toContain(code);
+    }
+    // Transient codes stay retryable under the default policy.
+    for (const code of ["UNAVAILABLE", "TIMEOUT", "RATE_LIMIT", "CONFLICT"]) {
+      expect(mapped.nonRetryableErrorTypes).not.toContain(code);
+    }
+  });
+
+  it("ep006_unit_retry_narrow_policy_excludes_unlisted_classes", () => {
+    const policy: NexusRetryPolicy = {
+      ...DEFAULT_RETRY_POLICY,
+      retryableErrorClasses: ["TIMEOUT"],
+    };
+    const mapped = toTemporalRetry(policy);
+    // UNAVAILABLE is not in the narrow retryable list -> non-retryable.
+    expect(mapped.nonRetryableErrorTypes).toContain("UNAVAILABLE");
+    expect(mapped.nonRetryableErrorTypes).toContain("VALIDATION");
+    // TIMEOUT is the only listed class -> its code stays retryable.
+    expect(mapped.nonRetryableErrorTypes).not.toContain("TIMEOUT");
+  });
+
+  it("ep006_unit_retry_empty_classes_single_attempt_all_non_retryable", () => {
+    const policy: NexusRetryPolicy = {
+      ...DEFAULT_RETRY_POLICY,
+      retryableErrorClasses: [],
+    };
+    const mapped = toTemporalRetry(policy);
+    expect(mapped.maximumAttempts).toBe(1);
+    expect(mapped.nonRetryableErrorTypes).toHaveLength(
+      // All SPEC-006 codes are excluded when no class is retryable.
+      ["VALIDATION","AUTHENTICATION","AUTHORIZATION","POLICY","UNAVAILABLE","TIMEOUT","CONFLICT","RATE_LIMIT","EXTERNAL_PROVIDER","VERIFICATION","COMPENSATION","INTERNAL_INVARIANT"].length,
+    );
+  });
 });

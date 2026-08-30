@@ -37,6 +37,29 @@ export interface WorkflowErrorOptions {
   readonly cause?: unknown;
 }
 
+import type { RetryErrorClass } from "./vocabulary.js";
+
+/**
+ * Canonical SPEC-006 code -> retry class (SPEC-006 behavior 7). The
+ * policy's `retryableErrorClasses` is class-level; this table is the
+ * code-level owner of each class, kept in one place so the Temporal
+ * mapping and `NexusWorkflowError.isRetryable()` cannot drift.
+ */
+export const ERROR_CODE_CLASS: Record<NexusErrorCode, RetryErrorClass> = {
+  VALIDATION: "PERMANENT",
+  AUTHENTICATION: "PERMANENT",
+  AUTHORIZATION: "PERMANENT",
+  POLICY: "PERMANENT",
+  UNAVAILABLE: "UNAVAILABLE",
+  TIMEOUT: "TIMEOUT",
+  CONFLICT: "TRANSIENT",
+  RATE_LIMIT: "RATE_LIMIT",
+  EXTERNAL_PROVIDER: "PERMANENT",
+  VERIFICATION: "PERMANENT",
+  COMPENSATION: "PERMANENT",
+  INTERNAL_INVARIANT: "PERMANENT",
+};
+
 /**
  * Typed workflow failure carrying a SPEC-006 code. Retryability is a
  * property of the code plus the owning retry policy, never of the message.
@@ -63,15 +86,7 @@ export class NexusWorkflowError extends Error {
   }
 
   isRetryable(): boolean {
-    switch (this.code) {
-      case "UNAVAILABLE":
-      case "TIMEOUT":
-      case "RATE_LIMIT":
-      case "CONFLICT":
-        return true;
-      default:
-        return false;
-    }
+    return ERROR_CODE_CLASS[this.code] !== "PERMANENT";
   }
 
   toProblemDetails(): Record<string, unknown> {

@@ -23,6 +23,7 @@ import type { WorkflowBundleOption } from "@temporalio/worker";
 import { applyCompensation, verifyApproval } from "./activities.js";
 import type { NexusActivityRegistry } from "./activity-types.js";
 import { NAMESPACE, TASK_QUEUES } from "./config.js";
+import { NexusFailureInterceptor } from "./interceptors.js";
 
 export interface TemporalWorkerOptions {
   readonly address?: string;
@@ -100,6 +101,11 @@ export async function createTemporalWorker(
       namespace,
       taskQueue: TASK_QUEUES.ACTIVITY,
       activities,
+      // Classify NexusWorkflowError at the boundary so permanent SPEC-006
+      // failures are never retried (SPEC-006 behavior 7).
+      interceptors: {
+        activity: [() => ({ inbound: new NexusFailureInterceptor() })],
+      },
       ...(options.buildId === undefined ? {} : { buildId: options.buildId }),
       connection,
     }),
