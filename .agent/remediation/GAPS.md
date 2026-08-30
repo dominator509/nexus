@@ -26,7 +26,7 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
 
 ## GAP-002 (RX-005) - EP-004/EP-005/EP-006 persistence and retry truth (AUD-007, AUD-008, AUD-023)
 
-**Status:** LOGGED 2026-08-30 — fix ONE at a time from top severity; report after each.
+**Status:** LOGGED 2026-08-30 - fix ONE at a time from top severity; report after each.
 
 ### GAP-002a (AUD-007, P1) - EP-004 closed without production PostgreSQL repository / UnitOfWork / pgvector adapters
 - Only `MemoryRepository` / `WorldGraphRepository` / `VectorRepository` / `UnitOfWork` traits exist in `nexus-data`.
@@ -107,7 +107,7 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
 
 ## GAP-002d (RX-005, CORRECTION from Dominic 2026-08-30) - AUD-023 "VERIFIED_FIXED" rests on a test double, not a real boundary
 
-**Status:** LOGGED 2026-08-30 — fix ONE at a time from top severity; report after each.
+**Status:** LOGGED 2026-08-30 - fix ONE at a time from top severity; report after each.
 
 **Severity:** P1 (gate fired green on a shell; TESTING.md line 36 violated)
 
@@ -121,7 +121,7 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
    The test file itself admits it: "Test double for the SDK call chain".
 
 2. **No real Temporal server exercises the AUD-023 classification path.**
-   The real-server suite (`tests/workflows/` — real temporalio/server:1.31.2
+   The real-server suite (`tests/workflows/` - real temporalio/server:1.31.2
    + postgres:18.4 containers) exists and is genuinely live-fire for
    approval/binding/restart, but:
    - `grep -rn "throw new NexusWorkflowError" tests/workflows/` -> ZERO hits
@@ -142,11 +142,11 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
 4. **TESTING.md line 36 is the law and was not met.** "Temporal tests
    include the official test environment and at least one real server
    E2E." `@temporalio/testing` is installed as a devDependency but
-   `TestWorkflowEnvironment` appears NOWHERE in source — the official
+   `TestWorkflowEnvironment` appears NOWHERE in source - the official
    test environment is present in package.json and unused.
 
 5. **The register row is misleading.** AUD-023 marked VERIFIED_FIXED with
-   evidence "temporal 74/74" — but 74 unit tests with a `next()` double
+   evidence "temporal 74/74" - but 74 unit tests with a `next()` double
    do not prove the boundary classification that the finding describes
    ("non-retryable ApplicationFailure is never supplied").
 
