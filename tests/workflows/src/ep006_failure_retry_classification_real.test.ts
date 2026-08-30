@@ -118,7 +118,7 @@ async function startIndependentSession(): Promise<{
     connection,
     client,
   } as unknown as TestSession;
-  return { session, stack, connection, sdkConnection, client, ownSession };
+  return { stack, connection, sdkConnection, client, ownSession };
 }
 
 describe("ep006_failure_retry_classification_real", () => {
