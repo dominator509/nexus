@@ -71,9 +71,14 @@ impl<'a> PgMemoryRepository<'a> {
                 DataError::new(DataErrorCode::Invariant, format!("corrupt tenant_id: {e}"))
             })?,
             namespace: row.get("namespace"),
-            memory_type: MemoryType::from_str(&row.get::<_, String>("memory_type")).map_err(|e| {
-                DataError::new(DataErrorCode::Invariant, format!("corrupt memory_type: {e}"))
-            })?,
+            memory_type: MemoryType::from_str(&row.get::<_, String>("memory_type")).map_err(
+                |e| {
+                    DataError::new(
+                        DataErrorCode::Invariant,
+                        format!("corrupt memory_type: {e}"),
+                    )
+                },
+            )?,
             content: row.get("content"),
             content_hash: row.get("content_hash"),
             source: row.get("source"),
@@ -94,12 +99,22 @@ impl<'a> PgMemoryRepository<'a> {
             status: MemoryStatus::from_str(&row.get::<_, String>("status")).map_err(|e| {
                 DataError::new(DataErrorCode::Invariant, format!("corrupt status: {e}"))
             })?,
-            derived_from: derived.into_iter().map(|u| NexusId::new(u.to_string())).collect::<Result<Vec<_>, _>>().map_err(|e| {
-                DataError::new(DataErrorCode::Invariant, format!("corrupt derived_from: {e}"))
-            })?,
-            supersedes: supersedes.map(|u| NexusId::new(u.to_string())).transpose().map_err(|e| {
-                DataError::new(DataErrorCode::Invariant, format!("corrupt supersedes: {e}"))
-            })?,
+            derived_from: derived
+                .into_iter()
+                .map(|u| NexusId::new(u.to_string()))
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| {
+                    DataError::new(
+                        DataErrorCode::Invariant,
+                        format!("corrupt derived_from: {e}"),
+                    )
+                })?,
+            supersedes: supersedes
+                .map(|u| NexusId::new(u.to_string()))
+                .transpose()
+                .map_err(|e| {
+                    DataError::new(DataErrorCode::Invariant, format!("corrupt supersedes: {e}"))
+                })?,
             embedding_ref,
         })
     }
@@ -110,12 +125,12 @@ fn parse_retention(text: &str) -> Result<RetentionPolicy, DataError> {
         return Ok(RetentionPolicy::indefinite());
     }
     let mut parts = text.split_whitespace();
-    let unit = parts.next().ok_or_else(|| {
-        DataError::new(DataErrorCode::Invariant, "corrupt retention in store")
-    })?;
-    let value = parts.next().ok_or_else(|| {
-        DataError::new(DataErrorCode::Invariant, "corrupt retention in store")
-    })?;
+    let unit = parts
+        .next()
+        .ok_or_else(|| DataError::new(DataErrorCode::Invariant, "corrupt retention in store"))?;
+    let value = parts
+        .next()
+        .ok_or_else(|| DataError::new(DataErrorCode::Invariant, "corrupt retention in store"))?;
     let unit = match unit {
         "Hours" => RetentionUnit::Hours,
         "Days" => RetentionUnit::Days,
@@ -126,7 +141,7 @@ fn parse_retention(text: &str) -> Result<RetentionPolicy, DataError> {
             return Err(DataError::new(
                 DataErrorCode::Invariant,
                 format!("corrupt retention unit: {other}"),
-            ))
+            ));
         }
     };
     let value = value.parse::<u32>().map_err(|_| {
@@ -283,8 +298,7 @@ impl MemoryRepository for PgMemoryRepository<'_> {
                     derived_from, supersedes, embedding_ref
              FROM memory_records WHERE tenant_id = $1",
         );
-        let mut params: Vec<Box<dyn postgres::types::ToSql + Sync>> =
-            vec![Box::new(tenant_uuid)];
+        let mut params: Vec<Box<dyn postgres::types::ToSql + Sync>> = vec![Box::new(tenant_uuid)];
         let mut n = 2i32;
         if let Some(ns) = &query.namespace {
             sql.push_str(&format!(" AND namespace = ${n}"));

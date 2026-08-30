@@ -10,13 +10,36 @@ const IMAGE: &str = "pgvector/pgvector:pg18";
 
 #[test]
 fn diag_propose_serialization() {
-    let name = format!("nexus-diag-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+    let name = format!(
+        "nexus-diag-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
     let out = Command::new("docker")
-        .args(["run", "-d", "--name", &name, "-e", "POSTGRES_USER=nexus", "-e", "POSTGRES_PASSWORD=nexus", "-e", "POSTGRES_DB=nexus", "-p", "127.0.0.1::5432", IMAGE])
+        .args([
+            "run",
+            "-d",
+            "--name",
+            &name,
+            "-e",
+            "POSTGRES_USER=nexus",
+            "-e",
+            "POSTGRES_PASSWORD=nexus",
+            "-e",
+            "POSTGRES_DB=nexus",
+            "-p",
+            "127.0.0.1::5432",
+            IMAGE,
+        ])
         .output()
         .expect("docker run");
     assert!(out.status.success());
-    let port_out = Command::new("docker").args(["port", &name, "5432"]).output().expect("docker port");
+    let port_out = Command::new("docker")
+        .args(["port", &name, "5432"])
+        .output()
+        .expect("docker port");
     let text = String::from_utf8_lossy(&port_out.stdout);
     let port: u16 = text.trim().rsplit(':').next().unwrap().parse().unwrap();
     let deadline = Instant::now() + Duration::from_secs(60);
@@ -35,10 +58,21 @@ fn diag_propose_serialization() {
         assert!(Instant::now() < deadline);
         std::thread::sleep(Duration::from_millis(500));
     };
-    for m in ["migrations/001_memory_and_world_graph.sql", "migrations/002_memory_embeddings_vector.sql", "migrations/003_tenant_isolation_rls.sql"] {
-        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap().join(m);
+    for m in [
+        "migrations/001_memory_and_world_graph.sql",
+        "migrations/002_memory_embeddings_vector.sql",
+        "migrations/003_tenant_isolation_rls.sql",
+    ] {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join(m);
         let sql = std::fs::read_to_string(p).unwrap();
-        client.batch_execute(&sql).unwrap_or_else(|e| panic!("apply {m}: {e}"));
+        client
+            .batch_execute(&sql)
+            .unwrap_or_else(|e| panic!("apply {m}: {e}"));
     }
     // Now replicate the propose INSERT parameter list exactly, inside a
     // real transaction with the tenant claim set - the same conditions the
@@ -50,9 +84,7 @@ fn diag_propose_serialization() {
     let supersedes: Option<Uuid> = None;
     let embedding_ref: Option<String> = None;
 
-    client
-        .simple_query("BEGIN")
-        .expect("begin transaction");
+    client.simple_query("BEGIN").expect("begin transaction");
     client
         .execute(
             "SELECT set_config('app.tenant_id', $1, true)",
@@ -61,11 +93,24 @@ fn diag_propose_serialization() {
         .expect("set tenant claim");
 
     let params: &[&(dyn postgres::types::ToSql + Sync)] = &[
-        &mid, &tenant, &"household".to_string(), &"SEMANTIC", &content,
-        &"a".repeat(64), &"test".to_string(), &"principal".to_string(),
-        &"2026-08-12T00:00:00Z".to_string(), &"2026-08-12T00:00:00Z".to_string(),
-        &0.8f64, &"HOUSEHOLD", &"remember".to_string(), &"Days 30".to_string(),
-        &"PROPOSED", &derived, &supersedes, &embedding_ref,
+        &mid,
+        &tenant,
+        &"household".to_string(),
+        &"SEMANTIC",
+        &content,
+        &"a".repeat(64),
+        &"test".to_string(),
+        &"principal".to_string(),
+        &"2026-08-12T00:00:00Z".to_string(),
+        &"2026-08-12T00:00:00Z".to_string(),
+        &0.8f64,
+        &"HOUSEHOLD",
+        &"remember".to_string(),
+        &"Days 30".to_string(),
+        &"PROPOSED",
+        &derived,
+        &supersedes,
+        &embedding_ref,
     ];
     let n = client
         .execute(

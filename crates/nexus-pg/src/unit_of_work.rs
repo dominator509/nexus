@@ -25,14 +25,12 @@ impl PgUnitOfWork {
     /// Open a connection and begin a transaction.
     pub fn begin(client: Client) -> Result<Self, DataError> {
         let mut client = client;
-        client
-            .simple_query("BEGIN")
-            .map_err(|e| {
-                DataError::new(
-                    DataErrorCode::ExternalProvider,
-                    format!("postgres begin: {e}"),
-                )
-            })?;
+        client.simple_query("BEGIN").map_err(|e| {
+            DataError::new(
+                DataErrorCode::ExternalProvider,
+                format!("postgres begin: {e}"),
+            )
+        })?;
         Ok(Self {
             client: RefCell::new(Some(client)),
         })
@@ -43,10 +41,7 @@ impl PgUnitOfWork {
     /// empty and any further use is a `Conflict` error. The closure's
     /// error type is free (`E: From<DataError>`) so repository adapters
     /// can surface their own typed errors (e.g. `EventError`).
-    pub(crate) fn with_tx<T, E>(
-        &self,
-        f: impl FnOnce(&mut Client) -> Result<T, E>,
-    ) -> Result<T, E>
+    pub(crate) fn with_tx<T, E>(&self, f: impl FnOnce(&mut Client) -> Result<T, E>) -> Result<T, E>
     where
         E: From<DataError>,
     {

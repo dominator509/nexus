@@ -245,7 +245,7 @@ fn parse_retention(text: &str) -> Result<nexus_data::RetentionPolicy, DataError>
             return Err(DataError::new(
                 DataErrorCode::Invariant,
                 format!("corrupt retention unit: {other}"),
-            ))
+            ));
         }
     };
     let value = value

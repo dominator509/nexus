@@ -5,9 +5,7 @@
 //! read and write is tenant-scoped at the SQL level AND behind the RLS
 //! policy from migration 003.
 
-use nexus_data::{
-    DataError, DataErrorCode, PostgresWorldGraphRepository, WorldGraphRepository,
-};
+use nexus_data::{DataError, DataErrorCode, PostgresWorldGraphRepository, WorldGraphRepository};
 use nexus_domain::{NexusId, TenantId};
 use postgres::Client;
 use uuid::Uuid;

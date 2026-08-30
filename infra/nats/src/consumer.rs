@@ -89,15 +89,12 @@ impl NatsEventConsumer {
                     Ok(store) => Ok(store),
                     // A concurrent connect may have created the bucket
                     // between the failed get and this create; re-read.
-                    Err(_) => context
-                        .get_key_value(CHECKPOINT_BUCKET)
-                        .await
-                        .map_err(|e| {
-                            EventError::new(
-                                EventErrorCode::ExternalProvider,
-                                format!("nats checkpoint bucket: {e}"),
-                            )
-                        }),
+                    Err(_) => context.get_key_value(CHECKPOINT_BUCKET).await.map_err(|e| {
+                        EventError::new(
+                            EventErrorCode::ExternalProvider,
+                            format!("nats checkpoint bucket: {e}"),
+                        )
+                    }),
                 }
             }
         }

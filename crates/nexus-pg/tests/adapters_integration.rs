@@ -194,7 +194,12 @@ fn setup() -> TestPostgres {
     pg
 }
 
-fn record(id: &str, tenant: &str, content: serde_json::Value, status: MemoryStatus) -> MemoryRecord {
+fn record(
+    id: &str,
+    tenant: &str,
+    content: serde_json::Value,
+    status: MemoryStatus,
+) -> MemoryRecord {
     MemoryRecord {
         memory_id: nid(id),
         tenant_id: tid(tenant),
@@ -245,16 +250,25 @@ fn rx005_production_memory_repository_propose_activate_get_round_trip() {
     repo.propose(
         tenant.clone(),
         MemoryProposal {
-            record: record(mem_id, tenant.as_str(), serde_json::json!({ "note": "groceries" }), MemoryStatus::Proposed),
+            record: record(
+                mem_id,
+                tenant.as_str(),
+                serde_json::json!({ "note": "groceries" }),
+                MemoryStatus::Proposed,
+            ),
         },
     )
     .expect("propose through adapter");
 
-    repo.activate(tenant.clone(), nid(mem_id)).expect("activate");
+    repo.activate(tenant.clone(), nid(mem_id))
+        .expect("activate");
     let got = repo.get(tenant.clone(), nid(mem_id)).expect("get");
     assert_eq!(got.status, MemoryStatus::Active);
     assert_eq!(got.content, serde_json::json!({ "note": "groceries" }));
-    assert_eq!(got.retention, RetentionPolicy::for_duration(RetentionUnit::Days, 30));
+    assert_eq!(
+        got.retention,
+        RetentionPolicy::for_duration(RetentionUnit::Days, 30)
+    );
     uow.commit().expect("commit");
 }
 
@@ -269,7 +283,12 @@ fn rx005_production_unit_of_work_rollback_discards_writes() {
         repo.propose(
             tenant.clone(),
             MemoryProposal {
-                record: record(mem_id, tenant.as_str(), serde_json::json!({ "v": 1 }), MemoryStatus::Proposed),
+                record: record(
+                    mem_id,
+                    tenant.as_str(),
+                    serde_json::json!({ "v": 1 }),
+                    MemoryStatus::Proposed,
+                ),
             },
         )
         .expect("propose");
@@ -315,8 +334,15 @@ fn rx005_production_world_graph_walk_through_adapter() {
     assert!(walked.contains(&a));
     assert!(walked.contains(&b));
     assert!(walked.contains(&c));
-    assert!(repo.follow(tenant.clone(), a.clone(), b.clone()).expect("follow a->b"));
-    assert!(!repo.follow(tenant.clone(), c.clone(), a.clone()).expect("follow c->a is absent"));
+    assert!(
+        repo.follow(tenant.clone(), a.clone(), b.clone())
+            .expect("follow a->b")
+    );
+    assert!(
+        !repo
+            .follow(tenant.clone(), c.clone(), a.clone())
+            .expect("follow c->a is absent")
+    );
     uow.commit().expect("commit");
 }
 
@@ -333,11 +359,17 @@ fn rx005_production_vector_repository_upsert_and_nearest() {
         repo.propose(
             tenant.clone(),
             MemoryProposal {
-                record: record(mem_id, tenant.as_str(), serde_json::json!({ "note": "vector parent" }), MemoryStatus::Proposed),
+                record: record(
+                    mem_id,
+                    tenant.as_str(),
+                    serde_json::json!({ "note": "vector parent" }),
+                    MemoryStatus::Proposed,
+                ),
             },
         )
         .expect("propose parent");
-        repo.activate(tenant.clone(), nid(mem_id)).expect("activate parent");
+        repo.activate(tenant.clone(), nid(mem_id))
+            .expect("activate parent");
     }
 
     let dims = vec![0.1f32; 384];
@@ -346,12 +378,13 @@ fn rx005_production_vector_repository_upsert_and_nearest() {
         .upsert_vector(tenant.clone(), nid(mem_id), dims.clone())
         .expect("upsert vector");
 
-    let near = vrepo
-        .nearest(tenant.clone(), &dims, 1)
-        .expect("nearest");
+    let near = vrepo.nearest(tenant.clone(), &dims, 1).expect("nearest");
     assert_eq!(near.len(), 1);
     assert_eq!(near[0].record.memory_id, nid(mem_id));
-    assert!((near[0].score - 1.0).abs() < 1e-9, "identical vectors cosine ~1");
+    assert!(
+        (near[0].score - 1.0).abs() < 1e-9,
+        "identical vectors cosine ~1"
+    );
     uow.commit().expect("commit");
 }
 
@@ -369,11 +402,17 @@ fn rx005_production_repository_set_binds_all_repos_to_one_uow() {
         repo.propose(
             tenant.clone(),
             MemoryProposal {
-                record: record(mem_id, tenant.as_str(), serde_json::json!({ "note": "set" }), MemoryStatus::Proposed),
+                record: record(
+                    mem_id,
+                    tenant.as_str(),
+                    serde_json::json!({ "note": "set" }),
+                    MemoryStatus::Proposed,
+                ),
             },
         )
         .expect("propose through set");
-        repo.activate(tenant.clone(), nid(mem_id)).expect("activate through set");
+        repo.activate(tenant.clone(), nid(mem_id))
+            .expect("activate through set");
     }
     {
         let vrepo = set.vector().expect("vector accessor");
@@ -384,7 +423,9 @@ fn rx005_production_repository_set_binds_all_repos_to_one_uow() {
     {
         let grepo = set.world_graph().expect("world graph accessor");
         // No edges seeded; walk returns just the start node.
-        let walked = grepo.walk(tenant.clone(), nid(mem_id), 1).expect("walk through set");
+        let walked = grepo
+            .walk(tenant.clone(), nid(mem_id), 1)
+            .expect("walk through set");
         assert!(walked.contains(&nid(mem_id)));
     }
     uow.commit().expect("commit");
@@ -404,11 +445,17 @@ fn rx005_rls_blocks_cross_tenant_access_at_database_boundary() {
         repo.propose(
             tenant_a.clone(),
             MemoryProposal {
-                record: record(mem_id, tenant_a.as_str(), serde_json::json!({ "secret": "tenant-a" }), MemoryStatus::Proposed),
+                record: record(
+                    mem_id,
+                    tenant_a.as_str(),
+                    serde_json::json!({ "secret": "tenant-a" }),
+                    MemoryStatus::Proposed,
+                ),
             },
         )
         .expect("propose tenant A");
-        repo.activate(tenant_a.clone(), nid(mem_id)).expect("activate tenant A");
+        repo.activate(tenant_a.clone(), nid(mem_id))
+            .expect("activate tenant A");
         uow.commit().expect("commit");
     }
 
@@ -452,7 +499,9 @@ fn rx005_rls_blocks_cross_tenant_access_at_database_boundary() {
         rows.is_empty(),
         "tenant B must not see tenant A records through RLS"
     );
-    rls_client.simple_query("COMMIT").expect("commit tenant B tx");
+    rls_client
+        .simple_query("COMMIT")
+        .expect("commit tenant B tx");
 
     // Claim tenant A: the same raw query now sees the row.
     rls_client.simple_query("BEGIN").expect("begin tenant A tx");
@@ -469,7 +518,9 @@ fn rx005_rls_blocks_cross_tenant_access_at_database_boundary() {
         )
         .expect("tenant A raw query");
     assert_eq!(rows.len(), 1, "tenant A sees its own record through RLS");
-    rls_client.simple_query("COMMIT").expect("commit tenant A tx");
+    rls_client
+        .simple_query("COMMIT")
+        .expect("commit tenant A tx");
 
     // Fail-closed probes (regression guard for the NULLIF hardening in
     // migration 003): a session that never claimed a tenant, and a session
@@ -518,11 +569,17 @@ fn rx005_composite_fk_binds_embedding_to_parent_tenant() {
         repo.propose(
             tenant_a.clone(),
             MemoryProposal {
-                record: record(mem_id, tenant_a.as_str(), serde_json::json!({ "note": "parent" }), MemoryStatus::Proposed),
+                record: record(
+                    mem_id,
+                    tenant_a.as_str(),
+                    serde_json::json!({ "note": "parent" }),
+                    MemoryStatus::Proposed,
+                ),
             },
         )
         .expect("propose parent");
-        repo.activate(tenant_a.clone(), nid(mem_id)).expect("activate");
+        repo.activate(tenant_a.clone(), nid(mem_id))
+            .expect("activate");
     }
     // The composite FK is (tenant_id, memory_id) -> memory_records. An
     // embedding row for tenant B referencing tenant A's memory_id must be
@@ -595,12 +652,10 @@ fn rx005_production_query_honors_namespace_and_sensitivity_ceiling() {
         MemoryStatus::Active,
     );
     r1.namespace = "household".to_string();
-    repo.propose(
-        tenant.clone(),
-        MemoryProposal { record: r1.clone() },
-    )
-    .expect("propose r1");
-    repo.activate(tenant.clone(), r1.memory_id.clone()).expect("activate r1");
+    repo.propose(tenant.clone(), MemoryProposal { record: r1.clone() })
+        .expect("propose r1");
+    repo.activate(tenant.clone(), r1.memory_id.clone())
+        .expect("activate r1");
 
     let mut r2 = record(
         "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f7083",
@@ -612,7 +667,8 @@ fn rx005_production_query_honors_namespace_and_sensitivity_ceiling() {
     r2.sensitivity = Sensitivity::Secret;
     repo.propose(tenant.clone(), MemoryProposal { record: r2.clone() })
         .expect("propose r2");
-    repo.activate(tenant.clone(), r2.memory_id.clone()).expect("activate r2");
+    repo.activate(tenant.clone(), r2.memory_id.clone())
+        .expect("activate r2");
 
     // Sensitivity ceiling HOUSEHOLD excludes the SECRET record even though
     // both are ACTIVE.
@@ -665,7 +721,11 @@ fn rx005_production_supersede_delete_and_vector_remove_lifecycle() {
         .expect("supersede");
 
     let old = repo.get(tenant.clone(), nid(old_id)).expect("get old");
-    assert_eq!(old.status, MemoryStatus::Superseded, "old record is SUPERSEDED");
+    assert_eq!(
+        old.status,
+        MemoryStatus::Superseded,
+        "old record is SUPERSEDED"
+    );
     let new = repo.get(tenant.clone(), nid(new_id)).expect("get new");
     assert_eq!(new.status, MemoryStatus::Active);
     assert_eq!(new.supersedes, Some(nid(old_id)));
@@ -682,7 +742,9 @@ fn rx005_production_supersede_delete_and_vector_remove_lifecycle() {
         near.iter().any(|c| c.record.memory_id == nid(new_id)),
         "embedding retrievable after upsert"
     );
-    vrepo.remove(tenant.clone(), nid(new_id)).expect("remove vector");
+    vrepo
+        .remove(tenant.clone(), nid(new_id))
+        .expect("remove vector");
     let near = vrepo
         .nearest(tenant.clone(), &dims, 5)
         .expect("nearest after remove");
@@ -706,18 +768,19 @@ fn rx005_outbox_append_is_atomic_with_domain_write() {
     {
         let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow");
         let mut mrepo = PgMemoryRepository::new(&uow);
-        mrepo.propose(
-            tenant.clone(),
-            MemoryProposal {
-                record: record(
-                    mem_id,
-                    tenant.as_str(),
-                    serde_json::json!({ "note": "atomic" }),
-                    MemoryStatus::Proposed,
-                ),
-            },
-        )
-        .expect("propose");
+        mrepo
+            .propose(
+                tenant.clone(),
+                MemoryProposal {
+                    record: record(
+                        mem_id,
+                        tenant.as_str(),
+                        serde_json::json!({ "note": "atomic" }),
+                        MemoryStatus::Proposed,
+                    ),
+                },
+            )
+            .expect("propose");
         let orepo = PgOutboxRepository::new(&uow);
         orepo.append(&envelope(1)).expect("append");
         uow.commit().expect("commit");
@@ -726,9 +789,7 @@ fn rx005_outbox_append_is_atomic_with_domain_write() {
     let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow 2");
     let mut mrepo = PgMemoryRepository::new(&uow);
     assert_eq!(
-        mrepo.get(tenant.clone(), nid(mem_id))
-            .expect("get")
-            .status,
+        mrepo.get(tenant.clone(), nid(mem_id)).expect("get").status,
         MemoryStatus::Proposed
     );
     let orepo = PgOutboxRepository::new(&uow);
@@ -739,18 +800,19 @@ fn rx005_outbox_append_is_atomic_with_domain_write() {
     {
         let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow 3");
         let mut mrepo = PgMemoryRepository::new(&uow);
-        mrepo.propose(
-            tenant.clone(),
-            MemoryProposal {
-                record: record(
-                    "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f70a3",
-                    tenant.as_str(),
-                    serde_json::json!({ "note": "rollback" }),
-                    MemoryStatus::Proposed,
-                ),
-            },
-        )
-        .expect("propose");
+        mrepo
+            .propose(
+                tenant.clone(),
+                MemoryProposal {
+                    record: record(
+                        "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f70a3",
+                        tenant.as_str(),
+                        serde_json::json!({ "note": "rollback" }),
+                        MemoryStatus::Proposed,
+                    ),
+                },
+            )
+            .expect("propose");
         let orepo = PgOutboxRepository::new(&uow);
         orepo.append(&envelope(2)).expect("append");
         uow.rollback().expect("rollback");
@@ -758,7 +820,8 @@ fn rx005_outbox_append_is_atomic_with_domain_write() {
     let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow 4");
     let mut mrepo = PgMemoryRepository::new(&uow);
     assert_eq!(
-        mrepo.get(tenant.clone(), nid("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f70a3"))
+        mrepo
+            .get(tenant.clone(), nid("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f70a3"))
             .unwrap_err()
             .code(),
         nexus_data::DataErrorCode::Conflict
@@ -786,7 +849,9 @@ fn rx005_outbox_publisher_lifecycle_and_bounded_retry() {
     assert_eq!(pending.len(), 2);
 
     // Mark a in-flight: fetch_pending excludes it; b remains.
-    orepo.mark_publishing(&a.outbox_id).expect("mark publishing");
+    orepo
+        .mark_publishing(&a.outbox_id)
+        .expect("mark publishing");
     let pending = orepo.fetch_pending(10).expect("fetch");
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].outbox_id, b.outbox_id);
@@ -828,7 +893,11 @@ fn rx005_inbox_deduplicates_and_lifecycle() {
     assert!(irepo.record_delivery("indexer", "evt-2").expect("second"));
 
     // Consumers are isolated.
-    assert!(irepo.record_delivery("other", "evt-1").expect("other consumer"));
+    assert!(
+        irepo
+            .record_delivery("other", "evt-1")
+            .expect("other consumer")
+    );
 
     let new = irepo.fetch_new("indexer", 10).expect("fetch");
     assert_eq!(new.len(), 2);
@@ -849,9 +918,11 @@ fn rx005_inbox_deduplicates_and_lifecycle() {
     assert_eq!(new[0].attempts, 1);
 
     // A redelivered DONE event stays deduplicated.
-    assert!(!irepo
-        .record_delivery("indexer", "evt-1")
-        .expect("redeliver done"));
+    assert!(
+        !irepo
+            .record_delivery("indexer", "evt-1")
+            .expect("redeliver done")
+    );
 
     // Marking a missing delivery fails closed.
     let err = irepo.mark_done("indexer", "evt-nope").unwrap_err();
