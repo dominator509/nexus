@@ -2195,6 +2195,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-pg"
+version = "0.1.0"
+dependencies = [
+ "nexus-data",
+ "nexus-domain",
+ "postgres",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "nexus-pki"
 version = "0.1.0"
 dependencies = [
