@@ -1,4 +1,10 @@
-rx005-battery	8	0
+rx005-battery	9	0
+nexus-pg-live-fire	14	0
+nexus-nats-live-fire	19	0
+data-events	38	0
+workflows-retry	109	0
+temporal-unit	75	0
+temporal-real-server-e2e	20	0
 register	90	0
 canonical-verify	1	0
 expected-files	1	0

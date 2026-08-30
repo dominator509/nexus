@@ -67,6 +67,21 @@ else
   bad "temporal retry classification suite"
 fi
 
+# --- AUD-023: REAL Temporal server E2E (TESTING.md line 36) ---
+# The interceptor/retry classification must be proven at the real activity
+# boundary: NexusWorkflowError thrown through the real worker+interceptor
+# against temporalio/server:1.31.2. Unit tests with a next() double are
+# NOT sufficient (GAP-002d). Full suite: integration + failure + new
+# retry-classification real-server proofs.
+out=$(pnpm --filter @nexus/workflows-tests test:integration 2>&1 | python3 -c "import re,sys; print(re.sub(r'\x1b\[[0-9;]*m', '', sys.stdin.read()))" || true)
+n=$(echo "$out" | grep -oE "Tests +[0-9]+ passed" | grep -oE "[0-9]+" | tail -1)
+if [ -n "$n" ] && [ "$n" -ge 1 ] && ! echo "$out" | grep -qE "failed \("; then
+  note "temporal real-server E2E suite ($n tests, temporalio/server:1.31.2)"
+else
+  bad "temporal real-server E2E suite (see full output below)"
+  echo "$out" | tail -30
+fi
+
 # --- typechecks ---
 if cargo check --workspace >/tmp/rx005-check.log 2>&1; then
   note "workspace check clean"

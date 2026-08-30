@@ -24,3 +24,7 @@ migrations/004_outbox_inbox.sql
 packages/workflows/src/errors.ts
 scripts/nodes/RX-005.sh
 scripts/rx005-remediation-tests.sh
+infra/temporal/src/__tests__/ep006_official_environment_interceptor.test.ts
+infra/temporal/vitest.config.ts
+tests/workflows/src/ep006_failure_retry_classification_real.test.ts
+tests/workflows/package.json

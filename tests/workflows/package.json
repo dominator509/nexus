@@ -5,7 +5,7 @@
   "type": "module",
   "description": "EP-006 M3 real-server integration tests: Temporal server 1.31.2 + PostgreSQL 18.4 ephemeral containers (SPEC-023; TESTING.md real dependency rules).",
   "scripts": {
-    "test:integration": "vitest run -t ep006_integration",
+    "test:integration": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
   },

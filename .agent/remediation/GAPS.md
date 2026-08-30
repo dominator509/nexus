@@ -104,3 +104,78 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
 - Proof: temporal 74/74 (8 retry mapping tests incl. permanent/narrow/
   empty-class classification, 5 failure-classifier tests), workflows
   109/109 after the errors.ts refactor, typecheck exit 0.
+
+## GAP-002d (RX-005, CORRECTION from Dominic 2026-08-30) - AUD-023 "VERIFIED_FIXED" rests on a test double, not a real boundary
+
+**Status:** LOGGED 2026-08-30 — fix ONE at a time from top severity; report after each.
+
+**Severity:** P1 (gate fired green on a shell; TESTING.md line 36 violated)
+
+### Findings (audit, every claim verified against the tree)
+
+1. **The interceptor is proven only with a hand-rolled `next()` double.**
+   `infra/temporal/src/__tests__/ep006_unit_failure.test.ts` lines 25-49:
+   the SDK call chain is simulated by `const next = async () => { throw new
+   NexusWorkflowError(...) }`. This proves the interceptor's try/catch
+   logic, NOT that it works at a real Temporal activity boundary.
+   The test file itself admits it: "Test double for the SDK call chain".
+
+2. **No real Temporal server exercises the AUD-023 classification path.**
+   The real-server suite (`tests/workflows/` — real temporalio/server:1.31.2
+   + postgres:18.4 containers) exists and is genuinely live-fire for
+   approval/binding/restart, but:
+   - `grep -rn "throw new NexusWorkflowError" tests/workflows/` -> ZERO hits
+   - No activity in the real suite throws a NexusWorkflowError, so the
+     NexusFailureInterceptor is never exercised at the real boundary.
+   - `grep -rn "NexusWorkflowError" tests/workflows/src/` matches only
+     stack/worker/session helpers and restart/compensation tests that do
+     NOT throw typed failures through an activity.
+
+3. **The RX-005 battery never runs the real-server suite.**
+   `scripts/rx005-remediation-tests.sh` AUD-023 section runs only
+   `pnpm --filter @nexus/temporal test:unit` (unit tests with the double)
+   and `pnpm --filter @nexus/workflows test:unit`. The real Temporal
+   server suite is absent from the battery, so the closure tag
+   `green-v2/RX-005/7d50efe` attested "8/8" without ever connecting to a
+   live Temporal server for the retry classification claim.
+
+4. **TESTING.md line 36 is the law and was not met.** "Temporal tests
+   include the official test environment and at least one real server
+   E2E." `@temporalio/testing` is installed as a devDependency but
+   `TestWorkflowEnvironment` appears NOWHERE in source — the official
+   test environment is present in package.json and unused.
+
+5. **The register row is misleading.** AUD-023 marked VERIFIED_FIXED with
+   evidence "temporal 74/74" — but 74 unit tests with a `next()` double
+   do not prove the boundary classification that the finding describes
+   ("non-retryable ApplicationFailure is never supplied").
+
+**FIX IN PROGRESS (2026-08-30):**
+- Added `tests/workflows/src/ep006_failure_retry_classification_real.test.ts`:
+  REAL boundary proof - a runEffect activity throws NexusWorkflowError
+  through the real worker+interceptor against temporalio/server:1.31.2.
+  - PERMANENT (POLICY): surfaced to client as type=POLICY,
+    nonRetryable=true, and attempted EXACTLY ONCE (the AUD-023 claim:
+    before the fix, permanent failures burned five attempts).
+  - TRANSIENT (UNAVAILABLE): retried by the real engine (attempts=2),
+    workflow completes SUCCEEDED.
+  - 2/2 green against the real server (33s).
+- Fixed `tests/workflows/package.json` test:integration: removed the
+  `-t ep006_integration` filter that was SKIPPING all ep006_failure_*
+  real-server tests (8 tests were silently not running). Full suite now
+  10 files / 20 tests green (93s).
+- Wired the real-server suite into scripts/rx005-remediation-tests.sh as
+  a distinct AUD-023 gate section (TESTING.md line 36 compliance).
+
+**OFFICIAL ENVIRONMENT PROOF ADDED (2026-08-30):**
+- TESTING.md line 36 requires BOTH the official test environment AND a
+  real server E2E. Added
+  `infra/temporal/src/__tests__/ep006_official_environment_interceptor.test.ts`:
+  TestWorkflowEnvironment.createLocal() launches a REAL Temporal server
+  binary; the REAL worker + REAL NexusFailureInterceptor + REAL activity
+  throwing NexusWorkflowError cross real gRPC. Asserts the client-visible
+  failure is ApplicationFailure(type=POLICY, nonRetryable=true) and the
+  permanent activity was attempted exactly once. 1/1 green (1.7s).
+- New vitest.config.ts for @nexus/temporal (fileParallelism: false,
+  180s timeouts) so the official-environment test coexists with the unit
+  suite. Full temporal suite now 12 files / 75 tests green.
