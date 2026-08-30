@@ -2200,6 +2200,7 @@ version = "0.1.0"
 dependencies = [
  "nexus-data",
  "nexus-domain",
+ "nexus-events",
  "postgres",
  "serde",
  "serde_json",
