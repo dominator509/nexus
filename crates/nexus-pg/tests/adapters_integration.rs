@@ -21,8 +21,15 @@ use nexus_data::{
     RetentionPolicy, RetentionUnit, Sensitivity, UnitOfWork, VectorRepository,
     WorldGraphRepository,
 };
-use nexus_domain::{MemoryType, NexusId, TenantId};
-use nexus_pg::{PgMemoryRepository, PgRepositorySet, PgUnitOfWork, PgVectorRepository, PgWorldGraphRepository};
+use nexus_domain::{CorrelationId, EventId, MemoryType, NexusId, TenantId};
+use nexus_events::{
+    EventDataClass, EventEnvelope, EventType, InboxRepository, InboxStatus, OutboxRepository,
+    OutboxStatus,
+};
+use nexus_pg::{
+    PgInboxRepository, PgMemoryRepository, PgOutboxRepository, PgRepositorySet, PgUnitOfWork,
+    PgVectorRepository, PgWorldGraphRepository,
+};
 use postgres::{Client, NoTls};
 use uuid::Uuid;
 
@@ -49,10 +56,11 @@ fn migration_path(name: &str) -> std::path::PathBuf {
         .join(name)
 }
 
-const MIGRATIONS: [&str; 3] = [
+const MIGRATIONS: [&str; 4] = [
     "migrations/001_memory_and_world_graph.sql",
     "migrations/002_memory_embeddings_vector.sql",
     "migrations/003_tenant_isolation_rls.sql",
+    "migrations/004_outbox_inbox.sql",
 ];
 
 /// A running ephemeral postgres container with a dynamically published host port.
@@ -206,6 +214,23 @@ fn record(id: &str, tenant: &str, content: serde_json::Value, status: MemoryStat
         derived_from: vec![],
         supersedes: None,
         embedding_ref: None,
+    }
+}
+
+fn envelope(seed: u8) -> EventEnvelope {
+    EventEnvelope {
+        event_id: EventId::new(format!("0190e1c4-5c8a-7f40-8a1b-2c3d4e5fc0{seed:02x}")).unwrap(),
+        event_type: EventType::new("memory.record.created").unwrap(),
+        schema_version: "1.0.0".to_string(),
+        source: "integration".to_string(),
+        subject: "ignored".to_string(),
+        time: "2026-08-12T00:00:00Z".to_string(),
+        tenant_id: tid("0190e1c4-5c8a-7f40-8a1b-2c3d4e5fc002"),
+        actor: "principal".to_string(),
+        correlation_id: CorrelationId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5fc010").unwrap(),
+        causation_id: None,
+        data_class: EventDataClass::Household,
+        payload: serde_json::json!({ "seed": seed }),
     }
 }
 
@@ -543,6 +568,16 @@ fn rx005_migrations_are_idempotent_with_rls() {
         .expect("fk count");
     let fk_count: i64 = row.get(0);
     assert_eq!(fk_count, 1, "composite tenant FK must exist");
+    // Migration 004's ledger tables must also exist after double apply.
+    let row = client
+        .query_one(
+            "SELECT count(*) FROM pg_tables
+             WHERE schemaname = 'public' AND tablename IN ('outbox', 'inbox')",
+            &[],
+        )
+        .expect("ledger table count");
+    let table_count: i64 = row.get(0);
+    assert_eq!(table_count, 2, "outbox and inbox tables must exist");
 }
 
 #[test]
@@ -657,6 +692,174 @@ fn rx005_production_supersede_delete_and_vector_remove_lifecycle() {
     repo.delete(tenant.clone(), nid(new_id)).expect("delete");
     let deleted = repo.get(tenant.clone(), nid(new_id)).expect("get deleted");
     assert_eq!(deleted.status, MemoryStatus::Deleted);
+
+    uow.commit().expect("commit");
+}
+
+#[test]
+fn rx005_outbox_append_is_atomic_with_domain_write() {
+    let pg = setup();
+    let tenant = tid("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f70a2");
+    let mem_id = "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f70a1";
+
+    // Commit path: the domain write and the outbox append land together.
+    {
+        let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow");
+        let mut mrepo = PgMemoryRepository::new(&uow);
+        mrepo.propose(
+            tenant.clone(),
+            MemoryProposal {
+                record: record(
+                    mem_id,
+                    tenant.as_str(),
+                    serde_json::json!({ "note": "atomic" }),
+                    MemoryStatus::Proposed,
+                ),
+            },
+        )
+        .expect("propose");
+        let orepo = PgOutboxRepository::new(&uow);
+        orepo.append(&envelope(1)).expect("append");
+        uow.commit().expect("commit");
+    }
+    // Both visible to a fresh unit of work.
+    let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow 2");
+    let mut mrepo = PgMemoryRepository::new(&uow);
+    assert_eq!(
+        mrepo.get(tenant.clone(), nid(mem_id))
+            .expect("get")
+            .status,
+        MemoryStatus::Proposed
+    );
+    let orepo = PgOutboxRepository::new(&uow);
+    assert_eq!(orepo.fetch_pending(10).expect("fetch").len(), 1);
+    uow.commit().expect("commit 2");
+
+    // Rollback path: neither the write nor the append survives.
+    {
+        let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow 3");
+        let mut mrepo = PgMemoryRepository::new(&uow);
+        mrepo.propose(
+            tenant.clone(),
+            MemoryProposal {
+                record: record(
+                    "0190e1c4-5c8a-7f40-8a1b-2c3d4e5f70a3",
+                    tenant.as_str(),
+                    serde_json::json!({ "note": "rollback" }),
+                    MemoryStatus::Proposed,
+                ),
+            },
+        )
+        .expect("propose");
+        let orepo = PgOutboxRepository::new(&uow);
+        orepo.append(&envelope(2)).expect("append");
+        uow.rollback().expect("rollback");
+    }
+    let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow 4");
+    let mut mrepo = PgMemoryRepository::new(&uow);
+    assert_eq!(
+        mrepo.get(tenant.clone(), nid("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f70a3"))
+            .unwrap_err()
+            .code(),
+        nexus_data::DataErrorCode::Conflict
+    );
+    let orepo = PgOutboxRepository::new(&uow);
+    assert_eq!(
+        orepo.fetch_pending(10).expect("fetch").len(),
+        1,
+        "only the committed outbox row remains"
+    );
+    uow.commit().expect("commit 4");
+}
+
+#[test]
+fn rx005_outbox_publisher_lifecycle_and_bounded_retry() {
+    let pg = setup();
+    let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow");
+    let orepo = PgOutboxRepository::new(&uow);
+
+    let a = orepo.append(&envelope(10)).expect("append a");
+    assert_eq!(a.status, OutboxStatus::Pending);
+    let b = orepo.append(&envelope(11)).expect("append b");
+
+    let pending = orepo.fetch_pending(10).expect("fetch");
+    assert_eq!(pending.len(), 2);
+
+    // Mark a in-flight: fetch_pending excludes it; b remains.
+    orepo.mark_publishing(&a.outbox_id).expect("mark publishing");
+    let pending = orepo.fetch_pending(10).expect("fetch");
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].outbox_id, b.outbox_id);
+
+    // Publish succeeds: the row leaves the pending set.
+    orepo.mark_published(&a.outbox_id).expect("mark published");
+    let pending = orepo.fetch_pending(10).expect("fetch");
+    assert_eq!(pending.len(), 1, "published row leaves the pending set");
+
+    // Publish b fails: FAILED with attempts incremented, still retried.
+    orepo
+        .mark_failed(&b.outbox_id, "nats timeout")
+        .expect("mark failed");
+    let pending = orepo.fetch_pending(10).expect("fetch");
+    assert_eq!(pending.len(), 1, "failed row is retried");
+    assert_eq!(pending[0].status, OutboxStatus::Failed);
+    assert_eq!(pending[0].attempts, 1);
+    assert!(
+        pending[0].last_error.as_deref().unwrap().contains("nats"),
+        "redacted failure reason is stored"
+    );
+
+    // Marking a missing id fails closed with Conflict.
+    let err = orepo.mark_published("missing").unwrap_err();
+    assert_eq!(err.code(), nexus_events::EventErrorCode::Conflict);
+
+    uow.commit().expect("commit");
+}
+
+#[test]
+fn rx005_inbox_deduplicates_and_lifecycle() {
+    let pg = setup();
+    let mut uow = PgUnitOfWork::begin(pg.client()).expect("begin uow");
+    let irepo = PgInboxRepository::new(&uow);
+
+    // First sighting records; replay deduplicates.
+    assert_eq!(irepo.record_delivery("indexer", "evt-1").expect("first"), true);
+    assert_eq!(irepo.record_delivery("indexer", "evt-1").expect("replay"), false);
+    assert_eq!(irepo.record_delivery("indexer", "evt-2").expect("second"), true);
+
+    // Consumers are isolated.
+    assert_eq!(
+        irepo.record_delivery("other", "evt-1").expect("other consumer"),
+        true
+    );
+
+    let new = irepo.fetch_new("indexer", 10).expect("fetch");
+    assert_eq!(new.len(), 2);
+
+    // Done rows leave the pending set.
+    irepo.mark_done("indexer", "evt-1").expect("done");
+    let new = irepo.fetch_new("indexer", 10).expect("fetch");
+    assert_eq!(new.len(), 1);
+    assert_eq!(new[0].event_id, "evt-2");
+
+    // Failed rows are retried with attempts incremented.
+    irepo
+        .mark_failed("indexer", "evt-2", "handler error")
+        .expect("failed");
+    let new = irepo.fetch_new("indexer", 10).expect("fetch");
+    assert_eq!(new.len(), 1);
+    assert_eq!(new[0].status, InboxStatus::Failed);
+    assert_eq!(new[0].attempts, 1);
+
+    // A redelivered DONE event stays deduplicated.
+    assert_eq!(
+        irepo.record_delivery("indexer", "evt-1").expect("redeliver done"),
+        false
+    );
+
+    // Marking a missing delivery fails closed.
+    let err = irepo.mark_done("indexer", "evt-nope").unwrap_err();
+    assert_eq!(err.code(), nexus_events::EventErrorCode::Conflict);
 
     uow.commit().expect("commit");
 }

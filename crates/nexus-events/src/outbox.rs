@@ -1,10 +1,15 @@
 //! Transactional outbox (SPEC-023 behavior 1).
 //!
 //! State changes and outbox records commit in one PostgreSQL transaction.
-//! The outbox port takes the `nexus-data` `UnitOfWork` transaction
-//! boundary so a domain write and its outbox append are atomic.
+//! The outbox repository is bound to the same concrete unit of work as
+//! the domain repositories at construction (see the `nexus-pg` adapter),
+//! so a domain write and its outbox append commit or roll back together.
+//!
+//! The `append` port takes no transaction argument by design: the earlier
+//! `&mut dyn UnitOfWork` parameter was unimplementable (the port cannot
+//! execute statements through that trait object) and unusable (no caller
+//! existed). Atomicity is expressed by sharing one unit of work instance.
 
-use nexus_data::UnitOfWork;
 use serde::{Deserialize, Serialize};
 
 use crate::envelope::EventEnvelope;
@@ -69,13 +74,10 @@ impl OutboxRecord {
 pub trait OutboxRepository {
     /// Append an envelope atomically with the caller's state change.
     ///
-    /// The `UnitOfWork` guarantees the state mutation and the outbox
-    /// insert commit or roll back together (SPEC-023 behavior 1).
-    fn append(
-        &self,
-        tx: &mut dyn UnitOfWork,
-        envelope: &EventEnvelope,
-    ) -> Result<OutboxRecord, EventError>;
+    /// The repository is bound to the same `UnitOfWork` as the domain
+    /// repositories, so the state mutation and the outbox insert commit
+    /// or roll back together (SPEC-023 behavior 1).
+    fn append(&self, envelope: &EventEnvelope) -> Result<OutboxRecord, EventError>;
 
     /// Fetch pending records for the publisher (bounded batch).
     fn fetch_pending(&self, limit: u32) -> Result<Vec<OutboxRecord>, EventError>;

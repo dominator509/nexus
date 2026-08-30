@@ -114,3 +114,30 @@ impl From<serde_json::Error> for EventError {
         Self::new(EventErrorCode::Validation, format!("json: {err}"))
     }
 }
+
+impl From<nexus_data::DataError> for EventError {
+    /// Preserve the SPEC-006 code ladder across the data boundary. The
+    /// two code sets mirror each other by design (see the module docs);
+    /// the correlation id is carried over when present.
+    fn from(err: nexus_data::DataError) -> Self {
+        let code = match err.code() {
+            nexus_data::DataErrorCode::Validation => EventErrorCode::Validation,
+            nexus_data::DataErrorCode::Authentication => EventErrorCode::Authentication,
+            nexus_data::DataErrorCode::Authorization => EventErrorCode::Authorization,
+            nexus_data::DataErrorCode::Policy => EventErrorCode::Policy,
+            nexus_data::DataErrorCode::Unavailable => EventErrorCode::Unavailable,
+            nexus_data::DataErrorCode::Timeout => EventErrorCode::Timeout,
+            nexus_data::DataErrorCode::Conflict => EventErrorCode::Conflict,
+            nexus_data::DataErrorCode::RateLimit => EventErrorCode::RateLimit,
+            nexus_data::DataErrorCode::ExternalProvider => EventErrorCode::ExternalProvider,
+            nexus_data::DataErrorCode::Verification => EventErrorCode::Verification,
+            nexus_data::DataErrorCode::Compensation => EventErrorCode::Compensation,
+            nexus_data::DataErrorCode::Invariant => EventErrorCode::Invariant,
+        };
+        let mut out = Self::new(code, err.message());
+        if let Some(correlation_id) = err.correlation_id() {
+            out = out.with_correlation(correlation_id);
+        }
+        out
+    }
+}

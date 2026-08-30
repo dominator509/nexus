@@ -1,6 +1,7 @@
-//! PostgreSQL and pgvector adapters (EP-004 M3, RX-005 AUD-007).
+//! PostgreSQL and pgvector adapters (EP-004 M3, RX-005 AUD-007/AUD-008).
 //!
-//! Concrete implementations of the provider-neutral ports in `nexus-data`:
+//! Concrete implementations of the provider-neutral ports in `nexus-data`
+//! and `nexus-events`:
 //!
 //! - `PgUnitOfWork` — real PostgreSQL transaction with fail-closed drop.
 //! - `PgMemoryRepository` — memory records behind the `MemoryRepository`
@@ -11,6 +12,10 @@
 //!   the source of truth (SPEC-002 behavior 2).
 //! - `PgRepositorySet` — tenant-scoped composition root binding all three
 //!   repositories to one transaction.
+//! - `PgOutboxRepository` — transactional outbox (SPEC-023 behavior 1),
+//!   atomic with the domain write through the shared unit of work.
+//! - `PgInboxRepository` — idempotent consumer inbox (SPEC-023 behavior
+//!   4), deduplicating by (consumer, event_id).
 //!
 //! Tenant isolation is enforced twice: every SQL statement carries the
 //! tenant id AND the `003_tenant_isolation_rls.sql` migration enables row
@@ -20,19 +25,23 @@
 //! (fail closed).
 //!
 //! This crate is infrastructure: it may import application ports
-//! (`nexus-data`, `nexus-domain`) and drivers, never the reverse. The
-//! dependency-direction tests in the behavior crates forbid these drivers
-//! from leaking upward.
+//! (`nexus-data`, `nexus-domain`, `nexus-events`) and drivers, never the
+//! reverse. The dependency-direction tests in the behavior crates forbid
+//! these drivers from leaking upward.
 
 #![forbid(unsafe_code)]
 
+mod inbox;
 mod memory;
+mod outbox;
 mod repository_set;
 mod unit_of_work;
 mod vector;
 mod world_graph;
 
+pub use inbox::PgInboxRepository;
 pub use memory::PgMemoryRepository;
+pub use outbox::PgOutboxRepository;
 pub use repository_set::PgRepositorySet;
 pub use unit_of_work::PgUnitOfWork;
 pub use vector::PgVectorRepository;

@@ -58,6 +58,31 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
   fiddling), but transactional outbox/inbox persistence in `nexus-pg` is a
   distinct piece of work - scope decision with Dominic before implementation.
 
+**GAP-002b2: RESOLVED 2026-08-30 (VERIFIED_FIXED, commit pending)**
+- Port corrected: `OutboxRepository::append` dropped its unimplementable
+  `&mut dyn UnitOfWork` parameter (the trait exposes no statement
+  execution; no caller existed). Atomicity is expressed by binding the
+  repository to the same `PgUnitOfWork` as the domain repositories.
+- Migration 004: `outbox` + `inbox` tables (idempotent, status CHECK
+  constraints, scan indexes). Platform-level ledgers - deliberately no
+  tenant RLS (publisher scan is cross-tenant by design).
+- `PgOutboxRepository`: append (PENDING), fetch_pending (PENDING+FAILED,
+  oldest first, in-flight PUBLISHING excluded), mark_publishing/
+  mark_published/mark_failed (idempotent per row, Conflict on missing,
+  attempts incremented on failure - bounded retry).
+- `PgInboxRepository`: record_delivery deduplicates via ON CONFLICT DO
+  NOTHING (first sighting true, replay false), mark_done/mark_failed,
+  fetch_new (NEW+FAILED per consumer).
+- `PgUnitOfWork::with_tx` generalized over the closure error type
+  (`E: From<DataError>`); `From<DataError> for EventError` added to
+  nexus-events preserving the SPEC-006 code ladder and correlation.
+- Proof (live-fire `pgvector/pgvector:pg18`): atomicity both ways (domain
+  write + append commit together, roll back together), publisher lifecycle
+  (pending -> publishing excluded -> published; failed retried with
+  attempts), inbox dedup + lifecycle + consumer isolation, migration
+  idempotency covers the new tables. nexus-pg 14/14; data+events+pg
+  52/52; workspace check clean (0 errors, 0 warnings).
+
 ### GAP-002c (AUD-023, P2) - Temporal does not enforce permanent/transient retry classification
 - `toTemporalRetry()` maps only backoff/maximumAttempts; never supplies `nonRetryableErrorTypes` or non-retryable `ApplicationFailure`.
 - Permanent failures (VALIDATION/POLICY/AUTH) get up to five attempts.

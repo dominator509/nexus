@@ -40,11 +40,16 @@ impl PgUnitOfWork {
 
     /// Run one operation against the live connection (inside the
     /// transaction). Fail-closed: after `commit`/`rollback` the slot is
-    /// empty and any further use is a `Conflict` error.
-    pub(crate) fn with_tx<T>(
+    /// empty and any further use is a `Conflict` error. The closure's
+    /// error type is free (`E: From<DataError>`) so repository adapters
+    /// can surface their own typed errors (e.g. `EventError`).
+    pub(crate) fn with_tx<T, E>(
         &self,
-        f: impl FnOnce(&mut Client) -> Result<T, DataError>,
-    ) -> Result<T, DataError> {
+        f: impl FnOnce(&mut Client) -> Result<T, E>,
+    ) -> Result<T, E>
+    where
+        E: From<DataError>,
+    {
         let mut guard = self.client.borrow_mut();
         let client = guard
             .as_mut()
