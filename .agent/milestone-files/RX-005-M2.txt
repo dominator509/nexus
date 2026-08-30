@@ -1,0 +1,1 @@
+AUD-008: NATS JetStream KV checkpoint persistence + ephemeral per-poll consumers

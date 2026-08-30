@@ -349,3 +349,8 @@
 2026-08-29T19:35:59Z | ipman | RX-004 | MILESTONE_PASS | [M4] AUD-063 (RX-004 portion): M5 gate measures real healthz latency on live runtime and evaluates against budget; shared RX-021
 2026-08-29T19:35:59Z | ipman | RX-004 | MILESTONE_PASS | [M5] regression battery 20/20 green; register AUD-004/005/062 VERIFIED_FIXED, AUD-063 FIXED_UNVERIFIED (RX-021); closure evidence ready
 2026-08-30T20:07:21Z | ipman | RX-004 | NODE_DONE | RX-004 closed under V2: closure_commit=89ee6ac green-v2/RX-004/89ee6ac; battery 22/22, register 90/90, canonical ladder RX004_LADDER_TRUE_EXIT=0 (no pipe masking), expected-files ok; AUD-004/005/062 VERIFIED_FIXED; AUD-063 FIXED_UNVERIFIED (RX-021 co-owner); 8 proofs bound
+2026-08-30T21:38:17Z | ipman | RX-005 | MILESTONE_PASS | [M1] AUD-007: nexus-pg PostgreSQL adapters live-fire green (PgUnitOfWork/memory/world_graph/vector/RepositorySet + RLS migration 003; 14/14 vs pgvector/pgvector:pg18)
+2026-08-30T21:38:17Z | ipman | RX-005 | MILESTONE_PASS | [M2] AUD-008: NATS checkpoint persistence real (JetStream KV bucket nexus_checkpoints; ephemeral per-poll consumers; 19/19 vs nats:2.14.3)
+2026-08-30T21:38:17Z | ipman | RX-005 | MILESTONE_PASS | [M3] AUD-008: PgOutboxRepository + PgInboxRepository + migration 004 (atomic append, dedup, bounded retry; 14/14 nexus-pg)
+2026-08-30T21:38:17Z | ipman | RX-005 | MILESTONE_PASS | [M4] AUD-023: Temporal retry classification (nonRetryableErrorTypes from policy + classified ApplicationFailure interceptor; temporal 74/74, workflows 109/109)
+2026-08-30T21:40:51Z | ipman | RX-005 | NODE_DONE | RX-005 closed under V2: closure_commit=7d50efe green-v2/RX-005/7d50efe; battery 8/8, register 90/90, verify exit 0, expected-files ok; AUD-007/008/023 VERIFIED_FIXED; 8 proofs bound
