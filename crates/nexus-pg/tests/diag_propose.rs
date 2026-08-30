@@ -21,13 +21,16 @@ fn diag_propose_serialization() {
     let port: u16 = text.trim().rsplit(':').next().unwrap().parse().unwrap();
     let deadline = Instant::now() + Duration::from_secs(60);
     let mut client = loop {
-        if let Ok(mut c) = Client::connect(
+        let mut connected = Client::connect(
             &format!("host=127.0.0.1 port={port} user=nexus password=nexus dbname=nexus connect_timeout=2"),
             NoTls,
-        ) {
-            if c.simple_query("SELECT 1").is_ok() {
-                break c;
-            }
+        )
+        .ok();
+        let ready = connected
+            .as_mut()
+            .is_some_and(|c| c.simple_query("SELECT 1").is_ok());
+        if ready {
+            break connected.expect("ready client");
         }
         assert!(Instant::now() < deadline);
         std::thread::sleep(Duration::from_millis(500));

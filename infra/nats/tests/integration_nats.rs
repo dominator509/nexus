@@ -171,7 +171,7 @@ async fn ack_pending(url: &str, subject: &str) -> usize {
     while let Some(info) = consumers.next().await {
         let info = info.expect("raw consumer info");
         if info.config.filter_subject == subject {
-            total += info.num_ack_pending as usize;
+            total += info.num_ack_pending;
         }
     }
     total

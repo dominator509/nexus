@@ -823,15 +823,12 @@ fn rx005_inbox_deduplicates_and_lifecycle() {
     let irepo = PgInboxRepository::new(&uow);
 
     // First sighting records; replay deduplicates.
-    assert_eq!(irepo.record_delivery("indexer", "evt-1").expect("first"), true);
-    assert_eq!(irepo.record_delivery("indexer", "evt-1").expect("replay"), false);
-    assert_eq!(irepo.record_delivery("indexer", "evt-2").expect("second"), true);
+    assert!(irepo.record_delivery("indexer", "evt-1").expect("first"));
+    assert!(!irepo.record_delivery("indexer", "evt-1").expect("replay"));
+    assert!(irepo.record_delivery("indexer", "evt-2").expect("second"));
 
     // Consumers are isolated.
-    assert_eq!(
-        irepo.record_delivery("other", "evt-1").expect("other consumer"),
-        true
-    );
+    assert!(irepo.record_delivery("other", "evt-1").expect("other consumer"));
 
     let new = irepo.fetch_new("indexer", 10).expect("fetch");
     assert_eq!(new.len(), 2);
@@ -852,10 +849,9 @@ fn rx005_inbox_deduplicates_and_lifecycle() {
     assert_eq!(new[0].attempts, 1);
 
     // A redelivered DONE event stays deduplicated.
-    assert_eq!(
-        irepo.record_delivery("indexer", "evt-1").expect("redeliver done"),
-        false
-    );
+    assert!(!irepo
+        .record_delivery("indexer", "evt-1")
+        .expect("redeliver done"));
 
     // Marking a missing delivery fails closed.
     let err = irepo.mark_done("indexer", "evt-nope").unwrap_err();

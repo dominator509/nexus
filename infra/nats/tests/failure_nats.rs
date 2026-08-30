@@ -357,7 +357,7 @@ async fn ep005_failure_unacked_messages_remain_pending() {
     while let Some(info) = consumers.next().await {
         let info = info.expect("consumer info");
         if info.config.filter_subject == "nexus.memory.>" {
-            pending += info.num_ack_pending as usize;
+            pending += info.num_ack_pending;
         }
     }
     assert_eq!(
