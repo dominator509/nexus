@@ -1,11 +1,11 @@
 {
-  "attestation_digest": "sha256:4f29e35ad505f0e5622fc9aca524bb08f427baa5f38052b235a3fba5cf2f3943",
-  "closure_commit": "7d50efe3b516b1a54663357d285200a93049cd99",
-  "created_at": "2026-08-30T21:40:46Z",
+  "attestation_digest": "sha256:992e1e9ef89afffe7c0e20fa09d484ee9982b05deb169019ad7068dddf791d9b",
+  "closure_commit": "48518d583fc8fe944f57e54b19a42f14865b35d0",
+  "created_at": "2026-08-30T23:58:07Z",
   "created_by": "node-close-v2.sh",
-  "expected_files_digest": "sha256:914941b7e4070454bc20476049724306d12eaffd9801c24a490714bc9779bf61",
+  "expected_files_digest": "sha256:d4c73ad5d34139fdc3130f41e2a7af35047a1810d71e418c7d0481eecae5289f",
   "generation": 2,
-  "green_v2_tag": "green-v2/RX-005/7d50efe3b516b1a54663357d285200a93049cd99",
+  "green_v2_tag": "green-v2/RX-005/48518d583fc8fe944f57e54b19a42f14865b35d0",
   "milestones": {
     "max": 4,
     "passed": [
@@ -19,12 +19,12 @@
   "node_verify_exit": 0,
   "proofs": [
     {
-      "digest": "sha256:92f858717d73b605a978c9e5acd38e720a3333a042edfbd9fc309e993534bb6c",
+      "digest": "sha256:711932216773ae254af283b94ca2c215d92df151973cace3458505ef5e0195c8",
       "id": "verify",
       "ref": ".agent/remediation/evidence/RX-005/verify.log"
     },
     {
-      "digest": "sha256:c099bca463405532ff40f8103288b77b7ce867b3905b085db195080ecf097632",
+      "digest": "sha256:37375939d7c03f05b68238a3a76d2542efc8e1f0df59723dc223902ffc6c7253",
       "id": "rx005-remediation-tests",
       "ref": "scripts/rx005-remediation-tests.sh"
     },
@@ -34,12 +34,12 @@
       "ref": "scripts/nodes/RX-005.sh"
     },
     {
-      "digest": "sha256:7709425d48064ba27273f7770d412cb3e4024ccec1b36402021f598974c8185f",
+      "digest": "sha256:953104f76d15e7b5ef37283005c6011d47de605d31b4a92057a990bff2f60af1",
       "id": "adapters_integration",
       "ref": "crates/nexus-pg/tests/adapters_integration.rs"
     },
     {
-      "digest": "sha256:6865cc323e00659f80e580b5a94f7b80ada8893e8b20e31d0f3c9acdfdb08f8d",
+      "digest": "sha256:d3e582fa930eb9b2b8e8ce945b62da39158b34efc5299189c6e0d03506c24357",
       "id": "integration_nats",
       "ref": "infra/nats/tests/integration_nats.rs"
     },
@@ -57,10 +57,30 @@
       "digest": "sha256:4e1279338a61ec675e967dd298c57b56a37b6eb36c05677e6ba751442cff19bd",
       "id": "004_outbox_inbox",
       "ref": "migrations/004_outbox_inbox.sql"
+    },
+    {
+      "digest": "sha256:b07fa572c300546d9552fb39b534ad64b61d49afbe4b9df64cade59589a5f13d",
+      "id": "retry_classification_real",
+      "ref": "infra/temporal/src/__tests__/ep006_official_environment_interceptor.test.ts"
+    },
+    {
+      "digest": "sha256:6bbed80ad2b938c65be753c73084d7e15cfe8972addee53907bf3015672a2f94",
+      "id": "retry_classification_e2e",
+      "ref": "tests/workflows/src/ep006_failure_retry_classification_real.test.ts"
+    },
+    {
+      "digest": "sha256:bee93b3861daaff0eb36f5ba996ccbe24e6b114e6f3bcca8517dadaa251e689b",
+      "id": "temporal_vitest_config",
+      "ref": "infra/temporal/vitest.config.ts"
+    },
+    {
+      "digest": "sha256:2423b6ec350a8408ccd3dc85c936a913a14e475f916b22493b1d24c3656cea51",
+      "id": "workflows_tests_pkg",
+      "ref": "tests/workflows/package.json"
     }
   ],
   "schema_version": 2,
-  "scope_list_digest": "sha256:914941b7e4070454bc20476049724306d12eaffd9801c24a490714bc9779bf61",
+  "scope_list_digest": "sha256:d4c73ad5d34139fdc3130f41e2a7af35047a1810d71e418c7d0481eecae5289f",
   "status": "DONE",
   "test_summary": {
     "failed": 0,
@@ -68,7 +88,37 @@
       {
         "failed": 0,
         "family": "rx005-battery",
-        "passed": 8
+        "passed": 9
+      },
+      {
+        "failed": 0,
+        "family": "nexus-pg-live-fire",
+        "passed": 14
+      },
+      {
+        "failed": 0,
+        "family": "nexus-nats-live-fire",
+        "passed": 19
+      },
+      {
+        "failed": 0,
+        "family": "data-events",
+        "passed": 38
+      },
+      {
+        "failed": 0,
+        "family": "workflows-retry",
+        "passed": 109
+      },
+      {
+        "failed": 0,
+        "family": "temporal-unit",
+        "passed": 75
+      },
+      {
+        "failed": 0,
+        "family": "temporal-real-server-e2e",
+        "passed": 20
       },
       {
         "failed": 0,
@@ -86,8 +136,8 @@
         "passed": 1
       }
     ],
-    "passed": 100
+    "passed": 376
   },
-  "verify_log": ".agent/remediation/evidence/RX-005/verify.log|sha256:92f858717d73b605a978c9e5acd38e720a3333a042edfbd9fc309e993534bb6c",
+  "verify_log": ".agent/remediation/evidence/RX-005/verify.log|sha256:711932216773ae254af283b94ca2c215d92df151973cace3458505ef5e0195c8",
   "verify_sentinel": "verify: ok"
 }
