@@ -1,9 +1,9 @@
 {
-  "canary_digest": "b4696034cd9e9689f4ce9b509a804ddf92d2d5901c3d48ecff71fcde6f338e43",
+  "canary_digest": "232565aea12ee839a3522ada383ff00c1e48fa9ad1752443bb479ff2a18a4fc8",
   "cleanup": "fixture teardown + zero-orphan audit in gate",
   "connector": "nexus-imap-smtp (imap 3.0.0-alpha.15 + lettre 0.11.23)",
   "connector_classification": "IMPLEMENTED / PROTOCOL_CERTIFIED / TRANSPORT_CERTIFIED",
-  "correlation": "mail-lf011-1788010396218317433-1788010411673142638",
+  "correlation": "mail-lf011-1788115165702280923-1788115169227596925",
   "exact_target_verification": "Verified",
   "external_provider_certification": "NOT ASSERTED",
   "lf_id": "LF-011",
@@ -12,10 +12,10 @@
   "provider": "greenmail-2.1.0",
   "provider_classification": "CONTROLLED_TEST_FIXTURE",
   "recipient_account_fingerprint": "29de9c8126f98398181e304ff05b9f478ffd13fc2c9094b311185dd79bc1d02c",
-  "recipient_provider_id": "d-lf011-1788010396218317433@nexus.local",
-  "run_id": "1788010396218317433",
+  "recipient_provider_id": "d-lf011-1788115165702280923@nexus.local",
+  "run_id": "1788115165702280923",
   "sender_account_fingerprint": "cc371077ef32b52485f6f818cd4c2541aca8f34998922b5775f5245ceba079c5",
-  "sender_provider_id": "d-lf011-1788010396218317433@nexus.local",
+  "sender_provider_id": "d-lf011-1788115165702280923@nexus.local",
   "state_transitions": {
     "approval_class_0": "denied (zero mutation)",
     "approval_class_2": "approved",
@@ -25,13 +25,13 @@
   },
   "summary": {
     "body_bytes": 677,
-    "body_sha256": "863c23bba7a5529c61702106b14caf2d07f0dfaa970fb1c81f0fa0095cb6578f",
+    "body_sha256": "f7df485ae32a0091aff3ff28812acef9143421182a72e5c934d308c433fd81ba",
     "flags": [
       "\\Seen"
     ],
     "from": "tenant-a@nexus.test",
-    "message_id": "d-lf011-1788010396218317433@nexus.local",
-    "subject": "lf011 LF011CANARY_1788010396218317433_1788010410438494706"
+    "message_id": "d-lf011-1788115165702280923@nexus.local",
+    "subject": "lf011 LF011CANARY_1788115165702280923_1788115168003781504"
   },
-  "timestamp": "1788010411"
+  "timestamp": "1788115169"
 }

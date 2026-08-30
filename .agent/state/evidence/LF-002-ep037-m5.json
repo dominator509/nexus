@@ -12,7 +12,7 @@
   "destination_provider": "FRESH_DEPLOYMENT_LOCAL",
   "domain_reattachment": {
     "connectors": {
-      "capability_id": "lf002-connector-ep037-m5-1788010673864-1c30ab",
+      "capability_id": "lf002-connector-ep037-m5-1788115395209-2c90c",
       "state": "RESTORED"
     },
     "identity": {
@@ -34,15 +34,15 @@
   },
   "encryption": "AES-256-GCM",
   "encryption_proof": "PLAINTEXT_CANARY_ABSENT_IN_STORED_PAYLOAD",
-  "git_commit": "15194acd35d245b2dfdbbd6865185faed0a5b030",
+  "git_commit": "89ee6ac3fd34139f40512894db84e1b1d06d4a72",
   "hash_verification": "ALL_MANIFEST_HASHES_VERIFIED",
   "lf_id": "LF-002",
   "milestone": "M5",
   "node": "EP-037",
   "restore_state": "VALIDATED",
-  "run_id": "ep037-m5-1788010673864-1c30ab",
+  "run_id": "ep037-m5-1788115395209-2c90c",
   "slug": "restore-existing-nexus",
   "source_provider": "LOCAL",
-  "written_at": "2026-08-29T13:37:53Z",
+  "written_at": "2026-08-30T18:43:15Z",
   "wrong_key": "FAIL_CLOSED_ZERO_PARTIAL_RESTORED_AUTHORITY"
 }

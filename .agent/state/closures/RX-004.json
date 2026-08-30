@@ -1,0 +1,94 @@
+{
+  "attestation_digest": "sha256:14cfb9e482e9f42fa2506912aa8834e475c73299014e2cd5405466f7fd8343cf",
+  "closure_commit": "89ee6ac3fd34139f40512894db84e1b1d06d4a72",
+  "created_at": "2026-08-30T20:07:11Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:1b3cdf5a0b1d05978e757ba86e146b944bf2ba75d18d51ecea8477b4a300859e",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-004/89ee6ac3fd34139f40512894db84e1b1d06d4a72",
+  "milestones": {
+    "max": 5,
+    "passed": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "node": "RX-004",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:6869c42cb3fd1292274631b23b031e2437c4bcf55dcd90ecf9d7fb684b85e3f3",
+      "id": "verify-log",
+      "ref": ".agent/remediation/evidence/RX-004/verify.log"
+    },
+    {
+      "digest": "sha256:b9175effd8715f22331c40a44251fa8bb53b98bcd56aa9b9f0bfc1579b45d866",
+      "id": "ladder-script",
+      "ref": ".agent/remediation/evidence/RX-004/ladder.sh"
+    },
+    {
+      "digest": "sha256:9cb20ed5e6d4b3d54eba975be404c460014563a96fcaac540c2055da3799b30a",
+      "id": "battery-script",
+      "ref": "scripts/rx004-build-test-reality-tests.sh"
+    },
+    {
+      "digest": "sha256:6f02ad1e550038bb4d9e18367fe36692b500d35b3979cfd40922664dcf65a49e",
+      "id": "consecutive-verify",
+      "ref": "scripts/ep040-consecutive-verify.sh"
+    },
+    {
+      "digest": "sha256:bebffa6ab30c328b5abfe53db2d68d72063381c3c0c2493948eadc3b0768426c",
+      "id": "m5-tests",
+      "ref": "scripts/ep040-m5-tests.sh"
+    },
+    {
+      "digest": "sha256:7089dd4b2fa8da5ebc9ee25b6b639fa748d4bbe08391d3e4c6360f122844ddd0",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-004.sh"
+    },
+    {
+      "digest": "sha256:aee368a47ebc14a94b49610f239738ece9c7f2254f1e1a8c605f5d472ea89d0b",
+      "id": "build-script",
+      "ref": "scripts/build.sh"
+    },
+    {
+      "digest": "sha256:a5aa4b39d75d2f87e95d5c991d09b62ae3f27b0bd17b5c2bc0292c1ea93cd99a",
+      "id": "security-check",
+      "ref": "scripts/security-check.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:1b3cdf5a0b1d05978e757ba86e146b944bf2ba75d18d51ecea8477b4a300859e",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "rx004-battery",
+        "passed": 22
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "canonical-verify",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 114
+  },
+  "verify_log": ".agent/remediation/evidence/RX-004/verify.log|sha256:6869c42cb3fd1292274631b23b031e2437c4bcf55dcd90ecf9d7fb684b85e3f3",
+  "verify_sentinel": "verify: ok"
+}

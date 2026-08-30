@@ -348,3 +348,4 @@
 2026-08-29T19:35:59Z | ipman | RX-004 | MILESTONE_PASS | [M3] AUD-062: ep040-consecutive-verify.sh runs 3 full canonical verifies through ConsecutiveVerify::new(3) harness; wired into M5 gate + node verify
 2026-08-29T19:35:59Z | ipman | RX-004 | MILESTONE_PASS | [M4] AUD-063 (RX-004 portion): M5 gate measures real healthz latency on live runtime and evaluates against budget; shared RX-021
 2026-08-29T19:35:59Z | ipman | RX-004 | MILESTONE_PASS | [M5] regression battery 20/20 green; register AUD-004/005/062 VERIFIED_FIXED, AUD-063 FIXED_UNVERIFIED (RX-021); closure evidence ready
+2026-08-30T20:07:21Z | ipman | RX-004 | NODE_DONE | RX-004 closed under V2: closure_commit=89ee6ac green-v2/RX-004/89ee6ac; battery 22/22, register 90/90, canonical ladder RX004_LADDER_TRUE_EXIT=0 (no pipe masking), expected-files ok; AUD-004/005/062 VERIFIED_FIXED; AUD-063 FIXED_UNVERIFIED (RX-021 co-owner); 8 proofs bound
