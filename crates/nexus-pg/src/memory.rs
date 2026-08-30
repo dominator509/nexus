@@ -3,7 +3,7 @@
 //! Concrete `MemoryRepository` on real PostgreSQL. Every operation:
 //! 1. Sets the `app.tenant_id` session claim (transaction-local) so the
 //!    RLS policies from migration 003 enforce isolation at the database
-//!    boundary — a statement that forgot its tenant filter is denied.
+//!    boundary - a statement that forgot its tenant filter is denied.
 //! 2. Also carries `tenant_id` in every WHERE/INSERT explicitly.
 //!
 //! Timestamps round-trip as RFC 3339 strings (the canonical wire form of

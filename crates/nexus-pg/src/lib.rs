@@ -3,18 +3,18 @@
 //! Concrete implementations of the provider-neutral ports in `nexus-data`
 //! and `nexus-events`:
 //!
-//! - `PgUnitOfWork` — real PostgreSQL transaction with fail-closed drop.
-//! - `PgMemoryRepository` — memory records behind the `MemoryRepository`
+//! - `PgUnitOfWork` - real PostgreSQL transaction with fail-closed drop.
+//! - `PgMemoryRepository` - memory records behind the `MemoryRepository`
 //!   port, tenant-isolated by RLS at the database boundary.
-//! - `PgWorldGraphRepository` — adjacency + recursive-walk fallback
+//! - `PgWorldGraphRepository` - adjacency + recursive-walk fallback
 //!   doctrine (INV-015), never a dedicated graph database.
-//! - `PgVectorRepository` — pgvector HNSW index as a retrieval aid, never
+//! - `PgVectorRepository` - pgvector HNSW index as a retrieval aid, never
 //!   the source of truth (SPEC-002 behavior 2).
-//! - `PgRepositorySet` — tenant-scoped composition root binding all three
+//! - `PgRepositorySet` - tenant-scoped composition root binding all three
 //!   repositories to one transaction.
-//! - `PgOutboxRepository` — transactional outbox (SPEC-023 behavior 1),
+//! - `PgOutboxRepository` - transactional outbox (SPEC-023 behavior 1),
 //!   atomic with the domain write through the shared unit of work.
-//! - `PgInboxRepository` — idempotent consumer inbox (SPEC-023 behavior
+//! - `PgInboxRepository` - idempotent consumer inbox (SPEC-023 behavior
 //!   4), deduplicating by (consumer, event_id).
 //!
 //! Tenant isolation is enforced twice: every SQL statement carries the

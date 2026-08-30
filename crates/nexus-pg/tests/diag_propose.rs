@@ -38,7 +38,7 @@ fn diag_propose_serialization() {
         client.batch_execute(&sql).unwrap_or_else(|e| panic!("apply {m}: {e}"));
     }
     // Now replicate the propose INSERT parameter list exactly, inside a
-    // real transaction with the tenant claim set — the same conditions the
+    // real transaction with the tenant claim set - the same conditions the
     // adapter runs under. Assert the outcome; a silent print is not a test.
     let mid = Uuid::parse_str("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f7001").unwrap();
     let tenant = Uuid::parse_str("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f7002").unwrap();
