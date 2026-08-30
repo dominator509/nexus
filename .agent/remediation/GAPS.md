@@ -35,9 +35,28 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
 - `memory_embeddings` FK binds only `memory_id`; tenant_id is not part of a composite FK to `memory_records`.
 
 ### GAP-002b (AUD-008, P1) - EP-005 NATS checkpoint persistence is a no-op; outbox/inbox absent
-- `NatsEventConsumer::checkpoint()` always returns `Ok(None)`; `save_checkpoint()` is a no-op.
-- `poll()` names the durable consumer `{consumer}-{after_sequence}` — durable identity changes per poll, defeating durability.
-- No `OutboxRepository` / `InboxRepository` PostgreSQL implementations; the restart proof polls once and manually changes sequence.
+
+**NATS consumer portion: RESOLVED 2026-08-30 (VERIFIED_FIXED, commit pending)**
+- `checkpoint()`/`save_checkpoint()` now persist to a real JetStream KV bucket
+  (`nexus_checkpoints`, keyed by consumer name) - durable, survives restart;
+  `checkpoint()` reads the stored checkpoint, `save_checkpoint()` writes it.
+- `poll()` now creates an EPHEMERAL per-call pull consumer positioned by the
+  application-owned `after_sequence` (DeliverAll for 0). The pre-fix durable
+  consumer per sequence (`{consumer}-{after_sequence}`) accumulated unbounded
+  server-side state and defeated durability; a single stable durable consumer
+  would track its own position and ignore the checkpoint, so it is avoided by
+  design (at-least-once + inbox dedup, matching SPEC-023 behavior 4).
+- Proof (live-fire `nats:2.14.3`): integration + failure suites 19/19; new
+  tests prove checkpoint round-trip equality, overwrite advance, persistence
+  across a fresh connection, None for unsaved consumers, and resume-after-
+  checkpoint skipping processed events.
+
+**Still LOGGED - GAP-002b2 (AUD-008 remainder): Outbox/Inbox PostgreSQL implementations absent**
+- `OutboxRepository` / `InboxRepository` ports exist in `nexus-events`
+  (SPEC-023 behaviors 1 & 4); no PostgreSQL implementations anywhere.
+- The restart proof now exercises the real checkpoint (no manual sequence
+  fiddling), but transactional outbox/inbox persistence in `nexus-pg` is a
+  distinct piece of work - scope decision with Dominic before implementation.
 
 ### GAP-002c (AUD-023, P2) - Temporal does not enforce permanent/transient retry classification
 - `toTemporalRetry()` maps only backoff/maximumAttempts; never supplies `nonRetryableErrorTypes` or non-retryable `ApplicationFailure`.

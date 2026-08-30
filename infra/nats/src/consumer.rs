@@ -1,14 +1,28 @@
-//! NATS JetStream durable consumer (SPEC-023 behavior 4).
+//! NATS JetStream event consumer with durable checkpoints (SPEC-023
+//! behavior 4).
 //!
-//! Consumers are idempotent and maintain durable checkpoints. The
-//! adapter exposes a pull consumer over the canonical stream; the
-//! checkpoint is persisted by the application layer (PostgreSQL), and
-//! resume after restart starts at the last checkpoint sequence.
+//! The checkpoint is the durable resume point and lives in a NATS
+//! JetStream KV bucket (`nexus_checkpoints`), keyed by consumer name.
+//! `save_checkpoint` writes it, `checkpoint` reads it, so consumption
+//! after a restart resumes from the last checkpoint instead of the
+//! beginning (AUD-008: the pre-fix adapter returned `Ok(None)` always and
+//! `save_checkpoint` was a no-op - checkpoints were never persisted).
+//!
+//! `poll` creates an EPHEMERAL pull consumer per call, positioned by
+//! `after_sequence` - the application-owned resume point read from the
+//! checkpoint. Ephemeral consumers die with the connection and are never
+//! persisted server-side, so polling cannot leak durable consumers (the
+//! pre-fix adapter created a durable consumer per sequence,
+//! `{consumer}-{after_sequence}`, accumulating unbounded server state).
+//! A stable durable consumer is deliberately avoided: it would track its
+//! own server-side position and ignore the checkpoint the application
+//! passes in, breaking the port's resume contract.
 //!
 //! Explicit acknowledgement: `poll` retains the delivered JetStream
 //! message handles keyed by (consumer, event_id); `ack` acknowledges the
 //! matching delivery on the server. Unacked messages stay in the stream
-//! (fail-closed) and are redelivered after the server ack-wait.
+//! (fail-closed) and are redelivered to a later poll that starts at or
+//! before their sequence.
 //!
 //! Runtime lifecycle: this adapter never owns a Tokio runtime. It must be
 //! driven from the Nexus application composition root's async runtime.
@@ -16,16 +30,21 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use async_nats::jetstream;
+use async_nats::jetstream::{self, kv};
 use nexus_events::{
     ConsumerCheckpoint, ConsumerConfig, EventConsumer, EventEnvelope, EventError, EventErrorCode,
 };
 
 use crate::encode::decode;
 
+/// NATS KV bucket that holds the durable consumer checkpoints.
+const CHECKPOINT_BUCKET: &str = "nexus_checkpoints";
+
 /// `EventConsumer` implemented on NATS JetStream.
 pub struct NatsEventConsumer {
     context: jetstream::Context,
+    /// Durable checkpoint store (JetStream KV, keyed by consumer name).
+    checkpoints: kv::Store,
     /// Delivered-but-unacknowledged JetStream messages keyed by
     /// `(consumer, event_id)` so `ack` can acknowledge the exact
     /// delivery (SPEC-023 behavior 4).
@@ -34,6 +53,9 @@ pub struct NatsEventConsumer {
 
 impl NatsEventConsumer {
     /// Connect to a NATS server and wrap its JetStream context.
+    ///
+    /// Ensures the checkpoint KV bucket exists (get-or-create, tolerant
+    /// of a concurrent create racing this one).
     ///
     /// Must be called from inside a Tokio runtime owned by the
     /// composition root.
@@ -45,26 +67,78 @@ impl NatsEventConsumer {
             )
         })?;
         let context = jetstream::new(client);
+        let checkpoints = Self::ensure_checkpoint_store(&context).await?;
         Ok(Self {
             context,
+            checkpoints,
             pending: Mutex::new(HashMap::new()),
         })
+    }
+
+    async fn ensure_checkpoint_store(
+        context: &jetstream::Context,
+    ) -> Result<kv::Store, EventError> {
+        match context.get_key_value(CHECKPOINT_BUCKET).await {
+            Ok(store) => Ok(store),
+            Err(_) => {
+                let config = kv::Config {
+                    bucket: CHECKPOINT_BUCKET.to_string(),
+                    ..Default::default()
+                };
+                match context.create_key_value(config).await {
+                    Ok(store) => Ok(store),
+                    // A concurrent connect may have created the bucket
+                    // between the failed get and this create; re-read.
+                    Err(_) => context
+                        .get_key_value(CHECKPOINT_BUCKET)
+                        .await
+                        .map_err(|e| {
+                            EventError::new(
+                                EventErrorCode::ExternalProvider,
+                                format!("nats checkpoint bucket: {e}"),
+                            )
+                        }),
+                }
+            }
+        }
     }
 }
 
 impl EventConsumer for NatsEventConsumer {
     async fn checkpoint(&self, consumer: &str) -> Result<Option<ConsumerCheckpoint>, EventError> {
-        // Checkpoints live in the application's durable store
-        // (PostgreSQL via OutboxRepository/InboxRepository); the NATS
-        // adapter does not own them. Returning None means "start from the
-        // beginning" for a brand-new consumer.
-        let _ = consumer;
-        Ok(None)
+        let entry = self.checkpoints.get(consumer).await.map_err(|e| {
+            EventError::new(
+                EventErrorCode::ExternalProvider,
+                format!("nats checkpoint read {consumer}: {e}"),
+            )
+        })?;
+        match entry {
+            Some(bytes) => serde_json::from_slice(&bytes).map(Some).map_err(|e| {
+                EventError::new(
+                    EventErrorCode::Invariant,
+                    format!("corrupt checkpoint for {consumer}: {e}"),
+                )
+            }),
+            None => Ok(None),
+        }
     }
 
-    async fn save_checkpoint(&self, _checkpoint: &ConsumerCheckpoint) -> Result<(), EventError> {
-        // The application layer persists checkpoints; the adapter has no
-        // authority to write application state.
+    async fn save_checkpoint(&self, checkpoint: &ConsumerCheckpoint) -> Result<(), EventError> {
+        let bytes = serde_json::to_vec(checkpoint).map_err(|e| {
+            EventError::new(
+                EventErrorCode::Validation,
+                format!("checkpoint serialize: {e}"),
+            )
+        })?;
+        self.checkpoints
+            .put(&checkpoint.consumer, bytes.into())
+            .await
+            .map_err(|e| {
+                EventError::new(
+                    EventErrorCode::ExternalProvider,
+                    format!("nats checkpoint write {}: {e}", checkpoint.consumer),
+                )
+            })?;
         Ok(())
     }
 
@@ -79,16 +153,23 @@ impl EventConsumer for NatsEventConsumer {
                 format!("nats stream get: {e}"),
             )
         })?;
-        let consumer_name = format!("{}-{}", config.consumer, after_sequence);
-        let durable = stream
+        // Ephemeral pull consumer, positioned by the application-owned
+        // resume point. Never durable: a durable consumer per sequence
+        // would accumulate server-side state (the AUD-008 defect) and a
+        // single stable durable consumer would track its own position,
+        // ignoring the checkpoint passed in here.
+        let deliver_policy = if after_sequence == 0 {
+            jetstream::consumer::DeliverPolicy::All
+        } else {
+            jetstream::consumer::DeliverPolicy::ByStartSequence {
+                start_sequence: after_sequence,
+            }
+        };
+        let pull = stream
             .create_consumer(jetstream::consumer::pull::Config {
-                name: Some(consumer_name.clone()),
-                durable_name: Some(consumer_name),
                 filter_subject: config.subject.clone(),
                 ack_policy: jetstream::consumer::AckPolicy::Explicit,
-                deliver_policy: jetstream::consumer::DeliverPolicy::ByStartSequence {
-                    start_sequence: after_sequence,
-                },
+                deliver_policy,
                 ..Default::default()
             })
             .await
@@ -100,7 +181,7 @@ impl EventConsumer for NatsEventConsumer {
             })?;
         let fetched = async {
             use futures_util::StreamExt;
-            let mut messages = durable
+            let mut messages = pull
                 .fetch()
                 .max_messages(config.batch_size as usize)
                 .messages()
