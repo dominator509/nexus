@@ -25,11 +25,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  TASK_QUEUES,
-  WORKFLOW_TYPES,
-  signalChannel,
-} from "@nexus/temporal";
+import { TASK_QUEUES, WORKFLOW_TYPES, signalChannel } from "@nexus/temporal";
 import type { ApplyCompensationInput } from "@nexus/temporal";
 import {
   parseActionDigest,

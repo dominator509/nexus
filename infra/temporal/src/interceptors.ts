@@ -23,9 +23,7 @@ import { toApplicationFailure } from "./failure.js";
  * Rethrow `NexusWorkflowError` as a classified `ApplicationFailure`; all
  * other errors pass through unchanged.
  */
-export class NexusFailureInterceptor
-  implements ActivityInboundCallsInterceptor
-{
+export class NexusFailureInterceptor implements ActivityInboundCallsInterceptor {
   async execute(
     input: ActivityExecuteInput,
     next: Next<ActivityInboundCallsInterceptor, "execute">,

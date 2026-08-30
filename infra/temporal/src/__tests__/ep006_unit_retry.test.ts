@@ -90,7 +90,20 @@ describe("ep006_unit_retry", () => {
     expect(mapped.maximumAttempts).toBe(1);
     expect(mapped.nonRetryableErrorTypes).toHaveLength(
       // All SPEC-006 codes are excluded when no class is retryable.
-      ["VALIDATION","AUTHENTICATION","AUTHORIZATION","POLICY","UNAVAILABLE","TIMEOUT","CONFLICT","RATE_LIMIT","EXTERNAL_PROVIDER","VERIFICATION","COMPENSATION","INTERNAL_INVARIANT"].length,
+      [
+        "VALIDATION",
+        "AUTHENTICATION",
+        "AUTHORIZATION",
+        "POLICY",
+        "UNAVAILABLE",
+        "TIMEOUT",
+        "CONFLICT",
+        "RATE_LIMIT",
+        "EXTERNAL_PROVIDER",
+        "VERIFICATION",
+        "COMPENSATION",
+        "INTERNAL_INVARIANT",
+      ].length,
     );
   });
 });
