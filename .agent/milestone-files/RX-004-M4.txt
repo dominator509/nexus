@@ -1,0 +1,1 @@
+[M4] AUD-063 (RX-004 portion): M5 gate measures real healthz latency on live runtime and evaluates against budget; shared RX-021

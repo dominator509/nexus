@@ -37,6 +37,7 @@ SCOPE_AUDIT_DRIFT_ONLY=1 sh "$SELF_DIR/scope-audit.sh" "$NODE" >/dev/null 2>&1 \
 max_m=0
 for f in "$ROOT"/.agent/milestone-files/"$NODE"-M*.txt; do
   [ -e "$f" ] || continue
+  [ -s "$f" ] || fail "milestone manifest $f is empty (placeholder content required)"
   n=$(basename "$f" | sed "s/^$NODE-M\([0-9]*\)\.txt$/\1/")
   [ "$n" -gt "$max_m" ] 2>/dev/null && max_m=$n
 done

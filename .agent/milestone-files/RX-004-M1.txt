@@ -1,0 +1,1 @@
+[M1] AUD-004: build.sh fails closed on missing required artifacts (cargo bins, 8 dist dirs, python wheel+sdist, flutter_assets); uv fallback removed; hostile uv-broken test green

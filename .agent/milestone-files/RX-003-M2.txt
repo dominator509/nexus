@@ -1,0 +1,1 @@
+[M2] trusted actions pinned to immutable commit SHAs (actions/checkout 11d5960a, jdx/mise-action c37c9329) across ci/nightly/release (AUD-006, AUD-061)

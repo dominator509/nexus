@@ -1,0 +1,1 @@
+[M2] AUD-005: security-check.sh wires clippy static analysis + nexus-security-core policy battery (18 failure tests); SECURITY.md honestly scopes asserted surface
