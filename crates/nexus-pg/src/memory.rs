@@ -167,7 +167,7 @@ impl MemoryRepository for PgMemoryRepository<'_> {
         let embedding_ref = record
             .embedding_ref
             .as_ref()
-            .map(|r| serde_json::to_string(r))
+            .map(serde_json::to_string)
             .transpose()
             .map_err(|e| DataError::new(DataErrorCode::Validation, format!("json: {e}")))?;
         self.uow.with_tx(|tx| {
@@ -300,9 +300,9 @@ impl MemoryRepository for PgMemoryRepository<'_> {
             // Filter to sensitivities at or below the ceiling. The ranking
             // ladder is the canonical declaration order of `Sensitivity`.
             let ceiling = sensitivity_rank(*sens);
-            sql.push_str(&format!(
-                " AND sensitivity IN ('PUBLIC','HOUSEHOLD','PERSONAL','SENSITIVE','BUSINESS_CONFIDENTIAL','SECURITY','SECRET')"
-            ));
+            sql.push_str(
+                " AND sensitivity IN ('PUBLIC','HOUSEHOLD','PERSONAL','SENSITIVE','BUSINESS_CONFIDENTIAL','SECURITY','SECRET')",
+            );
             sql.push_str(&format!(" AND sensitivity_rank(sensitivity) <= ${n}"));
             params.push(Box::new(ceiling));
             n += 1;
@@ -407,7 +407,7 @@ impl MemoryRepository for PgMemoryRepository<'_> {
         let embedding_ref = new_record
             .embedding_ref
             .as_ref()
-            .map(|r| serde_json::to_string(r))
+            .map(serde_json::to_string)
             .transpose()
             .map_err(|e| DataError::new(DataErrorCode::Validation, format!("json: {e}")))?;
         self.uow.with_tx(|tx| {
