@@ -75,6 +75,11 @@ ALLOW_DOUBLE_BRACE = {
     # EP-025 M3: endpoint digest passwords rendered per-run by the
     # same fixture bootstrap (never committed).
     "infra/asterisk/config/pjsip.conf.tmpl",
+    # RX-015 CI authority: GitHub Actions REQUIRES `${{ secrets.* }}`
+    # expression syntax to inject repository secrets (preflight's
+    # DEEPSEEK_API_KEY probe is a live API call). Same class as the
+    # template entities above - real required syntax, not a placeholder.
+    ".github/workflows/ci.yml",
 }
 
 for path in ROOT.rglob("*"):
