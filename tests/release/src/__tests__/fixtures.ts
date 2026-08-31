@@ -247,6 +247,74 @@ export function promotionWire(): Record<string, unknown> {
   };
 }
 
+/** Real Ed25519 test keypair (WebCrypto) for AUD-070 signature proofs. */
+export interface ApprovalTestKey {
+  publicKeyRaw: Uint8Array<ArrayBuffer>;
+  privateKeyJwk: JsonWebKey;
+}
+
+function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
+  const b64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = globalThis.atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+export async function approvalTestKey(): Promise<ApprovalTestKey> {
+  const keyPair = await globalThis.crypto.subtle.generateKey(
+    { name: "Ed25519" },
+    true,
+    ["sign", "verify"],
+  );
+  const jwk = (await globalThis.crypto.subtle.exportKey(
+    "jwk",
+    keyPair.privateKey,
+  )) as JsonWebKey;
+  const publicKeyRaw = base64UrlToBytes(jwk.x ?? "");
+  return { publicKeyRaw, privateKeyJwk: jwk };
+}
+
+/**
+ * Build a promotion wire carrying a REAL Ed25519 signature over the
+ * canonical approval payload (AUD-070). Overrides are applied to the
+ * base promotion wire BEFORE signing, so a tampered override naturally
+ * produces a signature that no longer verifies.
+ */
+export async function signedPromotionWire(
+  key: ApprovalTestKey,
+  overrides: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  const wire: Record<string, unknown> = { ...promotionWire(), ...overrides };
+  const { canonicalApprovalPayload } = await import("@nexus/setup");
+  const payload = canonicalApprovalPayload(
+    wire as unknown as ManualPromotion,
+  );
+  const privateKey = await globalThis.crypto.subtle.importKey(
+    "jwk",
+    key.privateKeyJwk,
+    { name: "Ed25519" },
+    false,
+    ["sign"],
+  );
+  const signature = await globalThis.crypto.subtle.sign(
+    "Ed25519",
+    privateKey,
+    payload,
+  );
+  const sigBytes = new Uint8Array(signature);
+  let binary = "";
+  for (const b of sigBytes) binary += String.fromCharCode(b);
+  wire["signature"] = {
+    algorithm: "ED25519",
+    key_id: "key-test-1",
+    value_b64: globalThis.btoa(binary),
+  };
+  return wire;
+}
+
 export function validPlan(): UpdatePlan {
   return parseUpdatePlan(planWire());
 }

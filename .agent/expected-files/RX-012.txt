@@ -1,0 +1,15 @@
+# RX-012 expected files: remediation surface for AUD-070
+# (manual production promotion authority: real signed approval records,
+#  authenticated approver, policy lookup, expiry, requester/approver
+#  separation, record binding - never a bare approval string)
+.agent/expected-files/RX-012.txt
+.agent/milestone-files/RX-012-M1.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+apps/setup/src/update/types.ts
+apps/setup/src/update/canary.ts
+tests/release/src/__tests__/ep042_unit_canary_promotion.test.ts
+tests/release/src/__tests__/fixtures.ts
+scripts/nodes/RX-012.sh
+scripts/rx012-remediation-tests.sh

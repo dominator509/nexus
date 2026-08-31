@@ -1010,6 +1010,8 @@ export interface ManualPromotion {
   approved_at: string;
   state: PromotionState;
   exact_manual_command: string;
+  /** Real Ed25519 signature over the canonical approval payload (AUD-070). */
+  signature: Signature;
 }
 
 const MANUAL_PROMOTION_FIELDS: ReadonlySet<string> = new Set([
@@ -1023,6 +1025,7 @@ const MANUAL_PROMOTION_FIELDS: ReadonlySet<string> = new Set([
   "approved_at",
   "state",
   "exact_manual_command",
+  "signature",
 ]);
 
 export function parseManualPromotion(
@@ -1040,6 +1043,14 @@ export function parseManualPromotion(
       ReleaseErrorCode.Validation,
       `${what} unsupported schema_version: ${schemaVersion}`,
       { field: `${what}.schema_version` },
+    );
+  }
+  const signatureRaw = obj["signature"];
+  if (signatureRaw === undefined) {
+    throw new ReleaseError(
+      ReleaseErrorCode.Validation,
+      `${what}.signature is required for an approval record`,
+      { field: `${what}.signature` },
     );
   }
   return {
@@ -1071,6 +1082,7 @@ export function parseManualPromotion(
       obj["exact_manual_command"],
       `${what}.exact_manual_command`,
     ),
+    signature: parseSignature(signatureRaw, `${what}.signature`),
   };
 }
 

@@ -455,3 +455,29 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
   installed state untouched; a foreign journal owner is refused.
 - Battery: scripts/rx011-remediation-tests.sh green. Register
   AUD-069 -> VERIFIED_FIXED.
+
+**AUD-070 REMEDIATED (RX-012, 2026-08-31):**
+- Root cause: evaluatePromotionGate() accepted a bare approvalRef string
+  and approved on any nonblank value once the canary was
+  READY_TO_PROMOTE with a health criterion and evidence ref. Tests
+  deliberately used 'approval-42' as sufficient authority. There was no
+  authenticated approver, approval record, expiry, signature, policy
+  lookup, or requester/approver separation.
+- Fix: promotion authority now requires a full ManualPromotion record
+  that parse fails closed without a real signature, and the gate
+  verifies: (1) a real Ed25519 signature over the canonical approval
+  payload against a pinned public key; (2) the approver is listed in
+  the authorized-approver policy (policy lookup); (3) approved_at is
+  within the validity window (expiry; stale and future-dated denied);
+  (4) the approver differs from the requester (requester/approver
+  separation); (5) the record binds to the exact canary ring and
+  release; (6) the record is APPROVED_MANUAL_ONLY with an exact manual
+  command. The gate never accepts a bare string.
+- Proof: hostile - bare string is not authority (parser fails closed
+  without signature), unauthorized approver denied, requester==approver
+  denied, expired approval denied, future-dated denied, tampered
+  signature denied, wrong pinned key denied, wrong-ring binding denied;
+  the full gate approves ONLY with a real signed, in-window, authorized,
+  separated, bound record.
+- Battery: scripts/rx012-remediation-tests.sh green. Register
+  AUD-070 -> VERIFIED_FIXED.
