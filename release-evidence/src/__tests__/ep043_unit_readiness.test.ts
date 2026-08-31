@@ -476,6 +476,82 @@ describe("EP-043 M2 release manifest", () => {
     expect(canonicalManifestPayload(payload)).not.toContain("manifest_digest");
   });
 
+  it("rx010_artifact_digest_hashes_raw_bytes_not_lossy_decode", () => {
+    // AUD-077 hostile proof: distinct binary sequences that TextDecoder
+    // collapses onto the same U+FFFD replacement characters must produce
+    // DIFFERENT digests. Hashing must never round-trip through UTF-8.
+    const a = new Uint8Array([0x61, 0xff]); // 'a' + invalid utf-8 byte
+    const b = new Uint8Array([0x61, 0xfe]); // 'a' + different invalid byte
+    expect(digestBytes(a)).not.toBe(digestBytes(b));
+    // And the hash of valid bytes equals the standard SHA-256 of those
+    // bytes: sha256("hello") is a known FIPS vector.
+    const hello = new TextEncoder().encode("hello");
+    expect(digestBytes(hello)).toBe(
+      "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+    );
+  });
+
+  it("rx010_manifest_digest_binds_nested_component_properties", () => {
+    // AUD-078 hostile proof: a NESTED component property (component
+    // digest) must be bound by the manifest digest. Under the old
+    // JSON.stringify(replacer-array) serialization the replacer list was
+    // applied recursively and dropped every nested component property,
+    // so this tamper did not change the digest at all.
+    const base = {
+      releaseId: "nexus-1.0.0-rc1",
+      version: "1.0.0",
+      channel: "STABLE" as const,
+      profile: "FULLY_LOCAL" as const,
+      createdAt: "2026-08-25T00:00:00.000Z",
+      components: [componentInput("nexus-core", coreBytes)],
+    };
+    const manifestA = buildReleaseManifest(base);
+    const { manifest_digest: _a, ...payloadA } = manifestA;
+    // Tamper the NESTED component digest (swap the artifact bytes).
+    const tamperedBytes = new TextEncoder().encode("nexus-core-v1 TAMPERED");
+    const manifestB = buildReleaseManifest({
+      ...base,
+      components: [componentInput("nexus-core", tamperedBytes)],
+    });
+    const { manifest_digest: _b, ...payloadB } = manifestB;
+    expect(canonicalManifestPayload(payloadA)).not.toBe(
+      canonicalManifestPayload(payloadB),
+    );
+    expect(manifestDigest(payloadA)).not.toBe(manifestDigest(payloadB));
+  });
+
+  it("rx010_manifest_digest_binds_nested_signature_and_refs", () => {
+    // AUD-078 hostile proof: the component signature value and the SBOM /
+    // artifact references live NESTED inside components; they must be
+    // cryptographically bound by the manifest digest.
+    const base = {
+      releaseId: "nexus-1.0.0-rc1",
+      version: "1.0.0",
+      channel: "STABLE" as const,
+      profile: "FULLY_LOCAL" as const,
+      createdAt: "2026-08-25T00:00:00.000Z",
+      components: [componentInput("nexus-core", coreBytes)],
+    };
+    const manifestA = buildReleaseManifest(base);
+    const { manifest_digest: _a, ...payloadA } = manifestA;
+    const tampered = JSON.parse(JSON.stringify(payloadA)) as typeof payloadA;
+    tampered.components = tampered.components.map((component, index) =>
+      index === 0
+        ? {
+            ...component,
+            signature: {
+              ...component.signature,
+              value_b64: "TAMPERED_SIGNATURE_VALUE",
+            },
+          }
+        : component,
+    );
+    expect(canonicalManifestPayload(tampered)).not.toBe(
+      canonicalManifestPayload(payloadA),
+    );
+    expect(manifestDigest(tampered)).not.toBe(manifestDigest(payloadA));
+  });
+
   it("ep043_unit_manifest_verify_rejects_tamper", () => {
     const manifest = buildReleaseManifest({
       releaseId: "nexus-1.0.0-rc1",

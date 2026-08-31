@@ -336,3 +336,60 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
   the vitest bundle suite (19 proofs) runs with real signatures.
 - Battery: scripts/rx009-remediation-tests.sh green. Register
   AUD-065 -> VERIFIED_FIXED.
+**AUD-076 REMEDIATED (RX-010, 2026-08-31):**
+- Root cause: collectReleaseTag() read .git/HEAD verbatim and the
+  readiness gate only required a nonempty string; a branch pointer
+  (ref: refs/heads/master) satisfied the release-tag obligation.
+- Fix: collectReleaseTag now requires HEAD to resolve to a refs/tags/*
+  ref. Branch pointers and detached commits fail closed to "" so the
+  readiness release-tag obligation can never be met by merely being on
+  a branch.
+- Proof: unit proofs - tag ref accepted, branch pointer rejected,
+  detached commit rejected, missing .git fails closed.
+- Battery: scripts/rx010-remediation-tests.sh green. Register
+  AUD-076 -> VERIFIED_FIXED.
+
+**AUD-077 REMEDIATED (RX-010, 2026-08-31):**
+- Root cause: digestBytes() decoded arbitrary binary artifact bytes
+  with TextDecoder (lossy UTF-8) before hashing; distinct binary
+  sequences collapsed onto the same U+FFFD replacement characters and
+  produced identical digests.
+- Fix: new sha256Bytes() hashes the Uint8Array directly (pure-JS
+  FIPS 180-4 over raw bytes); digestBytes returns
+  sha256:<sha256Bytes(bytes)> with no decode round-trip. String
+  hashing (sha256HexSync) delegates to the same bytes core.
+- Proof: hostile - [0x61,0xff] and [0x61,0xfe] now produce distinct
+  digests; known FIPS vector sha256("hello") asserted.
+- Battery: scripts/rx010-remediation-tests.sh green. Register
+  AUD-077 -> VERIFIED_FIXED.
+
+**AUD-078 REMEDIATED (RX-010, 2026-08-31):**
+- Root cause: canonicalManifestPayload() used
+  JSON.stringify(manifest, Object.keys(manifest).sort()); a replacer
+  ARRAY is applied recursively, so every nested component property
+  (identity, digest, signature, SBOM, artifact ref) was discarded from
+  the serialized digest input. Re-verification repeated the broken
+  algorithm.
+- Fix: canonicalize() recursively key-sorts at every nesting level and
+  canonicalManifestPayload serializes the canonicalized payload, so
+  the manifest digest cryptographically binds ALL nested component
+  state.
+- Proof: hostile - swapping component artifact bytes (nested digest)
+  and tampering the nested signature value both change the manifest
+  digest (invisible under the old serialization).
+- Battery: scripts/rx010-remediation-tests.sh green. Register
+  AUD-078 -> VERIFIED_FIXED.
+
+**AUD-079 REMEDIATED (RX-010, 2026-08-31):**
+- Root cause: canonicalEvidenceDigest() had the same top-level replacer
+  flaw; nested certification state, evidence refs, drill status/
+  timestamps, review verdicts/evidence and capability-status values
+  were not cryptographically bound, and tests reproduced the flawed
+  serialization.
+- Fix: canonicalEvidenceDigest() serializes canonicalize(payload) -
+  recursive key sorting binds every nested field.
+- Proof: hostile - nested drill status flip, nested review verdict
+  flip, and nested capability-status flip all change the evidence
+  digest; the reproduction test now asserts the canonical form.
+- Battery: scripts/rx010-remediation-tests.sh green. Register
+  AUD-079 -> VERIFIED_FIXED.

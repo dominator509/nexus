@@ -1,0 +1,1 @@
+AUD-077: digestBytes hashes RAW artifact bytes via new sha256Bytes (pure-JS FIPS 180-4 over Uint8Array); no TextDecoder round-trip; distinct invalid-UTF-8 byte sequences (0xff vs 0xfe) now produce distinct digests; known FIPS vector sha256("hello") asserted

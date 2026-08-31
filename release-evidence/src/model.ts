@@ -673,11 +673,33 @@ function detectRedaction(input: Record<string, unknown>): boolean {
   return joined !== redactShipMessage(joined);
 }
 
-/** Canonical deterministic evidence digest over the payload (sha256 hex). */
+/** Recursively key-sort a JSON-safe value into canonical form (AUD-078,
+ *  AUD-079). Deterministic serialization must sort keys at EVERY nesting
+ *  level; a top-level-only replacer array silently drops nested object
+ *  properties from the digest input. */
+export function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => canonicalize(item));
+  }
+  if (value !== null && typeof value === "object") {
+    const source = value as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(source).sort()) {
+      out[key] = canonicalize(source[key]);
+    }
+    return out;
+  }
+  return value;
+}
+
+/** Canonical deterministic evidence digest over the payload (sha256 hex).
+ *  Keys are sorted recursively (AUD-079) so nested certification, drill,
+ *  review and capability-status values are cryptographically bound - a
+ *  top-level-only replacer would silently drop them from the digest. */
 export function canonicalEvidenceDigest(
   payload: Omit<ReleaseEvidence, "evidenceDigest" | "redactionResult">,
 ): string {
-  const canonical = JSON.stringify(payload, Object.keys(payload).sort());
+  const canonical = JSON.stringify(canonicalize(payload));
   return sha256Hex(canonical);
 }
 
@@ -698,31 +720,15 @@ export function sha256Hex(input: string): string {
   return sha256HexSync(input);
 }
 
-/* Pure-JS SHA-256 (FIPS 180-4) - deterministic, no external dependency. */
-const K: number[] = [
-  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
-  0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
-  0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
-  0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
-  0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
-  0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
-  0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
-  0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
-  0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
-];
-
-function rotr(value: number, bits: number): number {
-  return ((value >>> bits) | (value << (32 - bits))) >>> 0;
-}
-
-function sha256HexSync(input: string): string {
-  const msg = new TextEncoder().encode(input);
-  const bitLen = msg.length * 8;
-  const withOne = new Uint8Array(msg.length + 1);
-  withOne.set(msg);
-  withOne[msg.length] = 0x80;
+/** Real SHA-256 (FIPS 180-4) over RAW BYTES (AUD-077). Hashing binary
+ *  artifact bytes must never round-trip through TextDecoder/TextEncoder:
+ *  lossy UTF-8 decoding collapses distinct byte sequences onto the same
+ *  replacement characters and breaks the artifact binding. */
+export function sha256Bytes(bytes: Uint8Array): string {
+  const bitLen = bytes.length * 8;
+  const withOne = new Uint8Array(bytes.length + 1);
+  withOne.set(bytes);
+  withOne[bytes.length] = 0x80;
   const padLen = ((withOne.length + 8 + 63) & ~63) >>> 0;
   const padded = new Uint8Array(padLen);
   padded.set(withOne);
@@ -786,6 +792,31 @@ function sha256HexSync(input: string): string {
   return [h0, h1, h2, h3, h4, h5, h6, h7]
     .map((v) => v.toString(16).padStart(8, "0"))
     .join("");
+}
+
+/* Pure-JS SHA-256 (FIPS 180-4) - deterministic, no external dependency. */
+const K: number[] = [
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+  0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+  0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+  0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+  0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+  0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+  0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+  0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+  0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+];
+
+function rotr(value: number, bits: number): number {
+  return ((value >>> bits) | (value << (32 - bits))) >>> 0;
+}
+
+function sha256HexSync(input: string): string {
+  // String hashing is the UTF-8 encoding of the input hashed as bytes;
+  // binary artifact hashing uses sha256Bytes directly (AUD-077).
+  return sha256Bytes(new TextEncoder().encode(input));
 }
 
 /** Parse ReleaseEvidence from unknown wire data, fail-closed. */

@@ -294,11 +294,22 @@ export function collectDrills(paths: RepoPaths): DrillInput[] {
   return drills;
 }
 
-/** Collect the release tag from the git refs (green/EP-043 or HEAD). */
+/** Collect the release tag from the git refs (AUD-076). A release tag
+ *  requires HEAD to resolve to a refs/tags/* ref. A branch pointer
+ *  (ref: refs/heads/...) or a detached commit is NOT a release tag and
+ *  fails closed to "" so the readiness gate can never be satisfied by
+ *  merely being on a branch. */
 export function collectReleaseTag(root: string): string {
   try {
     const head = readFileSync(join(root, ".git", "HEAD"), "utf8").trim();
-    return head;
+    if (!head.startsWith("ref:")) {
+      return "";
+    }
+    const refPath = head.slice(5).trim();
+    if (!refPath.startsWith("refs/tags/")) {
+      return "";
+    }
+    return refPath.slice("refs/tags/".length);
   } catch {
     return "";
   }

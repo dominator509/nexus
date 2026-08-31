@@ -1,9 +1,9 @@
 # PRODUCTION READINESS
 
 Node: EP-043
-Run: ep043-readiness-1788141120315
-Git commit: ca4eb2a9759bccba1e0c8788f86e153ef2ab1af4
-Generated: 2026-08-31T01:52:00.317Z
+Run: ep043-readiness-1788197719004
+Git commit: c073d0f42809b9124df07dbef709d0e6b7a01d97
+Generated: 2026-08-31T17:35:19.007Z
 
 ## Decision: NOT_READY
 
@@ -58,6 +58,7 @@ reasons must be resolved before a ship decision:
 - review RESTORE is not PASS
 - review UPDATE is not PASS
 - review ROLLBACK is not PASS
+- no release tag
 - fresh-clone-equivalent rerun has not been executed
 
 ## Acceptance Obligations
@@ -134,7 +135,9 @@ Status: NOT MET
 
 ### a release tag and exact manual deploy command are produced without deploying production
 
-Status: MET
+Status: NOT MET
+
+- no release tag
 
 ## Evidence
 

@@ -22,6 +22,7 @@ import {
   SHIP_PHASES,
   WAIVER_CLASSES,
   canonicalEvidenceDigest,
+  canonicalize,
   createManualDeployHandoff,
   createProductionReadinessDecision,
   createReleaseEvidence,
@@ -409,11 +410,92 @@ describe("EP-043 M1 release evidence", () => {
       reviews: evidence.reviews,
       releaseNotes: evidence.releaseNotes,
     };
+    // The digest is the real sha256 of the RECURSIVELY canonicalized
+    // payload (AUD-079); a top-level-only replacer is not canonical.
     expect(canonicalEvidenceDigest(payload)).toBe(
-      sha256Hex(JSON.stringify(payload, Object.keys(payload).sort())),
+      sha256Hex(JSON.stringify(canonicalize(payload))),
     );
     expect(evidence.evidenceDigest).toBe(
-      sha256Hex(JSON.stringify(payload, Object.keys(payload).sort())),
+      sha256Hex(JSON.stringify(canonicalize(payload))),
+    );
+  });
+
+  it("rx010_evidence_digest_binds_nested_drill_status", () => {
+    // AUD-079 hostile proof: a NESTED tamper (drill status flipped) must
+    // change the digest. Under the old top-level replacer serialization
+    // the nested drill object was dropped entirely and this tamper was
+    // invisible to the digest.
+    const a = buildEvidence();
+    const payload = () => ({
+      schema_version: 1 as const,
+      node: a.node,
+      runId: a.runId,
+      gitCommit: a.gitCommit,
+      releaseId: a.releaseId,
+      certifications: a.certifications,
+      drills: a.drills,
+      reviews: a.reviews,
+      releaseNotes: a.releaseNotes,
+    });
+    const original = payload();
+    const tampered = payload();
+    tampered.drills = tampered.drills.map((drill, index) =>
+      index === 0
+        ? { ...drill, status: drill.status === "FAILED" ? "DATED_EVIDENCE" : "FAILED" }
+        : drill,
+    );
+    expect(canonicalEvidenceDigest(tampered)).not.toBe(
+      canonicalEvidenceDigest(original),
+    );
+  });
+
+  it("rx010_evidence_digest_binds_nested_review_verdict", () => {
+    // AUD-079 hostile proof: a nested review verdict flip must change the
+    // digest (reviews carry evidence refs and verdicts).
+    const a = buildEvidence();
+    const payload = () => ({
+      schema_version: 1 as const,
+      node: a.node,
+      runId: a.runId,
+      gitCommit: a.gitCommit,
+      releaseId: a.releaseId,
+      certifications: a.certifications,
+      drills: a.drills,
+      reviews: a.reviews,
+      releaseNotes: a.releaseNotes,
+    });
+    const original = payload();
+    const tampered = payload();
+    tampered.reviews = tampered.reviews.map((review, index) =>
+      index === 0
+        ? { ...review, status: review.status === "PASS" ? "FAIL" : "PASS" }
+        : review,
+    );
+    expect(canonicalEvidenceDigest(tampered)).not.toBe(
+      canonicalEvidenceDigest(original),
+    );
+  });
+
+  it("rx010_evidence_digest_binds_nested_capability_status", () => {
+    // AUD-079 hostile proof: capability-status values are nested under
+    // releaseNotes and must be cryptographically bound.
+    const a = buildEvidence();
+    const payload = () => ({
+      schema_version: 1 as const,
+      node: a.node,
+      runId: a.runId,
+      gitCommit: a.gitCommit,
+      releaseId: a.releaseId,
+      certifications: a.certifications,
+      drills: a.drills,
+      reviews: a.reviews,
+      releaseNotes: a.releaseNotes,
+    });
+    const original = payload();
+    const tampered = payload();
+    tampered.releaseNotes = { ...tampered.releaseNotes, "core-control": "DEFERRED" };
+    expect(canonicalEvidenceDigest(tampered)).not.toBe(
+      canonicalEvidenceDigest(original),
     );
   });
 

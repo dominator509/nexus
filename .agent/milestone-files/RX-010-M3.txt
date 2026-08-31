@@ -1,0 +1,1 @@
+AUD-078: canonicalManifestPayload uses recursive key-sorted canonicalize() (every nesting level); nested component digest/signature/SBOM/artifact-ref tampering now changes the manifest digest; hostile proofs: swapped component bytes, tampered signature value
