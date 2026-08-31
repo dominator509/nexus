@@ -1,0 +1,1 @@
+AUD-012: scripts/rx006-remediation-tests.sh regression battery 8/8 green — nexus-headscale unit regressions (18), rx006 hostile unit set (6: placeholder/empty keys rejected, no-store fail-closed, unresolved-reference fail-closed), nexus-trust (17), REAL headscale+openbao integration live-fire (10, key binding), orphan audit, workspace check, clippy, remediation register 90/90

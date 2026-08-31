@@ -1,0 +1,1 @@
+AUD-012: register_node binds the caller-supplied WireGuard public key (32-byte hex, mkey: optional) as the node identity; no synthetic random mkey; provider round-trip verified; placeholder/empty keys rejected before any provider call

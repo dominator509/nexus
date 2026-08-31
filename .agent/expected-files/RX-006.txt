@@ -1,0 +1,20 @@
+# RX-006 expected files: remediation surface for AUD-012
+# (Headscale mesh identity truth: caller-supplied key binding, resolvable
+#  private-key references, real X25519 live-fire with OpenBao)
+.agent/expected-files/RX-006.txt
+.agent/milestone-files/RX-006-M1.txt
+.agent/milestone-files/RX-006-M2.txt
+.agent/milestone-files/RX-006-M3.txt
+.agent/milestone-files/RX-006-M4.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/DECISIONS.md
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+crates/nexus-trust/src/mesh.rs
+infra/headscale/Cargo.toml
+infra/headscale/src/mesh.rs
+infra/headscale/src/lib_tests.rs
+infra/headscale/examples/mesh_live_proof.rs
+scripts/nodes/RX-006.sh
+scripts/rx006-remediation-tests.sh
+tests/trust/test_ep009_integration_headscale.py

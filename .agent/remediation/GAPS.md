@@ -179,3 +179,22 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
 - New vitest.config.ts for @nexus/temporal (fileParallelism: false,
   180s timeouts) so the official-environment test coexists with the unit
   suite. Full temporal suite now 12 files / 75 tests green.
+
+**AUD-012 REMEDIATED (RX-006, 2026-08-31):**
+- Root cause: register_node() ignored the supplied WireGuard public key
+  and synthesized an unrelated random mkey; wireguard_config() fabricated
+  openbao:mesh/{tenant}/{node_id} with no code creating/storing that key;
+  the live proof used placeholder keys.
+- Fix: register_node now binds the caller-supplied key (32-byte hex,
+  mkey: optional), verifies the provider round-trip (StateConflict on
+  mismatch), and rejects placeholder/empty keys before any provider call.
+  wireguard_config now resolves the private-key reference through a real
+  SecretStore (fail-fast: no store -> StateConflict; unresolvable ->
+  NotFound); it never fabricates a reference.
+- Proof: mesh_live_proof generates REAL X25519 keypairs (openssl), stores
+  the private key in a REAL OpenBao dev container under the REAL headscale
+  node id, registers the derived public key, resolves the reference, and
+  asserts cryptographic binding (stored mesh_key == registered identity).
+- Battery: scripts/rx006-remediation-tests.sh 8/8 green (unit 18, hostile
+  6, nexus-trust 17, real integration 10, orphan audit, workspace, clippy,
+  register 90/90). Register AUD-012 -> VERIFIED_FIXED.
