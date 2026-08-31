@@ -55,6 +55,20 @@ pub trait NotificationRouter {
             "notification router has no implementation bound",
         ))
     }
+
+    /// Route with an explicit delivery context (quiet hours, presence,
+    /// acknowledgement, time). Fails closed when unbound.
+    fn route_with_context(
+        &self,
+        envelope: &NotificationEnvelope,
+        policy: &DeliveryPolicy,
+        ctx: &crate::model::DeliveryContext,
+    ) -> Result<Vec<DeliveryReceipt>, NotificationError> {
+        let _ = (envelope, policy, ctx);
+        Err(NotificationError::unavailable(
+            "notification router has no implementation bound",
+        ))
+    }
 }
 
 /// Fail-closed channel provider for an unbound channel. Advertises

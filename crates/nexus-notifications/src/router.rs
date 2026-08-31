@@ -32,7 +32,9 @@ use std::collections::HashMap;
 use nexus_domain::NotificationChannel;
 
 use crate::error::{NotificationError, NotificationErrorCode};
-use crate::model::{DeliveryPolicy, DeliveryReceipt, NotificationEnvelope, PrivacyRouting};
+use crate::model::{
+    DeliveryContext, DeliveryPolicy, DeliveryReceipt, NotificationEnvelope, PrivacyRouting,
+};
 use crate::observability::{NotificationObservability, NotificationObservation};
 use crate::provider::{ChannelProvider, NotificationRouter};
 use crate::vocabulary::{DeliveryState, EscalationStage, NotificationId};
@@ -117,14 +119,37 @@ impl EscalatingNotificationRouter {
         &self,
         envelope: &NotificationEnvelope,
         policy: &DeliveryPolicy,
+        ctx: &DeliveryContext,
     ) -> Result<Vec<DeliveryReceipt>, NotificationError> {
         let started = std::time::Instant::now();
         let mut receipts = Vec::new();
 
+        // Expiry gate FIRST: an expired notification is never
+        // delivered (fail closed, zero provider mutation). An
+        // unparsable expiry is treated as expired - never delivered.
+        let expired = crate::model::rfc3339_utc_to_ms(&envelope.expires_at)
+            .map(|exp| ctx.now_ms > exp)
+            .unwrap_or(true);
+        if expired {
+            return Err(NotificationError::policy(
+                "notification has expired; delivery denied",
+            ));
+        }
+
         // Policy gate FIRST (fail closed, zero provider mutation).
-        if !policy.allows_any(envelope.urgency) {
+        if !policy.allows_any(envelope.urgency, ctx) {
             return Err(NotificationError::policy(
                 "delivery policy denies all channels for this urgency",
+            ));
+        }
+
+        // Envelope channel intersection: only channels the envelope
+        // explicitly asks for may be attempted (SPEC-014). A channel
+        // the envelope did not request is never a fallback target.
+        let envelope_channels = envelope.channels.clone();
+        if envelope_channels.is_empty() {
+            return Err(NotificationError::policy(
+                "envelope requests no channels; delivery denied",
             ));
         }
 
@@ -140,10 +165,14 @@ impl EscalatingNotificationRouter {
         }
 
         // Walk the ORIGINAL chain in order (escalation priority);
-        // skip channels denied by policy or privacy - with zero
-        // provider mutation for a denied channel.
+        // skip channels denied by policy, privacy, or the envelope's
+        // own channel list - with zero provider mutation for a denied
+        // channel.
         for (stage_index, channel) in self.chain.iter().enumerate() {
-            if !policy.allows(envelope.urgency, *channel) {
+            if !envelope_channels.contains(channel) {
+                continue;
+            }
+            if !policy.allows(envelope.urgency, *channel, ctx) {
                 continue;
             }
             if !privacy_allowed.contains(channel) {
@@ -282,7 +311,16 @@ impl NotificationRouter for EscalatingNotificationRouter {
         envelope: &NotificationEnvelope,
         policy: &DeliveryPolicy,
     ) -> Result<Vec<DeliveryReceipt>, NotificationError> {
-        self.route_chain(envelope, policy)
+        self.route_chain(envelope, policy, &DeliveryContext::default())
+    }
+
+    fn route_with_context(
+        &self,
+        envelope: &NotificationEnvelope,
+        policy: &DeliveryPolicy,
+        ctx: &DeliveryContext,
+    ) -> Result<Vec<DeliveryReceipt>, NotificationError> {
+        self.route_chain(envelope, policy, ctx)
     }
 }
 
@@ -325,7 +363,7 @@ mod tests {
             "Suspicious sign-in",
             "A new device signed in to your account.",
             vec![NotificationChannel::MobilePush, NotificationChannel::Sms],
-            "2026-08-21T12:00:00Z",
+            "2099-01-01T00:00:00Z",
             CorrelationId::new("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
             None,
         )
@@ -512,5 +550,57 @@ mod tests {
         ])
         .unwrap_err();
         assert_eq!(err.code, NotificationErrorCode::Validation);
+    }
+
+    #[test]
+    fn ep032_failure_unit_router_expired_envelope_denied_zero_mutation() {
+        // AUD-018: an expired notification is never delivered (fail
+        // closed, zero provider mutation).
+        let router = router_with(vec![]);
+        let env = envelope("n-1", NotificationUrgency::Critical, Privacy::Personal);
+        let ctx = DeliveryContext {
+            now_ms: 4_100_000_000_000, // after 2099-01-01T00:00:00Z (~4.07e12)
+            in_quiet_hours: false,
+            present: true,
+            acknowledged: true,
+        };
+        let err = router
+            .route_with_context(&env, &policy(vec![NotificationChannel::MobilePush]), &ctx)
+            .unwrap_err();
+        assert_eq!(err.code, NotificationErrorCode::Policy);
+        assert!(router.observability().is_empty());
+    }
+
+    #[test]
+    fn ep032_failure_unit_router_envelope_channel_intersection_denies_unrequested_channel() {
+        // AUD-018: a channel the envelope did NOT request is never a
+        // fallback target - even when the escalation chain and policy
+        // allow it.
+        let provider = UnboundChannelProvider {
+            channel: NotificationChannel::Sms,
+        };
+        let router = EscalatingNotificationRouter::new(
+            vec![Box::new(provider)],
+            privacy(),
+            vec![NotificationChannel::MobilePush, NotificationChannel::Sms],
+        )
+        .unwrap();
+        // Envelope requests ONLY MobilePush; Sms is chain+policy
+        // allowed but must never be attempted.
+        let mut env = envelope("n-1", NotificationUrgency::Critical, Privacy::Personal);
+        env.channels = vec![NotificationChannel::MobilePush];
+        let receipts = router
+            .route(
+                &env,
+                &policy(vec![
+                    NotificationChannel::MobilePush,
+                    NotificationChannel::Sms,
+                ]),
+            )
+            .unwrap();
+        assert!(receipts.is_empty(), "unrequested Sms must not be attempted");
+        for obs in router.observability() {
+            assert_ne!(obs.channel, NotificationChannel::Sms);
+        }
     }
 }

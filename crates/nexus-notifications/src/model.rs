@@ -99,6 +99,83 @@ impl NotificationEnvelope {
     }
 }
 
+/// Delivery-time context the policy must evaluate to enforce its
+/// declared fields: quiet hours, presence, acknowledgement, and
+/// expiry. A default context is fail-closed: quiet hours unknown is
+/// not quiet hours, but a REQUIRED presence/acknowledgement that is
+/// not proven is DENIED.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeliveryContext {
+    /// Current unix time in milliseconds (RFC3339-comparable).
+    pub now_ms: u64,
+    /// Whether the recipient is inside quiet hours.
+    pub in_quiet_hours: bool,
+    /// Whether the recipient's presence is proven (required when
+    /// `require_presence`).
+    pub present: bool,
+    /// Whether the notification has been acknowledged (required when
+    /// `require_acknowledgement`).
+    pub acknowledged: bool,
+}
+
+/// Current unix time in milliseconds.
+fn now_unix_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+/// Parse the RFC3339 UTC timestamp used by the envelope schema
+/// (YYYY-MM-DDTHH:MM:SSZ) into unix milliseconds. Malformed input
+/// yields None; callers fail closed on unparsable expiry.
+pub(crate) fn rfc3339_utc_to_ms(s: &str) -> Option<u64> {
+    // Strict 20-char shape: 2026-08-21T12:00:00Z
+    if s.len() != 20 || !s.ends_with('Z') {
+        return None;
+    }
+    let b = s.as_bytes();
+    if b[4] != b'-' || b[7] != b'-' || b[10] != b'T' || b[13] != b':' || b[16] != b':' {
+        return None;
+    }
+    let year: i64 = s[0..4].parse().ok()?;
+    let month: u32 = s[5..7].parse().ok()?;
+    let day: u32 = s[8..10].parse().ok()?;
+    let hour: u32 = s[11..13].parse().ok()?;
+    let minute: u32 = s[14..16].parse().ok()?;
+    let second: u32 = s[17..19].parse().ok()?;
+    if !(1..=12).contains(&month)
+        || !(1..=31).contains(&day)
+        || !(0..=23).contains(&hour)
+        || !(0..=59).contains(&minute)
+        || !(0..=60).contains(&second)
+    {
+        return None;
+    }
+    // Days from civil algorithm (Howard Hinnant) - valid for all
+    // supported years; leap seconds are clamped to 59.
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = if y >= 0 { y } else { y - 399 } / 400;
+    let yoe = y - era * 400;
+    let mp = month as i64 + if month > 2 { -3 } else { 9 };
+    let doy = (153 * mp + 2) / 5 + day as i64 - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146097 + doe - 719468;
+    let secs = days * 86400 + hour as i64 * 3600 + minute as i64 * 60 + second.min(59) as i64;
+    Some(secs as u64 * 1000)
+}
+
+impl Default for DeliveryContext {
+    fn default() -> Self {
+        Self {
+            now_ms: now_unix_ms(),
+            in_quiet_hours: false,
+            present: false,
+            acknowledged: false,
+        }
+    }
+}
+
 /// Delivery policy: person, urgency, privacy, presence, availability,
 /// quiet hours, and acknowledgement determine delivery (acceptance
 /// obligation 1).
@@ -121,21 +198,39 @@ pub struct DeliveryPolicy {
 }
 
 impl DeliveryPolicy {
-    /// Policy gate: urgency must meet the minimum and the channel must
-    /// be explicitly permitted. A channel not on the allowlist is
-    /// denied (fail closed).
-    pub fn allows(&self, urgency: NotificationUrgency, channel: NotificationChannel) -> bool {
+    /// Policy gate: urgency must meet the minimum, the channel must be
+    /// explicitly permitted, quiet hours must not suppress, and a
+    /// required acknowledgement/presence must be proven in the context.
+    /// Any unproven requirement is denied (fail closed).
+    pub fn allows(
+        &self,
+        urgency: NotificationUrgency,
+        channel: NotificationChannel,
+        ctx: &DeliveryContext,
+    ) -> bool {
         if urgency < self.min_urgency {
             return false;
         }
-        self.allowed_channels.contains(&channel)
+        if !self.allowed_channels.contains(&channel) {
+            return false;
+        }
+        if self.quiet_hours_suppress && ctx.in_quiet_hours {
+            return false;
+        }
+        if self.require_acknowledgement && !ctx.acknowledged {
+            return false;
+        }
+        if self.require_presence && !ctx.present {
+            return false;
+        }
+        true
     }
 
     /// Whether the policy permits ANY channel at this urgency.
-    pub fn allows_any(&self, urgency: NotificationUrgency) -> bool {
+    pub fn allows_any(&self, urgency: NotificationUrgency, ctx: &DeliveryContext) -> bool {
         self.allowed_channels
             .iter()
-            .any(|c| self.allows(urgency, *c))
+            .any(|c| self.allows(urgency, *c, ctx))
     }
 }
 
@@ -438,17 +533,86 @@ mod tests {
             require_acknowledgement: false,
             require_presence: false,
         };
+        let ctx = DeliveryContext {
+            now_ms: 1_700_000_000_000,
+            in_quiet_hours: false,
+            present: true,
+            acknowledged: true,
+        };
         // Low urgency denied.
-        assert!(!policy.allows(NotificationUrgency::Low, NotificationChannel::MobilePush));
+        assert!(!policy.allows(
+            NotificationUrgency::Low,
+            NotificationChannel::MobilePush,
+            &ctx
+        ));
         // Allowed channel at sufficient urgency passes.
         assert!(policy.allows(
             NotificationUrgency::Critical,
-            NotificationChannel::MobilePush
+            NotificationChannel::MobilePush,
+            &ctx
         ));
         // Channel not on allowlist denied (fail closed).
-        assert!(!policy.allows(NotificationUrgency::Critical, NotificationChannel::Sms));
-        assert!(policy.allows_any(NotificationUrgency::Critical));
-        assert!(!policy.allows_any(NotificationUrgency::Low));
+        assert!(!policy.allows(
+            NotificationUrgency::Critical,
+            NotificationChannel::Sms,
+            &ctx
+        ));
+        assert!(policy.allows_any(NotificationUrgency::Critical, &ctx));
+        assert!(!policy.allows_any(NotificationUrgency::Low, &ctx));
+    }
+
+    #[test]
+    fn ep032_unit_delivery_policy_enforces_quiet_hours_ack_presence() {
+        // AUD-018: the policy's declared fields (quiet hours,
+        // acknowledgement, presence) are REAL gates, not decoration.
+        let policy = DeliveryPolicy {
+            min_urgency: NotificationUrgency::Low,
+            allowed_channels: vec![NotificationChannel::MobilePush],
+            quiet_hours_suppress: true,
+            require_acknowledgement: true,
+            require_presence: true,
+        };
+        let base = DeliveryContext {
+            now_ms: 1_700_000_000_000,
+            in_quiet_hours: false,
+            present: true,
+            acknowledged: true,
+        };
+        assert!(policy.allows(
+            NotificationUrgency::High,
+            NotificationChannel::MobilePush,
+            &base
+        ));
+        // Quiet hours suppress.
+        let quiet = DeliveryContext {
+            in_quiet_hours: true,
+            ..base.clone()
+        };
+        assert!(!policy.allows(
+            NotificationUrgency::High,
+            NotificationChannel::MobilePush,
+            &quiet
+        ));
+        // Missing acknowledgement denied (fail closed).
+        let unacked = DeliveryContext {
+            acknowledged: false,
+            ..base.clone()
+        };
+        assert!(!policy.allows(
+            NotificationUrgency::High,
+            NotificationChannel::MobilePush,
+            &unacked
+        ));
+        // Missing presence denied (fail closed).
+        let absent = DeliveryContext {
+            present: false,
+            ..base.clone()
+        };
+        assert!(!policy.allows(
+            NotificationUrgency::High,
+            NotificationChannel::MobilePush,
+            &absent
+        ));
     }
 
     #[test]
