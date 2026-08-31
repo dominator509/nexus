@@ -23,6 +23,7 @@
 use std::process::Command;
 
 use nexus_trust::mesh::{MeshController, MeshNode, WireGuardConfig, WireGuardPeer};
+use nexus_trust::secret::{SecretReference, SecretStore};
 use nexus_trust::vocabulary::{MeshNodeState, TrustZone};
 use nexus_trust::TrustError;
 
@@ -40,11 +41,23 @@ pub struct HeadscaleMeshController {
     address: String,
     /// API key (held in memory; Debug is redacted via manual impl).
     api_key: RedactedKey,
+    /// Optional secret store used to resolve private-key references.
+    secret_store: Option<SecretStoreHandle>,
 }
 
 /// API key wrapper with redacted Debug.
 #[derive(Clone)]
 struct RedactedKey(String);
+
+/// Secret store handle: Arc<dyn SecretStore> with redacted Debug.
+#[derive(Clone)]
+struct SecretStoreHandle(std::sync::Arc<dyn SecretStore>);
+
+impl std::fmt::Debug for SecretStoreHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("<configured>")
+    }
+}
 
 impl std::fmt::Debug for RedactedKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -69,7 +82,20 @@ impl HeadscaleMeshController {
             config_file: config_file.into(),
             address: address.into(),
             api_key: RedactedKey(api_key.into()),
+            secret_store: None,
         }
+    }
+
+    /// Attach a secret store so `wireguard_config` can resolve the
+    /// node's private-key reference instead of fabricating one.
+    pub fn with_secret_store(mut self, store: std::sync::Arc<dyn SecretStore>) -> Self {
+        self.secret_store = Some(SecretStoreHandle(store));
+        self
+    }
+
+    /// The configured secret store, if any.
+    pub fn secret_store(&self) -> Option<&std::sync::Arc<dyn SecretStore>> {
+        self.secret_store.as_ref().map(|h| &h.0)
     }
 
     /// Run a headscale CLI subcommand; returns stdout on success.
@@ -152,10 +178,16 @@ impl HeadscaleMeshController {
         ))
     }
 
-    /// Create a pending node with a fresh machine key, then register it.
+    /// Create a pending node using the CALLER-SUPPLIED machine key, then
+    /// register it.
+    ///
+    /// AUD-012: identity must be bound to the supplied WireGuard public
+    /// key. The adapter never synthesizes a random machine key; a node
+    /// whose key was not supplied (empty/placeholder) is rejected.
     fn create_and_register(&self, node: &MeshNode) -> Result<Node, HeadscaleError> {
-        // Machine key: 32 random bytes hex, canonical mkey: prefix.
-        let mkey = fresh_machine_key();
+        // The supplied key IS the node identity. Reject placeholders:
+        // an empty key or one that is not 32 bytes of hex fails closed.
+        let mkey = validate_node_key(&node.wireguard_public_key)?;
         self.ensure_user(&node.tenant_id)?;
         let created = self.run(&[
             "debug",
@@ -191,22 +223,36 @@ impl HeadscaleMeshController {
                 format!("cannot parse register output: {e}"),
             )
         })?;
+        // AUD-012: the provider MUST round-trip the caller's key. A node
+        // that comes back with a different identity is a state conflict.
+        if !reg.machine_key.is_empty() && reg.machine_key != mkey {
+            return Err(HeadscaleError::new(
+                HeadscaleErrorCode::StateConflict,
+                format!(
+                    "node registered with a different machine key than supplied (fingerprint {})",
+                    fingerprint(&node.name)
+                ),
+            ));
+        }
         let _ = pending;
         Ok(reg)
     }
 }
 
-/// Generate a fresh machine key: `mkey:` + 64 hex chars (32 bytes).
-fn fresh_machine_key() -> String {
-    use std::fs;
-    let mut buf = [0u8; 32];
-    if let Ok(f) = fs::File::open("/dev/urandom") {
-        use std::io::Read;
-        let mut f = f;
-        let _ = f.read_exact(&mut buf);
+/// Validate a caller-supplied WireGuard machine key and normalize it to
+/// the canonical `mkey:` + 32-byte hex form.
+///
+/// AUD-012: placeholder keys (short strings, empty, non-hex) are
+/// rejected so a synthetic identity can never be registered.
+fn validate_node_key(supplied: &str) -> Result<String, HeadscaleError> {
+    let raw = supplied.strip_prefix("mkey:").unwrap_or(supplied);
+    if raw.len() != 64 || !raw.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err(HeadscaleError::new(
+            HeadscaleErrorCode::MalformedProviderResponse,
+            "supplied WireGuard machine key must be 32 bytes of hex (mkey: prefix optional)",
+        ));
     }
-    let hex: String = buf.iter().map(|b| format!("{b:02x}")).collect();
-    machine_key(&hex)
+    Ok(machine_key(raw))
 }
 
 /// Map a headscale node record onto the contract MeshNode.
@@ -252,6 +298,21 @@ impl MeshController for HeadscaleMeshController {
     }
 
     fn wireguard_config(&self, node_id: &str) -> Result<WireGuardConfig, TrustError> {
+        // AUD-012: the private-key reference MUST resolve. The adapter
+        // never fabricates a reference: without a secret store, or when
+        // the store cannot resolve the key, wireguard_config fails
+        // closed instead of returning a config pointing at nothing.
+        // The store check happens FIRST (fail fast): no store means no
+        // reference can ever be resolved, so we never touch the provider.
+        let store = self.secret_store().ok_or_else(|| {
+            HeadscaleError::new(
+                HeadscaleErrorCode::StateConflict,
+                format!(
+                    "no secret store configured: cannot resolve mesh private key reference for node {node_id}"
+                ),
+            )
+            .into_trust()
+        })?;
         // Resolve the node's tenant by listing all users/nodes: the
         // contract gives us only the node id, so find it first.
         let list = self
@@ -295,14 +356,23 @@ impl MeshController for HeadscaleMeshController {
             })
             .collect();
         let addresses = target.ip_addresses.clone();
-        WireGuardConfig::new(
-            "nexus0",
-            format!("openbao:mesh/{tenant}/{node_id}"),
-            addresses,
-            vec![],
-            peers,
-        )
-        .map_err(|e| {
+        let reference = format!("openbao:mesh/{tenant}/{node_id}");
+        let secret_ref = SecretReference::new("openbao", format!("mesh/{tenant}/{node_id}"), None)
+            .map_err(|e| {
+                HeadscaleError::new(
+                    HeadscaleErrorCode::MalformedProviderResponse,
+                    format!("cannot build mesh secret reference: {e}"),
+                )
+                .into_trust()
+            })?;
+        store.get(&secret_ref).map_err(|_| {
+            HeadscaleError::new(
+                HeadscaleErrorCode::NotFound,
+                format!("mesh private key reference {reference} does not resolve (node {node_id})"),
+            )
+            .into_trust()
+        })?;
+        WireGuardConfig::new("nexus0", reference, addresses, vec![], peers).map_err(|e| {
             HeadscaleError::new(
                 HeadscaleErrorCode::MalformedProviderResponse,
                 format!("cannot build wireguard config: {e}"),

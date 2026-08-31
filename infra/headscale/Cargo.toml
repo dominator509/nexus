@@ -13,3 +13,5 @@ nexus-trust = { path = "../../crates/nexus-trust", version = "0.1.0" }
 [dev-dependencies]
 nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
 nexus-identity = { path = "../../crates/nexus-identity", version = "0.1.0" }
+nexus-openbao = { path = "../../infra/openbao", version = "0.1.0" }
+openssl = "0.10"
