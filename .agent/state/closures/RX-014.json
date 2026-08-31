@@ -1,0 +1,216 @@
+{
+  "attestation_digest": "sha256:3d70bb0109a972e9ccd51e5cccb086c4ec022c1599176585084a565f2ea55c92",
+  "closure_commit": "faf25a6f60cf60587ae4d5b737af1b26b9c0c01b",
+  "created_at": "2026-08-31T22:20:50Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:e8b440eb0c8296bbbfbafd136a7e2ce9bca100951ca1ef0783e3c41348adedcb",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-014/faf25a6f60cf60587ae4d5b737af1b26b9c0c01b",
+  "milestones": {
+    "max": 7,
+    "passed": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "node": "RX-014",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:5da05a33c1f5a3f910fc69d007d985dcc9285e11498182b931eba85a542de5a1",
+      "id": "gmail-real-wire",
+      "ref": "connectors/gmail/src/adapter.rs"
+    },
+    {
+      "digest": "sha256:2c24d6c26a03bbb43ec5d8bff287a8b1b480768972954e404661a21ab726f1af",
+      "id": "gmail-send-draft",
+      "ref": "connectors/gmail/src/transport.rs"
+    },
+    {
+      "digest": "sha256:add9c5e8e5a3749fa0f10b384a0abf274c54ed3192b889b0bcb25aa46c91b624",
+      "id": "attachment-enumeration",
+      "ref": "connectors/microsoft-mail/src/adapter.rs"
+    },
+    {
+      "digest": "sha256:7c8ddcee910a6c619270dd6d1a3c7e6d5c69d2be0d1073830e2cc65458088c11",
+      "id": "graph-attachments",
+      "ref": "connectors/microsoft-mail/src/transport.rs"
+    },
+    {
+      "digest": "sha256:ed439e9035befa048fcf4d471fee5ee06480b19feda1a74ad5a629ab1fa0316b",
+      "id": "imap-bodystructure",
+      "ref": "connectors/imap-smtp/src/adapter.rs"
+    },
+    {
+      "digest": "sha256:06a73a82d23eb55c48d29e264dc092b1cc984944c3b4ee5ab6295f45deec89d2",
+      "id": "imap-uid-fetch",
+      "ref": "connectors/imap-smtp/src/transport.rs"
+    },
+    {
+      "digest": "sha256:a678bc4237f7d70e6068de9b11aade7cac7505997f595e688b052e48e7ea8c3f",
+      "id": "delivery-policy",
+      "ref": "crates/nexus-notifications/src/lib.rs"
+    },
+    {
+      "digest": "sha256:6247e8da5f9bb1a5f2ba8e5e6f58c6a8f2b582ada2975d3c2f01201fbd47da7c",
+      "id": "delivery-policy-model",
+      "ref": "crates/nexus-notifications/src/model.rs"
+    },
+    {
+      "digest": "sha256:efe162f171b959bba4642dc7903c8f2b7a39afca9f9ce46ab3c76888af52e5be",
+      "id": "router-expiry-intersection",
+      "ref": "crates/nexus-notifications/src/router.rs"
+    },
+    {
+      "digest": "sha256:8d39bef04b7a1c3799742b782c1cb427d5ec49424a18c22aa50f2e04ad9cfb41",
+      "id": "router-port",
+      "ref": "crates/nexus-notifications/src/provider.rs"
+    },
+    {
+      "digest": "sha256:4ee4adfced929b8d1873617793fc68f1b1a791369db14f2fa7aea5eacf21152f",
+      "id": "router-sms",
+      "ref": "connectors/sms/src/adapter.rs"
+    },
+    {
+      "digest": "sha256:10d7dae6e82805c28c433b04b18f65bd8d8709496c4c39a00bcc9310d7ba28e3",
+      "id": "ictfax-adapter",
+      "ref": "connectors/ictfax/src/adapter.rs"
+    },
+    {
+      "digest": "sha256:14acb8e1438903bdc57e60bd6dc31fbe6d0a0e8bfc98d1b14000a70ea0f72b72",
+      "id": "ictfax-binding",
+      "ref": "connectors/ictfax/src/transport.rs"
+    },
+    {
+      "digest": "sha256:055afb379b5eb2a70086969f1e38a11719e8c9b23b72d9c302ab97ccf6b8071c",
+      "id": "consent-first",
+      "ref": "infra/asterisk/fixture/lf012_orchestrator.py"
+    },
+    {
+      "digest": "sha256:0517e460b68344cfea705db96b378c8d9fbe1f70891f1c8ab9e6d6398a56b7d0",
+      "id": "ep025-m5-gate",
+      "ref": "scripts/ep025-m5-tests.sh"
+    },
+    {
+      "digest": "sha256:199cf0a0fe7962c96f022d7486715bc449b36c229fc60c2d1f62f57ea96d7e94",
+      "id": "x-reply-object",
+      "ref": "connectors/social-direct/src/adapter.rs"
+    },
+    {
+      "digest": "sha256:efad2654c73aa7eb95f605821099269ad0563ca4b64b3b411c992cf5d8124599",
+      "id": "x-reply-transport",
+      "ref": "connectors/social-direct/src/transport.rs"
+    },
+    {
+      "digest": "sha256:3d69a33cc0c4c09b30c22b635f0206bd3d68ab3ded96d1fe8ef13c1f193ba26d",
+      "id": "x-reply-wire-proof",
+      "ref": "connectors/social-direct/tests/ep029_m3_direct.rs"
+    },
+    {
+      "digest": "sha256:1c9726ed06676d5cffebb138a2a45708174fc1660af418c9b6eb47247af25e72",
+      "id": "battery-script",
+      "ref": "scripts/rx014-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:c794381a1b3818b124dfa9e96cd6a13508f76340d2b305961fa2b12836823778",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-014.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:e8b440eb0c8296bbbfbafd136a7e2ce9bca100951ca1ef0783e3c41348adedcb",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "nexus-gmail-aud009",
+        "passed": 17
+      },
+      {
+        "failed": 0,
+        "family": "nexus-microsoft-mail-aud010",
+        "passed": 41
+      },
+      {
+        "failed": 0,
+        "family": "nexus-imap-smtp-aud010",
+        "passed": 13
+      },
+      {
+        "failed": 0,
+        "family": "nexus-gmail-aud010",
+        "passed": 17
+      },
+      {
+        "failed": 0,
+        "family": "nexus-notifications-aud018-aud019",
+        "passed": 37
+      },
+      {
+        "failed": 0,
+        "family": "nexus-sms-connector-aud019",
+        "passed": 22
+      },
+      {
+        "failed": 0,
+        "family": "notifications-e2e-livefire",
+        "passed": 17
+      },
+      {
+        "failed": 0,
+        "family": "nexus-ictfax-aud020",
+        "passed": 12
+      },
+      {
+        "failed": 0,
+        "family": "nexus-asterisk-aud021",
+        "passed": 64
+      },
+      {
+        "failed": 0,
+        "family": "nexus-telephony-aud021",
+        "passed": 34
+      },
+      {
+        "failed": 0,
+        "family": "orchestrator-pycompile",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep025-m5-gate-assertions",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "nexus-social-direct-aud024",
+        "passed": 17
+      },
+      {
+        "failed": 0,
+        "family": "workspace-check",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "clippy",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      }
+    ],
+    "passed": 385
+  },
+  "verify_log": ".agent/remediation/evidence/RX-014/verify.log|sha256:90ffa9b8d6b59145a068892363e6b8bc2ad33fa38af8e4d5fbd69eb32f642659",
+  "verify_sentinel": "verify: ok"
+}
