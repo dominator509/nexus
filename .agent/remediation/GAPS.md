@@ -198,3 +198,42 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
 - Battery: scripts/rx006-remediation-tests.sh 8/8 green (unit 18, hostile
   6, nexus-trust 17, real integration 10, orphan audit, workspace, clippy,
   register 90/90). Register AUD-012 -> VERIFIED_FIXED.
+
+**AUD-011 REMEDIATED (RX-007, 2026-08-31):**
+- Root cause: SkillExecutor verified the signed package and declared
+  permissions, then executed with Command::new. No filesystem/namespace/
+  seccomp isolation, privilege drop, or network enforcement; permissions
+  were env vars a hostile payload could ignore.
+- Fix: on Linux the subprocess is a REAL OS sandbox in pre_exec:
+  unshare(CLONE_NEWNS|CLONE_NEWNET|CLONE_NEWIPC|CLONE_NEWUTS); private
+  mount tree; bounded tmpfs at /tmp (only writable location); /, /proc,
+  /sys remounted read-only; payload materialized inside the sandbox; real
+  setgroups/setgid/setuid drop to uid/gid 65534; PR_SET_NO_NEW_PRIVS; a
+  seccomp BPF deny-list filter (mount/umount2/ptrace/kexec*/module-load/
+  power-cycle/swap/identity/keyring/bpf/process_vm_*/perf/io_uring/open_by_
+  handle/chroot/pivot_root/setns/unshare -> EPERM, default allow). Any
+  sandbox step failure makes spawn fail closed - the skill is never
+  executed unsandboxed on Linux.
+- Proof: rx007 hostile payloads probe the sandbox from the inside - uid
+  65534, host writes fail while /tmp tmpfs writable, /proc/net/dev shows
+  loopback only (no host iface), Seccomp: 2 + NoNewPrivs: 1.
+- Battery: scripts/rx007-remediation-tests.sh 6/6 green. Register
+  AUD-011 -> VERIFIED_FIXED.
+
+**AUD-022 REMEDIATED (RX-007, 2026-08-31):**
+- Root cause: stdout drained synchronously to EOF before stderr, no
+  execution timeout; a child filling stderr while keeping stdout open
+  blocked itself while the parent waited forever. ProcessRunner repeated
+  the pattern.
+- Fix: SkillExecutor and ProcessRunner now drain stdout and stderr
+  CONCURRENTLY over channel-backed reader threads; a wall-clock deadline
+  (SKILL_EXEC_TIMEOUT / PROCESS_EXEC_TIMEOUT, overridable via
+  with_timeout) kills the process group (SkillExecutor) or the direct
+  child (ProcessRunner, safe-only crate) on expiry; the result is
+  observable as timed_out / HarnessExitStatus::Timeout - never a
+  fabricated success; a 2s bounded receive grace prevents a pipe-
+  inheriting grandchild from hanging the runner.
+- Proof: rx007 stderr-flood payloads (360KB > 64KB pipe buffer x several)
+  complete normally; hung payloads are killed at the deadline.
+- Battery: scripts/rx007-remediation-tests.sh 6/6 green. Register
+  AUD-022 -> VERIFIED_FIXED.

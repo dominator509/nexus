@@ -2546,6 +2546,7 @@ name = "nexus-skills"
 version = "0.1.0"
 dependencies = [
  "jsonschema",
+ "libc",
  "nexus-domain",
  "nexus-fabric",
  "ring",
