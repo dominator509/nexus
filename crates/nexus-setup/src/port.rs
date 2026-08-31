@@ -80,6 +80,16 @@ pub trait EdgeEnrollmentPort {
         &self,
         credential: EnrollmentCredential,
     ) -> SetupResult<EnrollmentCredential>;
+    /// Atomically consume a one-time enrollment credential by proving
+    /// possession of the bootstrap secret (AUD-043). The operational
+    /// setup application calls THIS, never a bare credential-ID path.
+    /// Returns the consumed (USED) credential; the caller persists it.
+    fn claim_enrollment(
+        &self,
+        credential: &EnrollmentCredential,
+        secret: &str,
+        now_unix_s: u64,
+    ) -> SetupResult<EnrollmentCredential>;
 }
 
 /// DiscoveryWizard port: observations are data, never authority.
