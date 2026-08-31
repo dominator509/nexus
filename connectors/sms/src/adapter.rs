@@ -203,6 +203,10 @@ impl<T: SmsGateway> ChannelProvider for SmsChannelProvider<T> {
         self.gateway.is_some()
     }
 
+    fn requires_destination(&self) -> bool {
+        true
+    }
+
     fn deliver(
         &self,
         _envelope: &NotificationEnvelope,
@@ -213,6 +217,14 @@ impl<T: SmsGateway> ChannelProvider for SmsChannelProvider<T> {
         Err(NotificationError::validation(
             "sms delivery requires an explicit destination (deliver_to)",
         ))
+    }
+
+    fn deliver_to(
+        &self,
+        envelope: &NotificationEnvelope,
+        destination: &SmsDestination,
+    ) -> Result<DeliveryReceipt, NotificationError> {
+        self.deliver_to(envelope, destination)
     }
 }
 

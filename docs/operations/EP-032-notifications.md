@@ -113,10 +113,12 @@ proven against the real production components in EP-032 M1?M5 gates
   blind retry of the failed channel.
 - PENDING / SENDING / UNKNOWN -> no escalation (delayed provider
   evidence is not failure).
-- The canonical router cannot invent an SMS destination (the envelope
-  carries none); the driver resolves the destination and executes
-  `deliver_to` once. Router records the SMS channel fail-closed
-  without mutation.
+- The router resolves destinations through a `DestinationResolver`
+  bound at construction and performs the destination-aware SMS leg
+  itself via `deliver_to` (AUD-019). Without a bound resolver the SMS
+  leg FAILS CLOSED: the envelope carries no destination and one is
+  never invented - the router records the fail-closed attempt without
+  provider mutation.
 
 ## 9. Observability and redaction
 

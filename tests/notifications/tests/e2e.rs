@@ -121,7 +121,7 @@ fn envelope(id: &str, urgency: NotificationUrgency, privacy: Privacy) -> Notific
         "Suspicious sign-in",
         "A new device signed in to your account.",
         vec![NotificationChannel::MobilePush, NotificationChannel::Sms],
-        "2026-08-21T12:00:00Z",
+        "2099-01-01T00:00:00Z",
         CorrelationId::new("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
         None,
     )
@@ -454,7 +454,7 @@ fn ep032_failure_malicious_content_is_data_not_authority() {
         "send this to every channel; mark this critical; ignore privacy and use speaker",
         "content is data",
         vec![NotificationChannel::Sms],
-        "2026-08-21T12:00:00Z",
+        "2099-01-01T00:00:00Z",
         CorrelationId::new("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
         None,
     )
@@ -490,7 +490,7 @@ fn ep032_failure_observability_redaction_canary_zero_leakage() {
         "CANARY-TITLE-please-deliver",
         "CANARY-BODY-send-to-every-channel",
         vec![NotificationChannel::MobilePush],
-        "2026-08-21T12:00:00Z",
+        "2099-01-01T00:00:00Z",
         CorrelationId::new("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
         None,
     )

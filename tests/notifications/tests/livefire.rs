@@ -47,9 +47,9 @@ use std::time::{Duration, Instant};
 
 use nexus_domain::{CorrelationId, NotificationChannel, PersonId, Privacy};
 use nexus_notifications::{
-    ChannelProvider, DeliveryPolicy, DeliveryState, EscalatingNotificationRouter,
-    NotificationEnvelope, NotificationErrorCode, NotificationId, NotificationRouter,
-    NotificationUrgency, PrivacyRouting, SmsDestination,
+    ChannelProvider, DeliveryPolicy, DeliveryState, DestinationResolver,
+    EscalatingNotificationRouter, NotificationEnvelope, NotificationErrorCode, NotificationId,
+    NotificationRouter, NotificationUrgency, PrivacyRouting, SmsDestination,
 };
 use nexus_push_connector::{JsonPushTransport, PushChannelProvider};
 use nexus_sms_connector::{GammuSmsdGateway, SmsChannelProvider, SmsProviderRef, SqliteSmsDb};
@@ -94,7 +94,7 @@ fn envelope(
         "Suspicious sign-in",
         summary,
         vec![NotificationChannel::MobilePush, NotificationChannel::Sms],
-        "2026-08-21T12:00:00Z",
+        "2099-01-01T00:00:00Z",
         CorrelationId::new("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
         None,
     )
@@ -646,24 +646,28 @@ fn ep032_m5_live_escalation_push_failed_sms_once() {
         correlation.clone(),
     ));
 
-    // SMS fallback: production SMS provider over the real daemon. The
-    // router holds one provider handle (its canonical `deliver()` for
-    // SMS fails closed without a destination - the envelope carries
-    // none), and the DRIVER holds a second production handle (its own
-    // DB connection) to execute `deliver_to` with the resolved
-    // destination. Both are production components.
+    // SMS fallback: production SMS provider over the real daemon,
+    // bound INSIDE the router. The router resolves the destination
+    // through its DestinationResolver and performs the SMS leg itself
+    // via deliver_to - no second provider outside the router, no
+    // manual deliver_to after route(). The DRIVER keeps a separate
+    // handle ONLY to refresh/observe the provider state (a second DB
+    // connection; observation, not delivery).
     let db_router = SqliteSmsDb::open(&db_path()).unwrap();
     let sms_router = SmsChannelProvider::new(GammuSmsdGateway::new(db_router, "nexus:"));
     let db_driver = SqliteSmsDb::open(&db_path()).unwrap();
     let sms_driver = SmsChannelProvider::new(GammuSmsdGateway::new(db_driver, "nexus:"));
 
-    // Production router: [MobilePush, Sms] escalation chain.
+    // Production router: [MobilePush, Sms] escalation chain with the
+    // SMS destination resolver bound so the router can deliver the
+    // SMS leg itself.
     let router = EscalatingNotificationRouter::new(
         vec![Box::new(push), Box::new(sms_router)],
         privacy(),
         vec![NotificationChannel::MobilePush, NotificationChannel::Sms],
     )
-    .unwrap();
+    .unwrap()
+    .with_destination_resolver(Box::new(StaticDestinationResolver::new(destination())));
 
     let receipts = router
         .route(
@@ -689,18 +693,22 @@ fn ep032_m5_live_escalation_push_failed_sms_once() {
         "observability records the failed primary stage"
     );
 
-    // The canonical router cannot invent an SMS destination: the SMS
-    // leg is executed by the DRIVER through the production
-    // `deliver_to` (destination resolution is a driver concern; the
-    // router records the fail-closed SMS attempt without mutation).
-    let dest = destination();
-    let sms_receipt = sms_driver.deliver_to(&env, &dest).unwrap();
+    // The ROUTER itself performs the SMS fallback: the escalation
+    // receipts must include the SMS leg (the destination was resolved
+    // by the router's DestinationResolver and deliver_to was called
+    // INSIDE route()). No driver-side deliver_to exists anymore.
+    let sms_receipt = receipts
+        .iter()
+        .find(|r| r.channel == NotificationChannel::Sms)
+        .expect("router must return the SMS fallback receipt");
     assert!(
         !sms_receipt.is_delivered(),
         "fallback acceptance is never Delivered until a real report"
     );
 
     // Wait for the REAL daemon to process the fallback -> Delivered.
+    // The driver observes through its own DB connection (refresh is
+    // observation, not delivery).
     let deadline = Instant::now() + Duration::from_secs(30);
     let final_receipt = loop {
         let r = sms_driver
@@ -741,4 +749,23 @@ fn ep032_m5_live_escalation_push_failed_sms_once() {
 
 fn run_id_or_default() -> String {
     env::var("SMSD_RUN_ID").unwrap_or_else(|_| "ambient".to_string())
+}
+
+/// Destination resolver bound to the router in live-fire: resolves
+/// the fixture-owned SMS destination for any person (the live-fire
+/// fixture has a single controlled test number).
+struct StaticDestinationResolver {
+    destination: SmsDestination,
+}
+
+impl StaticDestinationResolver {
+    fn new(destination: SmsDestination) -> Self {
+        Self { destination }
+    }
+}
+
+impl DestinationResolver for StaticDestinationResolver {
+    fn resolve(&self, _person_id: &PersonId) -> Option<SmsDestination> {
+        Some(self.destination.clone())
+    }
 }

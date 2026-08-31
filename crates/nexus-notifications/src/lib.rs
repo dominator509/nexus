@@ -43,7 +43,8 @@ pub use model::{
 };
 pub use observability::{NotificationObservability, NotificationObservation};
 pub use provider::{
-    ChannelProvider, NotificationRouter, UnboundChannelProvider, UnboundNotificationRouter,
+    ChannelProvider, DestinationResolver, NotificationRouter, UnboundChannelProvider,
+    UnboundDestinationResolver, UnboundNotificationRouter,
 };
 pub use router::EscalatingNotificationRouter;
 pub use vocabulary::{

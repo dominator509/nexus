@@ -36,7 +36,9 @@ use crate::model::{
     DeliveryContext, DeliveryPolicy, DeliveryReceipt, NotificationEnvelope, PrivacyRouting,
 };
 use crate::observability::{NotificationObservability, NotificationObservation};
-use crate::provider::{ChannelProvider, NotificationRouter};
+use crate::provider::{
+    ChannelProvider, DestinationResolver, NotificationRouter, UnboundDestinationResolver,
+};
 use crate::vocabulary::{DeliveryState, EscalationStage, NotificationId};
 
 /// Escalating notification router over bound channel providers.
@@ -48,6 +50,9 @@ pub struct EscalatingNotificationRouter {
     privacy: PrivacyRouting,
     /// Ordered escalation chain (duplicates rejected at build).
     chain: Vec<NotificationChannel>,
+    /// Destination resolution for destination-requiring channels
+    /// (e.g. SMS). Fail-closed when unbound.
+    destination_resolver: Box<dyn DestinationResolver>,
     /// Bounded redacted observability ring.
     observability: std::cell::RefCell<NotificationObservability>,
 }
@@ -104,8 +109,18 @@ impl EscalatingNotificationRouter {
             providers: provider_map,
             privacy,
             chain,
+            destination_resolver: Box::new(UnboundDestinationResolver),
             observability: std::cell::RefCell::new(NotificationObservability::default()),
         })
+    }
+
+    /// Bind a destination resolver so destination-requiring channels
+    /// (e.g. SMS) can be delivered by the router itself. Without a
+    /// resolver, a destination-requiring leg fails closed (the
+    /// envelope carries no destination and one is never invented).
+    pub fn with_destination_resolver(mut self, resolver: Box<dyn DestinationResolver>) -> Self {
+        self.destination_resolver = resolver;
+        self
     }
 
     /// Bounded redacted observability ring (safe fields only).
@@ -223,8 +238,21 @@ impl EscalatingNotificationRouter {
             }
 
             // ONE attempt per channel; the provider returns the
-            // ONLY delivery authority.
-            let result = provider.deliver(envelope);
+            // ONLY delivery authority. A destination-requiring
+            // provider (e.g. SMS) is attempted ONLY with an explicit
+            // resolved destination; without one the leg fails closed
+            // (a destination is never invented) and escalates.
+            let result = if provider.requires_destination() {
+                match self.destination_resolver.resolve(&envelope.person_id) {
+                    Some(destination) => provider.deliver_to(envelope, &destination),
+                    None => Err(NotificationError::validation(format!(
+                        "channel provider {} requires a destination; none resolved",
+                        channel
+                    ))),
+                }
+            } else {
+                provider.deliver(envelope)
+            };
             let (receipt, error_class) = match result {
                 Ok(r) => (r, None),
                 Err(e) => {
@@ -351,8 +379,27 @@ mod tests {
     use super::*;
     use crate::model::EscalationPolicy;
     use crate::provider::UnboundChannelProvider;
-    use crate::vocabulary::{NotificationId, NotificationUrgency};
+    use crate::vocabulary::{NotificationId, NotificationUrgency, SmsDestination};
     use nexus_domain::{CorrelationId, PersonId, Privacy};
+
+    /// Deterministic destination resolver used by router unit tests.
+    struct StaticResolver {
+        destination: SmsDestination,
+    }
+
+    impl StaticResolver {
+        fn new(dest: &str) -> Self {
+            Self {
+                destination: SmsDestination::new(dest).unwrap(),
+            }
+        }
+    }
+
+    impl DestinationResolver for StaticResolver {
+        fn resolve(&self, _person_id: &PersonId) -> Option<SmsDestination> {
+            Some(self.destination.clone())
+        }
+    }
 
     fn envelope(id: &str, urgency: NotificationUrgency, privacy: Privacy) -> NotificationEnvelope {
         NotificationEnvelope::new(
@@ -602,5 +649,141 @@ mod tests {
         for obs in router.observability() {
             assert_ne!(obs.channel, NotificationChannel::Sms);
         }
+    }
+
+    // AUD-019: destination-requiring providers (SMS) must be
+    // deliverable BY THE ROUTER when a destination resolves, and must
+    // fail closed (never fabricate a recipient) when one does not.
+
+    /// In-memory destination-requiring provider that records
+    /// whether it was reached through `deliver` (fail-closed) or
+    /// `deliver_to` (destination-aware).
+    #[derive(Clone)]
+    struct DestinationRecordingProvider {
+        channel: NotificationChannel,
+        calls: std::rc::Rc<std::cell::RefCell<Vec<String>>>,
+        delivered_to: std::rc::Rc<std::cell::RefCell<Vec<String>>>,
+    }
+
+    impl DestinationRecordingProvider {
+        fn new(channel: NotificationChannel) -> Self {
+            Self {
+                channel,
+                calls: std::rc::Rc::new(std::cell::RefCell::new(Vec::new())),
+                delivered_to: std::rc::Rc::new(std::cell::RefCell::new(Vec::new())),
+            }
+        }
+
+        fn deliver_calls(&self) -> usize {
+            self.calls.borrow().len()
+        }
+
+        fn deliver_to_calls(&self) -> usize {
+            self.delivered_to.borrow().len()
+        }
+    }
+
+    impl ChannelProvider for DestinationRecordingProvider {
+        fn channel(&self) -> NotificationChannel {
+            self.channel
+        }
+
+        fn available(&self) -> bool {
+            true
+        }
+
+        fn requires_destination(&self) -> bool {
+            true
+        }
+
+        fn deliver(
+            &self,
+            envelope: &NotificationEnvelope,
+        ) -> Result<DeliveryReceipt, NotificationError> {
+            self.calls
+                .borrow_mut()
+                .push(envelope.notification_id.as_str().to_string());
+            Err(NotificationError::validation(
+                "requires an explicit destination",
+            ))
+        }
+
+        fn deliver_to(
+            &self,
+            envelope: &NotificationEnvelope,
+            destination: &SmsDestination,
+        ) -> Result<DeliveryReceipt, NotificationError> {
+            self.delivered_to.borrow_mut().push(format!(
+                "{}:{}",
+                envelope.notification_id,
+                destination.as_str()
+            ));
+            Ok(DeliveryReceipt::new(
+                crate::vocabulary::DeliveryReceiptId::new(format!(
+                    "r-{}",
+                    envelope.notification_id
+                ))
+                .unwrap(),
+                envelope.notification_id.clone(),
+                self.channel,
+                DeliveryState::Delivered,
+                envelope.correlation_id.clone(),
+                Some("dst-r".to_string()),
+                Some(1_700_000_000_000),
+            ))
+        }
+    }
+
+    #[test]
+    fn ep032_unit_router_destination_aware_sms_delivered_by_router() {
+        // AUD-019: with a resolver bound, the ROUTER itself performs
+        // the destination-aware SMS leg - no driver-side second
+        // provider, no manual deliver_to after route().
+        let sms = DestinationRecordingProvider::new(NotificationChannel::Sms);
+        let router = EscalatingNotificationRouter::new(
+            vec![Box::new(sms.clone())],
+            privacy(),
+            vec![NotificationChannel::Sms],
+        )
+        .unwrap()
+        .with_destination_resolver(Box::new(StaticResolver::new("+15551234567")));
+        let env = envelope("n-1", NotificationUrgency::High, Privacy::Personal);
+        let receipts = router
+            .route(&env, &policy(vec![NotificationChannel::Sms]))
+            .unwrap();
+        assert_eq!(receipts.len(), 1);
+        assert_eq!(receipts[0].state, DeliveryState::Delivered);
+        assert_eq!(sms.deliver_calls(), 0, "canonical deliver never used");
+        assert_eq!(
+            sms.deliver_to_calls(),
+            1,
+            "router performs the destination-aware leg exactly once"
+        );
+    }
+
+    #[test]
+    fn ep032_unit_router_unresolved_destination_fails_closed() {
+        // AUD-019: without a resolver (or with an unresolved person),
+        // the destination-requiring leg FAILS CLOSED - no fabricated
+        // recipient, no provider mutation.
+        let sms = DestinationRecordingProvider::new(NotificationChannel::Sms);
+        let router = EscalatingNotificationRouter::new(
+            vec![Box::new(sms.clone())],
+            privacy(),
+            vec![NotificationChannel::Sms],
+        )
+        .unwrap();
+        let env = envelope("n-1", NotificationUrgency::High, Privacy::Personal);
+        let receipts = router
+            .route(&env, &policy(vec![NotificationChannel::Sms]))
+            .unwrap();
+        assert_eq!(receipts.len(), 1);
+        assert_eq!(receipts[0].state, DeliveryState::Failed);
+        assert_eq!(sms.deliver_calls(), 0, "canonical deliver never used");
+        assert_eq!(
+            sms.deliver_to_calls(),
+            0,
+            "no destination-aware mutation without a resolved destination"
+        );
     }
 }
