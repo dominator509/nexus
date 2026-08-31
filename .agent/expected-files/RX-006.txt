@@ -11,6 +11,7 @@
 .agent/remediation/GAPS.md
 .agent/remediation/evidence/
 crates/nexus-trust/src/mesh.rs
+Cargo.lock
 infra/headscale/Cargo.toml
 infra/headscale/src/mesh.rs
 infra/headscale/src/lib_tests.rs

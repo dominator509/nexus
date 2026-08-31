@@ -1777,7 +1777,9 @@ version = "0.1.0"
 dependencies = [
  "nexus-domain",
  "nexus-identity",
+ "nexus-openbao",
  "nexus-trust",
+ "openssl",
  "serde",
  "serde_json",
 ]
