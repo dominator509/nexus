@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:6664fbe977ba703c7bc0c5e9f2adc8e43e6b495f218fc18059a11ee49eb7c57a",
+  "attestation_digest": "sha256:002f33143b21bd7810549f2a942fd3eae37e5084ce2e6cf35449e2cc6e8ea0a5",
   "closure_commit": "ba0e42582cf7a50feddf9b7ed83c0c40a61cdfa6",
   "created_at": "2026-08-31T13:37:13Z",
   "created_by": "node-close-v2.sh",
@@ -23,7 +23,7 @@
       "ref": "apps/control-plane/src/telemetry.rs"
     },
     {
-      "digest": "sha256:161c463fe0f85e20b25753c3e9394b3020f41b71c906e98683a1fe7e59cb9ebb",
+      "digest": "sha256:3d86e23427b156da0f1d7a03f9fb31afdf5d9bd897e7716747fcb1528bf007dc",
       "id": "composition-root",
       "ref": "apps/control-plane/src/composition.rs"
     },

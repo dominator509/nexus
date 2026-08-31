@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:6e6522b419d833284bbb446065dc5e25682e4d505deca8b09f87fda7275b8096",
+  "attestation_digest": "sha256:a5edc39aaec2aa60fd95b28313fb480da4dd81f9bb2700e06145eb734c37bec3",
   "closure_commit": "035ddf0c30ef35c25b99d6b623ea3d84564cac48",
   "created_at": "2026-08-31T12:54:37Z",
   "created_by": "node-close-v2.sh",
@@ -18,7 +18,7 @@
   "node_verify_exit": 0,
   "proofs": [
     {
-      "digest": "sha256:1df4a314a1faf06b8c7e133f5301e17eb9cc6643c17ec919289b4debe990d989",
+      "digest": "sha256:e9b7a0ce0347d0e818fbf8bb330f69cc91fb221143005a34b8ce4b5789d02d06",
       "id": "skill-executor",
       "ref": "crates/nexus-skills/src/executor.rs"
     },
@@ -28,7 +28,7 @@
       "ref": "crates/nexus-harness-adapters/src/process.rs"
     },
     {
-      "digest": "sha256:a45c6a916a64a6381b9988c0a54567e2345db45e7317bf2910501c52e33d2009",
+      "digest": "sha256:264137a456b6aa8eced372348707204964c899669d46c8645de136c21b3c6374",
       "id": "rx007-skills-hostile-tests",
       "ref": "crates/nexus-skills/tests/rx007_remediation.rs"
     },
