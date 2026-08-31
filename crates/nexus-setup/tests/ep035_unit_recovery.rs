@@ -39,14 +39,44 @@ fn ep035_unit_recovery_ambiguous_forces_reconcile_never_blind_retry() {
 
 #[test]
 fn ep035_unit_recovery_ambiguous_retry_safe_only_after_reconcile() {
+    // AUD-045: safe retry requires BOTH reconciliation AND an explicit
+    // negative mutation observation.
+    let decision = decide_recovery(&evidence(
+        RecoveryFailureClass::Ambiguous,
+        true,
+        Some(false),
+        Some(RecoveryMutationState::Reconciled),
+    ));
+    assert_eq!(decision.outcome, RecoveryOutcome::Retryable);
+    assert!(decision.retry_safe);
+}
+
+#[test]
+fn ep035_unit_recovery_ambiguous_reconciled_with_mutation_occurred_not_retry_safe() {
+    // AUD-045 hostile: AMBIGUOUS + RECONCILED where the mutation DID
+    // occur must NOT be retried (duplicate consequential effect).
     let decision = decide_recovery(&evidence(
         RecoveryFailureClass::Ambiguous,
         true,
         Some(true),
         Some(RecoveryMutationState::Reconciled),
     ));
-    assert_eq!(decision.outcome, RecoveryOutcome::Retryable);
-    assert!(decision.retry_safe);
+    assert_eq!(decision.outcome, RecoveryOutcome::Reconcile);
+    assert!(!decision.retry_safe);
+}
+
+#[test]
+fn ep035_unit_recovery_ambiguous_reconciled_without_observation_not_retry_safe() {
+    // AUD-045 hostile: AMBIGUOUS + RECONCILED with NO explicit negative
+    // mutation observation must not be retry-safe.
+    let decision = decide_recovery(&evidence(
+        RecoveryFailureClass::Ambiguous,
+        false,
+        None,
+        Some(RecoveryMutationState::Reconciled),
+    ));
+    assert_eq!(decision.outcome, RecoveryOutcome::Reconcile);
+    assert!(!decision.retry_safe);
 }
 
 #[test]

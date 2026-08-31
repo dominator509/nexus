@@ -16,8 +16,8 @@ use crate::error::{SetupError, SetupErrorCode, SetupResult};
 use crate::vocabulary::{
     contains_hostile_authority_token, CapabilityCertificationState, DeploymentMode,
     DeploymentVerificationState, DiscoveryKind, EnrollmentCredentialState, HardwareProvenance,
-    IntegrationStatus, RecoveryFailureClass, RecoveryMaterialKind, RecoveryMutationState,
-    RecoveryOutcome, ReleaseChannel,
+    IntegrationStatus, OwnerBootstrapState, RecoveryFailureClass, RecoveryMaterialKind,
+    RecoveryMutationState, RecoveryOutcome, ReleaseChannel,
 };
 
 macro_rules! typed_id {
@@ -348,16 +348,66 @@ impl OwnerBootstrapRequest {
 }
 
 /// The durable first-owner record once initialized.
+///
+/// AUD-044: the record carries its OWNER_BOOTSTRAP state so the
+/// persistence layer can never write OWNER_AUTHORIZED directly. Only
+/// the enforced ladder transition (`advance_owner_state`) can move the
+/// record forward, and it requires the preceding security transitions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FirstOwnerRecord {
     pub idempotency_key: String,
     pub principal_id: PersonId,
+    pub state: OwnerBootstrapState,
+}
+
+impl FirstOwnerRecord {
+    /// A first-owner record starts at the LOWEST ladder rung. It is
+    /// NEVER constructed as OWNER_AUTHORIZED: that state can only be
+    /// reached by traversing the enforced transitions.
+    pub fn new(idempotency_key: impl Into<String>, principal_id: PersonId) -> Self {
+        Self {
+            idempotency_key: idempotency_key.into(),
+            principal_id,
+            state: OwnerBootstrapState::DetailsProvided,
+        }
+    }
+}
+
+/// Advance the owner bootstrap ladder. Enforces the canonical sequence:
+/// OWNER_DETAILS_PROVIDED -> OWNER_IDENTITY_VERIFIED ->
+/// OWNER_PRINCIPAL_CREATED -> OWNER_AUTHORIZED. A jump over any rung is
+/// rejected; OWNER_AUTHORIZED can never be written without traversing
+/// every preceding security transition (AUD-044).
+pub fn advance_owner_state(
+    record: &FirstOwnerRecord,
+    to_state: OwnerBootstrapState,
+) -> SetupResult<FirstOwnerRecord> {
+    use OwnerBootstrapState::*;
+    let valid = match (record.state, to_state) {
+        (DetailsProvided, IdentityVerified) => true,
+        (IdentityVerified, PrincipalCreated) => true,
+        (PrincipalCreated, OwnerAuthorized) => true,
+        (state, next) if state == next => true, // idempotent re-assert
+        _ => false,
+    };
+    if !valid {
+        return Err(SetupError::policy(format!(
+            "invalid owner bootstrap transition {} -> {}",
+            record.state, to_state
+        )));
+    }
+    Ok(FirstOwnerRecord {
+        idempotency_key: record.idempotency_key.clone(),
+        principal_id: record.principal_id.clone(),
+        state: to_state,
+    })
 }
 
 /// Deterministic first-owner decision. Replay of the same idempotency
 /// key is idempotent; a competing request is CONFLICT (never two first
 /// owners). Durable enforcement is owned by the deployment layer; the
-/// decision semantics are fixed here.
+/// decision semantics are fixed here. The decision carries the record's
+/// CURRENT ladder state; authorization is a separate, later transition.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FirstOwnerDecision {
     Initialized { principal_id: PersonId },
@@ -452,6 +502,30 @@ impl EnrollmentCredential {
             expires_at_unix_s: self.expires_at_unix_s,
             state: self.state,
         }
+    }
+
+    /// Atomically claim this credential by proving possession of the
+    /// bootstrap secret.
+    ///
+    /// AUD-043: consumption of a one-time enrollment credential is bound
+    /// to the secret. A caller knowing only the credential ID cannot
+    /// consume it; the secret must match in the SAME atomic transition.
+    /// Returns a new credential in the USED state on success, and never
+    /// partially transitions on failure.
+    pub fn claim(&self, secret: &str, now_unix_s: u64) -> SetupResult<Self> {
+        if !self.is_usable(now_unix_s) {
+            return Err(SetupError::conflict(
+                "enrollment credential is not usable (expired, revoked, or already used)",
+            ));
+        }
+        if self.secret != secret {
+            return Err(SetupError::verification(
+                "bootstrap secret does not match enrollment credential",
+            ));
+        }
+        let mut claimed = self.clone();
+        claimed.state = EnrollmentCredentialState::Used;
+        Ok(claimed)
     }
 }
 
@@ -784,12 +858,22 @@ pub fn decide_recovery(evidence: &RecoveryEvidence) -> RecoveryDecision {
         .unwrap_or(RecoveryMutationState::Unknown);
     match evidence.failure_class {
         RecoveryFailureClass::Ambiguous => {
-            if evidence.mutation_state == Some(RecoveryMutationState::Reconciled) {
+            // AUD-045: AMBIGUOUS + RECONCILED is NOT retry-safe by
+            // itself. Retrying after an ambiguous provider outcome can
+            // duplicate a consequential effect unless there is an
+            // EXPLICIT negative mutation observation
+            // (mutation_occurred == Some(false)). A reconciled state
+            // without that observation is still unsafe to retry.
+            if evidence.mutation_state == Some(RecoveryMutationState::Reconciled)
+                && evidence.mutation_known
+                && evidence.mutation_occurred == Some(false)
+            {
                 RecoveryDecision {
                     outcome: RecoveryOutcome::Retryable,
                     mutation_state: RecoveryMutationState::Reconciled,
                     retry_safe: true,
-                    detail: "mutation reconciled; retry is safe".to_string(),
+                    detail: "mutation reconciled with explicit negative observation; retry is safe"
+                        .to_string(),
                 }
             } else {
                 RecoveryDecision {
