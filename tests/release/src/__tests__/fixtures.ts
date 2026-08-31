@@ -243,7 +243,7 @@ export function promotionWire(): Record<string, unknown> {
     approver: "operator-1",
     approved_at: "2026-08-25T02:00:00Z",
     state: "APPROVED_MANUAL_ONLY",
-    exact_manual_command: "sh scripts/deploy.sh --dry-run --release 1.1.0",
+    exact_manual_command: "sh scripts/deploy.sh --deploy --release 1.1.0",
   };
 }
 

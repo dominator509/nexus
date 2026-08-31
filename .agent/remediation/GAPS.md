@@ -481,3 +481,45 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
   separated, bound record.
 - Battery: scripts/rx012-remediation-tests.sh green. Register
   AUD-070 -> VERIFIED_FIXED.
+
+**AUD-082 REMEDIATED (RX-013, 2026-08-31):**
+- Root cause: the release manifest CLI read
+  infra/release/fixtures/components/nexus-core and nexus-model - files
+  literally containing '...fixture-component-bytes-deterministic' - and
+  verification reread the same fixture paths. Built Rust binaries,
+  containers, web assets, mobile artifacts and real models were never
+  hashed/verified.
+- Fix: the manifest is now built and verified from the REAL committed
+  product artifacts through a real-artifact map in the CLI: wake model
+  code (models/wake/nexus_wake/decision.py, manifest.py), provider
+  config (config/models/providers/providers.json), router policy
+  (config/models/router/policy.json), and the SeaweedFS container
+  definition (infra/release/containers/seaweedfs.yaml). All are
+  committed and clone-portable. verify-manifest fails closed for any
+  component not in the real map or whose real bytes differ.
+- Proof: hostile - fixture-only/ghost component denied (NOT_FOUND),
+  deleted real artifact -> NOT_FOUND, tampered digest ->
+  VERIFICATION_FAILED, tampered artifact -> deploy denied; the
+  integration test re-derives digests from the real committed paths.
+- Battery: scripts/rx013-remediation-tests.sh green. Register
+  AUD-082 -> VERIFIED_FIXED.
+
+**AUD-081 REMEDIATED (RX-013, 2026-08-31):**
+- Root cause: deploy.sh only supported --dry-run planning (which itself
+  invoked a phantom nexus-setup-cli binary that does not exist in the
+  workspace) and every other invocation exited 'production deployment
+  is not authorized'. There was no production deployment action at all.
+- Fix: deploy.sh is now a REAL deploy command. --deploy verifies the
+  release manifest digest and every artifact byte against the REAL
+  product artifacts, bridges to the canonical installer contract, then
+  executes the REAL transactional installer (backup-before-update,
+  staged replacement, digest validation, atomic switch, verification)
+  into the caller-provided isolated install root - the host nexus tree
+  is never touched. --dry-run performs real manifest/artifact
+  verification. The release handoff now carries
+  sh scripts/deploy.sh --deploy (not --dry-run).
+- Proof: real end-to-end deploy installs bytes matching the real
+  artifacts and writes the installer journal; a tampered artifact is
+  denied BEFORE any mutation (no install state created).
+- Battery: scripts/rx013-remediation-tests.sh green. Register
+  AUD-081 -> VERIFIED_FIXED.

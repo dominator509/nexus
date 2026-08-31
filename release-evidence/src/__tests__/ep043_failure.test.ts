@@ -50,13 +50,7 @@ const LOADER = join(
   "ts-resolve-loader.mjs",
 );
 const CLI = join(ROOT, "release-evidence", "src", "cli.ts");
-const FIXTURE_COMPONENTS = join(
-  ROOT,
-  "infra",
-  "release",
-  "fixtures",
-  "components",
-);
+const FIXTURE_ROOT = ROOT;
 
 const tempRoots: string[] = [];
 
@@ -103,18 +97,27 @@ async function runCli(
   }
 }
 
-async function copyFixtureComponents(target: string): Promise<void> {
-  const componentsDir = join(
-    target,
-    "infra",
-    "release",
-    "fixtures",
-    "components",
-  );
-  await mkdir(componentsDir, { recursive: true });
-  for (const name of ["nexus-core", "nexus-model"]) {
-    const bytes = await readFile(join(FIXTURE_COMPONENTS, name));
-    await writeFile(join(componentsDir, name), bytes);
+/**
+ * Copy the REAL release artifacts (AUD-082) into the temp repo so the
+ * manifest CLI can build/verify against real committed product bytes,
+ * exactly as it does in the real repository. The manifest binds these
+ * real paths - model code, provider config, router policy, container
+ * definition - never fixture strings.
+ */
+async function copyRealArtifacts(target: string): Promise<void> {
+  const realPaths = [
+    "models/wake/nexus_wake/decision.py",
+    "models/wake/nexus_wake/manifest.py",
+    "config/models/providers/providers.json",
+    "config/models/router/policy.json",
+    "infra/release/containers/seaweedfs.yaml",
+  ];
+  for (const rel of realPaths) {
+    const source = join(FIXTURE_ROOT, rel);
+    const dest = join(target, rel);
+    await mkdir(dirname(dest), { recursive: true });
+    const bytes = await readFile(source);
+    await writeFile(dest, bytes);
   }
 }
 
@@ -189,7 +192,7 @@ async function makeTempRepo(
     await mkdir(join(repo, ".agent", "GRAPH.md"));
   }
 
-  await copyFixtureComponents(repo);
+  await copyRealArtifacts(repo);
   return repo;
 }
 
@@ -257,8 +260,10 @@ describe("EP-043 M4 forced failures, abuse cases, observability", () => {
       cwd: repo,
     });
     expect(build.code).toBe(0);
+    // AUD-082: deleting a REAL release artifact makes verification fail
+    // closed - the manifest binds real product bytes, not fixtures.
     await rm(
-      join(repo, "infra", "release", "fixtures", "components", "nexus-core"),
+      join(repo, "models", "wake", "nexus_wake", "decision.py"),
     );
     const result = await runCli(
       ["verify-manifest", "--manifest", manifestPath],
@@ -266,7 +271,7 @@ describe("EP-043 M4 forced failures, abuse cases, observability", () => {
     );
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain("NOT_FOUND");
-    expect(result.stderr).toContain("nexus-core");
+    expect(result.stderr).toContain("nexus-wake-model");
   });
 
   it("ep043_failure_denied_read_is_fail_closed", async () => {

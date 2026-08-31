@@ -258,7 +258,7 @@ describe("RX-002 drill obligations (AUD-072)", () => {
       reviews: [],
       drills: [],
       releaseTag: "green/EP-043",
-      manualDeployCommand: "sh scripts/deploy.sh --dry-run",
+      manualDeployCommand: "sh scripts/deploy.sh --deploy",
       freshCloneRerun: true,
     };
     expect(evaluateReadiness(inputs).decision).toBe("NOT_READY");

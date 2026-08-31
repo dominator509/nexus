@@ -159,7 +159,7 @@ function buildHandoff(
     handoffId: "handoff-1",
     releaseId: "release-1",
     profile: "core",
-    exactCommand: "sh scripts/deploy.sh --dry-run",
+    exactCommand: "sh scripts/deploy.sh --deploy",
     createdAt: FIXED_NOW,
   });
   return { ...created, ...overrides };
@@ -619,7 +619,7 @@ describe("EP-043 M1 manual deploy handoff", () => {
   it("ep043_unit_handoff_constructs", () => {
     const handoff = buildHandoff();
     expect(handoff.schema_version).toBe(1);
-    expect(handoff.exactCommand).toBe("sh scripts/deploy.sh --dry-run");
+    expect(handoff.exactCommand).toBe("sh scripts/deploy.sh --deploy");
     expect(handoff.createdAt).toBe(FIXED_NOW);
   });
 
@@ -637,7 +637,7 @@ describe("EP-043 M1 manual deploy handoff", () => {
         handoffId: "h",
         releaseId: "r",
         profile: "core",
-        exactCommand: "sh scripts/deploy.sh --dry-run; rm -rf /",
+        exactCommand: "sh scripts/deploy.sh --deploy; rm -rf /",
       }),
     ).toThrow(ShipError);
   });

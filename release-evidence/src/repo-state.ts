@@ -332,7 +332,10 @@ export function collectReadinessInputs(paths: RepoPaths): ReadinessInputs {
   const reviews = collectReviews(paths);
   const drills = collectDrills(paths);
   const releaseTag = collectReleaseTag(paths.root);
-  const manualDeployCommand = "sh scripts/deploy.sh --dry-run";
+  // AUD-081: the exact manual deploy command must be a REAL deployment
+  // action, not a dry-run. The operator-facing handoff carries the
+  // verified deploy invocation.
+  const manualDeployCommand = "sh scripts/deploy.sh --deploy";
   return {
     graphNodes,
     liveFireProofs,

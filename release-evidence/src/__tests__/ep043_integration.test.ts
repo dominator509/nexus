@@ -32,13 +32,6 @@ const LOADER = join(
 );
 const CLI = join(ROOT, "release-evidence", "src", "cli.ts");
 const OPERATIONS = join(ROOT, "OPERATIONS.md");
-const FIXTURE_COMPONENTS = join(
-  ROOT,
-  "infra",
-  "release",
-  "fixtures",
-  "components",
-);
 
 const tempRoots: string[] = [];
 
@@ -111,6 +104,10 @@ describe("EP-043 M3 real dependency and transport integration", () => {
   });
 
   it("ep043_integration_manifest_digests_real_artifact_bytes", async () => {
+    // AUD-082: the manifest binds the REAL committed product artifacts
+    // (model code, provider config, router policy, container def), never
+    // fixture strings. Component digests must equal real sha256 over the
+    // real committed artifact bytes.
     const out = await tempDir("ep043-m3-manifest-");
     const result = await runCli(["manifest", "--output-dir", out]);
     expect(result.code).toBe(0);
@@ -123,11 +120,18 @@ describe("EP-043 M3 real dependency and transport integration", () => {
         size_bytes: number;
       }>;
     };
-    expect(manifest.components.length).toBeGreaterThanOrEqual(2);
+    expect(manifest.components.length).toBeGreaterThanOrEqual(5);
+    const realArtifactPaths: Record<string, string> = {
+      "nexus-wake-model": "models/wake/nexus_wake/decision.py",
+      "nexus-wake-manifest": "models/wake/nexus_wake/manifest.py",
+      "nexus-providers-config": "config/models/providers/providers.json",
+      "nexus-router-policy": "config/models/router/policy.json",
+      "nexus-container-seaweedfs": "infra/release/containers/seaweedfs.yaml",
+    };
     for (const component of manifest.components) {
-      const bytes = await readFile(
-        join(FIXTURE_COMPONENTS, component.component_id),
-      );
+      const relPath = realArtifactPaths[component.component_id];
+      expect(relPath).toBeDefined();
+      const bytes = await readFile(join(ROOT, relPath!));
       const expected = digestBytes(new Uint8Array(bytes));
       expect(component.digest).toBe(expected);
       expect(component.size_bytes).toBe(bytes.length);
@@ -227,8 +231,12 @@ describe("EP-043 M3 real dependency and transport integration", () => {
   });
 
   it("ep043_integration_verify_manifest_fails_closed_missing_artifact", async () => {
+    // AUD-082: verify-manifest fails closed when a manifest component is
+    // NOT one of the real release artifacts (ghost/injected component).
     const out = await tempDir("ep043-m3-ghost-");
-    const bytes = await readFile(join(FIXTURE_COMPONENTS, "nexus-core"));
+    const bytes = await readFile(
+      join(ROOT, "models", "wake", "nexus_wake", "decision.py"),
+    );
     const ghost = buildReleaseManifest({
       releaseId: "nexus-1.0.0-ghost",
       version: "1.0.0",
@@ -351,7 +359,7 @@ describe("EP-043 M3 real dependency and transport integration", () => {
     expect(manifest.code).toBe(0);
     expect(manifest.stdout).toContain("manifest: wrote");
     expect(manifest.stdout).toContain(
-      "components, signatures PRESENT_NOT_VERIFIED",
+      "real product artifacts, signatures PRESENT_NOT_VERIFIED",
     );
   });
 });

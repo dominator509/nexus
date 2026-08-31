@@ -233,6 +233,83 @@ async function commandReadiness(): Promise<void> {
   console.log(`wrote ${output} (${safe.length} bytes)`);
 }
 
+/**
+ * AUD-082: real release artifacts. The manifest MUST be built from the
+ * REAL product artifacts that ship - the actual model code, provider
+ * config, router policy, and container definition committed in the
+ * repository - never from fixture strings. Each entry resolves to a
+ * committed, clone-portable path so a fresh checkout can rebuild and
+ * reverify the exact same manifest.
+ */
+const REAL_RELEASE_ARTIFACTS: ReadonlyArray<{
+  componentId: string;
+  name: string;
+  version: string;
+  /** Repository-relative artifact path (committed, clone-portable). */
+  relPath: string;
+}> = [
+  {
+    componentId: "nexus-wake-model",
+    name: "nexus-wake-model",
+    version: "1.0.0",
+    relPath: "models/wake/nexus_wake/decision.py",
+  },
+  {
+    componentId: "nexus-wake-manifest",
+    name: "nexus-wake-manifest",
+    version: "1.0.0",
+    relPath: "models/wake/nexus_wake/manifest.py",
+  },
+  {
+    componentId: "nexus-providers-config",
+    name: "nexus-providers-config",
+    version: "1.0.0",
+    relPath: "config/models/providers/providers.json",
+  },
+  {
+    componentId: "nexus-router-policy",
+    name: "nexus-router-policy",
+    version: "1.0.0",
+    relPath: "config/models/router/policy.json",
+  },
+  {
+    componentId: "nexus-container-seaweedfs",
+    name: "nexus-container-seaweedfs",
+    version: "1.0.0",
+    relPath: "infra/release/containers/seaweedfs.yaml",
+  },
+];
+
+function readRealArtifact(
+  root: string,
+  relPath: string,
+  componentId: string,
+): Uint8Array {
+  const fullPath = join(root, relPath);
+  try {
+    const bytes = readFileSync(fullPath);
+    return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  } catch {
+    throw new ShipError(
+      "NOT_FOUND",
+      `real release artifact missing for ${componentId}: ${relPath}`,
+    );
+  }
+}
+
+function realArtifactInputs(
+  root: string,
+  releaseId: string,
+): ManifestComponentInput[] {
+  return REAL_RELEASE_ARTIFACTS.map((artifact) => ({
+    componentId: artifact.componentId,
+    name: artifact.name,
+    version: artifact.version,
+    artifactBytes: readRealArtifact(root, artifact.relPath, artifact.componentId),
+    artifactKey: `releases/${releaseId}/components/${artifact.componentId}`,
+  }));
+}
+
 async function commandManifest(): Promise<void> {
   rejectUnknownFlags(["output-dir", "release-id"]);
   const outputDir = flag("output-dir") ?? "dist/release";
@@ -242,44 +319,9 @@ async function commandManifest(): Promise<void> {
   rejectFileTarget(outPath);
   mkdirSync(outPath, { recursive: true });
 
-  const componentInputs: ManifestComponentInput[] = [
-    {
-      componentId: "nexus-core",
-      name: "nexus-core",
-      version: "1.0.0",
-      artifactBytes: new Uint8Array(
-        readFileSync(
-          join(
-            root,
-            "infra",
-            "release",
-            "fixtures",
-            "components",
-            "nexus-core",
-          ),
-        ),
-      ),
-      artifactKey: `releases/${releaseId}/components/nexus-core`,
-    },
-    {
-      componentId: "nexus-model",
-      name: "nexus-model",
-      version: "1.0.0",
-      artifactBytes: new Uint8Array(
-        readFileSync(
-          join(
-            root,
-            "infra",
-            "release",
-            "fixtures",
-            "components",
-            "nexus-model",
-          ),
-        ),
-      ),
-      artifactKey: `releases/${releaseId}/components/nexus-model`,
-    },
-  ];
+  // AUD-082: bind the manifest to the REAL committed product artifacts,
+  // never fixture strings.
+  const componentInputs = realArtifactInputs(root, releaseId);
 
   const manifest = buildReleaseManifest({
     releaseId,
@@ -300,7 +342,7 @@ async function commandManifest(): Promise<void> {
   );
   // eslint-disable-next-line no-console
   console.log(
-    `manifest: ${manifest.components.length} components, signatures PRESENT_NOT_VERIFIED`,
+    `manifest: ${manifest.components.length} real product artifacts, signatures PRESENT_NOT_VERIFIED`,
   );
 }
 
@@ -388,19 +430,25 @@ async function commandVerifyManifest(): Promise<void> {
       "manifest digest mismatch (tampered manifest)",
     );
   }
-  const componentDir = join(root, "infra", "release", "fixtures", "components");
+  // AUD-082: verify against the REAL committed product artifacts. A
+  // component that is not one of the real release artifacts is not a
+  // shippable product component and fails closed.
+  const realByComponentId = new Map(
+    REAL_RELEASE_ARTIFACTS.map((artifact) => [
+      artifact.componentId,
+      artifact.relPath,
+    ]),
+  );
   let verified = 0;
   for (const component of manifest.components) {
-    const artifactPath = join(componentDir, component.component_id);
-    let bytes: Uint8Array;
-    try {
-      bytes = new Uint8Array(readFileSync(artifactPath));
-    } catch {
+    const relPath = realByComponentId.get(component.component_id);
+    if (relPath === undefined) {
       throw new ShipError(
         "NOT_FOUND",
-        `artifact bytes missing for ${component.component_id}: ${artifactPath}`,
+        `component ${component.component_id} is not a real release artifact`,
       );
     }
+    const bytes = readRealArtifact(root, relPath, component.component_id);
     const actual = digestBytes(bytes);
     if (actual !== component.digest) {
       throw new ShipError(

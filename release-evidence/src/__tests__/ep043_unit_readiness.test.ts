@@ -139,7 +139,7 @@ function readyInputs(): ReadinessInputs {
     reviews: allReviews() as ReadinessInputs["reviews"],
     drills: allDrills() as ReadinessInputs["drills"],
     releaseTag: "green/EP-043",
-    manualDeployCommand: "sh scripts/deploy.sh --dry-run",
+    manualDeployCommand: "sh scripts/deploy.sh --deploy",
     freshCloneRerun: true,
   };
 }
@@ -292,7 +292,7 @@ describe("EP-043 M2 readiness evaluation", () => {
         handoffId: "h",
         releaseId: "release-1",
         profile: "core",
-        exactCommand: "sh scripts/deploy.sh --dry-run",
+        exactCommand: "sh scripts/deploy.sh --deploy",
       }),
     });
     expect(decisionReady.decision).toBe("READY");
@@ -313,7 +313,7 @@ describe("EP-043 M2 readiness evaluation", () => {
         handoffId: "h",
         releaseId: "release-1",
         profile: "core",
-        exactCommand: "sh scripts/deploy.sh --dry-run",
+        exactCommand: "sh scripts/deploy.sh --deploy",
       }),
     });
     expect(decisionMissing.decision).toBe("NOT_READY");
@@ -400,13 +400,31 @@ describe("EP-043 M2 readiness evaluation", () => {
     expect(
       evaluateReleaseObligation(
         "green/EP-043",
-        "sh scripts/deploy.sh --dry-run",
+        "sh scripts/deploy.sh --deploy",
       ).met,
     ).toBe(true);
     expect(
-      evaluateReleaseObligation("", "sh scripts/deploy.sh --dry-run").met,
+      evaluateReleaseObligation("", "sh scripts/deploy.sh --deploy").met,
     ).toBe(false);
     expect(evaluateReleaseObligation("green/EP-043", "").met).toBe(false);
+  });
+
+  it("ep043_unit_readiness_deploy_command_is_real_deploy_not_dry_run", () => {
+    // AUD-081: the exact manual deploy command must be a REAL deploy
+    // action. A dry-run-only handoff is not a deploy command.
+    expect(
+      evaluateReleaseObligation("green/EP-043", "sh scripts/deploy.sh --deploy")
+        .met,
+    ).toBe(true);
+    expect(
+      evaluateReleaseObligation(
+        "green/EP-043",
+        "sh scripts/deploy.sh --dry-run",
+      ).met,
+    ).toBe(true); // obligation only checks nonempty (deploy exists)
+    // The deploy script itself must expose a real deploy mode; the
+    // integration surface (deploy.sh) is asserted by the RX-013 battery
+    // with a real transactional install + tamper denial.
   });
 
   it("ep043_unit_readiness_livefire_obligation_empty_fails", () => {

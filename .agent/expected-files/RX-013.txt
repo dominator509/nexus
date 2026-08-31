@@ -1,0 +1,18 @@
+# RX-013 expected files: remediation surface for AUD-082 + AUD-081
+# (release manifest bound to REAL product artifacts; deploy.sh is a real
+#  deploy command through the transactional installer)
+.agent/expected-files/RX-013.txt
+.agent/milestone-files/RX-013-M1.txt
+.agent/milestone-files/RX-013-M2.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+release-evidence/src/cli.ts
+release-evidence/src/repo-state.ts
+release-evidence/src/__tests__/ep043_integration.test.ts
+release-evidence/src/__tests__/ep043_failure.test.ts
+release-evidence/src/__tests__/ep043_unit_readiness.test.ts
+scripts/deploy.sh
+COMMANDS.md
+scripts/nodes/RX-013.sh
+scripts/rx013-remediation-tests.sh
