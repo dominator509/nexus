@@ -24,7 +24,7 @@
 //! and the real SkillExecutor subprocess boundary. The hostile
 //! payloads are CONTROLLED_TEST_FIXTURE shell scripts.
 
-use nexus_skills::manifest::{SkillManifest, SkillPackage};
+use nexus_skills::manifest::SkillManifest;
 use nexus_skills::vocabulary::SignatureAlgorithm;
 use nexus_skills::{
     sha256_hex, sign_ed25519, SkillBundleLoader, SkillExecutor, SkillPackageErrorCode,

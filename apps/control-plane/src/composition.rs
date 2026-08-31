@@ -361,7 +361,7 @@ impl RuntimeComposition {
         // Real MCP engine with a real tool registry.
         let origin_policy = OriginPolicy::new(vec!["https://app.nexus.local".to_string()]);
         let mut tool_registry = McpToolRegistry::new();
-        let _ = tool_registry
+        tool_registry
             .register(
                 DeclaredTool {
                     name: "runtime.health".to_string(),

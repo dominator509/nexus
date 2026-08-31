@@ -278,3 +278,61 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
 - Battery: scripts/rx008-remediation-tests.sh green. Register
   AUD-084 -> VERIFIED_FIXED; AUD-054 -> FIXED_UNVERIFIED (co-owned
   with RX-019, which verifies OTel export/Grafana/Prometheus).
+**AUD-059 REMEDIATED (RX-009, 2026-08-31):**
+- Root cause: the tamper seal was a SHA-256 checksum stored beside the
+  evidence and recomputed during verification; the ArtifactSigner trait
+  had no implementation. Anyone able to change evidence could change its
+  checksum - the seal proved nothing.
+- Fix: nexus-supply-chain now has a REAL Ed25519 ArtifactSigner (ring
+  0.17, already in the workspace lock - no new dependency class):
+  keygen, deterministic RFC 8032 signing, and fail-closed verification
+  with typed SignatureInvalid for any tamper/wrong-key/short-key.
+  scripts/sbom/generate.sh seals evidence with evidence.json.sig +
+  evidence.json.pub; verify.sh cryptographically verifies with typed
+  SIGNATURE_MISSING / SIGNATURE_INVALID classes and a pinned-key mode
+  that refuses a wholesale evidence+sig+pubkey swap.
+- Proof: forced-failures proves tamper-and-RESEAL is still rejected
+  (SIGNATURE_INVALID with seal_matches=true, signature_verified=false) -
+  the cryptographic signature, not the checksum, is what catches
+  tampering. Legitimate-denial fixtures are re-signed so their intended
+  class fires.
+- Battery: scripts/rx009-remediation-tests.sh green. Register
+  AUD-059 -> VERIFIED_FIXED.
+
+**AUD-060 REMEDIATED (RX-009, 2026-08-31):**
+- Root cause: the certified SBOM inventory was Cargo-centric only,
+  although the shipped product contains pnpm/TypeScript, Flutter/Dart,
+  images, and model/data artifacts.
+- Fix: sbom_ecosystems adapter inventories the REAL repository state:
+  pnpm-lock.yaml (378 TypeScript packages), every pubspec.lock (137
+  Dart packages across 5 lockfiles), models/, tests/data, and app
+  images. Fail-closed on missing/malformed lockfiles. ecosystems.json
+  carries per-ecosystem counts + package lists + artifact inventory and
+  is cryptographically signed like the main evidence; verify.sh verifies
+  it with typed ECOSYSTEMS_MISSING / ECOSYSTEMS_STALE /
+  ECOSYSTEMS_SIGNATURE_INVALID classes, bound to run_id + git_commit.
+- Proof: hostile case - tampered ecosystem counts are rejected even
+  when the Cargo evidence is untouched.
+- Battery: scripts/rx009-remediation-tests.sh green. Register
+  AUD-060 -> VERIFIED_FIXED.
+
+**AUD-065 REMEDIATED (RX-009, 2026-08-31):**
+- Root cause: verifyBundle proved file hashes, manifest digest and
+  bundle self-digest but never cryptographically checked
+  SignedComponent.signature; the M5 gate shipped AAAA01BBBB01 dummy
+  signatures and expected VERIFIED. No signature verifier existed.
+- Fix: verifyBundle now imports the bundle's Ed25519 public key
+  (signing-key.pub.jwk carried in the bundle root) and cryptographically
+  verifies EVERY component signature over its canonical artifact digest
+  (Node WebCrypto; signing side is crypto.sign(null, msg, privateKey),
+  cross-verified live). New typed classes SIGNING_KEY_MISSING /
+  SIGNATURE_MISSING / SIGNATURE_INVALID fail closed. The M5 gate now
+  produces REAL signatures with a real keypair; evidence
+  signature-state is SIGNATURE_VERIFIED_ED25519; boundary.txt asserts
+  real Ed25519 signature verification, proven.
+- Proof: three hostile proofs - dummy/placeholder signature fails
+  (SIGNATURE_INVALID), signature from a wrong key fails
+  (SIGNATURE_INVALID), missing signing key fails (SIGNING_KEY_MISSING);
+  the vitest bundle suite (19 proofs) runs with real signatures.
+- Battery: scripts/rx009-remediation-tests.sh green. Register
+  AUD-065 -> VERIFIED_FIXED.

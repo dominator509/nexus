@@ -20,6 +20,7 @@
 import { describe, expect, it } from "vitest";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -27,6 +28,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { generateKeyPairSync, sign as nodeSign } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { contentDigest, type Digest } from "@nexus/setup";
@@ -53,6 +55,7 @@ interface Fixture {
   releaseId: string;
   componentDigests: Record<string, string>;
   componentNames: Record<string, string>;
+  signingKeyPath: string;
 }
 
 async function sha256Of(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
@@ -86,6 +89,20 @@ async function makeFixture(label: string): Promise<Fixture> {
   const d1 = `sha256:${await sha256Of(c1)}`;
   const d2 = `sha256:${await sha256Of(c2)}`;
 
+  // REAL Ed25519 signatures (AUD-065): the fixture signs each canonical
+  // component digest with a real keypair and carries the public key (JWK)
+  // so verifyBundle's cryptographic check is exercised for real.
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const signingKeyPath = join(base, "signing-key.pub.jwk");
+  writeFileSync(
+    signingKeyPath,
+    JSON.stringify(publicKey.export({ format: "jwk" })),
+  );
+  const signDigest = (digest: string): string =>
+    nodeSign(null, Buffer.from(digest), privateKey).toString("base64");
+  const s1 = signDigest(d1);
+  const s2 = signDigest(d2);
+
   const sbomPath = join(sbomDir, "sbom.json");
   const licensePath = join(base, "LICENSE");
   const migrationPath = join(base, "migration-1.sql");
@@ -110,7 +127,7 @@ async function makeFixture(label: string): Promise<Fixture> {
         signature: {
           algorithm: "ED25519",
           key_id: "key-test-1",
-          value_b64: "AAAA01BBBB01",
+          value_b64: s1,
         },
         sbom_ref: { backend: "local", key: "sbom-comp-1" },
         license_ref: "MIT",
@@ -125,7 +142,7 @@ async function makeFixture(label: string): Promise<Fixture> {
         signature: {
           algorithm: "ED25519",
           key_id: "key-test-1",
-          value_b64: "AAAA01BBBB01",
+          value_b64: s2,
         },
         sbom_ref: { backend: "local", key: "sbom-comp-2" },
         license_ref: "MIT",
@@ -192,6 +209,7 @@ async function makeFixture(label: string): Promise<Fixture> {
       "comp-1": "artifact-comp-1",
       "comp-2": "artifact-comp-2",
     },
+    signingKeyPath,
   };
 }
 
@@ -227,6 +245,12 @@ async function makeBundle(
       { name: "recover.sh", payloadPath: fixture.recoveryPath },
     ],
   });
+  // The bundle carries the signing public key in its root (AUD-065) so
+  // verification can cryptographically check every component signature.
+  copyFileSync(
+    fixture.signingKeyPath,
+    join(bundleDir, "signing-key.pub.jwk"),
+  );
   return { fixture, bundleDir, bundleId };
 }
 

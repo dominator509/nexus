@@ -343,10 +343,10 @@ unsafe fn apply_linux_sandbox(payload: &[u8]) -> Result<(), std::io::Error> {
     let payload_path = CString::new("/tmp/.nexus-skill-exec").unwrap();
 
     let err = |what: &str| {
-        std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("sandbox {what} failed: {}", std::io::Error::last_os_error()),
-        )
+        std::io::Error::other(format!(
+            "sandbox {what} failed: {}",
+            std::io::Error::last_os_error()
+        ))
     };
 
     // 1. Real namespaces: mount, network, IPC, UTS. (PID ns is
@@ -444,9 +444,7 @@ unsafe fn apply_linux_sandbox(payload: &[u8]) -> Result<(), std::io::Error> {
     }
     // 8. seccomp: deny-list filter (default allow, EPERM for the
     //    dangerous syscall set).
-    if let Err(e) = install_seccomp_denylist() {
-        return Err(e);
-    }
+    install_seccomp_denylist()?;
     Ok(())
 }
 
@@ -551,13 +549,10 @@ unsafe fn install_seccomp_denylist() -> Result<(), std::io::Error> {
         0,
     ) != 0
     {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!(
-                "seccomp install failed: {}",
-                std::io::Error::last_os_error()
-            ),
-        ));
+        return Err(std::io::Error::other(format!(
+            "seccomp install failed: {}",
+            std::io::Error::last_os_error()
+        )));
     }
     Ok(())
 }
