@@ -1,0 +1,133 @@
+{
+  "attestation_digest": "sha256:f31914e8126570820b682b4d286162e794c65b5496ceb70da18b258c1c305619",
+  "closure_commit": "4943bfdb95dbdb50eeaa5708d68f750605eb3813",
+  "created_at": "2026-08-31T17:56:45Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:6e1877abb40e743b77407bd3db5605bff0e8da7b211f8ee2631ab47b2a61d93c",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-010/4943bfdb95dbdb50eeaa5708d68f750605eb3813",
+  "milestones": {
+    "max": 4,
+    "passed": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "node": "RX-010",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:af1d61761202f42f04c695e2f45785600df92324fe0900f8709297ad2cbb4b19",
+      "id": "release-tag-truth",
+      "ref": "release-evidence/src/repo-state.ts"
+    },
+    {
+      "digest": "sha256:9e5e2b8042895ebfbc137852084bb83fde01a79251284d6bd11ed1a74cccdd28",
+      "id": "bytes-digest",
+      "ref": "release-evidence/src/model.ts"
+    },
+    {
+      "digest": "sha256:554e916cc31d1e4a2be14871199292aba3a0b6988a32e36877033774c8152c9e",
+      "id": "manifest-canonical",
+      "ref": "release-evidence/src/manifest.ts"
+    },
+    {
+      "digest": "sha256:d5f1b5fc36a8e53f26d5ecb6087db5c5df7eb2b9c478f09e689b86527791d17e",
+      "id": "repo-state-tests",
+      "ref": "release-evidence/src/__tests__/ep043_unit_repo_state.test.ts"
+    },
+    {
+      "digest": "sha256:efeeeb6523988c6e9a9ca6f2cfbd0f2e7e6b213d4ede6771208c2f259626ccb7",
+      "id": "contract-tests",
+      "ref": "release-evidence/src/__tests__/ep043_unit_contract.test.ts"
+    },
+    {
+      "digest": "sha256:ee8e550283952ccfa99ab6e79920cc05cc5f4a61e5d0e03410a05ddceb3bc177",
+      "id": "readiness-tests",
+      "ref": "release-evidence/src/__tests__/ep043_unit_readiness.test.ts"
+    },
+    {
+      "digest": "sha256:db8034d0e4103d750d2126184df2b68448093b72594ad4904d99cc25b7c82ed3",
+      "id": "battery-script",
+      "ref": "scripts/rx010-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:8bf339f10c52b41ffe7957c1b2789880ba872b9f721b39d1c73096ffeeeff29f",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-010.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:6e1877abb40e743b77407bd3db5605bff0e8da7b211f8ee2631ab47b2a61d93c",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "release-evidence-suite",
+        "passed": 159
+      },
+      {
+        "failed": 0,
+        "family": "typecheck",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m1-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m2-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m3-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m4-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m5-substantive",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "readiness-release-tag-blocker",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "workspace-check",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "clippy",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 259
+  },
+  "verify_log": ".agent/remediation/evidence/RX-010/verify.log|sha256:ae8b4e513ec96e115e8896c7ad2ff6e92a5ac0669fc89b83abc966bebc49f128",
+  "verify_sentinel": "verify: ok"
+}
