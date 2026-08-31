@@ -1,0 +1,152 @@
+{
+  "attestation_digest": "sha256:fab3302ce46aa8ca4b37700caea4cdc5ce057e27ba13dca39f17657369ca272c",
+  "closure_commit": "8fe13189e9f837cdeac6c4ff9175b399aa9f12c3",
+  "created_at": "2026-08-31T17:13:10Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:bada041e58a84c56852e4fb841275a10e8ab2d74adde4cb86667fefcbfb8f5ed",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-009/8fe13189e9f837cdeac6c4ff9175b399aa9f12c3",
+  "milestones": {
+    "max": 3,
+    "passed": [
+      1,
+      2,
+      3
+    ]
+  },
+  "node": "RX-009",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:18cc569431284fc168eee112acb546826d392216201b5719b667e9a362f2eb7e",
+      "id": "ed25519-signer",
+      "ref": "crates/nexus-supply-chain/src/signer.rs"
+    },
+    {
+      "digest": "sha256:1f264d24c6b15577fd0876771974b8dbe5166ad6649ae33a017ab5dc6c11c8d4",
+      "id": "evidence-sign-adapter",
+      "ref": "crates/nexus-supply-chain/examples/evidence_sign.rs"
+    },
+    {
+      "digest": "sha256:32e2a4baa27d1ae9ee202af7e1cfc366a2f2857853689870c366d4bb6e360493",
+      "id": "sbom-ecosystems",
+      "ref": "policies/licenses/examples/sbom_ecosystems.rs"
+    },
+    {
+      "digest": "sha256:9bd73419a52432e3bc48d66fd1f4b95fab0ade42f95c7f659b1c0b59eb0b74fb",
+      "id": "sbom-generate",
+      "ref": "scripts/sbom/generate.sh"
+    },
+    {
+      "digest": "sha256:1a718540664997f68fa3a46779ce4ef7db8056d22cde52b4ee74d2edf409d37d",
+      "id": "sbom-verify",
+      "ref": "scripts/sbom/verify.sh"
+    },
+    {
+      "digest": "sha256:ba307373f67881c6b349e170b12c39f3279533df6b167f8c1b0c9fadbb63603d",
+      "id": "forced-failures",
+      "ref": "scripts/sbom/forced-failures.sh"
+    },
+    {
+      "digest": "sha256:a0f655ee3055bbcd1f883fd41e0146883a4d7abadcddf0b977c927f3cb099c82",
+      "id": "bundle-verify",
+      "ref": "offline-bundle/src/verify.ts"
+    },
+    {
+      "digest": "sha256:5258908b051bf0e916c5e7452a084157e4a3352b269cf7c83a98cd2dc5798f58",
+      "id": "bundle-errors",
+      "ref": "offline-bundle/src/errors.ts"
+    },
+    {
+      "digest": "sha256:07e891e9323f0fd3356d62abf6239f2c868fd9915c37337baf8e3b52113cfd12",
+      "id": "bundle-produce",
+      "ref": "offline-bundle/scripts/bundle-produce.sh"
+    },
+    {
+      "digest": "sha256:45b7f3d5c554583d31b7a327b4908251c762599cbcc4e366bfaca6855b461b58",
+      "id": "m5-gate",
+      "ref": "scripts/ep042-m5-tests.sh"
+    },
+    {
+      "digest": "sha256:b6c672bec5e7fbfcc668d0627f6ab9c8e021f8b330ee4a4930137a3d57c58011",
+      "id": "bundle-tests",
+      "ref": "tests/release/src/bundle/ep042_bundle_offline.test.ts"
+    },
+    {
+      "digest": "sha256:a89941cca06609fc6160bb1afb1ceaf143544a72e051e8ec41bfc1ee1c1c1617",
+      "id": "battery-script",
+      "ref": "scripts/rx009-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:f0b1f685786edd86d93067a45f853d08263fa7e1b7a0fe9b8b5e00f301ecd87b",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-009.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:bada041e58a84c56852e4fb841275a10e8ab2d74adde4cb86667fefcbfb8f5ed",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "supply-chain-unit",
+        "passed": 52
+      },
+      {
+        "failed": 0,
+        "family": "ep039-m1-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep039-m4-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep039-m5-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "vitest-bundle",
+        "passed": 19
+      },
+      {
+        "failed": 0,
+        "family": "typecheck",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "hostile-signature",
+        "passed": 4
+      },
+      {
+        "failed": 0,
+        "family": "workspace-check",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "clippy",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 172
+  },
+  "verify_log": ".agent/remediation/evidence/RX-009/verify.log|sha256:3bd68c4fc554898c10702e2bcd5537f46bd2c0b25d587704feaae1e29212921c",
+  "verify_sentinel": "verify: ok"
+}
