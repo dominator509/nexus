@@ -193,13 +193,13 @@ local-start before running the ladder.
 The runtime smoke base URL resolves by precedence
 (`scripts/smoke/runtime.sh` and `scripts/live-fire/LF-029.sh`):
 
-1. `NEXUS_SMOKE_URL` — operator override, always wins. Set this when
+1. `NEXUS_SMOKE_URL` - operator override, always wins. Set this when
    hosting remotely (public domain or dynamic IP), e.g.
    `export NEXUS_SMOKE_URL=https://nexus.example.com`.
-2. `NEXUS_BASE_DOMAIN` — used only when it is a real deployable domain
+2. `NEXUS_BASE_DOMAIN` - used only when it is a real deployable domain
    (`https://<domain>`); local/test placeholders (`.test`, `.local`,
    `.example.test`, `localhost`) are ignored and fall through.
-3. Canonical local mapping `http://127.0.0.1:8443` — the compose core
+3. Canonical local mapping `http://127.0.0.1:8443` - the compose core
    profile binds the control plane on host `127.0.0.1:8443`.
 
 Every deployment (including a fresh clone on a foreign host or dynamic
