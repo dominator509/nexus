@@ -12,5 +12,21 @@ nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
 nexus-identity = { path = "../../crates/nexus-identity", version = "0.1.0" }
 nexus-capabilities = { path = "../../crates/nexus-capabilities", version = "0.1.0" }
 nexus-fabric = { path = "../../crates/nexus-fabric", version = "0.1.0" }
+# RX-007 AUD-084: real authenticated session bindings for MCP/A2A
+# surfaces (AuthenticationStrength; SPEC-005).
+nexus-auth = { path = "../../crates/nexus-auth", version = "0.1.0" }
+# RX-007 AUD-083: real telemetry context + structured-log export at
+# startup (SPEC-007; nexus-otel is the real OTLP/JSON export boundary).
+nexus-observability = { path = "../../crates/nexus-observability", version = "0.1.0" }
+nexus-otel = { path = "../../infra/otel", version = "0.1.0" }
+# RX-007 AUD-084: real composition root surfaces (SPEC-003) - real
+# capability registry + dispatcher, real MCP engine, real A2A gateway,
+# real event outbox/inbox records.
+nexus-connectors = { path = "../../crates/nexus-connectors", version = "0.1.0" }
+nexus-mcp = { path = "../../crates/nexus-mcp", version = "0.1.0" }
+nexus-a2a = { path = "../../crates/nexus-a2a", version = "0.1.0" }
+nexus-events = { path = "../../crates/nexus-events", version = "0.1.0" }
+# Real SHA-256 for hash-bound artifact composition (SPEC-003 behavior 6).
+sha2 = "0.11"
 axum = "0.8.9"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "signal", "net"] }

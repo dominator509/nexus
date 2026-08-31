@@ -237,3 +237,44 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
   complete normally; hung payloads are killed at the deadline.
 - Battery: scripts/rx007-remediation-tests.sh 6/6 green. Register
   AUD-022 -> VERIFIED_FIXED.
+
+**AUD-083 REMEDIATED (RX-008, 2026-08-31):**
+- Root cause: EP-044 main.rs initialized no telemetry at startup; the
+  crate had no OpenTelemetry/tracing dependency; the M4 'telemetry'
+  test only checked that stdout did not expose a tenant identifier.
+- Fix: RuntimeTelemetry::init builds a validated
+  nexus_observability::TelemetryContext (component nexus-control-plane,
+  node, environment, operation=startup) and startup_line() emits a
+  structured log line through the REAL nexus-otel export boundary
+  (export_structured_log), which re-verifies
+  RedactedEnvelope::assert_exportable() before any byte is produced.
+  main.rs initializes telemetry at startup and prints the startup
+  line. Unit regressions prove context validity, empty-component
+  fail-closed, structured exportable line, and that the tenant id
+  never leaks.
+- Battery: scripts/rx008-remediation-tests.sh green. Register
+  AUD-083 -> VERIFIED_FIXED.
+
+**AUD-084 REMEDIATED (RX-008, 2026-08-31):**
+- Root cause: main.rs hard-coded only health and capabilities; the
+  router exposed only /healthz, /readyz, /v1/capabilities; the
+  REST/MCP/A2A/auth/query/command/workflow/event/artifact surfaces
+  were not composed despite SPEC-003.
+- Fix: the runtime is now the APPLICATION COMPOSITION ROOT -
+  RuntimeComposition composes the REAL InMemoryCapabilityRegistry
+  (runtime.health + runtime.capabilities descriptors), the REAL
+  CapabilityDispatcher, the REAL McpEngine with a real tool registry,
+  the REAL A2AGatewayImpl with a hash-bound MemoryArtifactStore, and
+  the REAL MemoryOutbox. The server router exposes the SPEC-003
+  surfaces over HTTP (/v1/discover, /v1/mcp/initialize|tools|call,
+  /v1/a2a/tasks + run + stream, /v1/artifacts publish/fetch,
+  /v1/events append/pending), every handler driving a real engine.
+  A2AGatewayImpl's artifact port gained Send+Sync so the composition
+  satisfies axum State bounds.
+- Proof: ep044 integration drives the REAL binary over REAL HTTP -
+  discover, MCP init/list/call, A2A submit/run/stream, artifact
+  publish/fetch (hash-bound; fabricated id 404), events append/pending
+  - all green.
+- Battery: scripts/rx008-remediation-tests.sh green. Register
+  AUD-084 -> VERIFIED_FIXED; AUD-054 -> FIXED_UNVERIFIED (co-owned
+  with RX-019, which verifies OTel export/Grafana/Prometheus).

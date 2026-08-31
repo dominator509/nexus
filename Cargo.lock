@@ -1552,12 +1552,20 @@ name = "nexus-control-plane"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "nexus-a2a",
+ "nexus-auth",
  "nexus-capabilities",
+ "nexus-connectors",
  "nexus-domain",
+ "nexus-events",
  "nexus-fabric",
  "nexus-identity",
+ "nexus-mcp",
+ "nexus-observability",
+ "nexus-otel",
  "serde",
  "serde_json",
+ "sha2 0.11.0",
  "tokio",
 ]
 

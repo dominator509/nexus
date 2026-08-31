@@ -1,18 +1,24 @@
-//! EP-044 control-plane runtime binary (ADR-019 `ControlPlaneServer`).
+//! EP-044 control-plane runtime binary (ADR-019 `ControlPlaneServer`;
+//! RX-008 AUD-083/AUD-084).
 //!
 //! The real runnable Nexus Control Plane Runtime. Reads canonical
 //! configuration from the environment (`NEXUS_BASE_DOMAIN`,
 //! `NEXUS_SMOKE_URL`, `NEXUS_CONTROL_PLANE_BIND`, `NEXUS_TENANT_ID`,
-//! `NEXUS_CAPABILITY_SOURCE`), composes the real capability source and
-//! lifecycle, and serves `/healthz`, `/readyz`, `/v1/capabilities`
-//! until a shutdown signal arrives. No placeholder mode; the binary IS
-//! the runtime.
+//! `NEXUS_CAPABILITY_SOURCE`), initializes the REAL telemetry context
+//! at startup (AUD-083), composes the REAL SPEC-003 application
+//! surfaces through the composition root (AUD-084: capability
+//! registry + dispatcher, MCP, A2A, artifacts, event outbox), and
+//! serves `/healthz`, `/readyz`, `/v1/capabilities` plus the composed
+//! surfaces until a shutdown signal arrives. No placeholder mode; the
+//! binary IS the runtime.
 
 use std::sync::Arc;
 
 use nexus_control_plane::capabilities::{CapabilityListSource, ConfiguredCapabilityList};
+use nexus_control_plane::composition::RuntimeComposition;
 use nexus_control_plane::config::ControlPlaneConfig;
 use nexus_control_plane::server::ControlPlaneServer;
+use nexus_control_plane::telemetry::RuntimeTelemetry;
 
 fn env_or(key: &str, default: &str) -> String {
     std::env::var(key).unwrap_or_else(|_| default.to_string())
@@ -41,15 +47,42 @@ async fn main() {
     // Canonical base URL for the runtime smoke (NEXUS_SMOKE_URL wins).
     let _smoke_url = env_or("NEXUS_SMOKE_URL", &config.base_url());
 
-    // Real capability source: deterministic core list. Never invented at
-    // request time (SPEC-003 discovery; EP-044 composition root).
+    // AUD-083: telemetry context initialized at startup; the startup
+    // structured-log line goes through the REAL nexus-otel export
+    // boundary (redaction verified before any byte is emitted).
+    let tenant = nexus_domain::TenantId::new(&tenant_id).ok();
+    let telemetry =
+        match RuntimeTelemetry::init("nexus-control-plane", Some("local"), tenant.as_ref()) {
+            Ok(t) => t,
+            Err(err) => {
+                eprintln!("control-plane: telemetry init failed: {err}");
+                std::process::exit(2);
+            }
+        };
+    match telemetry.startup_line() {
+        Ok(line) => print!("{line}"),
+        Err(err) => eprintln!("control-plane: startup telemetry export failed: {err}"),
+    }
+
+    // AUD-084: the runtime is the APPLICATION COMPOSITION ROOT. Real
+    // capability source for the canonical discovery endpoints + the
+    // full SPEC-003 composition (registry, dispatcher, MCP, A2A,
+    // artifacts, outbox) are composed here and handed to the server.
     let capabilities: Box<dyn CapabilityListSource + Send + Sync> =
         Box::new(ConfiguredCapabilityList::new(
             capability_source.clone(),
-            vec!["health".to_string(), "capabilities".to_string()],
+            vec![
+                "health".to_string(),
+                "capabilities".to_string(),
+                "mcp".to_string(),
+                "a2a".to_string(),
+                "artifacts".to_string(),
+                "events".to_string(),
+            ],
         ));
+    let composition = RuntimeComposition::new();
 
-    let server = ControlPlaneServer::new(config, capabilities);
+    let server = ControlPlaneServer::with_composition(config, capabilities, composition);
     let lifecycle = Arc::clone(server.lifecycle());
 
     println!(
