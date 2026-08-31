@@ -31,14 +31,21 @@ ApprovalPrompt _prompt({
   );
 }
 
-MobileSession _session({bool revoked = false, int expiresAtUnixS = 1000}) {
+MobileSession _session({
+  bool revoked = false,
+  int expiresAtUnixS = 1000,
+  SessionStrength strength = SessionStrength.stepUp,
+  String? principalId,
+  String? deviceId,
+  String? tenantId,
+}) {
   return MobileSession(
     sessionId: '77777777-7777-4777-8777-777777777777',
-    principalId: '33333333-3333-4333-8333-333333333333',
-    tenantId: '44444444-4444-4444-8444-444444444444',
-    deviceId: '22222222-2222-4222-8222-222222222222',
+    principalId: principalId ?? '33333333-3333-4333-8333-333333333333',
+    tenantId: tenantId ?? '44444444-4444-4444-8444-444444444444',
+    deviceId: deviceId ?? '22222222-2222-4222-8222-222222222222',
     grantFlow: GrantFlow.authorizationCode,
-    strength: SessionStrength.multiFactor,
+    strength: strength,
     createdAtUnixS: 0,
     expiresAtUnixS: expiresAtUnixS,
     revoked: revoked,
@@ -46,11 +53,16 @@ MobileSession _session({bool revoked = false, int expiresAtUnixS = 1000}) {
   );
 }
 
-DeviceBinding _binding({bool revoked = false}) {
+DeviceBinding _binding({
+  bool revoked = false,
+  String? deviceId,
+  String? principalId,
+  String? tenantId,
+}) {
   return DeviceBinding(
-    deviceId: '22222222-2222-4222-8222-222222222222',
-    tenantId: '44444444-4444-4444-8444-444444444444',
-    principalId: '33333333-3333-4333-8333-333333333333',
+    deviceId: deviceId ?? '22222222-2222-4222-8222-222222222222',
+    tenantId: tenantId ?? '44444444-4444-4444-8444-444444444444',
+    principalId: principalId ?? '33333333-3333-4333-8333-333333333333',
     boundAtUnixS: 0,
     revoked: revoked,
   );
@@ -227,6 +239,174 @@ void main() {
       );
       expect(resolution.decision, ApprovalDecision.approved);
     });
+
+    // ------------------------------------------------------------------
+    // AUD-041 regressions: step-up enforcement + binding identity truth.
+    // ------------------------------------------------------------------
+
+    test(
+      'AUD-041: single-factor session is refused for R4 (POLICY), not an acting-ID mismatch',
+      () {
+        final service = ApprovalBindingService();
+        expect(
+          () => service.approve(
+            prompt: _prompt(),
+            session: _session(strength: SessionStrength.singleFactor),
+            binding: _binding(),
+            actingDeviceId: '22222222-2222-4222-8222-222222222222',
+            actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+            nowUnixS: 500,
+          ),
+          throwsA(
+            isA<Spec006Error>().having(
+              (e) => e.code,
+              'code',
+              ErrorCode.policy,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'AUD-041: multi-factor (non-step-up) session is refused for R4 (POLICY)',
+      () {
+        final service = ApprovalBindingService();
+        expect(
+          () => service.approve(
+            prompt: _prompt(),
+            session: _session(strength: SessionStrength.multiFactor),
+            binding: _binding(),
+            actingDeviceId: '22222222-2222-4222-8222-222222222222',
+            actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+            nowUnixS: 500,
+          ),
+          throwsA(
+            isA<Spec006Error>().having((e) => e.code, 'code', ErrorCode.policy),
+          ),
+        );
+      },
+    );
+
+    test(
+      'AUD-041: session whose principal differs from the prompt is refused (AUTHORIZATION)',
+      () {
+        final service = ApprovalBindingService();
+        expect(
+          () => service.approve(
+            prompt: _prompt(),
+            session: _session(
+              principalId: '99999999-9999-4999-8999-999999999999',
+            ),
+            binding: _binding(),
+            actingDeviceId: '22222222-2222-4222-8222-222222222222',
+            actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+            nowUnixS: 500,
+          ),
+          throwsA(
+            isA<Spec006Error>().having(
+              (e) => e.code,
+              'code',
+              ErrorCode.authorization,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'AUD-041: session whose device differs from the prompt is refused (AUTHORIZATION)',
+      () {
+        final service = ApprovalBindingService();
+        expect(
+          () => service.approve(
+            prompt: _prompt(),
+            session: _session(
+              deviceId: '99999999-9999-4999-8999-999999999999',
+            ),
+            binding: _binding(),
+            actingDeviceId: '22222222-2222-4222-8222-222222222222',
+            actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+            nowUnixS: 500,
+          ),
+          throwsA(
+            isA<Spec006Error>().having(
+              (e) => e.code,
+              'code',
+              ErrorCode.authorization,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'AUD-041: binding that does not own the prompt device is refused (AUTHORIZATION)',
+      () {
+        final service = ApprovalBindingService();
+        expect(
+          () => service.approve(
+            prompt: _prompt(),
+            session: _session(),
+            binding: _binding(
+              deviceId: '99999999-9999-4999-8999-999999999999',
+            ),
+            actingDeviceId: '22222222-2222-4222-8222-222222222222',
+            actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+            nowUnixS: 500,
+          ),
+          throwsA(
+            isA<Spec006Error>().having(
+              (e) => e.code,
+              'code',
+              ErrorCode.authorization,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'AUD-041: binding that does not own the prompt principal is refused (AUTHORIZATION)',
+      () {
+        final service = ApprovalBindingService();
+        expect(
+          () => service.approve(
+            prompt: _prompt(),
+            session: _session(),
+            binding: _binding(
+              principalId: '99999999-9999-4999-8999-999999999999',
+            ),
+            actingDeviceId: '22222222-2222-4222-8222-222222222222',
+            actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+            nowUnixS: 500,
+          ),
+          throwsA(
+            isA<Spec006Error>().having(
+              (e) => e.code,
+              'code',
+              ErrorCode.authorization,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'AUD-041: R1 approval with a single-factor session is still accepted',
+      () {
+        final service = ApprovalBindingService();
+        final resolution = service.approve(
+          prompt: _prompt(risk: RiskClass.r1, approvalClass: ApprovalClass.policy),
+          session: _session(strength: SessionStrength.singleFactor),
+          binding: _binding(),
+          actingDeviceId: '22222222-2222-4222-8222-222222222222',
+          actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+          nowUnixS: 500,
+        );
+        expect(resolution.decision, ApprovalDecision.approved);
+      },
+    );
 
     test(
       'approval resolution is idempotent: duplicate approve returns the same resolution',
