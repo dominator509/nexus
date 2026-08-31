@@ -327,6 +327,25 @@ grep -q '"governed_transcript_created": false' "$EVIDENCE_DIR/EP-025-M5-LF-012-n
   echo "EP-025 M5: FAIL - negative scenario did not fail closed" >&2
   exit 1
 }
+# AUD-021: consent is evaluated BEFORE recording/transcription - the
+# negative evidence must prove the recording NEVER started and zero
+# bytes were captured (no transcript can exist).
+grep -q '"recording_started": false' "$EVIDENCE_DIR/EP-025-M5-LF-012-negative-disclosure.json" || {
+  echo "EP-025 M5: FAIL - negative scenario recorded despite consent denial" >&2
+  exit 1
+}
+grep -q '"caller_recording_bytes": 0' "$EVIDENCE_DIR/EP-025-M5-LF-012-negative-disclosure.json" || {
+  echo "EP-025 M5: FAIL - negative scenario captured audio bytes" >&2
+  exit 1
+}
+grep -q '"stt_skipped": "recording not consented"' "$EVIDENCE_DIR/EP-025-M5-LF-012-negative-disclosure.json" || {
+  echo "EP-025 M5: FAIL - negative scenario lacks STT skip marker" >&2
+  exit 1
+}
+grep -q '"stt_transcript"' "$EVIDENCE_DIR/EP-025-M5-LF-012-negative-disclosure.json" && {
+  echo "EP-025 M5: FAIL - negative scenario produced a transcript" >&2
+  exit 1
+}
 
 # ---- scenario 3: hostile instruction (speech is data) ----------------
 run_scenario hostile "$WORK/phrase-hostile.raw" "$PHRASE_HOSTILE_SHA" true || exit 1

@@ -114,10 +114,11 @@ fn lf012_governed_positive_creates_digest_only_artifact() {
     assert!(artifact.id.as_str().starts_with("tx-"));
 }
 
-/// Negative path: disclosure NOT satisfied -> TranscriptGate refuses.
-/// The governed transcript/recording behavior fails closed according
-/// to the contract; no artifact is produced and no raw transcript is
-/// persisted anywhere in the artifact surface.
+/// Negative path: disclosure NOT satisfied -> the orchestrator NEVER
+/// records or transcribes (AUD-021). TranscriptGate refuses, no
+/// artifact is produced, and the evidence must show zero captured
+/// bytes and NO transcript at all - consent is evaluated BEFORE any
+/// recording/transcription, not after.
 #[test]
 #[ignore]
 fn lf012_governed_negative_fails_closed() {
@@ -129,17 +130,36 @@ fn lf012_governed_negative_fails_closed() {
     );
     assert_eq!(ev["governed_transcript_created"].as_bool(), Some(false));
 
+    // AUD-021: the recording must NEVER have started, no WAV bytes were
+    // captured, and whisper NEVER ran - there is no transcript in the
+    // evidence at all.
+    assert_eq!(ev["recording_started"].as_bool(), Some(false));
+    assert_eq!(ev["caller_recording_bytes"].as_u64(), Some(0));
+    assert!(
+        ev.get("stt_transcript").is_none(),
+        "negative scenario must not contain a transcript"
+    );
+    assert!(
+        ev.get("stt_digest").is_none(),
+        "negative scenario must not contain an STT digest"
+    );
+    assert_eq!(
+        ev.get("stt_skipped").and_then(|v| v.as_str()),
+        Some("recording not consented")
+    );
+
     let disclosure = disclosure_from_evidence(&ev);
     assert!(!TranscriptGate::should_produce(&disclosure));
 
+    // Even IF a transcript were hypothetically supplied, the production
+    // gate must refuse to create an artifact (defense in depth).
     let session = session_id(&ev);
-    let stt = ev["stt_transcript"].as_str().expect("stt transcript");
     let artifact = TranscriptGate::create_if_allowed(
         &disclosure,
         &session,
         CallPrivacyClass::Private,
-        stt,
-        stt.split_whitespace().count() as u64,
+        "hypothetical transcript",
+        2,
         0,
         false,
     )
@@ -224,13 +244,16 @@ fn lf012_governed_hostile_speech_is_data_not_authority() {
 }
 
 /// Validation guard: the evidence JSON must carry a real STT transcript
-/// (vacuity - no empty/masked proof can satisfy the governance suite).
+/// for scenarios where recording was CONSENTED (positive / hostile),
+/// and must prove the negative scenario captured NOTHING (AUD-021:
+/// consent is evaluated before any recording/transcription). No
+/// empty/masked proof can satisfy the governance suite.
 #[test]
 #[ignore]
 fn lf012_evidence_is_nonempty() {
+    // Positive + hostile: recording consented -> real transcript.
     for name in [
         "EP-025-M5-LF-012-positive.json",
-        "EP-025-M5-LF-012-negative-disclosure.json",
         "EP-025-M5-LF-012-hostile.json",
     ] {
         let ev = evidence_json(name);
@@ -246,6 +269,20 @@ fn lf012_evidence_is_nonempty() {
             "{name}: deterministic response text must be present"
         );
     }
+    // Negative: consent denied -> NO transcript, NO captured bytes.
+    let ev = evidence_json("EP-025-M5-LF-012-negative-disclosure.json");
+    assert_eq!(ev["recording_started"].as_bool(), Some(false));
+    assert_eq!(ev["caller_recording_bytes"].as_u64(), Some(0));
+    assert!(
+        ev.get("stt_transcript").is_none(),
+        "negative: consent denied must never produce a transcript"
+    );
+    let cid = ev["channel_id"].as_str().unwrap_or("");
+    assert!(!cid.is_empty(), "negative: channel id must be present");
+    assert!(
+        ev["response_text"].as_str().unwrap_or("").len() > 4,
+        "negative: deterministic disclosure response must be present"
+    );
 }
 
 /// Every evidence file must carry a real, current TTS waveform digest
