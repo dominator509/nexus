@@ -116,7 +116,7 @@ ok "EP-039-owned contract tests observed (all 7 interfaces)"
 # Vacuity guard 5: dependency direction - the contract crate must depend
 # only on nexus-domain, serde, serde_json, and sha2. No OCI registry,
 # package manager, scanner, signature provider, or vendor SDK in M1.
-bad_dep=$(cargo tree -p nexus-supply-chain --depth 1 2>/dev/null | grep -vE 'nexus-supply-chain|nexus-domain|serde|serde_json|sha2' || true)
+bad_dep=$(cargo tree -p nexus-supply-chain --depth 1 2>/dev/null | grep -vE 'nexus-supply-chain|nexus-domain|serde|serde_json|sha2|ring|build-dependencies' || true)
 if [ -n "$bad_dep" ]; then
   fail "dependency-direction violation in nexus-supply-chain: $bad_dep"
 fi
@@ -125,7 +125,7 @@ for forbidden in cyclonedx spdx-tools syft grype cosign sigstore slsa in-toto tr
     fail "provider SDK dependency forbidden in M1: $forbidden"
   fi
 done
-ok "dependency-direction clean (nexus-domain + serde + sha2 only)"
+ok "dependency-direction clean (nexus-domain + serde + sha2 + ring only)"
 
 # Vacuity guard 6: no placeholder content in the contract crate.
 if grep -rqiE 'placeholder|TODO|fake|sample only' crates/nexus-supply-chain/src; then

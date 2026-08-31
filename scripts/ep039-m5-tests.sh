@@ -197,7 +197,9 @@ done
 ok "scripts/sbom generate -> verify -> observability green"
 
 # Vacuity guard 10: stale evidence must be rejected by the M4 pipeline
-# (a file existing is not proof of current verification).
+# (a file existing is not proof of current verification). The fixture is
+# a VALIDLY-SIGNED evidence whose generated_at is ancient - so the only
+# failing check is freshness (STALE_EVIDENCE), not the crypto seal.
 mkdir -p "$WORK/stale"
 cp "$WORK/evidence/evidence.json" "$WORK/stale/evidence.json"
 cp "$WORK/evidence/evidence.json.sha256" "$WORK/stale/evidence.json.sha256"
@@ -212,6 +214,16 @@ with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f)
 PYEOF
 sha256sum "$WORK/stale/evidence.json" | awk '{print $1}' >"$WORK/stale/evidence.json.sha256"
+# Re-sign the stale evidence with a fresh keypair so the signature is
+# cryptographically valid; staleness must be the ONLY denial.
+cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+  keygen "$WORK/stale/signing-key.der" "$WORK/stale/evidence.json.pub" \
+  >>"$log" 2>&1 || fail "stale fixture keygen failed" "$log"
+cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+  sign "$WORK/stale/evidence.json" "$WORK/stale/signing-key.der" \
+  "$WORK/stale/evidence.json.sig" "$WORK/stale/evidence.json.pub" \
+  >>"$log" 2>&1 || fail "stale fixture signing failed" "$log"
+rm -f "$WORK/stale/signing-key.der"
 if sh scripts/sbom/verify.sh "$WORK/stale" >"$WORK/stale.log" 2>&1; then
   fail "stale evidence verified (must be rejected)"
 fi

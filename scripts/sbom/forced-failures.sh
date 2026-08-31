@@ -36,6 +36,21 @@ fail() {
 }
 ok() { echo "sbom/forced-failures: $1"; }
 
+# Re-sign a fixture evidence dir with a fresh keypair so the crypto seal
+# is valid; the fixture's intended failure class is then the ONLY denial
+# (staleness, run mismatch, empty - not a missing signature).
+resign_fixture() {
+  dir="$1"
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    keygen "$dir/signing-key.der" "$dir/evidence.json.pub" \
+    >>"$log" 2>&1 || return 1
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    sign "$dir/evidence.json" "$dir/signing-key.der" \
+    "$dir/evidence.json.sig" "$dir/evidence.json.pub" \
+    >>"$log" 2>&1 || return 1
+  rm -f "$dir/signing-key.der"
+}
+
 log="/tmp/ep039-sbom-forced-failures.log"
 : > "$log"
 
@@ -121,12 +136,17 @@ if ! sh scripts/sbom/verify.sh "$WORK/fresh" >"$WORK/fresh-verify.log" 2>&1; the
 fi
 ok "fresh evidence verifies against current repository state"
 
-# 2d. Tampered evidence must be rejected (seal mismatch).
+# 2d. Tampered evidence must be rejected - INCLUDING when the attacker
+# recomputes the sha256 seal. The cryptographic signature is the real
+# seal (AUD-059): changing the evidence invalidates the signature even
+# if the checksum is resealed.
 cp "$WORK/fresh/evidence.json" "$WORK/tampered.json"
 cp "$WORK/fresh/evidence.json.sha256" "$WORK/tampered.json.sha256"
 mkdir -p "$WORK/tampered"
 cp "$WORK/tampered.json" "$WORK/tampered/evidence.json"
 cp "$WORK/tampered.json.sha256" "$WORK/tampered/evidence.json.sha256"
+cp "$WORK/fresh/evidence.json.sig" "$WORK/tampered/evidence.json.sig"
+cp "$WORK/fresh/evidence.json.pub" "$WORK/tampered/evidence.json.pub"
 # Tamper one byte in the packages list.
 python3 - "$WORK/tampered/evidence.json" <<'PYEOF'
 import json
@@ -138,13 +158,15 @@ d["package_count"] = d["package_count"] + 1
 with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f)
 PYEOF
+# The attacker reseals the bare checksum - it must NOT help.
+sha256sum "$WORK/tampered/evidence.json" | awk '{print $1}' >"$WORK/tampered/evidence.json.sha256"
 if sh scripts/sbom/verify.sh "$WORK/tampered" >"$WORK/tampered-verify.log" 2>&1; then
   fail "tampered evidence verified (must be rejected)"
 fi
-if ! grep -q 'TAMPERED_EVIDENCE' "$WORK/tampered/verification.json"; then
+if ! grep -q 'SIGNATURE_INVALID' "$WORK/tampered/verification.json"; then
   fail "tampered evidence failure class not typed: $(cat "$WORK/tampered/verification.json")"
 fi
-ok "tampered evidence rejected (TAMPERED_EVIDENCE)"
+ok "tampered evidence rejected (SIGNATURE_INVALID despite resealed checksum)"
 
 # 2e. Stale evidence must be rejected (freshness window).
 mkdir -p "$WORK/stale"
@@ -161,6 +183,7 @@ with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f)
 PYEOF
 sha256sum "$WORK/stale/evidence.json" | awk '{print $1}' >"$WORK/stale/evidence.json.sha256"
+resign_fixture "$WORK/stale" || fail "stale fixture re-sign failed" "$log"
 if sh scripts/sbom/verify.sh "$WORK/stale" >"$WORK/stale-verify.log" 2>&1; then
   fail "stale evidence verified (must be rejected)"
 fi
@@ -185,6 +208,7 @@ with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f)
 PYEOF
 sha256sum "$WORK/mismatched/evidence.json" | awk '{print $1}' >"$WORK/mismatched/evidence.json.sha256"
+resign_fixture "$WORK/mismatched" || fail "mismatched fixture re-sign failed" "$log"
 if sh scripts/sbom/verify.sh "$WORK/mismatched" >"$WORK/mismatched-verify.log" 2>&1; then
   fail "mismatched run_id evidence verified (must be rejected)"
 fi
@@ -197,6 +221,7 @@ ok "mismatched run_id/git_commit rejected (MISMATCHED_RUN_ID)"
 mkdir -p "$WORK/empty"
 echo '{"schema":"nexus.sbom.evidence.v1","run_id":"ep039-sbom-empty","git_commit":"deadbeef","package_count":0,"packages":[]}' >"$WORK/empty/evidence.json"
 sha256sum "$WORK/empty/evidence.json" | awk '{print $1}' >"$WORK/empty/evidence.json.sha256"
+resign_fixture "$WORK/empty" || fail "empty fixture re-sign failed" "$log"
 if sh scripts/sbom/verify.sh "$WORK/empty" >"$WORK/empty-verify.log" 2>&1; then
   fail "empty evidence verified (must be rejected)"
 fi

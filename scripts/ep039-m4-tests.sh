@@ -199,7 +199,7 @@ for proof in \
   "missing Cargo.lock fails closed" \
   "malformed Cargo.lock fails closed" \
   "fresh evidence verifies against current repository state" \
-  "tampered evidence rejected (TAMPERED_EVIDENCE)" \
+  "tampered evidence rejected (SIGNATURE_INVALID despite resealed checksum)" \
   "stale evidence rejected (STALE_EVIDENCE)" \
   "mismatched run_id/git_commit rejected (MISMATCHED_RUN_ID)" \
   "empty evidence rejected (EMPTY_EVIDENCE)" \
