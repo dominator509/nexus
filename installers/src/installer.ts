@@ -503,7 +503,10 @@ export async function installRelease(
   //    rename/mount/filesystem failure therefore leaves the previous
   //    install restorable at its old path, not destroyed.
   journalAppend(cfg, "SWITCHED", "atomic switch to staged state");
-  const previousRoot = join(dirname(opts.installRoot), `.previous-${opts.installId}`);
+  const previousRoot = join(
+    dirname(opts.installRoot),
+    `.previous-${opts.installId}`,
+  );
   try {
     if (existsSync(opts.installRoot)) {
       renameSync(opts.installRoot, previousRoot);

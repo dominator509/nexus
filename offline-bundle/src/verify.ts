@@ -356,9 +356,11 @@ export async function verifyBundle(
     }
     const sigBytes = decodeBase64(sigValue);
     const digestBytes = toBytes(
-      Buffer.from(component.digest.startsWith("sha256:")
-        ? component.digest
-        : `sha256:${component.digest}`),
+      Buffer.from(
+        component.digest.startsWith("sha256:")
+          ? component.digest
+          : `sha256:${component.digest}`,
+      ),
     );
     const valid = await globalThis.crypto.subtle.verify(
       { name: "Ed25519" },
@@ -445,9 +447,7 @@ function toBytes(bytes: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBuffer> {
 }
 
 /** Import an Ed25519 JWK public key for verification (AUD-065). */
-async function importSigningKey(
-  jwk: JsonWebKey,
-): Promise<CryptoKey> {
+async function importSigningKey(jwk: JsonWebKey): Promise<CryptoKey> {
   try {
     return await globalThis.crypto.subtle.importKey(
       "jwk",
@@ -466,7 +466,8 @@ async function importSigningKey(
 
 /** Decode standard base64 (padding optional) to bytes. */
 function decodeBase64(value: string): Uint8Array<ArrayBuffer> {
-  const padded = value.length % 4 === 0 ? value : value + "=".repeat(4 - (value.length % 4));
+  const padded =
+    value.length % 4 === 0 ? value : value + "=".repeat(4 - (value.length % 4));
   const buf = Buffer.from(padded, "base64");
   return toBytes(buf);
 }

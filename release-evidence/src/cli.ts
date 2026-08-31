@@ -305,7 +305,11 @@ function realArtifactInputs(
     componentId: artifact.componentId,
     name: artifact.name,
     version: artifact.version,
-    artifactBytes: readRealArtifact(root, artifact.relPath, artifact.componentId),
+    artifactBytes: readRealArtifact(
+      root,
+      artifact.relPath,
+      artifact.componentId,
+    ),
     artifactKey: `releases/${releaseId}/components/${artifact.componentId}`,
   }));
 }

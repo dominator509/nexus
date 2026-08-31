@@ -398,10 +398,8 @@ describe("EP-043 M2 readiness evaluation", () => {
 
   it("ep043_unit_readiness_release_obligation_truth", () => {
     expect(
-      evaluateReleaseObligation(
-        "green/EP-043",
-        "sh scripts/deploy.sh --deploy",
-      ).met,
+      evaluateReleaseObligation("green/EP-043", "sh scripts/deploy.sh --deploy")
+        .met,
     ).toBe(true);
     expect(
       evaluateReleaseObligation("", "sh scripts/deploy.sh --deploy").met,

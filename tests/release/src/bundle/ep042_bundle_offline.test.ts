@@ -247,10 +247,7 @@ async function makeBundle(
   });
   // The bundle carries the signing public key in its root (AUD-065) so
   // verification can cryptographically check every component signature.
-  copyFileSync(
-    fixture.signingKeyPath,
-    join(bundleDir, "signing-key.pub.jwk"),
-  );
+  copyFileSync(fixture.signingKeyPath, join(bundleDir, "signing-key.pub.jwk"));
   return { fixture, bundleDir, bundleId };
 }
 

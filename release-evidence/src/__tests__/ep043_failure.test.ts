@@ -262,9 +262,7 @@ describe("EP-043 M4 forced failures, abuse cases, observability", () => {
     expect(build.code).toBe(0);
     // AUD-082: deleting a REAL release artifact makes verification fail
     // closed - the manifest binds real product bytes, not fixtures.
-    await rm(
-      join(repo, "models", "wake", "nexus_wake", "decision.py"),
-    );
+    await rm(join(repo, "models", "wake", "nexus_wake", "decision.py"));
     const result = await runCli(
       ["verify-manifest", "--manifest", manifestPath],
       { cwd: repo },

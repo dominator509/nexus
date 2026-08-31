@@ -441,7 +441,10 @@ describe("EP-043 M1 release evidence", () => {
     const tampered = payload();
     tampered.drills = tampered.drills.map((drill, index) =>
       index === 0
-        ? { ...drill, status: drill.status === "FAILED" ? "DATED_EVIDENCE" : "FAILED" }
+        ? {
+            ...drill,
+            status: drill.status === "FAILED" ? "DATED_EVIDENCE" : "FAILED",
+          }
         : drill,
     );
     expect(canonicalEvidenceDigest(tampered)).not.toBe(
@@ -493,7 +496,10 @@ describe("EP-043 M1 release evidence", () => {
     });
     const original = payload();
     const tampered = payload();
-    tampered.releaseNotes = { ...tampered.releaseNotes, "core-control": "DEFERRED" };
+    tampered.releaseNotes = {
+      ...tampered.releaseNotes,
+      "core-control": "DEFERRED",
+    };
     expect(canonicalEvidenceDigest(tampered)).not.toBe(
       canonicalEvidenceDigest(original),
     );

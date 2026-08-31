@@ -86,7 +86,13 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
-def _bao_http(method: str, path: str, body=None, token: str | None = None, timeout: float = 8.0) -> tuple[int, dict]:
+def _bao_http(
+    method: str,
+    path: str,
+    body=None,
+    token: str | None = None,
+    timeout: float = 8.0,
+) -> tuple[int, dict]:
     h = {"Content-Type": "application/json"}
     if token:
         h["X-Vault-Token"] = token

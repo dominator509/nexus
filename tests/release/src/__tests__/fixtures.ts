@@ -289,9 +289,7 @@ export async function signedPromotionWire(
 ): Promise<Record<string, unknown>> {
   const wire: Record<string, unknown> = { ...promotionWire(), ...overrides };
   const { canonicalApprovalPayload } = await import("@nexus/setup");
-  const payload = canonicalApprovalPayload(
-    wire as unknown as ManualPromotion,
-  );
+  const payload = canonicalApprovalPayload(wire as unknown as ManualPromotion);
   const privateKey = await globalThis.crypto.subtle.importKey(
     "jwk",
     key.privateKeyJwk,

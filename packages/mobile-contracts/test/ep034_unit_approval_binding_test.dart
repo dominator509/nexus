@@ -258,11 +258,7 @@ void main() {
             nowUnixS: 500,
           ),
           throwsA(
-            isA<Spec006Error>().having(
-              (e) => e.code,
-              'code',
-              ErrorCode.policy,
-            ),
+            isA<Spec006Error>().having((e) => e.code, 'code', ErrorCode.policy),
           ),
         );
       },
@@ -321,9 +317,7 @@ void main() {
         expect(
           () => service.approve(
             prompt: _prompt(),
-            session: _session(
-              deviceId: '99999999-9999-4999-8999-999999999999',
-            ),
+            session: _session(deviceId: '99999999-9999-4999-8999-999999999999'),
             binding: _binding(),
             actingDeviceId: '22222222-2222-4222-8222-222222222222',
             actingPrincipalId: '33333333-3333-4333-8333-333333333333',
@@ -348,9 +342,7 @@ void main() {
           () => service.approve(
             prompt: _prompt(),
             session: _session(),
-            binding: _binding(
-              deviceId: '99999999-9999-4999-8999-999999999999',
-            ),
+            binding: _binding(deviceId: '99999999-9999-4999-8999-999999999999'),
             actingDeviceId: '22222222-2222-4222-8222-222222222222',
             actingPrincipalId: '33333333-3333-4333-8333-333333333333',
             nowUnixS: 500,
@@ -397,7 +389,10 @@ void main() {
       () {
         final service = ApprovalBindingService();
         final resolution = service.approve(
-          prompt: _prompt(risk: RiskClass.r1, approvalClass: ApprovalClass.policy),
+          prompt: _prompt(
+            risk: RiskClass.r1,
+            approvalClass: ApprovalClass.policy,
+          ),
           session: _session(strength: SessionStrength.singleFactor),
           binding: _binding(),
           actingDeviceId: '22222222-2222-4222-8222-222222222222',

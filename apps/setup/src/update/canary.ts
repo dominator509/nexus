@@ -129,12 +129,7 @@ export async function verifyApprovalSignature(
       false,
       ["verify"],
     );
-    return globalThis.crypto.subtle.verify(
-      "Ed25519",
-      key,
-      signature,
-      payload,
-    );
+    return globalThis.crypto.subtle.verify("Ed25519", key, signature, payload);
   } catch {
     return false;
   }

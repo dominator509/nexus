@@ -523,3 +523,28 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
   denied BEFORE any mutation (no install state created).
 - Battery: scripts/rx013-remediation-tests.sh green. Register
   AUD-081 -> VERIFIED_FIXED.
+
+**AUD-086 REMEDIATED (RX-013, 2026-08-31):**
+- Root cause: canonical backup, restore, migration, release-build and
+  deployment commands invoked cargo run -p nexus-cli, -p nexus-setup-cli
+  or target/release/nexusctl - packages/binary that do not exist in the
+  workspace (the actual setup package is nexus-setup). Every such
+  invocation failed at runtime with 'package not found'.
+- Fix: every phantom reference is removed. rollback-drill.sh and
+  restore-drill.sh delegate to the REAL canonical drill
+  (scripts/ep043-rollback-drill.sh); migrate.sh applies the REAL
+  migrations/*.sql through psql when DATABASE_URL is set and fails
+  closed otherwise; release-build.sh produces the REAL release manifest
+  through the release-evidence CLI (manifest + verify-manifest);
+  backup.sh documents the REAL installer backup-before-update surface;
+  seed-test-tenant.sh, proof-runner.sh, provider-certify.sh and
+  hardware-certify.sh fail closed with explicit messages (no such real
+  executable exists); LF-013 calls the real EP-027 M5 gate. Pre-existing
+  format/lint drift that blocked the real path (Dart test file,
+  Python line length in tests/trust) was corrected.
+- Proof: phantom scan is clean for canonical commands; deploy.sh
+  executes a real transactional install; rollback drill runs the real
+  drill and writes evidence; release-build produces and verifies a real
+  manifest.
+- Battery: scripts/rx013-remediation-tests.sh green. Register
+  AUD-086 -> VERIFIED_FIXED.

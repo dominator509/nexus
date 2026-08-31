@@ -1,18 +1,35 @@
-# RX-013 expected files: remediation surface for AUD-082 + AUD-081
+# RX-013 expected files: remediation surface for AUD-082 + AUD-081 + AUD-086
 # (release manifest bound to REAL product artifacts; deploy.sh is a real
-#  deploy command through the transactional installer)
+#  deploy command through the transactional installer; no canonical
+#  command references phantom executables)
 .agent/expected-files/RX-013.txt
 .agent/milestone-files/RX-013-M1.txt
 .agent/milestone-files/RX-013-M2.txt
+.agent/milestone-files/RX-013-M3.txt
 .agent/remediation/AUDIT_FINDINGS.tsv
 .agent/remediation/GAPS.md
 .agent/remediation/evidence/
+PRODUCTION_READINESS.md
 release-evidence/src/cli.ts
 release-evidence/src/repo-state.ts
 release-evidence/src/__tests__/ep043_integration.test.ts
 release-evidence/src/__tests__/ep043_failure.test.ts
 release-evidence/src/__tests__/ep043_unit_readiness.test.ts
+release-evidence/src/__tests__/ep043_unit_contract.test.ts
+release-evidence/src/__tests__/rx002_evidence_truth.test.ts
 scripts/deploy.sh
+scripts/backup.sh
+scripts/migrate.sh
+scripts/restore-drill.sh
+scripts/rollback-drill.sh
+scripts/seed-test-tenant.sh
+scripts/proof-runner.sh
+scripts/provider-certify.sh
+scripts/hardware-certify.sh
+scripts/release-build.sh
+scripts/live-fire/LF-013.sh
+tests/trust/test_ep009_integration_headscale.py
+packages/mobile-contracts/test/ep034_unit_approval_binding_test.dart
 COMMANDS.md
 scripts/nodes/RX-013.sh
 scripts/rx013-remediation-tests.sh

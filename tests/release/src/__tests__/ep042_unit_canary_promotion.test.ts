@@ -154,10 +154,12 @@ describe("ep042_unit canary / promotion gate", () => {
       evidence_ref: "evidence/run-1.json",
     });
     const key = await approvalTestKey();
-    const promotion = parseManualPromotion(
-      await signedPromotionWire(key),
+    const promotion = parseManualPromotion(await signedPromotionWire(key));
+    const verdict = await evaluatePromotionGate(
+      ring,
+      promotion,
+      policyFor(key),
     );
-    const verdict = await evaluatePromotionGate(ring, promotion, policyFor(key));
     expect(verdict.decision).toBe("APPROVED_MANUAL_ONLY");
   });
 
@@ -190,7 +192,11 @@ describe("ep042_unit canary / promotion gate", () => {
     const promotion = parseManualPromotion(
       await signedPromotionWire(key, { approver: "intruder-9" }),
     );
-    const verdict = await evaluatePromotionGate(ring, promotion, policyFor(key));
+    const verdict = await evaluatePromotionGate(
+      ring,
+      promotion,
+      policyFor(key),
+    );
     expect(verdict.decision).toBe("LOCKED");
     expect(verdict.reasons.join(" ")).toContain("not authorized");
   });
@@ -229,7 +235,11 @@ describe("ep042_unit canary / promotion gate", () => {
         approved_at: "2026-08-25T01:00:00Z",
       }),
     );
-    const verdict = await evaluatePromotionGate(ring, promotion, policyFor(key));
+    const verdict = await evaluatePromotionGate(
+      ring,
+      promotion,
+      policyFor(key),
+    );
     expect(verdict.decision).toBe("LOCKED");
     expect(verdict.reasons.join(" ")).toContain("expired");
   });
@@ -247,7 +257,11 @@ describe("ep042_unit canary / promotion gate", () => {
         approved_at: "2026-08-25T03:00:00Z",
       }),
     );
-    const verdict = await evaluatePromotionGate(ring, promotion, policyFor(key));
+    const verdict = await evaluatePromotionGate(
+      ring,
+      promotion,
+      policyFor(key),
+    );
     expect(verdict.decision).toBe("LOCKED");
     expect(verdict.reasons.join(" ")).toContain("future");
   });
@@ -270,7 +284,11 @@ describe("ep042_unit canary / promotion gate", () => {
       ...wire,
       exact_manual_command: "sh scripts/deploy.sh --release 1.0.0-evil",
     });
-    const verdict = await evaluatePromotionGate(ring, promotion, policyFor(key));
+    const verdict = await evaluatePromotionGate(
+      ring,
+      promotion,
+      policyFor(key),
+    );
     expect(verdict.decision).toBe("LOCKED");
     expect(verdict.reasons.join(" ")).toContain("signature");
   });
@@ -308,7 +326,11 @@ describe("ep042_unit canary / promotion gate", () => {
     const promotion = parseManualPromotion(
       await signedPromotionWire(key, { canary_ring_ref: "ring-OTHER" }),
     );
-    const verdict = await evaluatePromotionGate(ring, promotion, policyFor(key));
+    const verdict = await evaluatePromotionGate(
+      ring,
+      promotion,
+      policyFor(key),
+    );
     expect(verdict.decision).toBe("LOCKED");
     expect(verdict.reasons.join(" ")).toContain("ring");
   });
@@ -443,9 +465,7 @@ describe("ep042_unit canary / promotion gate", () => {
 
   it("ep042_unit_manual_promotion_never_deploys", async () => {
     const key = await approvalTestKey();
-    const promotion = parseManualPromotion(
-      await signedPromotionWire(key),
-    );
+    const promotion = parseManualPromotion(await signedPromotionWire(key));
     expect(promotionNeverDeploys(promotion)).toBe(true);
     expect(promotion.state).toBe("APPROVED_MANUAL_ONLY");
     // The record is a decision record carrying an exact manual command;
