@@ -1,0 +1,182 @@
+{
+  "attestation_digest": "sha256:69a2f8f4e50bc39620931f78cf763316183ae98368588678ab767b40546003f4",
+  "closure_commit": "9f8f7b6ce8d699d36112f9d6cbf86c699a9eefbe",
+  "created_at": "2026-08-31T20:39:03Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:f6c02be46f890043f5c0891a01ccecb4233a934f6b2e95dc11fb11506fbb1754",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-013/9f8f7b6ce8d699d36112f9d6cbf86c699a9eefbe",
+  "milestones": {
+    "max": 3,
+    "passed": [
+      1,
+      2,
+      3
+    ]
+  },
+  "node": "RX-013",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:354408ada3b5b85099bd8f159d11642c7db178455f32f5f01a90f3b9ef881686",
+      "id": "manifest-real-artifacts",
+      "ref": "release-evidence/src/cli.ts"
+    },
+    {
+      "digest": "sha256:d3abd45467fd1b6219d25a7fda38bdfea5037cedb186775d1a8b3ea31a4dcad7",
+      "id": "deploy-handoff",
+      "ref": "scripts/deploy.sh"
+    },
+    {
+      "digest": "sha256:f9d5f1d645f35f6554eeac6ac63a954833cbd01ebed3b926654da92f785b4559",
+      "id": "handoff-command",
+      "ref": "release-evidence/src/repo-state.ts"
+    },
+    {
+      "digest": "sha256:d452ff26d8bfdedf9a65a83db07e4f98141896524c15522c7bb08882663cc53c",
+      "id": "integration-proofs",
+      "ref": "release-evidence/src/__tests__/ep043_integration.test.ts"
+    },
+    {
+      "digest": "sha256:72f3ea2e332bf600157514882d8ee4f59570b2759479de9035a44f4f4c60a832",
+      "id": "failure-proofs",
+      "ref": "release-evidence/src/__tests__/ep043_failure.test.ts"
+    },
+    {
+      "digest": "sha256:573938646382b64b119351dab3a05a3751a78e26079d6f9d26d923828e79180f",
+      "id": "readiness-proofs",
+      "ref": "release-evidence/src/__tests__/ep043_unit_readiness.test.ts"
+    },
+    {
+      "digest": "sha256:ca380e03ac0590575ece2ba7513c1f9e5325d4a41fde0eae6d7a9ee48d3b396d",
+      "id": "battery-script",
+      "ref": "scripts/rx013-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:94502ea3626a24d0b9f5316799afa0938353153bfff29efab834d6a2158a6ef4",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-013.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:f6c02be46f890043f5c0891a01ccecb4233a934f6b2e95dc11fb11506fbb1754",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "release-evidence-suite",
+        "passed": 160
+      },
+      {
+        "failed": 0,
+        "family": "hostile-sentinels",
+        "passed": 3
+      },
+      {
+        "failed": 0,
+        "family": "typecheck-release-evidence",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "deploy-dry-run-real-verification",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "deploy-tamper-denial",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "deploy-tamper-no-install-state",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "deploy-real-install-bytes",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "deploy-real-install-journal",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "phantom-scan",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "deploy-real-deploy-surface",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "rollback-drill-delegation",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "release-build-manifest",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m1-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m2-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m3-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m4-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep043-m5-substantive",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep042-m2-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "workspace-check",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "clippy",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 272
+  },
+  "verify_log": ".agent/remediation/evidence/RX-013/verify.log|sha256:0e90b25fd129356f797d3b7cb88dcf5e603a632655de081ce7ffa2eae1cfb6b0",
+  "verify_sentinel": "verify: ok"
+}
