@@ -1,0 +1,16 @@
+# RX-011 expected files: remediation surface for AUD-066 + AUD-067 + AUD-068 + AUD-069
+# (rollback digest verification; atomic switch preserves current install; payloads
+#  bound to validated release manifest; durable idempotency/duplicate guard)
+.agent/expected-files/RX-011.txt
+.agent/milestone-files/RX-011-M1.txt
+.agent/milestone-files/RX-011-M2.txt
+.agent/milestone-files/RX-011-M3.txt
+.agent/milestone-files/RX-011-M4.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+installers/src/installer.ts
+installers/src/__tests__/ep042_unit_installer.test.ts
+tests/release/src/failure/ep042_failure_installer.test.ts
+scripts/nodes/RX-011.sh
+scripts/rx011-remediation-tests.sh

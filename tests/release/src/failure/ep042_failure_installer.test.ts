@@ -273,9 +273,9 @@ describe("ep042_failure installer real failure proofs", () => {
     try {
       const c = await makeComponents();
       const wire = await manifestWireFor(c);
-      // Same install id on a second install is a duplicate request: the
-      // journal resets (append-only history is per install root), and
-      // the second install proceeds only because the first failed.
+      // AUD-069: a completed install (journal last state INSTALLED) is
+      // durable; replaying the same install_id must be refused BEFORE
+      // any filesystem mutation. The journal is the idempotency guard.
       const first = await installRelease({
         ...roots,
         releaseId: RUN.releaseId,
@@ -286,20 +286,23 @@ describe("ep042_failure installer real failure proofs", () => {
         components: c,
       });
       expect(first.installed.length).toBe(2);
-      // A second install with the same id but different release is a
-      // conflict: the manifest digest binds to release-1, so a release-2
-      // wire with the same release id is invalid.
-      const wire2 = await manifestWireFor(c);
-      const second = await installRelease({
-        ...roots,
-        releaseId: RUN.releaseId,
-        installId: RUN.installId,
-        runId: RUN.runId,
-        gitCommit: RUN.gitCommit,
-        manifestWire: wire2,
-        components: c,
-      });
-      expect(second.installed.length).toBe(2);
+      // A second install with the same install id is a replay of a
+      // completed install and is refused (idempotency guard).
+      await expect(
+        installRelease({
+          ...roots,
+          releaseId: RUN.releaseId,
+          installId: RUN.installId,
+          runId: RUN.runId,
+          gitCommit: RUN.gitCommit,
+          manifestWire: wire,
+          components: c,
+        }),
+      ).rejects.toMatchObject({ failureClass: "AUTHORIZATION_DENIED" });
+      // The installed state remains untouched by the refused replay.
+      expect(existsSync(join(roots.installRoot, "bin", "nexus-core"))).toBe(
+        true,
+      );
     } finally {
       teardown(roots);
     }
@@ -535,6 +538,208 @@ describe("ep042_failure installer real failure proofs", () => {
           expectedBackupDigest: "sha256:" + "a".repeat(64),
         }),
       ).rejects.toMatchObject({ failureClass: "BACKUP_FAILED" });
+    } finally {
+      teardown(roots);
+    }
+  });
+
+  it("ep042_failure_rollback_wrong_digest_source_denied", async () => {
+    // AUD-066: the raw rollback surface must verify the backup digest
+    // against the REAL backup bytes BEFORE any restore. A non-empty
+    // backup whose content does not match the caller's declared digest
+    // is a wrong/corrupt source and must be denied with
+    // ROLLBACK_FAILED - the caller's digest is never copied into a
+    // VERIFIED receipt without proof.
+    const roots = freshRoots("rollbackwrongdigest");
+    try {
+      mkdirSync(roots.backupRoot, { recursive: true });
+      writeFileSync(join(roots.backupRoot, "old-state"), "old-bytes");
+      mkdirSync(roots.installRoot, { recursive: true });
+      writeFileSync(join(roots.installRoot, "live"), "live-bytes");
+      await expect(
+        rollbackRelease({
+          ...roots,
+          releaseId: RUN.releaseId,
+          installId: RUN.installId,
+          runId: RUN.runId,
+          gitCommit: RUN.gitCommit,
+          expectedBackupDigest: "sha256:" + "a".repeat(64),
+        }),
+      ).rejects.toMatchObject({ failureClass: "ROLLBACK_FAILED" });
+      // No restore happened: the live install is untouched.
+      expect(readFileSync(join(roots.installRoot, "live"), "utf8")).toBe(
+        "live-bytes",
+      );
+    } finally {
+      teardown(roots);
+    }
+  });
+
+  it("ep042_failure_atomic_switch_cross_device_preserves_install", async () => {
+    // AUD-067: the atomic switch must NEVER delete the current install
+    // before the replacement is committed. Force the commit rename to
+    // fail for real by staging on a different filesystem (/dev/shm
+    // tmpfs vs /tmp): renameSync(staging, install) fails EXDEV. The
+    // live install must survive at its original path, not be deleted.
+    const roots = freshRoots("crossdev");
+    try {
+      const c = await makeComponents();
+      const wire = await manifestWireFor(c);
+      mkdirSync(roots.installRoot, { recursive: true });
+      writeFileSync(join(roots.installRoot, "old-state"), "old-bytes");
+      const shmBase = join("/dev/shm", `nexus-ep042-crossdev-${Date.now()}`);
+      mkdirSync(shmBase, { recursive: true });
+      try {
+        const shmStaging = join(shmBase, "staging");
+        await expect(
+          installRelease({
+            installRoot: roots.installRoot,
+            stagingRoot: shmStaging,
+            backupRoot: roots.backupRoot,
+            quarantineRoot: roots.quarantineRoot,
+            journalRoot: roots.journalRoot,
+            releaseId: RUN.releaseId,
+            installId: RUN.installId,
+            runId: RUN.runId,
+            gitCommit: RUN.gitCommit,
+            manifestWire: wire,
+            components: c,
+          }),
+        ).rejects.toMatchObject({ failureClass: "INSTALL_FAILED" });
+        // The live install was preserved, not destroyed.
+        expect(existsSync(roots.installRoot)).toBe(true);
+        expect(readFileSync(join(roots.installRoot, "old-state"), "utf8")).toBe(
+          "old-bytes",
+        );
+      } finally {
+        rmSync(shmBase, { recursive: true, force: true });
+      }
+    } finally {
+      teardown(roots);
+    }
+  });
+
+  it("ep042_failure_component_digest_not_bound_to_manifest", async () => {
+    // AUD-068: staged bytes are validated against the MANIFEST digest,
+    // not the caller's declaredDigest. A component whose declaredDigest
+    // differs from the manifest's declared digest for that component is
+    // an unbound payload and is denied before any mutation.
+    const roots = freshRoots("unbound");
+    try {
+      const c = await makeComponents();
+      const wire = await manifestWireFor(c);
+      const unbound = [...c];
+      unbound[0] = {
+        ...unbound[0]!,
+        declaredDigest: "sha256:" + "b".repeat(64),
+      };
+      await expect(
+        installRelease({
+          ...roots,
+          releaseId: RUN.releaseId,
+          installId: RUN.installId,
+          runId: RUN.runId,
+          gitCommit: RUN.gitCommit,
+          manifestWire: wire,
+          components: unbound,
+        }),
+      ).rejects.toMatchObject({ failureClass: "MANIFEST_INVALID" });
+      expect(existsSync(roots.installRoot)).toBe(false);
+      expect(existsSync(roots.stagingRoot)).toBe(false);
+    } finally {
+      teardown(roots);
+    }
+  });
+
+  it("ep042_failure_extra_component_not_declared_denied", async () => {
+    // AUD-068: a component not declared by the release manifest is an
+    // injected payload and is denied before any mutation.
+    const roots = freshRoots("extra");
+    try {
+      const c = await makeComponents();
+      const wire = await manifestWireFor(c);
+      const extra = [...c];
+      const extraBytes = await artifactBytes("rogue payload bytes");
+      extra.push({
+        componentId: "comp-rogue",
+        declaredDigest: `sha256:${await sha256Of(extraBytes)}`,
+        bytes: extraBytes,
+        path: "bin/rogue",
+      });
+      await expect(
+        installRelease({
+          ...roots,
+          releaseId: RUN.releaseId,
+          installId: RUN.installId,
+          runId: RUN.runId,
+          gitCommit: RUN.gitCommit,
+          manifestWire: wire,
+          components: extra,
+        }),
+      ).rejects.toMatchObject({ failureClass: "MANIFEST_INVALID" });
+      expect(existsSync(roots.installRoot)).toBe(false);
+      expect(existsSync(roots.stagingRoot)).toBe(false);
+    } finally {
+      teardown(roots);
+    }
+  });
+
+  it("ep042_failure_release_id_not_bound_to_manifest", async () => {
+    // AUD-068: opts.releaseId must bind to manifest.release_id. A
+    // caller requesting a different release than the manifest declares
+    // is denied before any mutation.
+    const roots = freshRoots("releasebind");
+    try {
+      const c = await makeComponents();
+      const wire = await manifestWireFor(c);
+      await expect(
+        installRelease({
+          ...roots,
+          releaseId: "release-2",
+          installId: RUN.installId,
+          runId: RUN.runId,
+          gitCommit: RUN.gitCommit,
+          manifestWire: wire,
+          components: c,
+        }),
+      ).rejects.toMatchObject({ failureClass: "MANIFEST_INVALID" });
+      expect(existsSync(roots.installRoot)).toBe(false);
+    } finally {
+      teardown(roots);
+    }
+  });
+
+  it("ep042_failure_foreign_journal_owner_denied", async () => {
+    // AUD-069: a journal owned by a DIFFERENT install_id must not be
+    // reset or overwritten by a new install request - install-ID
+    // ownership is checked before any filesystem mutation.
+    const roots = freshRoots("journalowner");
+    try {
+      const c = await makeComponents();
+      const wire = await manifestWireFor(c);
+      // First install completes with install-1 (journal ends INSTALLED).
+      await installRelease({
+        ...roots,
+        releaseId: RUN.releaseId,
+        installId: "install-1",
+        runId: RUN.runId,
+        gitCommit: RUN.gitCommit,
+        manifestWire: wire,
+        components: c,
+      });
+      // A different install_id arriving at the same journal root is
+      // refused - the journal records ownership of install-1.
+      await expect(
+        installRelease({
+          ...roots,
+          releaseId: RUN.releaseId,
+          installId: "install-2",
+          runId: RUN.runId,
+          gitCommit: RUN.gitCommit,
+          manifestWire: wire,
+          components: c,
+        }),
+      ).rejects.toMatchObject({ failureClass: "AUTHORIZATION_DENIED" });
     } finally {
       teardown(roots);
     }

@@ -393,3 +393,65 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
   digest; the reproduction test now asserts the canonical form.
 - Battery: scripts/rx010-remediation-tests.sh green. Register
   AUD-079 -> VERIFIED_FIXED.
+
+**AUD-066 REMEDIATED (RX-011, 2026-08-31):**
+- Root cause: rollbackRelease() checked only that the backup directory
+  existed/nonempty (assertBackupUsable), restored it, then copied the
+  caller's expectedBackupDigest directly into a verified: VERIFIED
+  receipt. verifyBackupDigest() existed but was never called.
+- Fix: rollbackRelease now verifies the backup source digest against
+  the REAL backup bytes (verifyBackupDigest) BEFORE any restore. A
+  wrong/corrupt backup is denied with ROLLBACK_FAILED; the caller's
+  digest is never copied into a VERIFIED receipt without proof.
+- Proof: hostile - a non-empty backup whose content does not match the
+  declared digest is denied (ROLLBACK_FAILED) and the live install is
+  untouched (no restore happens).
+- Battery: scripts/rx011-remediation-tests.sh green. Register
+  AUD-066 -> VERIFIED_FIXED.
+
+**AUD-067 REMEDIATED (RX-011, 2026-08-31):**
+- Root cause: the atomic switch recursively deleted installRoot and
+  only afterward called renameSync(stagingRoot, installRoot). A
+  rename/mount/filesystem failure left the live installation deleted;
+  the code explicitly did not auto-rollback.
+- Fix: the switch now preserves the current install by renaming it
+  aside (rename, not delete) before committing the staged state. If the
+  commit rename fails, the preserved install is restored at its
+  original path. The preserved install is removed only after the new
+  state is verified.
+- Proof: hostile - staging on a different filesystem (/dev/shm tmpfs
+  vs /tmp) forces a real EXDEV commit failure; the old install survives
+  with its original bytes at the original path.
+- Battery: scripts/rx011-remediation-tests.sh green. Register
+  AUD-067 -> VERIFIED_FIXED.
+
+**AUD-068 REMEDIATED (RX-011, 2026-08-31):**
+- Root cause: staged bytes were validated against caller-controlled
+  InstallComponent.declaredDigest, not the manifest digest; extra
+  opts.components not declared by the manifest were staged; opts.
+  releaseId was not bound to manifest.release_id.
+- Fix: installRelease now binds the request to the validated release
+  manifest - opts.releaseId must equal manifest.release_id, every
+  supplied component must be declared by the manifest, and every
+  supplied declaredDigest must equal the manifest's digest for that
+  component. Staged bytes are validated against these manifest-bound
+  digests; violations are denied with MANIFEST_INVALID before any
+  mutation.
+- Proof: hostile - unbound component digest, extra undeclared
+  component, and release-id mismatch all fail closed with
+  MANIFEST_INVALID and no filesystem mutation.
+- Battery: scripts/rx011-remediation-tests.sh green. Register
+  AUD-068 -> VERIFIED_FIXED.
+
+**AUD-069 REMEDIATED (RX-011, 2026-08-31):**
+- Root cause: installRelease() unconditionally reset its journal at
+  entry; there was no completed-install lookup, install-ID ownership
+  check, or replay refusal before filesystem mutation.
+- Fix: installRelease now reads the journal BEFORE any mutation. A
+  completed install (last state INSTALLED) for the same install_id
+  refuses replay; a journal owned by a different install_id refuses the
+  request (AUTHORIZATION_DENIED) instead of being reset/overwritten.
+- Proof: hostile - replay of a completed install is refused with the
+  installed state untouched; a foreign journal owner is refused.
+- Battery: scripts/rx011-remediation-tests.sh green. Register
+  AUD-069 -> VERIFIED_FIXED.
