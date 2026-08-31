@@ -1,0 +1,117 @@
+{
+  "attestation_digest": "sha256:6664fbe977ba703c7bc0c5e9f2adc8e43e6b495f218fc18059a11ee49eb7c57a",
+  "closure_commit": "ba0e42582cf7a50feddf9b7ed83c0c40a61cdfa6",
+  "created_at": "2026-08-31T13:37:13Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:d68a18035eb44fb4a5ef80b6a2d619610a933f54453038c41f9975f1c1ba2076",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-008/ba0e42582cf7a50feddf9b7ed83c0c40a61cdfa6",
+  "milestones": {
+    "max": 3,
+    "passed": [
+      1,
+      2,
+      3
+    ]
+  },
+  "node": "RX-008",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:cff57f533ed97efe4aa1689bb47a3dffa5582db23541c829b51a18dfc625fcd3",
+      "id": "telemetry-bootstrap",
+      "ref": "apps/control-plane/src/telemetry.rs"
+    },
+    {
+      "digest": "sha256:161c463fe0f85e20b25753c3e9394b3020f41b71c906e98683a1fe7e59cb9ebb",
+      "id": "composition-root",
+      "ref": "apps/control-plane/src/composition.rs"
+    },
+    {
+      "digest": "sha256:4ed82645d26d890f68b29dc9e5e2b03f8b903253f8fef0f29ac7ad44bdf5b8b8",
+      "id": "server-router",
+      "ref": "apps/control-plane/src/server.rs"
+    },
+    {
+      "digest": "sha256:ac29b32533b56763b52b514e28c15ab1a9ee50c5f43d4d491417e37fed99887d",
+      "id": "runtime-main",
+      "ref": "apps/control-plane/src/main.rs"
+    },
+    {
+      "digest": "sha256:38cacc93e39bfc4f83048dfe94091aaf9ec8ea52662536740fd1f54c08de2e98",
+      "id": "integration-livefire",
+      "ref": "apps/control-plane/tests/ep044_integration_http.rs"
+    },
+    {
+      "digest": "sha256:2a2a6474661747a4e480da1abc60ee6eefabde65fa263c562a0f4fe536670dee",
+      "id": "a2a-gateway-port",
+      "ref": "crates/nexus-a2a/src/gateway.rs"
+    },
+    {
+      "digest": "sha256:d99293c3712126c1623c9778fdb57c6289c1876fc5884d2fa5c0f0f6ba80a508",
+      "id": "gateway-artifact-store",
+      "ref": "infra/gateway/src/artifact_store.rs"
+    },
+    {
+      "digest": "sha256:93321e15cf88fbe39d8d91fcbba11bbd9c15a01a39492792226d26e985c99484",
+      "id": "battery-script",
+      "ref": "scripts/rx008-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:9629038790ac4b8bfadfe8b63da64161577313af05222a2e538536278004ef83",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-008.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:d68a18035eb44fb4a5ef80b6a2d619610a933f54453038c41f9975f1c1ba2076",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "telemetry-unit",
+        "passed": 7
+      },
+      {
+        "failed": 0,
+        "family": "composition-unit",
+        "passed": 7
+      },
+      {
+        "failed": 0,
+        "family": "integration-livefire",
+        "passed": 11
+      },
+      {
+        "failed": 0,
+        "family": "nexus-a2a",
+        "passed": 29
+      },
+      {
+        "failed": 0,
+        "family": "workspace-check",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "clippy",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 147
+  },
+  "verify_log": ".agent/remediation/evidence/RX-008/verify.log|sha256:b65fdf05c35661c8e8e80524e5b7f723c4ccd800be77ca53259498eeee4e2815",
+  "verify_sentinel": "verify: ok"
+}
