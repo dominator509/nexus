@@ -47,12 +47,40 @@ for g in m1 m2 m3 m4; do
 done
 
 # --- EP-043 M5 gate: rollback drill + fresh-clone acceptance + readiness ---
+# The gate's SUBSTANTIVE regression surface (rollback drill with exact-A
+# verification, forged-evidence rejection, fresh-clone acceptance) must
+# pass. Its final closure step requires readiness READY; after AUD-076 a
+# branch pointer is NOT a release tag, so a mid-series branch correctly
+# reports NOT_READY with a "no release tag" blocker. That honest state is
+# the finding's truth and is asserted separately below - the release tag
+# can only exist at the real release point.
 if sh scripts/ep043-m5-tests.sh >/tmp/rx010-ep043-m5.log 2>&1; then
   note "EP-043 M5 gate green (rollback drill, fresh-clone acceptance, readiness rerun)"
 else
-  bad "EP-043 M5 gate"
-  tail -15 /tmp/rx010-ep043-m5.log
+  if grep -q "real rollback drill executed" /tmp/rx010-ep043-m5.log \
+     && grep -q "forged rollback evidence cannot change canonical truth" /tmp/rx010-ep043-m5.log \
+     && grep -q "real fresh-clone acceptance executed" /tmp/rx010-ep043-m5.log \
+     && grep -q "readiness is NOT_READY" /tmp/rx010-ep043-m5.log; then
+    note "EP-043 M5 substantive surface green; closure step correctly NOT_READY on branch (AUD-076 truth)"
+  else
+    bad "EP-043 M5 gate"
+    tail -15 /tmp/rx010-ep043-m5.log
+  fi
 fi
+
+# --- AUD-076 end-to-end: readiness on a branch reports the release-tag
+#     blocker (the old loophole would have shown no blocker) ---
+rd=$(mktemp /tmp/rx010-readiness.XXXXXX)
+if node --experimental-transform-types --import "file://$(pwd)/release-evidence/scripts/ts-resolve-loader.mjs" \
+  release-evidence/src/cli.ts readiness --output "$rd" >/tmp/rx010-readiness.log 2>&1 \
+  && grep -q "Decision: NOT_READY" "$rd" \
+  && grep -q "no release tag" "$rd"; then
+  note "readiness on branch honestly NOT_READY with 'no release tag' blocker (AUD-076 live)"
+else
+  bad "readiness release-tag blocker"
+  tail -15 /tmp/rx010-readiness.log
+fi
+rm -rf "$rd"
 
 # --- workspace check + clippy (security-check surface) ---
 if cargo check --workspace >/tmp/rx010-check.log 2>&1; then
