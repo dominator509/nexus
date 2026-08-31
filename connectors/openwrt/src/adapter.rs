@@ -124,10 +124,33 @@ impl OpenWrtFirewallProvider {
     ) -> Result<QuarantineProposal, SentinelError> {
         let correlation = self.correlation();
 
-        // Gate 1 (caller-side): the proposal must be APPROVED by a
-        // human-governed approval decision before any containment can
-        // be applied (SPEC-013 behavior 5/6). A proposal that is still
-        // PROPOSED is DATA, never an executed rule.
+        // Gate 1 (caller-side): the proposal must carry an IMMUTABLE
+        // approval receipt binding the exact action (AUD-025).
+        // Mutating `state` to `Approved` alone is forgeable state,
+        // never authority - the receipt's action digest must match
+        // THIS proposal and the approver's strength must meet the
+        // required class. A proposal that is still PROPOSED is DATA,
+        // never an executed rule.
+        if !proposal.approval_binds() {
+            self.record(
+                &correlation,
+                "APPLY_CONTAINMENT",
+                "POLICY",
+                "quarantine proposal lacks a matching immutable approval receipt".into(),
+                std::collections::BTreeMap::from([(
+                    "device".into(),
+                    proposal.device_id.to_string(),
+                )]),
+            );
+            return Err(SentinelError::new(
+                SentinelErrorCode::Policy,
+                "quarantine proposal lacks a matching immutable approval receipt",
+                Some(correlation.clone()),
+                None,
+                Some(self.tenant_id.to_string()),
+                Some(proposal.proposal_id.to_string()),
+            ));
+        }
         if proposal.state != QuarantineState::Approved {
             self.record(
                 &correlation,
@@ -762,10 +785,15 @@ mod tests {
     fn approved_proposal(provider: &OpenWrtFirewallProvider, label: &str) -> QuarantineProposal {
         let d = device(label);
         let proposal = provider.propose_containment(&tenant(), None, &d).unwrap();
-        QuarantineProposal {
-            state: QuarantineState::Approved,
-            ..proposal
-        }
+        // AUD-025: approval is an immutable receipt binding the exact
+        // action - never a bare state mutation. The helper must go
+        // through the real approve() binding.
+        proposal.approve(
+            nexus_domain::ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
+            nexus_domain::PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
+            nexus_domain::ApprovalClass::Human,
+            "2026-08-20T00:00:00Z",
+        )
     }
 
     #[test]

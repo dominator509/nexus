@@ -30,6 +30,7 @@
 #![forbid(unsafe_code)]
 
 pub mod capability;
+pub mod digest;
 pub mod error;
 pub mod model;
 pub mod provider;
@@ -39,7 +40,7 @@ pub use capability::{SentinelCapabilityKind, SentinelCapabilityMap};
 pub use error::{SentinelError, SentinelErrorCode};
 pub use model::{
     BehaviorBaseline, ContainmentVerification, DeviceFingerprint, DnsBlocklistEntry, DnsTelemetry,
-    NetworkDevice, NetworkFinding, QuarantineProposal,
+    NetworkDevice, NetworkFinding, QuarantineApproval, QuarantineProposal,
 };
 pub use provider::{
     DnsSecurityProvider, FirewallProvider, NetworkInventory, UnboundDnsSecurityProvider,

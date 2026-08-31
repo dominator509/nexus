@@ -484,10 +484,14 @@ fn device(id: &str, label: &str, segment: NetworkSegment) -> NetworkDevice {
 
 fn approved_proposal(provider: &OpnsenseFirewallProvider, d: &NetworkDevice) -> QuarantineProposal {
     let proposal = provider.propose_containment(&tenant(), None, d).unwrap();
-    QuarantineProposal {
-        state: QuarantineState::Approved,
-        ..proposal
-    }
+    // AUD-025: approval is an immutable receipt binding the exact
+    // action - never a bare state mutation.
+    proposal.approve(
+        nexus_domain::ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
+        nexus_domain::PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
+        nexus_domain::ApprovalClass::Human,
+        "2026-08-20T00:00:00Z",
+    )
 }
 
 fn qlog(time: &str, question: &str, client: &str, reason: &str) -> QueryLogEntry {

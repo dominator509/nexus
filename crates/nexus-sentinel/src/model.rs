@@ -7,7 +7,7 @@
 //! payloads are normalized at the infrastructure boundary and never
 //! become domain contracts.
 
-use nexus_domain::{ApprovalClass, BusinessId, DeviceId, TenantId};
+use nexus_domain::{ApprovalClass, ApprovalId, BusinessId, DeviceId, PersonId, TenantId};
 use serde::{Deserialize, Serialize};
 
 use crate::vocabulary::{
@@ -255,11 +255,57 @@ impl NetworkFinding {
     }
 }
 
+/// Immutable approval receipt for a quarantine proposal (AUD-025).
+///
+/// SPEC-013 behavior 5/6: approval is an AUTHORITY BINDING, never a
+/// mutable enum state. The receipt records WHO approved (approver),
+/// WHAT was approved (action digest over the canonical proposal action
+/// fields), and the STRENGTH of the approval (approval class). A
+/// proposal whose state was mutated to `Approved` without a receipt
+/// fails closed at apply time: state alone is never authority.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct QuarantineApproval {
+    pub approval_id: ApprovalId,
+    pub approver: PersonId,
+    /// sha256 over the canonical proposal action fields
+    /// (proposal_id, tenant_id, device_id, target_segment, action).
+    /// The receipt binds to THIS action; transplanting the receipt to
+    /// a different proposal fails the digest check.
+    pub action_digest: String,
+    /// Strength of the approval (the class the approver actually
+    /// holds). Apply requires at least the proposal's required class.
+    pub auth_strength: ApprovalClass,
+    /// RFC3339 timestamp of approval grant.
+    pub granted_at: String,
+}
+
+impl QuarantineApproval {
+    pub fn new(
+        approval_id: ApprovalId,
+        approver: PersonId,
+        action_digest: impl Into<String>,
+        auth_strength: ApprovalClass,
+        granted_at: impl Into<String>,
+    ) -> Self {
+        Self {
+            approval_id,
+            approver,
+            action_digest: action_digest.into(),
+            auth_strength,
+            granted_at: granted_at.into(),
+        }
+    }
+}
+
 /// A quarantine proposal (SPEC-013: automated containment is limited
 /// to preauthorized high-confidence reversible rules and always
 /// notifies the owner; quarantine is a proposal until approved,
 /// applied, and verified). A proposal is NOT an executed rule; it
 /// becomes containment only through the approved/verified ladder.
+///
+/// AUD-025: approval is an immutable receipt, not a mutable state
+/// flag. `state == Approved` alone never authorizes containment; the
+/// proposal must carry a matching `QuarantineApproval` receipt.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct QuarantineProposal {
     pub proposal_id: QuarantineProposalId,
@@ -281,6 +327,9 @@ pub struct QuarantineProposal {
     /// Approval class required to apply (SPEC-013 behavior 5/6:
     /// destructive remediation requires human procedure).
     pub approval_class: ApprovalClass,
+    /// Immutable approval receipt once approved (AUD-025). None until
+    /// an approver actually binds the exact action.
+    pub approval: Option<QuarantineApproval>,
     /// Owner notification reference once notified.
     pub notified_owner: bool,
     /// Correlation reference to the originating finding.
@@ -314,6 +363,7 @@ impl QuarantineProposal {
             preauthorized,
             reversible,
             approval_class,
+            approval: None,
             notified_owner: false,
             correlation: None,
             proposed_at: proposed_at.into(),
@@ -341,6 +391,78 @@ impl QuarantineProposal {
     /// automation; it fails closed.
     pub fn is_auto_applicable(&self) -> bool {
         self.preauthorized && self.reversible
+    }
+
+    /// Canonical action binding: a sha256 digest over the proposal's
+    /// exact action fields. The approval receipt must match this
+    /// digest; a receipt minted for any other proposal (or any other
+    /// device/segment/action) fails the binding check (AUD-025).
+    pub fn action_digest(&self) -> String {
+        use crate::digest::sha256_hex;
+        let mut canonical = String::new();
+        canonical.push_str(self.proposal_id.as_str());
+        canonical.push('|');
+        canonical.push_str(&self.tenant_id.to_string());
+        canonical.push('|');
+        canonical.push_str(self.device_id.as_str());
+        canonical.push('|');
+        canonical.push_str(self.target_segment.as_str());
+        canonical.push('|');
+        canonical.push_str(self.action.as_str());
+        sha256_hex(canonical.as_bytes())
+    }
+
+    /// Bind an immutable approval receipt to this proposal (AUD-025).
+    /// The receipt records the approver, the approval strength, and a
+    /// digest of the EXACT action being approved. Only a proposal
+    /// carrying a matching receipt may be applied; mutating `state` to
+    /// `Approved` without a receipt is forgeable state, never
+    /// authority.
+    pub fn approve(
+        mut self,
+        approval_id: ApprovalId,
+        approver: PersonId,
+        auth_strength: ApprovalClass,
+        granted_at: impl Into<String>,
+    ) -> Self {
+        let receipt = QuarantineApproval::new(
+            approval_id,
+            approver,
+            self.action_digest(),
+            auth_strength,
+            granted_at.into(),
+        );
+        self.approval = Some(receipt);
+        self.state = QuarantineState::Approved;
+        self
+    }
+
+    /// AUD-025 apply gate: the proposal is approved ONLY when it
+    /// carries an approval receipt whose action digest matches THIS
+    /// proposal's exact action. A bare `state == Approved` (no
+    /// receipt, or a receipt bound to a different action) fails
+    /// closed. The approver's strength must also meet the required
+    /// approval class.
+    pub fn approval_binds(&self) -> bool {
+        let Some(receipt) = &self.approval else {
+            return false;
+        };
+        if receipt.action_digest != self.action_digest() {
+            return false;
+        }
+        class_rank(receipt.auth_strength) >= class_rank(self.approval_class)
+    }
+}
+
+/// Strict ordering over approval classes (SPEC-006): NONE < POLICY <
+/// HUMAN < STRONG_HUMAN < FOUR_EYES.
+fn class_rank(class: ApprovalClass) -> u8 {
+    match class {
+        ApprovalClass::None => 0,
+        ApprovalClass::Policy => 1,
+        ApprovalClass::Human => 2,
+        ApprovalClass::StrongHuman => 3,
+        ApprovalClass::FourEyes => 4,
     }
 }
 
@@ -558,6 +680,86 @@ mod tests {
             !non_reversible.is_auto_applicable(),
             "non-reversible rule never auto-applies"
         );
+    }
+
+    #[test]
+    fn aud025_unit_bare_state_mutation_is_never_authority() {
+        // AUD-025: mutating `state` to Approved without an immutable
+        // approval receipt is forgeable state - approval_binds() must
+        // fail closed. The LF-009 defect reconstructed the proposal
+        // with state: Approved and immediately mutated the firewall.
+        let base = QuarantineProposal::new(
+            QuarantineProposalId::new("q-1").unwrap(),
+            tenant(),
+            NetworkDeviceId::new("dev-1").unwrap(),
+            NetworkSegment::Quarantine,
+            FirewallAction::Drop,
+            true,
+            true,
+            ApprovalClass::Human,
+            "2026-08-20T00:00:00Z",
+        );
+        let forged = QuarantineProposal {
+            state: QuarantineState::Approved,
+            ..base.clone()
+        };
+        assert_eq!(forged.state, QuarantineState::Approved);
+        assert!(
+            !forged.approval_binds(),
+            "state mutation alone must never authorize containment"
+        );
+        // A receipt bound to a DIFFERENT action also fails: transplant
+        // the receipt to another proposal (different device).
+        let approved = base.clone().approve(
+            ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
+            PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
+            ApprovalClass::Human,
+            "2026-08-20T00:00:00Z",
+        );
+        assert!(approved.approval_binds(), "real receipt binds");
+        let different = QuarantineProposal {
+            device_id: NetworkDeviceId::new("dev-2").unwrap(),
+            ..approved.clone()
+        };
+        assert!(
+            !different.approval_binds(),
+            "receipt transplanted to another action must fail"
+        );
+    }
+
+    #[test]
+    fn aud025_unit_approval_strength_must_meet_required_class() {
+        // AUD-025: the approver's strength must be at least the
+        // proposal's required approval class. A POLICY-strength
+        // receipt cannot authorize a HUMAN-required containment.
+        let base = QuarantineProposal::new(
+            QuarantineProposalId::new("q-1").unwrap(),
+            tenant(),
+            NetworkDeviceId::new("dev-1").unwrap(),
+            NetworkSegment::Quarantine,
+            FirewallAction::Drop,
+            true,
+            true,
+            ApprovalClass::Human,
+            "2026-08-20T00:00:00Z",
+        );
+        let weak = base.approve(
+            ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
+            PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
+            ApprovalClass::Policy,
+            "2026-08-20T00:00:00Z",
+        );
+        assert!(
+            !weak.approval_binds(),
+            "policy-strength approval cannot authorize human-required containment"
+        );
+        let strong = weak.clone().approve(
+            ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6106").unwrap(),
+            PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
+            ApprovalClass::StrongHuman,
+            "2026-08-20T00:00:00Z",
+        );
+        assert!(strong.approval_binds(), "stronger class satisfies the gate");
     }
 
     #[test]
