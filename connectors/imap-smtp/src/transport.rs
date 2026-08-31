@@ -114,6 +114,17 @@ pub struct ImapMessage {
     pub flags: Vec<String>,
 }
 
+/// Canonical IMAP attachment metadata derived from the REAL
+/// BODYSTRUCTURE: only parts with an attachment disposition (or a
+/// filename parameter) are attachments; inline/text parts are not.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImapAttachmentMeta {
+    pub part_number: String,
+    pub filename: String,
+    pub mime_type: String,
+    pub size_bytes: u64,
+}
+
 /// Outcome of an SMTP submission (directive M).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SmtpOutcome {
@@ -136,6 +147,13 @@ pub trait ImapSession: Send {
         message_id: &str,
     ) -> Result<ImapMessage, MailError>;
     fn uid_fetch(&mut self, mailbox: &str, uid: u32) -> Result<ImapMessage, MailError>;
+    /// Fetch the BODYSTRUCTURE for a message and return its real
+    /// attachment parts (disposition=attachment or filename present).
+    fn uid_fetch_attachments(
+        &mut self,
+        mailbox: &str,
+        uid: u32,
+    ) -> Result<Vec<ImapAttachmentMeta>, MailError>;
     fn uid_state(&mut self, mailbox: &str, uid: u32) -> Result<MailState, MailError>;
     fn uid_archive(&mut self, mailbox: &str, uid: u32) -> Result<(), MailError>;
     fn uid_label(&mut self, mailbox: &str, uid: u32, label: &str) -> Result<(), MailError>;
@@ -407,6 +425,71 @@ fn envelope_from_fetch(
     })
 }
 
+/// Recursively walk a BODYSTRUCTURE tree collecting attachment parts.
+/// A part is an attachment only when its disposition is attachment or
+/// it carries a filename parameter; inline/text parts are skipped -
+/// never fabricated as attachments.
+fn walk_bodystructure(
+    bs: &imap_proto::types::BodyStructure<'_>,
+    prefix: &str,
+    out: &mut Vec<ImapAttachmentMeta>,
+) {
+    use imap_proto::types::BodyStructure;
+    match bs {
+        BodyStructure::Multipart { bodies, .. } => {
+            for (i, child) in bodies.iter().enumerate() {
+                let child_prefix = if prefix.is_empty() {
+                    (i + 1).to_string()
+                } else {
+                    format!("{prefix}.{}", i + 1)
+                };
+                walk_bodystructure(child, &child_prefix, out);
+            }
+        }
+        BodyStructure::Basic { common, other, .. }
+        | BodyStructure::Text { common, other, .. }
+        | BodyStructure::Message { common, other, .. } => {
+            let mut filename = None;
+            let mut is_attachment = false;
+            if let Some(disp) = &common.disposition {
+                if disp.ty.eq_ignore_ascii_case("attachment") {
+                    is_attachment = true;
+                }
+                if let Some(params) = &disp.params {
+                    for (k, v) in params {
+                        if k.eq_ignore_ascii_case("filename") {
+                            filename = Some(v.to_string());
+                        }
+                    }
+                }
+            }
+            if filename.is_none() {
+                if let Some(params) = &common.ty.params {
+                    for (k, v) in params {
+                        if k.eq_ignore_ascii_case("name") {
+                            filename = Some(v.to_string());
+                        }
+                    }
+                }
+            }
+            if !is_attachment && filename.is_none() {
+                return;
+            }
+            let mime_type = format!("{}/{}", common.ty.ty, common.ty.subtype);
+            out.push(ImapAttachmentMeta {
+                part_number: if prefix.is_empty() {
+                    "1".to_string()
+                } else {
+                    prefix.to_string()
+                },
+                filename: filename.unwrap_or_default(),
+                mime_type,
+                size_bytes: other.octets as u64,
+            });
+        }
+    }
+}
+
 fn message_from_fetch(fetch: &imap::types::Fetch, mailbox: &str) -> Result<ImapMessage, MailError> {
     let uid = fetch
         .uid
@@ -510,6 +593,27 @@ impl ImapSession for RealImapSession {
             .find(|f| f.uid == Some(uid))
             .ok_or_else(|| MailError::not_found(format!("no such uid {uid} in {mailbox}")))?;
         message_from_fetch(fetch, mailbox)
+    }
+
+    fn uid_fetch_attachments(
+        &mut self,
+        mailbox: &str,
+        uid: u32,
+    ) -> Result<Vec<ImapAttachmentMeta>, MailError> {
+        select_mailbox(&mut self.session, mailbox)?;
+        let fetches = self
+            .session
+            .uid_fetch(uid.to_string().as_str(), "(UID BODYSTRUCTURE)")
+            .map_err(|e| classify_imap(&e, "imap bodystructure fetch"))?;
+        let fetch = fetches
+            .iter()
+            .find(|f| f.uid == Some(uid))
+            .ok_or_else(|| MailError::not_found(format!("no such uid {uid} in {mailbox}")))?;
+        let mut out = Vec::new();
+        if let Some(bs) = fetch.bodystructure() {
+            walk_bodystructure(bs, "", &mut out);
+        }
+        Ok(out)
     }
 
     fn uid_state(&mut self, mailbox: &str, uid: u32) -> Result<MailState, MailError> {
@@ -898,5 +1002,80 @@ mod tests {
             )
             .expect_err("CRLF recipient must reject");
         assert_eq!(err.code, MailErrorCode::Validation);
+    }
+
+    #[test]
+    fn ep026_unit_m4_bodystructure_lists_only_attachment_parts() {
+        // AUD-010: BODYSTRUCTURE walking must report only parts with an
+        // attachment disposition (or filename); inline text parts are
+        // never fabricated as attachments.
+        use imap_proto::types::{
+            BodyContentCommon, BodyContentSinglePart, BodyStructure, ContentType,
+        };
+        let inline = BodyStructure::Text {
+            common: BodyContentCommon {
+                ty: ContentType {
+                    ty: "text".into(),
+                    subtype: "plain".into(),
+                    params: None,
+                },
+                disposition: None,
+                language: None,
+                location: None,
+            },
+            other: BodyContentSinglePart {
+                id: None,
+                md5: None,
+                description: None,
+                transfer_encoding: imap_proto::types::ContentEncoding::SevenBit,
+                octets: 12,
+            },
+            lines: 1,
+            extension: None,
+        };
+        let attachment = BodyStructure::Basic {
+            common: BodyContentCommon {
+                ty: ContentType {
+                    ty: "application".into(),
+                    subtype: "pdf".into(),
+                    params: None,
+                },
+                disposition: Some(imap_proto::types::ContentDisposition {
+                    ty: "attachment".into(),
+                    params: Some(vec![("filename".into(), "scan.pdf".into())]),
+                }),
+                language: None,
+                location: None,
+            },
+            other: BodyContentSinglePart {
+                id: None,
+                md5: None,
+                description: None,
+                transfer_encoding: imap_proto::types::ContentEncoding::Base64,
+                octets: 2048,
+            },
+            extension: None,
+        };
+        let multipart = BodyStructure::Multipart {
+            common: BodyContentCommon {
+                ty: ContentType {
+                    ty: "multipart".into(),
+                    subtype: "mixed".into(),
+                    params: None,
+                },
+                disposition: None,
+                language: None,
+                location: None,
+            },
+            bodies: vec![inline, attachment],
+            extension: None,
+        };
+        let mut out = Vec::new();
+        walk_bodystructure(&multipart, "", &mut out);
+        assert_eq!(out.len(), 1, "only the attachment part counts");
+        assert_eq!(out[0].filename, "scan.pdf");
+        assert_eq!(out[0].mime_type, "application/pdf");
+        assert_eq!(out[0].size_bytes, 2048);
+        assert_eq!(out[0].part_number, "2");
     }
 }

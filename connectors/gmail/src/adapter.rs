@@ -34,7 +34,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use nexus_email::{
-    Attachment, Draft, DraftId, EmailAddress, EmailProvider, MailChange, MailCommand,
+    Attachment, AttachmentId, Draft, DraftId, EmailAddress, EmailProvider, MailChange, MailCommand,
     MailDirection, MailError, MailPolicy, MailScope, MailState, MailboxId, Message, MessageId,
     SendRequest, ThreadId,
 };
@@ -249,18 +249,42 @@ impl EmailProvider for GmailAdapter {
         Ok(msg)
     }
 
-    fn list_attachments(&self, _message: &MessageId) -> Result<Vec<Attachment>, MailError> {
+    fn list_attachments(&self, message: &MessageId) -> Result<Vec<Attachment>, MailError> {
         let correlation = self.observability.lock().expect("obs lock").correlation();
+        // The operation reads the message (Read) and accesses
+        // attachment artifacts (Attachments); both scopes are granted
+        // by the policy gate, which fails closed otherwise.
         self.gate(
             MailCommand::Fetch,
-            &[MailScope::Attachments],
+            &[MailScope::Read, MailScope::Attachments],
             1,
             &correlation,
         )?;
-        // The Gmail API reports attachments only inside a full
-        // message fetch; a transport without attachment metadata
-        // returns an empty list (never fabricated).
-        Ok(Vec::new())
+        // Real Gmail enumeration: format=full payload.parts carry the
+        // attachmentId/filename/mimeType/size. Each attachment maps to
+        // a storage_ref handle; content materialization (sha256) is
+        // ArtifactStore-owned, never fabricated here.
+        let metas = self.transport.fetch_attachments(message.as_str())?;
+        let mut attachments = Vec::with_capacity(metas.len());
+        for meta in metas {
+            attachments.push(Attachment {
+                id: AttachmentId::new(format!("{}:{}", message.as_str(), meta.attachment_id))
+                    .map_err(|_| MailError::external("invalid gmail attachment id"))?,
+                filename: meta.filename,
+                content_type: meta.mime_type,
+                size_bytes: meta.size_bytes,
+                sha256: String::new(),
+                storage_ref: format!("gmail:{}:{}", message.as_str(), meta.attachment_id),
+                scan_status: nexus_email::ScanStatus::Pending,
+            });
+        }
+        self.record(
+            correlation,
+            "FETCH",
+            "ok",
+            format!("{} attachments on {}", attachments.len(), message),
+        );
+        Ok(attachments)
     }
 
     fn save_draft(&self, draft: &Draft) -> Result<DraftId, MailError> {
@@ -681,6 +705,21 @@ mod tests {
             })
         }
 
+        fn fetch_attachments(
+            &self,
+            message_id: &str,
+        ) -> Result<Vec<GmailAttachmentMeta>, MailError> {
+            let msg = self
+                .messages
+                .get(message_id)
+                .ok_or_else(|| MailError::not_found(format!("no such message {message_id}")))?;
+            let mut out = Vec::new();
+            for part in &msg.payload.parts {
+                part.collect_attachments(&mut out);
+            }
+            Ok(out)
+        }
+
         fn create_draft(&self, _raw: &str) -> Result<GmailDraft, MailError> {
             Ok(GmailDraft {
                 id: format!("draft-{}", self.drafts.len() + self.sent.len()),
@@ -781,6 +820,7 @@ mod tests {
                         value: "Hello".into(),
                     },
                 ],
+                parts: vec![],
             },
             raw: Some("SGVsbG8=".into()),
         }
@@ -899,6 +939,49 @@ mod tests {
             .expect("fetch");
         assert_eq!(msg.from.as_str(), "carol@example.com");
         assert_eq!(msg.subject, "Wire");
+    }
+
+    #[test]
+    fn ep026_unit_gmail_lists_real_attachment_metadata() {
+        // AUD-010: list_attachments must return REAL attachment
+        // metadata from payload.parts, not an empty collection.
+        let json = r#"{
+            "id": "m3",
+            "threadId": "thread-m3",
+            "labelIds": ["INBOX"],
+            "snippet": "with attachment",
+            "historyId": "7",
+            "internalDate": "1780000000002",
+            "payload": {
+                "headers": [
+                    {"name": "From", "value": "Alice <alice@example.com>"},
+                    {"name": "To", "value": "bob@example.com"},
+                    {"name": "Subject", "value": "Docs"}
+                ],
+                "parts": [
+                    {"partId": "0", "mimeType": "text/plain", "filename": "",
+                     "body": {"size": 5}},
+                    {"partId": "1", "mimeType": "application/pdf", "filename": "scan.pdf",
+                     "body": {"attachmentId": "ATT123", "size": 2048}}
+                ]
+            }
+        }"#;
+        let gm: crate::transport::GmailMessage =
+            serde_json::from_str(json).expect("real gmail wire parses");
+        let transport = StubTransport::default().with_message(gm);
+        let adapter = GmailAdapter::new(Box::new(transport), GmailScope::Full, policy(), inbox());
+        let atts = adapter
+            .list_attachments(&MessageId::new("m3").expect("id"))
+            .expect("list");
+        // Only the part WITH an attachmentId counts; inline text is not
+        // fabricated as an attachment.
+        assert_eq!(atts.len(), 1);
+        assert_eq!(atts[0].filename, "scan.pdf");
+        assert_eq!(atts[0].content_type, "application/pdf");
+        assert_eq!(atts[0].size_bytes, 2048);
+        assert_eq!(atts[0].storage_ref, "gmail:m3:ATT123");
+        assert_eq!(atts[0].sha256.len(), 0);
+        assert_eq!(atts[0].scan_status, nexus_email::ScanStatus::Pending);
     }
 
     #[test]

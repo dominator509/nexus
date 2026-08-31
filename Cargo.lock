@@ -1904,6 +1904,7 @@ name = "nexus-imap-smtp"
 version = "0.1.0"
 dependencies = [
  "imap",
+ "imap-proto",
  "lettre",
  "native-tls",
  "nexus-domain",

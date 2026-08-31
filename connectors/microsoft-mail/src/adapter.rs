@@ -32,7 +32,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use nexus_email::{
-    Attachment, Draft, DraftId, EmailAddress, EmailProvider, MailChange, MailCommand,
+    Attachment, AttachmentId, Draft, DraftId, EmailAddress, EmailProvider, MailChange, MailCommand,
     MailDirection, MailError, MailPolicy, MailScope, MailState, MailVerification, MailVerifier,
     MailboxId, Message, MessageId, SendRequest, ThreadId,
 };
@@ -303,18 +303,42 @@ impl EmailProvider for MicrosoftGraphAdapter {
         Ok(msg)
     }
 
-    fn list_attachments(&self, _message: &MessageId) -> Result<Vec<Attachment>, MailError> {
+    fn list_attachments(&self, message: &MessageId) -> Result<Vec<Attachment>, MailError> {
         let correlation = self.observability.lock().expect("obs lock").correlation();
+        // The operation reads the message (Read) and accesses
+        // attachment artifacts (Attachments); both scopes are granted
+        // by the policy gate, which fails closed otherwise.
         self.gate(
             MailCommand::Fetch,
-            &[MailScope::Attachments],
+            &[MailScope::Read, MailScope::Attachments],
             1,
             &correlation,
         )?;
-        // The Graph API reports attachments only inside a full
-        // message fetch; a transport without attachment metadata
-        // returns an empty list (never fabricated).
-        Ok(Vec::new())
+        // Real Graph enumeration: GET /me/messages/{id}/attachments
+        // returns the value collection. Each attachment maps to a
+        // storage_ref handle; content materialization (sha256) is
+        // ArtifactStore-owned, never fabricated here.
+        let metas = self.transport.fetch_attachments(message.as_str())?;
+        let mut attachments = Vec::with_capacity(metas.len());
+        for meta in metas {
+            attachments.push(Attachment {
+                id: AttachmentId::new(format!("{}:{}", message.as_str(), meta.id))
+                    .map_err(|_| MailError::external("invalid graph attachment id"))?,
+                filename: meta.name,
+                content_type: meta.content_type,
+                size_bytes: meta.size_bytes,
+                sha256: String::new(),
+                storage_ref: format!("graph:{}:{}", message.as_str(), meta.id),
+                scan_status: nexus_email::ScanStatus::Pending,
+            });
+        }
+        self.record(
+            correlation,
+            "FETCH",
+            "ok",
+            format!("{} attachments on {}", attachments.len(), message),
+        );
+        Ok(attachments)
     }
 
     fn save_draft(&self, draft: &Draft) -> Result<DraftId, MailError> {
@@ -688,6 +712,7 @@ mod tests {
     #[derive(Default)]
     struct StubTransport {
         messages: std::collections::HashMap<String, GraphMessage>,
+        attachment_metas: std::collections::HashMap<String, Vec<GraphAttachmentMeta>>,
         create_draft_calls: Arc<AtomicUsize>,
         send_draft_calls: Arc<AtomicUsize>,
     }
@@ -695,6 +720,11 @@ mod tests {
     impl StubTransport {
         fn with_message(mut self, gm: GraphMessage) -> Self {
             self.messages.insert(gm.id.clone(), gm);
+            self
+        }
+
+        fn with_attachments(mut self, message_id: &str, metas: Vec<GraphAttachmentMeta>) -> Self {
+            self.attachment_metas.insert(message_id.to_string(), metas);
             self
         }
     }
@@ -722,6 +752,17 @@ mod tests {
                 name: "a.txt".into(),
                 content_type: "text/plain".into(),
             })
+        }
+
+        fn fetch_attachments(
+            &self,
+            message_id: &str,
+        ) -> Result<Vec<GraphAttachmentMeta>, MailError> {
+            Ok(self
+                .attachment_metas
+                .get(message_id)
+                .cloned()
+                .unwrap_or_default())
         }
 
         fn create_draft(
@@ -879,6 +920,45 @@ mod tests {
         assert_eq!(msg.from.as_str(), "alice@example.com");
         assert_eq!(msg.state, MailState::Delivered);
         assert_eq!(msg.body_digest.len(), 64);
+    }
+
+    #[test]
+    fn ep026_unit_graph_lists_real_attachment_metadata() {
+        // AUD-010: list_attachments must return REAL attachment
+        // metadata from the Graph attachments collection, not an empty
+        // collection. Inline text is never fabricated as an attachment.
+        let transport = StubTransport::default()
+            .with_message(sample_message("m4"))
+            .with_attachments(
+                "m4",
+                vec![
+                    GraphAttachmentMeta {
+                        id: "ATT1".into(),
+                        size_bytes: 4096,
+                        name: "report.pdf".into(),
+                        content_type: "application/pdf".into(),
+                    },
+                    GraphAttachmentMeta {
+                        id: "ATT2".into(),
+                        size_bytes: 12,
+                        name: "note.txt".into(),
+                        content_type: "text/plain".into(),
+                    },
+                ],
+            );
+        let adapter =
+            MicrosoftGraphAdapter::new(Box::new(transport), GraphScope::Full, policy(), inbox());
+        let atts = adapter
+            .list_attachments(&MessageId::new("m4").expect("id"))
+            .expect("list");
+        assert_eq!(atts.len(), 2);
+        assert_eq!(atts[0].filename, "report.pdf");
+        assert_eq!(atts[0].content_type, "application/pdf");
+        assert_eq!(atts[0].size_bytes, 4096);
+        assert_eq!(atts[0].storage_ref, "graph:m4:ATT1");
+        assert_eq!(atts[0].sha256.len(), 0);
+        assert_eq!(atts[0].scan_status, ScanStatus::Pending);
+        assert_eq!(atts[1].filename, "note.txt");
     }
 
     #[test]

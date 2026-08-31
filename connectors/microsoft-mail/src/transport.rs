@@ -172,6 +172,16 @@ pub trait GraphTransport: Send + Sync {
         ))
     }
 
+    /// List attachment metadata via GET /v1.0/me/messages/{id}/attachments.
+    /// A message with no attachments yields an empty list - never
+    /// fabricated.
+    fn fetch_attachments(&self, message_id: &str) -> Result<Vec<GraphAttachmentMeta>, MailError> {
+        let _ = message_id;
+        Err(MailError::unavailable(
+            "graph transport has no implementation bound",
+        ))
+    }
+
     fn create_draft(
         &self,
         subject: &str,
@@ -494,6 +504,42 @@ impl GraphTransport for HttpGraphTransport {
             &format!("/v1.0/me/messages/{message_id}/attachments/{attachment_id}"),
             &[],
         )
+    }
+
+    fn fetch_attachments(&self, message_id: &str) -> Result<Vec<GraphAttachmentMeta>, MailError> {
+        if !self.scope.allows_read() {
+            return Err(MailError::authorization(
+                "graph token scope does not allow read",
+            ));
+        }
+        // Documented Graph surface: GET /me/messages/{id}/attachments
+        // returns { "value": [ {id, name, contentType, size, ...} ] }.
+        let list: serde_json::Value =
+            self.get_json(&format!("/v1.0/me/messages/{message_id}/attachments"), &[])?;
+        let mut out = Vec::new();
+        if let Some(arr) = list.get("value").and_then(|v| v.as_array()) {
+            for item in arr {
+                let id = match item.get("id").and_then(|v| v.as_str()) {
+                    Some(v) => v.to_string(),
+                    None => continue,
+                };
+                out.push(GraphAttachmentMeta {
+                    id,
+                    size_bytes: item.get("size").and_then(|v| v.as_u64()).unwrap_or(0),
+                    name: item
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    content_type: item
+                        .get("contentType")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                });
+            }
+        }
+        Ok(out)
     }
 
     fn create_draft(

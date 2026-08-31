@@ -81,17 +81,65 @@ impl GmailMessage {
 }
 
 /// Gmail payload envelope: the real wire format carries headers as a
-/// name/value list here, never as flat message fields.
+/// name/value list here, never as flat message fields, and attachment
+/// parts as a recursive part tree.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
 pub struct GmailPayload {
     #[serde(default)]
     pub headers: Vec<GmailHeader>,
+    #[serde(default)]
+    pub parts: Vec<GmailPart>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct GmailHeader {
     pub name: String,
     pub value: String,
+}
+
+/// One MIME part of a Gmail message payload. Attachment parts carry a
+/// body with an attachmentId; inline/text parts have no attachmentId.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+pub struct GmailPart {
+    #[serde(default, rename = "partId")]
+    pub part_id: String,
+    #[serde(default)]
+    pub filename: String,
+    #[serde(default, rename = "mimeType")]
+    pub mime_type: String,
+    #[serde(default)]
+    pub body: Option<GmailPartBody>,
+    #[serde(default)]
+    pub parts: Vec<GmailPart>,
+}
+
+impl GmailPart {
+    /// Walk this part tree collecting every part that carries a real
+    /// attachmentId (attachment metadata). Inline/text parts without
+    /// an attachmentId are skipped - never fabricated as attachments.
+    pub fn collect_attachments(&self, out: &mut Vec<GmailAttachmentMeta>) {
+        if let Some(body) = &self.body {
+            if let Some(attachment_id) = &body.attachment_id {
+                out.push(GmailAttachmentMeta {
+                    attachment_id: attachment_id.clone(),
+                    size_bytes: body.size,
+                    filename: self.filename.clone(),
+                    mime_type: self.mime_type.clone(),
+                });
+            }
+        }
+        for child in &self.parts {
+            child.collect_attachments(out);
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+pub struct GmailPartBody {
+    #[serde(default, rename = "attachmentId")]
+    pub attachment_id: Option<String>,
+    #[serde(default)]
+    pub size: u64,
 }
 
 /// Canonical Gmail draft envelope.
@@ -153,6 +201,16 @@ pub trait GmailTransport {
         attachment_id: &str,
     ) -> Result<GmailAttachmentMeta, MailError> {
         let _ = (message_id, attachment_id);
+        Err(MailError::unavailable(
+            "gmail transport has no implementation bound",
+        ))
+    }
+
+    /// Fetch a message with format=full and return its attachment
+    /// metadata (parts with an attachmentId). A message with no
+    /// attachments yields an empty list - never fabricated.
+    fn fetch_attachments(&self, message_id: &str) -> Result<Vec<GmailAttachmentMeta>, MailError> {
+        let _ = message_id;
         Err(MailError::unavailable(
             "gmail transport has no implementation bound",
         ))
@@ -412,6 +470,25 @@ impl GmailTransport for HttpGmailTransport {
             &format!("/gmail/v1/users/me/messages/{message_id}/attachments/{attachment_id}"),
             &[],
         )
+    }
+
+    fn fetch_attachments(&self, message_id: &str) -> Result<Vec<GmailAttachmentMeta>, MailError> {
+        if !self.scope.allows_read() {
+            return Err(MailError::authorization(
+                "gmail token scope does not allow read",
+            ));
+        }
+        // format=full returns payload.parts with attachmentId/filename/
+        // mimeType/size - the REAL Gmail attachment enumeration surface.
+        let msg: GmailMessage = self.get_json(
+            &format!("/gmail/v1/users/me/messages/{message_id}"),
+            &[("format", "full")],
+        )?;
+        let mut out = Vec::new();
+        for part in &msg.payload.parts {
+            part.collect_attachments(&mut out);
+        }
+        Ok(out)
     }
 
     fn create_draft(&self, raw: &str) -> Result<GmailDraft, MailError> {
