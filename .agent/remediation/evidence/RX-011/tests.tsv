@@ -1,0 +1,14 @@
+installer-failure-suite	27	0
+hostile-sentinels	7	0
+installer-unit-suite	12	0
+typecheck-installers	1	0
+typecheck-tests-release	1	0
+ep042-m1-gate	1	0
+ep042-m2-gate	1	0
+ep042-m3-gate	1	0
+ep042-m4-gate	1	0
+ep042-m5-gate	1	0
+workspace-check	1	0
+clippy	1	0
+register	90	0
+expected-files	1	0

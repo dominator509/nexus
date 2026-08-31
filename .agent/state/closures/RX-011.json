@@ -1,0 +1,138 @@
+{
+  "attestation_digest": "sha256:47f91a58200902c07cb5d4a71aed8a40ec33c0fe17d7c1c706681d9b1ae37bae",
+  "closure_commit": "74f293122e33fbe2f1101e75399341ce0e64ece7",
+  "created_at": "2026-08-31T18:31:08Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:2f2ba2d43ad6b9c5a34c019ac738e7e046b2a0cbadfca7a498f568f8c8c8cc5e",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-011/74f293122e33fbe2f1101e75399341ce0e64ece7",
+  "milestones": {
+    "max": 4,
+    "passed": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "node": "RX-011",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:e2c23e6406b4a266bde43bdb427c2213c66f4a467ba745913f2145e25214e196",
+      "id": "rollback-digest-verify",
+      "ref": "installers/src/installer.ts"
+    },
+    {
+      "digest": "sha256:e2c23e6406b4a266bde43bdb427c2213c66f4a467ba745913f2145e25214e196",
+      "id": "atomic-switch-preserve",
+      "ref": "installers/src/installer.ts"
+    },
+    {
+      "digest": "sha256:e2c23e6406b4a266bde43bdb427c2213c66f4a467ba745913f2145e25214e196",
+      "id": "manifest-bound-payloads",
+      "ref": "installers/src/installer.ts"
+    },
+    {
+      "digest": "sha256:e2c23e6406b4a266bde43bdb427c2213c66f4a467ba745913f2145e25214e196",
+      "id": "idempotency-guard",
+      "ref": "installers/src/installer.ts"
+    },
+    {
+      "digest": "sha256:419c3687be3159552ba652cc149f1d187ba6eac66736f1a577da6b4e1f6f4462",
+      "id": "hostile-proofs",
+      "ref": "tests/release/src/failure/ep042_failure_installer.test.ts"
+    },
+    {
+      "digest": "sha256:286ac9d1673ec586bb29b57d6e97b576302e65092694fa900cf0523fc70b413f",
+      "id": "battery-script",
+      "ref": "scripts/rx011-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:db796e87dbe7cc85ddaf890655ba5008949a282429e775d3c6ff9efa0240a715",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-011.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:2f2ba2d43ad6b9c5a34c019ac738e7e046b2a0cbadfca7a498f568f8c8c8cc5e",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "installer-failure-suite",
+        "passed": 27
+      },
+      {
+        "failed": 0,
+        "family": "hostile-sentinels",
+        "passed": 7
+      },
+      {
+        "failed": 0,
+        "family": "installer-unit-suite",
+        "passed": 12
+      },
+      {
+        "failed": 0,
+        "family": "typecheck-installers",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "typecheck-tests-release",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep042-m1-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep042-m2-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep042-m3-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep042-m4-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "ep042-m5-gate",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "workspace-check",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "clippy",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 146
+  },
+  "verify_log": ".agent/remediation/evidence/RX-011/verify.log|sha256:482d98587e2a151c4d262ff222ac096afba612e468799502a76c44dc96ca7943",
+  "verify_sentinel": "verify: ok"
+}
