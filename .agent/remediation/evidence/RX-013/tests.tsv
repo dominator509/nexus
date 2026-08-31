@@ -6,6 +6,10 @@ deploy-tamper-denial	1	0
 deploy-tamper-no-install-state	1	0
 deploy-real-install-bytes	1	0
 deploy-real-install-journal	1	0
+phantom-scan	1	0
+deploy-real-deploy-surface	1	0
+rollback-drill-delegation	1	0
+release-build-manifest	1	0
 ep043-m1-gate	1	0
 ep043-m2-gate	1	0
 ep043-m3-gate	1	0
