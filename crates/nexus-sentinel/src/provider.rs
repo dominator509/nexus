@@ -39,11 +39,17 @@ pub trait FirewallProvider {
     /// Propose verified containment. The proposal is DATA, not an
     /// executed rule; it becomes containment only through the
     /// approved/applied/verified ladder.
+    ///
+    /// AUD-026: `observed_source` is the OBSERVED network identity
+    /// (the device fingerprint's ip_ref) that the containment rule
+    /// must bind to - NEVER the device display label. A proposal
+    /// without an observed source fails closed.
     fn propose_containment(
         &self,
         tenant_id: &TenantId,
         business_id: Option<&BusinessId>,
         device: &NetworkDevice,
+        observed_source: Option<&str>,
     ) -> Result<QuarantineProposal, SentinelError>;
 
     /// Apply a quarantine proposal. Fails closed unless the proposal
@@ -118,6 +124,7 @@ impl FirewallProvider for UnboundFirewallProvider {
         _tenant_id: &TenantId,
         _business_id: Option<&BusinessId>,
         _device: &NetworkDevice,
+        _observed_source: Option<&str>,
     ) -> Result<QuarantineProposal, SentinelError> {
         Err(SentinelError::unavailable("no firewall provider bound"))
     }
@@ -221,7 +228,7 @@ mod tests {
         let err = provider.read_telemetry(&tenant()).unwrap_err();
         assert_eq!(err.code, SentinelErrorCode::Unavailable);
         let err = provider
-            .propose_containment(&tenant(), None, &device())
+            .propose_containment(&tenant(), None, &device(), None)
             .unwrap_err();
         assert_eq!(err.code, SentinelErrorCode::Unavailable);
         let proposal = QuarantineProposal::new(

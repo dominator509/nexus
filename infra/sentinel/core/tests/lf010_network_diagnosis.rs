@@ -185,6 +185,7 @@ struct OpnRule {
     description: String,
     enabled: bool,
     action: String,
+    source_net: Option<String>,
 }
 
 /// OPNsense-shaped fixture: searchRule / addRule / toggleRule / apply.
@@ -208,6 +209,7 @@ fn spawn_opnsense_fixture(
                         "description": r.description,
                         "enabled": if r.enabled { "1" } else { "0" },
                         "action": r.action,
+                        "source_net": r.source_net.clone().unwrap_or_default(),
                     })
                 })
                 .collect();
@@ -235,6 +237,10 @@ fn spawn_opnsense_fixture(
                     .and_then(|v| v.as_str())
                     .unwrap_or("block")
                     .to_string(),
+                source_net: rule
+                    .get("source_net")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
             });
             (
                 200,
@@ -483,7 +489,9 @@ fn device(id: &str, label: &str, segment: NetworkSegment) -> NetworkDevice {
 }
 
 fn approved_proposal(provider: &OpnsenseFirewallProvider, d: &NetworkDevice) -> QuarantineProposal {
-    let proposal = provider.propose_containment(&tenant(), None, d).unwrap();
+    let proposal = provider
+        .propose_containment(&tenant(), None, d, Some("192.168.30.10"))
+        .unwrap();
     // AUD-025: approval is an immutable receipt binding the exact
     // action - never a bare state mutation.
     proposal.approve(
@@ -552,6 +560,7 @@ fn ep030_m5_lf010_network_diagnosis() {
         description: "nexus-quarantine-thermostat-1".into(),
         enabled: true,
         action: "block".into(),
+        source_net: Some("192.168.30.20".into()),
     }];
     let (opn_port, opn_rules, opn_handle) = spawn_opnsense_fixture(opn_state);
 
@@ -695,7 +704,7 @@ fn ep030_m5_lf010_network_diagnosis() {
     // ---- 6. RECOMMENDED: reversible quarantine proposal ----
     let camera = device("cam-iot-1", "192.168.30.10", NetworkSegment::Iot);
     let proposed = opnsense
-        .propose_containment(&tenant(), None, &camera)
+        .propose_containment(&tenant(), None, &camera, Some("192.168.30.10"))
         .unwrap();
     assert_eq!(proposed.state, QuarantineState::Proposed);
     assert!(proposed.preauthorized && proposed.reversible);

@@ -316,6 +316,12 @@ pub struct QuarantineProposal {
     pub target_segment: NetworkSegment,
     /// Proposed firewall action (reversible rules only).
     pub action: FirewallAction,
+    /// The OBSERVED network identity to contain (AUD-026): the
+    /// source network/address from the device fingerprint's ip_ref,
+    /// never the display label. The firewall rule binds to this
+    /// exact observed identity; None means no observed identity was
+    /// captured and the proposal cannot be applied.
+    pub source_net: Option<String>,
     /// Provider-neutral rule reference once applied.
     pub rule_ref: Option<String>,
     pub state: QuarantineState,
@@ -358,6 +364,7 @@ impl QuarantineProposal {
             device_id,
             target_segment,
             action,
+            source_net: None,
             rule_ref: None,
             state: QuarantineState::Proposed,
             preauthorized,
@@ -383,6 +390,20 @@ impl QuarantineProposal {
     pub fn with_rule_ref(mut self, rule_ref: impl Into<String>) -> Self {
         self.rule_ref = Some(rule_ref.into());
         self
+    }
+
+    /// Bind the OBSERVED network identity (AUD-026). The source is the
+    /// device fingerprint's ip_ref - never the display label. A
+    /// proposal without an observed source cannot be applied.
+    pub fn with_source_net(mut self, source_net: impl Into<String>) -> Self {
+        self.source_net = Some(source_net.into());
+        self
+    }
+
+    /// AUD-026: the proposal carries the observed network identity
+    /// only when one was actually captured.
+    pub fn has_observed_source(&self) -> bool {
+        self.source_net.as_deref().is_some_and(|s| !s.is_empty())
     }
 
     /// SPEC-013 behavior 5: automated containment is limited to

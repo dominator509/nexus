@@ -426,7 +426,7 @@ fn ep030_integration_containment_lifecycle_over_real_sockets() {
     );
     // Propose: DATA, zero transport calls.
     let proposal = provider
-        .propose_containment(&tenant(), None, &device)
+        .propose_containment(&tenant(), None, &device, Some("192.0.2.10"))
         .unwrap();
     assert_eq!(proposal.state, QuarantineState::Proposed);
     // Approve via the immutable receipt binding (AUD-025: approval
@@ -497,7 +497,7 @@ fn ep030_integration_policy_denial_zero_transport_calls() {
         "2026-08-20T00:00:00Z",
     );
     let proposal = provider
-        .propose_containment(&tenant(), None, &device)
+        .propose_containment(&tenant(), None, &device, Some("192.0.2.10"))
         .unwrap();
     // NOT approved: fails closed with zero transport calls.
     let err = provider.apply_containment(&proposal).unwrap_err();

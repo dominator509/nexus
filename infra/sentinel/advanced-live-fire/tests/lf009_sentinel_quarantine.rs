@@ -270,6 +270,7 @@ struct OpnRule {
     description: String,
     enabled: bool,
     action: String,
+    source_net: Option<String>,
 }
 
 fn spawn_opnsense_fixture(
@@ -290,6 +291,7 @@ fn spawn_opnsense_fixture(
                         "description": r.description,
                         "enabled": if r.enabled { "1" } else { "0" },
                         "action": r.action,
+                        "source_net": r.source_net.clone().unwrap_or_default(),
                     })
                 })
                 .collect();
@@ -317,6 +319,10 @@ fn spawn_opnsense_fixture(
                     .and_then(|v| v.as_str())
                     .unwrap_or("block")
                     .to_string(),
+                source_net: rule
+                    .get("source_net")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
             });
             (
                 200,
@@ -362,7 +368,9 @@ fn unknown_device() -> NetworkDevice {
 }
 
 fn approved_proposal(provider: &OpnsenseFirewallProvider, d: &NetworkDevice) -> QuarantineProposal {
-    let proposal = provider.propose_containment(&tenant(), None, d).unwrap();
+    let proposal = provider
+        .propose_containment(&tenant(), None, d, Some(SCANNER))
+        .unwrap();
     // AUD-025: approval is an immutable receipt binding the exact
     // action - never a bare state mutation. The journey must go
     // through the real approve() binding.
@@ -664,7 +672,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     // ---- 9. AUTHORIZED: policy permits (approved + reversible) ----
     let device = unknown_device();
     let proposed = opnsense
-        .propose_containment(&tenant(), None, &device)
+        .propose_containment(&tenant(), None, &device, Some(SCANNER))
         .expect("propose containment");
     assert_eq!(proposed.state, QuarantineState::Proposed);
     assert!(proposed.preauthorized && proposed.reversible);

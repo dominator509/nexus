@@ -497,11 +497,33 @@ impl FirewallProvider for OpnsenseFirewallProvider {
         tenant_id: &TenantId,
         business_id: Option<&BusinessId>,
         device: &NetworkDevice,
+        observed_source: Option<&str>,
     ) -> Result<QuarantineProposal, SentinelError> {
         let correlation = self.correlation();
+        // AUD-026: the containment rule MUST bind the OBSERVED network
+        // identity (the device fingerprint's ip_ref), never the
+        // display label. Without an observed source the proposal fails
+        // closed - a label is not a network identity.
+        let Some(observed_source) = observed_source.map(str::trim).filter(|s| !s.is_empty()) else {
+            self.record(
+                &correlation,
+                "PROPOSE_CONTAINMENT",
+                "NOT_FOUND",
+                "no observed network identity for device".into(),
+                std::collections::BTreeMap::from([("device".into(), device.device_id.to_string())]),
+            );
+            return Err(SentinelError::new(
+                SentinelErrorCode::NotFound,
+                "no observed network identity for device",
+                Some(correlation.clone()),
+                None,
+                Some(self.tenant_id.to_string()),
+                Some(device.device_id.to_string()),
+            ));
+        };
         // The proposal is DATA, not an executed rule. Capture the
-        // device's provider-neutral label as the source network
-        // reference for the later containment rule.
+        // device's OBSERVED source as the network identity for the
+        // later containment rule.
         let proposal = QuarantineProposal::new(
             nexus_sentinel::QuarantineProposalId::new(format!(
                 "{}-{}",
@@ -521,6 +543,7 @@ impl FirewallProvider for OpnsenseFirewallProvider {
             nexus_domain::ApprovalClass::Human,
             String::new(),
         )
+        .with_source_net(observed_source)
         .with_business(business_id.cloned().unwrap_or_else(|| {
             nexus_domain::BusinessId::new("018f0f6f-9c1e-7b6e-8000-000000000003")
                 .expect("static business id")
@@ -529,7 +552,7 @@ impl FirewallProvider for OpnsenseFirewallProvider {
 
         self.sources.lock().unwrap().insert(
             proposal.proposal_id.as_str().to_string(),
-            device.label.clone(),
+            observed_source.to_string(),
         );
 
         self.record(
@@ -576,17 +599,34 @@ impl FirewallProvider for OpnsenseFirewallProvider {
                 .with_resource(proposal.proposal_id.to_string())
         })?;
 
+        // AUD-026: verification proves the rule binds the OBSERVED
+        // network identity, not just a rule id. The matching rule must
+        // carry the exact observed source network (the fingerprint's
+        // ip_ref); a rule that matches id/enabled/block but binds a
+        // different (or no) source is NOT verified.
+        let expected_source = proposal.source_net.as_deref().unwrap_or("");
         let verified = rules
             .iter()
             .find(|r| Some(r.uuid.as_str()) == proposal.rule_ref.as_deref())
-            .map(|r| r.enabled && r.action == "block")
+            .map(|r| {
+                r.enabled
+                    && r.action == "block"
+                    && r.source_net.as_deref() == Some(expected_source)
+                    && !expected_source.is_empty()
+            })
             .unwrap_or(false);
 
         let evidence = if verified {
             rules
                 .iter()
                 .find(|r| Some(r.uuid.as_str()) == proposal.rule_ref.as_deref())
-                .map(|r| format!("opnsense:rule:{}:enabled:block", r.uuid))
+                .map(|r| {
+                    format!(
+                        "opnsense:rule:{}:enabled:block:source={}",
+                        r.uuid,
+                        r.source_net.as_deref().unwrap_or("")
+                    )
+                })
                 .unwrap_or_else(|| "opnsense:rule:none".to_string())
         } else {
             "opnsense:rule:none".to_string()
@@ -657,7 +697,7 @@ mod tests {
     }
 
     impl CountingTransport {
-        fn add_rule_now(&self, description: &str) -> String {
+        fn add_rule_now(&self, description: &str, source_net: &str) -> String {
             let uuid = format!("rule-{}", self.next_uuid.fetch_add(1, Ordering::SeqCst) + 1);
             self.rules
                 .lock()
@@ -667,6 +707,7 @@ mod tests {
                     description: description.to_string(),
                     enabled: true,
                     action: "block".into(),
+                    source_net: Some(source_net.to_string()),
                 });
             uuid
         }
@@ -699,7 +740,7 @@ mod tests {
                     None,
                 ));
             }
-            Ok(self.add_rule_now(&payload.description))
+            Ok(self.add_rule_now(&payload.description, &payload.source_net))
         }
 
         fn toggle_rule(&self, uuid: &str, enabled: bool) -> Result<(), SentinelError> {
@@ -722,7 +763,9 @@ mod tests {
 
     fn approved_proposal(provider: &OpnsenseFirewallProvider, label: &str) -> QuarantineProposal {
         let d = device(label);
-        let proposal = provider.propose_containment(&tenant(), None, &d).unwrap();
+        let proposal = provider
+            .propose_containment(&tenant(), None, &d, Some("192.0.2.10"))
+            .unwrap();
         // AUD-025: approval is an immutable receipt binding the exact
         // action - never a bare state mutation. The helper must go
         // through the real approve() binding.
@@ -759,7 +802,7 @@ mod tests {
         let provider =
             OpnsenseFirewallProvider::new(Box::new(t.clone()), tenant(), "key", "secret");
         let proposal = provider
-            .propose_containment(&tenant(), None, &device("thermostat"))
+            .propose_containment(&tenant(), None, &device("thermostat"), Some("192.0.2.10"))
             .unwrap();
         assert_eq!(proposal.state, QuarantineState::Proposed);
         assert!(proposal.is_auto_applicable());
@@ -773,7 +816,7 @@ mod tests {
         let provider =
             OpnsenseFirewallProvider::new(Box::new(t.clone()), tenant(), "key", "secret");
         let proposal = provider
-            .propose_containment(&tenant(), None, &device("thermostat"))
+            .propose_containment(&tenant(), None, &device("thermostat"), Some("192.0.2.10"))
             .unwrap();
         // Not approved: fails closed with ZERO provider calls.
         let err = provider.apply_containment(&proposal).unwrap_err();
@@ -802,7 +845,9 @@ mod tests {
         let provider =
             OpnsenseFirewallProvider::new(Box::new(t.clone()), tenant(), "key", "secret");
         let d = device("thermostat");
-        let proposed = provider.propose_containment(&tenant(), None, &d).unwrap();
+        let proposed = provider
+            .propose_containment(&tenant(), None, &d, Some("192.0.2.10"))
+            .unwrap();
         // AUD-025: approval is an immutable receipt; approve the real
         // proposal so the reversibility gate (not the receipt gate) is
         // what denies.
@@ -889,6 +934,52 @@ mod tests {
     }
 
     #[test]
+    fn aud026_unit_verify_requires_observed_source_readback() {
+        // AUD-026: verification must prove the rule binds the OBSERVED
+        // network identity. A rule matching id/enabled/block but
+        // carrying a DIFFERENT (or no) source network is NOT verified.
+        let t = CountingTransport::default();
+        let provider =
+            OpnsenseFirewallProvider::new(Box::new(t.clone()), tenant(), "key", "secret");
+        let proposal = approved_proposal(&provider, "thermostat");
+        let applied = provider.apply_containment(&proposal).unwrap();
+        assert!(applied.source_net.as_deref() == Some("192.0.2.10"));
+
+        // Verified: the applied rule binds the exact observed source.
+        let v = provider.verify_containment(&applied).unwrap();
+        assert!(v.verified);
+
+        // Hostile: the fixture now binds a DIFFERENT source to the
+        // same rule uuid. Rule id + enabled + block alone must not
+        // verify - the source identity readback fails closed.
+        {
+            let mut rules = t.rules.lock().unwrap();
+            for r in rules.iter_mut() {
+                if Some(r.uuid.as_str()) == applied.rule_ref.as_deref() {
+                    r.source_net = Some("192.0.2.99".to_string());
+                }
+            }
+        }
+        let v2 = provider.verify_containment(&applied).unwrap();
+        assert!(
+            !v2.verified,
+            "rule binding a different observed source must not verify"
+        );
+
+        // Hostile: a rule with NO source readback also fails.
+        {
+            let mut rules = t.rules.lock().unwrap();
+            for r in rules.iter_mut() {
+                if Some(r.uuid.as_str()) == applied.rule_ref.as_deref() {
+                    r.source_net = None;
+                }
+            }
+        }
+        let v3 = provider.verify_containment(&applied).unwrap();
+        assert!(!v3.verified, "rule without source readback must not verify");
+    }
+
+    #[test]
     fn ep030_unit_revoke_disables_and_applies() {
         let t = CountingTransport::default();
         let provider =
@@ -909,7 +1000,7 @@ mod tests {
         let provider =
             OpnsenseFirewallProvider::new(Box::new(t.clone()), tenant(), "key", "secret");
         let proposal = provider
-            .propose_containment(&tenant(), None, &device("thermostat"))
+            .propose_containment(&tenant(), None, &device("thermostat"), Some("192.0.2.10"))
             .unwrap();
         let err = provider.revoke_containment(&proposal).unwrap_err();
         assert_eq!(err.code, SentinelErrorCode::Policy);

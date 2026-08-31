@@ -54,6 +54,10 @@ pub struct OpnsenseRule {
     pub enabled: bool,
     /// Provider-side action (pass|block|reject).
     pub action: String,
+    /// Provider-side source network/alias (searchRule row
+    /// source_net). AUD-026: verification reads this back to prove the
+    /// rule binds the OBSERVED network identity, not just a rule id.
+    pub source_net: Option<String>,
 }
 
 /// Normalized OPNsense rule creation payload (documented addRule body
@@ -331,6 +335,8 @@ impl OpnsenseTransport for HttpOpnsenseTransport {
             enabled: Option<serde_json::Value>,
             #[serde(default)]
             action: Option<String>,
+            #[serde(default)]
+            source_net: Option<String>,
         }
         let parsed: SearchResponse = Self::parse(response)?;
         Ok(parsed
@@ -346,6 +352,7 @@ impl OpnsenseTransport for HttpOpnsenseTransport {
                     _ => false,
                 },
                 action: row.action.unwrap_or_default(),
+                source_net: row.source_net,
             })
             .collect())
     }
