@@ -157,14 +157,29 @@ impl FaxProvider for IctFaxProvider {
         }
 
         // Document media first (documented send flow step 2), then a
-        // sendfax program, then the transmission, then send.
+        // sendfax program bound to the document, then a transmission
+        // bound to the destination/program/document, then send. The
+        // recipient and document data ALWAYS reach the provider
+        // request (AUD-020): the document bytes are the controlled
+        // runtime artifact read from the job's storage_ref.
         let result = (|| {
-            self.transport
-                .upload_document_media(&job.document.storage_ref)?;
+            let bytes = std::fs::read(&job.document.storage_ref).map_err(|e| {
+                FaxError::unavailable(format!(
+                    "ictfax document read failed ({}): {e}",
+                    job.document.storage_ref
+                ))
+            })?;
+            let document_id = self.transport.create_document_with_media(
+                &job.document.filename,
+                &job.document.content_type,
+                &bytes,
+            )?;
             // The sendfax program prepares the document for the
             // account; the provider returns its reference.
-            let _program = self.transport.create_sendfax_program()?;
-            let transmission = self.transport.create_transmission()?;
+            let program = self.transport.create_sendfax_program(&document_id)?;
+            let transmission =
+                self.transport
+                    .create_transmission(job.to.as_str(), &program, &document_id)?;
             self.transport.send_transmission(&transmission.id)?;
             FaxCarrierJobId::new(transmission.id)
         })();
@@ -335,15 +350,24 @@ impl FaxProvider for IctFaxProvider {
             .document_id
             .clone()
             .unwrap_or_else(|| transmission.id.clone());
+        // Fetch the REAL media bytes: the inbound document is an
+        // artifact with actual content, real size, and a real digest.
+        // A fabricated size-0 / empty-digest document is never
+        // returned (AUD-020).
+        let bytes = self.transport.fetch_document_media(&document_id)?;
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(&bytes);
+        let digest = hasher.finalize();
+        let sha256: String = digest.iter().map(|b| format!("{b:02x}")).collect();
         let document = FaxDocument {
             id: FaxDocumentId::new(document_id)?,
             filename: format!("{}.pdf", carrier_job.as_str()),
             content_type: "application/pdf".into(),
-            size_bytes: 0,
+            size_bytes: bytes.len() as u64,
             pages: transmission.pages,
-            // Digest is bound at ingest by the owning pipeline; the
-            // adapter never invents artifact content or hashes.
-            sha256: String::new(),
+            // The digest is computed from the REAL fetched bytes.
+            sha256,
             storage_ref: format!("ictfax:{}", carrier_job.as_str()),
             scan_status: FaxScanStatus::Pending,
         };
@@ -351,7 +375,10 @@ impl FaxProvider for IctFaxProvider {
             correlation.clone(),
             "FETCH_DOCUMENT",
             "ok",
-            format!("route {route} carrier job {carrier_job}"),
+            format!(
+                "route {route} carrier job {carrier_job} bytes {}",
+                document.size_bytes
+            ),
         );
         Ok(document)
     }
@@ -428,30 +455,88 @@ mod tests {
         }
     }
 
-    /// A tracking transport that counts carrier mutations so tests can
-    /// prove denied sends never reach the provider.
+    /// A tracking transport that counts carrier mutations AND records
+    /// the exact data passed to the provider, so tests prove the
+    /// recipient/document data really reach the provider request
+    /// (AUD-020).
     #[derive(Default)]
     struct TrackingTransport {
-        mutations: std::cell::Cell<u32>,
+        mutations: std::rc::Rc<std::cell::Cell<u32>>,
+        media: std::rc::Rc<std::cell::RefCell<Vec<(String, String, usize)>>>,
+        transmissions: std::rc::Rc<std::cell::RefCell<Vec<(String, String, String)>>>,
+        fetched_media: std::rc::Rc<std::cell::RefCell<Vec<String>>>,
+    }
+
+    /// Snapshot of the data a transport passed to the provider
+    /// (test-only observation; AUD-020 data-binding proof).
+    #[derive(Debug, Clone, Default)]
+    struct TransportObservation {
+        mutations: u32,
+        media: Vec<(String, String, usize)>,
+        transmissions: Vec<(String, String, String)>,
+        fetched_media: Vec<String>,
+    }
+
+    impl TrackingTransport {
+        fn observe(&self) -> TransportObservation {
+            TransportObservation {
+                mutations: self.mutations.get(),
+                media: self.media.borrow().clone(),
+                transmissions: self.transmissions.borrow().clone(),
+                fetched_media: self.fetched_media.borrow().clone(),
+            }
+        }
+    }
+
+    impl Clone for TrackingTransport {
+        fn clone(&self) -> Self {
+            Self {
+                mutations: self.mutations.clone(),
+                media: self.media.clone(),
+                transmissions: self.transmissions.clone(),
+                fetched_media: self.fetched_media.clone(),
+            }
+        }
     }
 
     impl IctFaxTransport for TrackingTransport {
-        fn upload_document_media(&self, _document_id: &str) -> Result<(), FaxError> {
+        fn create_document_with_media(
+            &self,
+            filename: &str,
+            content_type: &str,
+            bytes: &[u8],
+        ) -> Result<String, FaxError> {
             self.mutations.set(self.mutations.get() + 1);
-            Ok(())
+            self.media.borrow_mut().push((
+                filename.to_string(),
+                content_type.to_string(),
+                bytes.len(),
+            ));
+            Ok("doc-1".into())
         }
-        fn create_sendfax_program(&self) -> Result<String, FaxError> {
+        fn create_sendfax_program(&self, document_id: &str) -> Result<String, FaxError> {
             self.mutations.set(self.mutations.get() + 1);
+            assert_eq!(document_id, "doc-1", "program must bind the real document");
             Ok("program-1".into())
         }
-        fn create_transmission(&self) -> Result<crate::transport::IctFaxTransmission, FaxError> {
+        fn create_transmission(
+            &self,
+            destination: &str,
+            program_id: &str,
+            document_id: &str,
+        ) -> Result<crate::transport::IctFaxTransmission, FaxError> {
             self.mutations.set(self.mutations.get() + 1);
+            self.transmissions.borrow_mut().push((
+                destination.to_string(),
+                program_id.to_string(),
+                document_id.to_string(),
+            ));
             Ok(crate::transport::IctFaxTransmission {
                 id: "tx-1".into(),
-                destination: String::new(),
+                destination: destination.to_string(),
                 status: "queued".into(),
-                program: None,
-                document_id: None,
+                program: Some(program_id.to_string()),
+                document_id: Some(document_id.to_string()),
                 attempts: 0,
                 pages: 0,
             })
@@ -473,6 +558,12 @@ mod tests {
                 attempts: 1,
                 pages: 1,
             })
+        }
+        fn fetch_document_media(&self, document_id: &str) -> Result<Vec<u8>, FaxError> {
+            self.fetched_media
+                .borrow_mut()
+                .push(document_id.to_string());
+            Ok(b"inbound-fax-bytes".to_vec())
         }
         fn list_transmissions(
             &self,
@@ -508,9 +599,20 @@ mod tests {
 
     #[test]
     fn ep027_unit_ictfax_approved_submit_reaches_carrier_once() {
+        // The job's storage_ref must be a REAL file: the adapter
+        // reads the controlled runtime artifact and uploads its
+        // bytes - never an empty or fabricated body (AUD-020).
+        let unique = format!("ictfax-submit-{}.pdf", std::process::id());
+        let path = std::env::temp_dir().join(unique);
+        let content = b"%PDF-1.4 fake fax bytes 1234567890";
+        std::fs::write(&path, content).unwrap();
+        let mut j = job(2);
+        j.document.storage_ref = path.to_str().unwrap().to_string();
+        j.document.size_bytes = content.len() as u64;
+
         let transport = TrackingTransport::default();
+        let observe = transport.clone();
         let provider = IctFaxProvider::new(Box::new(transport), 1);
-        let j = job(2);
         let request = FaxSendRequest {
             job: j.id.clone(),
             idempotency_key: "key-1".into(),
@@ -525,6 +627,53 @@ mod tests {
             .filter(|e| e.operation == "SUBMIT" && e.outcome == "ok")
             .count();
         assert_eq!(oks, 1);
+        // AUD-020: the recipient/document data REALLY reach the
+        // provider request - real media bytes, real destination.
+        let obs = observe.observe();
+        assert_eq!(obs.mutations, 4, "document+program+transmission+send");
+        let (media_filename, media_type, media_len) = &obs.media[0];
+        assert_eq!(media_filename, "a.pdf");
+        assert_eq!(media_type, "application/pdf");
+        assert_eq!(
+            *media_len,
+            content.len(),
+            "real byte length reaches the provider"
+        );
+        let (dest, program, doc) = &obs.transmissions[0];
+        assert_eq!(
+            dest,
+            j.to.as_str(),
+            "recipient reaches the provider request"
+        );
+        assert_eq!(program, "program-1");
+        assert_eq!(doc, "doc-1", "document reference reaches the transmission");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn ep027_unit_ictfax_inbound_fetch_real_bytes_and_digest() {
+        // AUD-020: inbound fetch returns REAL bytes with a real size
+        // and a real sha256 digest - never size 0 / empty digest.
+        let transport = TrackingTransport::default();
+        let observe = transport.clone();
+        let provider = IctFaxProvider::new(Box::new(transport), 1);
+        let route = FaxRouteId::new("acc-1").expect("id");
+        let carrier = FaxCarrierJobId::new("tx-1").expect("id");
+        let doc = provider
+            .fetch_inbound_document(&route, &carrier)
+            .expect("fetch");
+        assert_eq!(
+            doc.size_bytes,
+            b"inbound-fax-bytes".len() as u64,
+            "real size"
+        );
+        assert_eq!(
+            doc.sha256, "6beb841622f2cff61780183d4cf26c95be3de242113f927c973f9671b34fe958",
+            "real digest computed from the fetched bytes"
+        );
+        let obs = observe.observe();
+        assert_eq!(obs.fetched_media.len(), 1);
+        assert_eq!(obs.fetched_media[0], "doc-1");
     }
 
     #[test]
