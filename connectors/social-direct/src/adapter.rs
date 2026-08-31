@@ -372,20 +372,27 @@ impl SocialProvider for DirectPlatformAdapter {
                 .with_resource(conversation.conversation_id.to_string())
         })?;
 
-        // The documented POST /2/tweets creates a reply when the text
-        // carries the reply context; the transport enforces the
-        // authenticated token.
-        let created = self.transport.create_tweet(content_ref).map_err(|e| {
-            self.record(
-                &correlation,
-                "REPLY",
-                "EXTERNAL_PROVIDER",
-                e.message.clone(),
-            );
-            e.with_correlation(correlation.clone())
-                .with_tenant(self.tenant_id.to_string())
-                .with_resource(conversation.conversation_id.to_string())
-        })?;
+        // The documented POST /2/tweets with the official reply object
+        // creates a REPLY, not a standalone post: the thread reference
+        // (conversation.thread_ref = the mention tweet id) is carried
+        // in `reply.in_reply_to_tweet_id` (AUD-024). The transport
+        // fails closed on a missing/invalid thread reference.
+        let thread_ref = conversation.thread_ref.trim();
+        let in_reply_to_tweet_id = thread_ref.strip_prefix("x:").unwrap_or(thread_ref);
+        let created = self
+            .transport
+            .reply_to_tweet(content_ref, in_reply_to_tweet_id)
+            .map_err(|e| {
+                self.record(
+                    &correlation,
+                    "REPLY",
+                    "EXTERNAL_PROVIDER",
+                    e.message.clone(),
+                );
+                e.with_correlation(correlation.clone())
+                    .with_tenant(self.tenant_id.to_string())
+                    .with_resource(conversation.conversation_id.to_string())
+            })?;
         self.record(
             &correlation,
             "REPLY",
