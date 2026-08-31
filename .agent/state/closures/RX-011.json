@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:47f91a58200902c07cb5d4a71aed8a40ec33c0fe17d7c1c706681d9b1ae37bae",
+  "attestation_digest": "sha256:334fe24b65b8facba0885a138977fd87c4c246b460613cd085a9fb164b42d8f4",
   "closure_commit": "74f293122e33fbe2f1101e75399341ce0e64ece7",
   "created_at": "2026-08-31T18:31:08Z",
   "created_by": "node-close-v2.sh",
@@ -19,22 +19,22 @@
   "node_verify_exit": 0,
   "proofs": [
     {
-      "digest": "sha256:e2c23e6406b4a266bde43bdb427c2213c66f4a467ba745913f2145e25214e196",
+      "digest": "sha256:480ce9ec5d597d05a0adefe67575ec752af2cee7cb5b362779a3d5f690aa62e7",
       "id": "rollback-digest-verify",
       "ref": "installers/src/installer.ts"
     },
     {
-      "digest": "sha256:e2c23e6406b4a266bde43bdb427c2213c66f4a467ba745913f2145e25214e196",
+      "digest": "sha256:480ce9ec5d597d05a0adefe67575ec752af2cee7cb5b362779a3d5f690aa62e7",
       "id": "atomic-switch-preserve",
       "ref": "installers/src/installer.ts"
     },
     {
-      "digest": "sha256:e2c23e6406b4a266bde43bdb427c2213c66f4a467ba745913f2145e25214e196",
+      "digest": "sha256:480ce9ec5d597d05a0adefe67575ec752af2cee7cb5b362779a3d5f690aa62e7",
       "id": "manifest-bound-payloads",
       "ref": "installers/src/installer.ts"
     },
     {
-      "digest": "sha256:e2c23e6406b4a266bde43bdb427c2213c66f4a467ba745913f2145e25214e196",
+      "digest": "sha256:480ce9ec5d597d05a0adefe67575ec752af2cee7cb5b362779a3d5f690aa62e7",
       "id": "idempotency-guard",
       "ref": "installers/src/installer.ts"
     },

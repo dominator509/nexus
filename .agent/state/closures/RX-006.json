@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:93489a4eaabc2b5d610c1b8c8b8837ea14f0afa2fdbb0062ce0d31488d8dd3d5",
+  "attestation_digest": "sha256:ada12f9bc241ff950d49f18bf116e26d44db21a8174910e7babd16836590bd66",
   "closure_commit": "3caca47c6e26e313c67c8eccb3d6bb1fa9aed282",
   "created_at": "2026-08-31T12:14:32Z",
   "created_by": "node-close-v2.sh",
@@ -44,7 +44,7 @@
       "ref": "infra/headscale/examples/mesh_live_proof.rs"
     },
     {
-      "digest": "sha256:3f0a6b8f2c99bc7ae11a8ccf871fbf1fd5e784cda534a7ba6cfefbd762d080f4",
+      "digest": "sha256:983468f219fa534379fd4ccd8a3ead05f0102fa8b873be0a61011c366d67219c",
       "id": "integration-suite",
       "ref": "tests/trust/test_ep009_integration_headscale.py"
     },
@@ -59,7 +59,7 @@
       "ref": "packages/mobile-contracts/lib/src/behavior/approval_binding.dart"
     },
     {
-      "digest": "sha256:5be6e1eb3fdc8866169f4fe2f5736e6416a2ee8e79c522aefc24f42d07669ad3",
+      "digest": "sha256:c88cf1bbe34ac62674fe8ca58eb3c87bbdcd82bb0748f2cfa2a7649363ec7911",
       "id": "approval-binding-tests",
       "ref": "packages/mobile-contracts/test/ep034_unit_approval_binding_test.dart"
     },

@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:81ac64b3edbeb670f20a0b556f3c0e762811aef4dd03e1ef5a6c698c09065854",
+  "attestation_digest": "sha256:d02603d599efa4dd1d21a4f48a1867d055cf297d02ea66c0f98e117001fcf6e7",
   "closure_commit": "678efd420ebea4d4300838f8c25ed1870428d4f8",
   "created_at": "2026-08-31T18:49:44Z",
   "created_by": "node-close-v2.sh",
@@ -16,7 +16,7 @@
   "node_verify_exit": 0,
   "proofs": [
     {
-      "digest": "sha256:13945e7a3eb5982fe4c7f1ef023775e06e8af3c34fbf293d2b8f201a073e74f7",
+      "digest": "sha256:4f959689a44dcb11af3e03e58f12a4639d674962ba3f700b66a9e476eec7b4f9",
       "id": "promotion-authority",
       "ref": "apps/setup/src/update/canary.ts"
     },
@@ -26,12 +26,12 @@
       "ref": "apps/setup/src/update/types.ts"
     },
     {
-      "digest": "sha256:61669e69ef40652829fc99d89b209d498e9236769e2cad07346dd3fa7774eae8",
+      "digest": "sha256:94f9c61450056ab82ee263c016476bbfeb41e8247f8bcf1a9062813597e961d9",
       "id": "hostile-proofs",
       "ref": "tests/release/src/__tests__/ep042_unit_canary_promotion.test.ts"
     },
     {
-      "digest": "sha256:f784439a5d4cb69be31d7190997d3563ecfefbe63fb22eb516d4d21379412c5f",
+      "digest": "sha256:04a27580f111e9a018531582982d83956d813cfd95bdf25846221de7f73c139c",
       "id": "signed-fixtures",
       "ref": "tests/release/src/__tests__/fixtures.ts"
     },

@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:fab3302ce46aa8ca4b37700caea4cdc5ce057e27ba13dca39f17657369ca272c",
+  "attestation_digest": "sha256:ec05d904de3c2435234e99bda8bd535abaf626b0c0d6d66a2e1d4dd06733e506",
   "closure_commit": "8fe13189e9f837cdeac6c4ff9175b399aa9f12c3",
   "created_at": "2026-08-31T17:13:10Z",
   "created_by": "node-close-v2.sh",
@@ -48,7 +48,7 @@
       "ref": "scripts/sbom/forced-failures.sh"
     },
     {
-      "digest": "sha256:a0f655ee3055bbcd1f883fd41e0146883a4d7abadcddf0b977c927f3cb099c82",
+      "digest": "sha256:6a767ac7858a69d4ffd9c463bcc741f9ab4eb8aceb17bfaf6a9f830ec15f8fa4",
       "id": "bundle-verify",
       "ref": "offline-bundle/src/verify.ts"
     },
@@ -68,7 +68,7 @@
       "ref": "scripts/ep042-m5-tests.sh"
     },
     {
-      "digest": "sha256:b6c672bec5e7fbfcc668d0627f6ab9c8e021f8b330ee4a4930137a3d57c58011",
+      "digest": "sha256:0a624aab2bb16af5e83689cc34e7b90b1ee46897ee80ba1288e0750e6546e407",
       "id": "bundle-tests",
       "ref": "tests/release/src/bundle/ep042_bundle_offline.test.ts"
     },
