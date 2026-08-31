@@ -548,3 +548,33 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
   manifest.
 - Battery: scripts/rx013-remediation-tests.sh green. Register
   AUD-086 -> VERIFIED_FIXED.
+
+## GAP-003 (RX-014) - Mail connectors are contract-verified, NOT live-certified (AUD-009, AUD-010)
+
+**Status:** LOGGED 2026-08-31 - Dominic directive: build from official docs is acceptable; live account testing deferred; log the gap.
+
+**Severity:** P2 (reality-law boundary; optional integration, not operational until live-fire)
+
+### Finding (verified against the tree 2026-08-31)
+
+1. **Every Gmail/Graph/IMAP test runs against stubs or hand-written fixtures, never a live provider.**
+   - `connectors/gmail/src/transport.rs` `ep026_unit_gmail_message_serde` parses a JSON string literal
+     (addresses `alice@example.com`, `bob@example.com`) - fixture-fidelity, not connectivity.
+   - `connectors/gmail/src/adapter.rs` tests drive `StubTransport` (in-memory recording double).
+   - `connectors/microsoft-mail` and `connectors/imap-smtp` follow the same pattern.
+   - 30 live-server integration tests in the mail crates are `#[ignore]`d - no credentials exist to run them.
+
+2. **Wire shape IS verified against Google official docs (2026-08-31, developers.google.com/gmail/api/reference/rest/v1/users.messages):**
+   - `historyId` string, `internalDate` string, `payload` object with `headers` array (name/value),
+     `raw` string; `filename`/`mimeType`/`partId` strings; `attachmentId` on MessagePartBody with
+     `data` string + `size` integer; `POST gmail/v1/users/{userId}/drafts/send` documented endpoint.
+   - So the AUD-009/010 fixes match the documented contract field-for-field.
+
+3. **What remains unproven until real live-fire (test Gmail account / OAuth credentials):**
+   - OAuth token acquisition + refresh rotation (no client ID or consent flow exercised anywhere).
+   - Exact `drafts/send` / `drafts/create` request bodies against the real API (base64url raw, userId=me).
+   - Real error JSON shapes vs. our SPEC-006 status mapping.
+   - Quota, pagination, scope grant behavior.
+
+**Resolution:** none yet - deferred per Dominic. Live accounts will be provided later; when available,
+run the `#[ignore]`d integration suites and record live-fire evidence before advertising operational.
