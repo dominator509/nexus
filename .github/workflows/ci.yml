@@ -49,6 +49,17 @@ jobs:
             sudo chmod +x /usr/local/bin/sops
           fi
 
+      - name: Prepare CI environment (.env + age key)
+        run: |
+          cp .env.example .env
+          mkdir -p secrets
+          age-keygen -o secrets/age-key.txt >/dev/null 2>&1 || true
+          if [ -n "$DEEPSEEK_API_KEY" ]; then
+            sed -i "s|^DEEPSEEK_API_KEY=.*|DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY|" .env
+          fi
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+
       - name: Preflight
         run: sh scripts/preflight.sh
 
@@ -102,6 +113,22 @@ jobs:
             curl -fsSL https://github.com/getsops/sops/releases/download/v3.13.0/sops-v3.13.0.linux.amd64 -o /usr/local/bin/sops
             sudo chmod +x /usr/local/bin/sops
           fi
+
+      - name: Install pinned cargo security tools
+        run: |
+          if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
+          if ! cargo-audit --version | grep -F '0.22.2'; then cargo install cargo-audit --locked --version 0.22.2; fi
+
+      - name: Prepare CI environment (.env + age key)
+        run: |
+          cp .env.example .env
+          mkdir -p secrets
+          age-keygen -o secrets/age-key.txt >/dev/null 2>&1 || true
+          if [ -n "$DEEPSEEK_API_KEY" ]; then
+            sed -i "s|^DEEPSEEK_API_KEY=.*|DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY|" .env
+          fi
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
       - name: Preflight
         run: sh scripts/preflight.sh
