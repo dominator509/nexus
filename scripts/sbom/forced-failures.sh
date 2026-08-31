@@ -39,6 +39,7 @@ ok() { echo "sbom/forced-failures: $1"; }
 # Re-sign a fixture evidence dir with a fresh keypair so the crypto seal
 # is valid; the fixture's intended failure class is then the ONLY denial
 # (staleness, run mismatch, empty - not a missing signature).
+# Also (re)sign the ecosystems evidence so multi-ecosystem checks pass.
 resign_fixture() {
   dir="$1"
   cargo run -q -p nexus-supply-chain --example evidence_sign -- \
@@ -48,6 +49,16 @@ resign_fixture() {
     sign "$dir/evidence.json" "$dir/signing-key.der" \
     "$dir/evidence.json.sig" "$dir/evidence.json.pub" \
     >>"$log" 2>&1 || return 1
+  if [ -f "$dir/ecosystems.json" ]; then
+    cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+      keygen "$dir/eco-key.der" "$dir/ecosystems.json.pub" \
+      >>"$log" 2>&1 || return 1
+    cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+      sign "$dir/ecosystems.json" "$dir/eco-key.der" \
+      "$dir/ecosystems.json.sig" "$dir/ecosystems.json.pub" \
+      >>"$log" 2>&1 || return 1
+    rm -f "$dir/eco-key.der"
+  fi
   rm -f "$dir/signing-key.der"
 }
 
@@ -147,6 +158,9 @@ cp "$WORK/tampered.json" "$WORK/tampered/evidence.json"
 cp "$WORK/tampered.json.sha256" "$WORK/tampered/evidence.json.sha256"
 cp "$WORK/fresh/evidence.json.sig" "$WORK/tampered/evidence.json.sig"
 cp "$WORK/fresh/evidence.json.pub" "$WORK/tampered/evidence.json.pub"
+cp "$WORK/fresh/ecosystems.json" "$WORK/tampered/ecosystems.json" 2>/dev/null || true
+cp "$WORK/fresh/ecosystems.json.sig" "$WORK/tampered/ecosystems.json.sig" 2>/dev/null || true
+cp "$WORK/fresh/ecosystems.json.pub" "$WORK/tampered/ecosystems.json.pub" 2>/dev/null || true
 # Tamper one byte in the packages list.
 python3 - "$WORK/tampered/evidence.json" <<'PYEOF'
 import json
@@ -172,6 +186,7 @@ ok "tampered evidence rejected (SIGNATURE_INVALID despite resealed checksum)"
 mkdir -p "$WORK/stale"
 cp "$WORK/fresh/evidence.json" "$WORK/stale/evidence.json"
 cp "$WORK/fresh/evidence.json.sha256" "$WORK/stale/evidence.json.sha256"
+cp "$WORK/fresh/ecosystems.json" "$WORK/stale/ecosystems.json" 2>/dev/null || true
 python3 - "$WORK/stale/evidence.json" <<'PYEOF'
 import json
 import sys
@@ -229,6 +244,36 @@ if ! grep -q 'EMPTY_EVIDENCE\|MISMATCHED_RUN_ID' "$WORK/empty/verification.json"
   fail "empty evidence failure class not typed: $(cat "$WORK/empty/verification.json")"
 fi
 ok "empty evidence rejected (EMPTY_EVIDENCE)"
+
+# 2g2. Tampered ecosystems evidence must be rejected (AUD-060): the
+# multi-ecosystem inventory is cryptographically sealed like the main
+# evidence; an attacker who edits the ecosystem counts is caught even
+# if they leave the Cargo evidence untouched.
+mkdir -p "$WORK/eco-tampered"
+cp "$WORK/fresh/evidence.json" "$WORK/eco-tampered/evidence.json"
+cp "$WORK/fresh/evidence.json.sha256" "$WORK/eco-tampered/evidence.json.sha256"
+cp "$WORK/fresh/evidence.json.sig" "$WORK/eco-tampered/evidence.json.sig"
+cp "$WORK/fresh/evidence.json.pub" "$WORK/eco-tampered/evidence.json.pub"
+cp "$WORK/fresh/ecosystems.json" "$WORK/eco-tampered/ecosystems.json"
+cp "$WORK/fresh/ecosystems.json.sig" "$WORK/eco-tampered/ecosystems.json.sig"
+cp "$WORK/fresh/ecosystems.json.pub" "$WORK/eco-tampered/ecosystems.json.pub"
+python3 - "$WORK/eco-tampered/ecosystems.json" <<'PYEOF'
+import json
+import sys
+p = sys.argv[1]
+with open(p, encoding="utf-8") as f:
+    d = json.load(f)
+d["ecosystems"]["typescript"]["package_count"] = 999999
+with open(p, "w", encoding="utf-8") as f:
+    json.dump(d, f)
+PYEOF
+if sh scripts/sbom/verify.sh "$WORK/eco-tampered" >"$WORK/eco-tampered-verify.log" 2>&1; then
+  fail "tampered ecosystems evidence verified (must be rejected)"
+fi
+if ! grep -q 'ECOSYSTEMS_SIGNATURE_INVALID' "$WORK/eco-tampered/verification.json"; then
+  fail "tampered ecosystems failure class not typed: $(cat "$WORK/eco-tampered/verification.json")"
+fi
+ok "tampered ecosystems evidence rejected (ECOSYSTEMS_SIGNATURE_INVALID)"
 
 # 2h. Redaction proof: generated evidence contains no secret-shaped
 # markers.

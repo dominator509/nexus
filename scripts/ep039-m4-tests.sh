@@ -203,6 +203,7 @@ for proof in \
   "stale evidence rejected (STALE_EVIDENCE)" \
   "mismatched run_id/git_commit rejected (MISMATCHED_RUN_ID)" \
   "empty evidence rejected (EMPTY_EVIDENCE)" \
+  "tampered ecosystems evidence rejected (ECOSYSTEMS_SIGNATURE_INVALID)" \
   "generated evidence redacted (no secret-shaped content)"; do
   if ! grep -qF "$proof" "$WORK/forced.log"; then
     fail "forced-failures proof missing: $proof" "$WORK/forced.log"
