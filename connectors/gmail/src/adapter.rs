@@ -157,14 +157,14 @@ impl GmailAdapter {
     /// Provider payloads normalize here; a missing/empty From header
     /// fails closed (External) rather than fabricating a sender.
     fn message_from_gmail(&self, gm: &GmailMessage) -> Result<Message, MailError> {
-        let from = gm
-            .from_header
+        let from_header = gm.from_header();
+        let from = from_header
             .as_deref()
             .filter(|s| !s.is_empty())
             .ok_or_else(|| MailError::external("gmail message missing From header"))?;
         let from_addr = EmailAddress::new(extract_email(from))?;
         let to_addrs = gm
-            .to_headers
+            .to_headers()
             .iter()
             .map(|h| EmailAddress::new(extract_email(h)))
             .collect::<Result<Vec<_>, _>>()?;
@@ -193,7 +193,7 @@ impl GmailAdapter {
             to: to_addrs,
             cc: vec![],
             bcc: vec![],
-            subject: gm.subject.clone().unwrap_or_default(),
+            subject: gm.subject().unwrap_or_default(),
             body_digest,
             attachments: vec![],
             state,
@@ -320,10 +320,13 @@ impl EmailProvider for GmailAdapter {
         }
         let target = request.draft.as_str();
         self.begin("SEND", target, &correlation)?;
-        let raw = format!("From: nexus@localhost\r\nTo: {}", target);
+        // Canonical Gmail draft-send: POST /gmail/v1/users/me/drafts/send
+        // with the draft id. The STORED draft is what gets sent; its
+        // To/Cc/Bcc resolve server-side. The draft id is a HANDLE, never
+        // a recipient address (AUD-009).
         let result = self
             .transport
-            .send_raw(&base64url(&raw))
+            .send_draft(target)
             .and_then(MessageId::new)
             .inspect_err(|err| {
                 self.record(
@@ -641,6 +644,7 @@ mod tests {
     struct StubTransport {
         messages: std::collections::HashMap<String, GmailMessage>,
         sent: Vec<String>,
+        sent_drafts: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
         drafts: Vec<String>,
         labels: std::collections::HashMap<String, Vec<String>>,
     }
@@ -685,6 +689,14 @@ mod tests {
         }
 
         fn send_raw(&self, _raw: &str) -> Result<String, MailError> {
+            Ok(format!("sent-{}", self.sent.len() + 1))
+        }
+
+        fn send_draft(&self, draft_id: &str) -> Result<String, MailError> {
+            self.sent_drafts
+                .lock()
+                .expect("sent_drafts lock")
+                .push(draft_id.to_string());
             Ok(format!("sent-{}", self.sent.len() + 1))
         }
 
@@ -752,11 +764,24 @@ mod tests {
             thread_id: format!("thread-{id}"),
             label_ids: vec!["INBOX".into(), "UNREAD".into()],
             snippet: "hi".into(),
-            history_id: 1,
-            internal_date_ms: 1780000000000,
-            from_header: Some("Alice <alice@example.com>".into()),
-            to_headers: vec!["bob@example.com".into()],
-            subject: Some("Hello".into()),
+            history_id: "1".into(),
+            internal_date_ms: "1780000000000".into(),
+            payload: crate::transport::GmailPayload {
+                headers: vec![
+                    crate::transport::GmailHeader {
+                        name: "From".into(),
+                        value: "Alice <alice@example.com>".into(),
+                    },
+                    crate::transport::GmailHeader {
+                        name: "To".into(),
+                        value: "bob@example.com".into(),
+                    },
+                    crate::transport::GmailHeader {
+                        name: "Subject".into(),
+                        value: "Hello".into(),
+                    },
+                ],
+            },
             raw: Some("SGVsbG8=".into()),
         }
     }
@@ -819,6 +844,61 @@ mod tests {
         };
         let err = adapter.send(&request).expect_err("must deny");
         assert_eq!(err.code, MailErrorCode::Policy);
+    }
+
+    #[test]
+    fn ep026_unit_gmail_send_resolves_stored_draft_not_draft_id_recipient() {
+        // AUD-009: the draft id is a HANDLE for drafts/send, never a
+        // recipient. The adapter must send the stored draft, not
+        // fabricate "To: <draft-id>".
+        let sent_drafts = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+        let mut transport = StubTransport::default().with_message(sample_message("m1"));
+        transport.sent_drafts = sent_drafts.clone();
+        let adapter = GmailAdapter::new(Box::new(transport), GmailScope::Full, policy(), inbox());
+        let request = SendRequest {
+            draft: DraftId::new("draft-9").expect("id"),
+            idempotency_key: "k9".into(),
+            approval_class: 2,
+            scopes_granted: vec![MailScope::Send],
+        };
+        let id = adapter.send(&request).expect("send");
+        assert_eq!(id.as_str(), "sent-1");
+        // The transport received the draft id as the send handle.
+        let drafts = sent_drafts.lock().expect("sent_drafts lock");
+        assert_eq!(*drafts, vec!["draft-9".to_string()]);
+    }
+
+    #[test]
+    fn ep026_unit_gmail_wire_format_real_payload_headers() {
+        // AUD-009: real Gmail JSON carries historyId/internalDate as
+        // strings and headers in payload.headers. A message without a
+        // From header fails closed (External) instead of fabricating a
+        // sender; a real response normalizes from the payload.
+        let json = r#"{
+            "id": "m2",
+            "threadId": "thread-m2",
+            "labelIds": ["INBOX"],
+            "snippet": "hello",
+            "historyId": "99",
+            "internalDate": "1780000000001",
+            "payload": {
+                "headers": [
+                    {"name": "From", "value": "Carol <carol@example.com>"},
+                    {"name": "To", "value": "dave@example.com"},
+                    {"name": "Subject", "value": "Wire"}
+                ]
+            }
+        }"#;
+        let gm: crate::transport::GmailMessage =
+            serde_json::from_str(json).expect("real gmail wire parses");
+        let transport = StubTransport::default().with_message(gm);
+        let adapter =
+            GmailAdapter::new(Box::new(transport), GmailScope::ReadOnly, policy(), inbox());
+        let msg = adapter
+            .fetch_message(&inbox(), &MessageId::new("m2").expect("id"))
+            .expect("fetch");
+        assert_eq!(msg.from.as_str(), "carol@example.com");
+        assert_eq!(msg.subject, "Wire");
     }
 
     #[test]
