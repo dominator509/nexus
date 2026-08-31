@@ -1,0 +1,148 @@
+{
+  "attestation_digest": "sha256:93489a4eaabc2b5d610c1b8c8b8837ea14f0afa2fdbb0062ce0d31488d8dd3d5",
+  "closure_commit": "3caca47c6e26e313c67c8eccb3d6bb1fa9aed282",
+  "created_at": "2026-08-31T12:14:32Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:b5baf2a86fd4d8ccf76686713eba7321e3c2b1ff897f7ac8e3d176eb0f8ca22f",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-006/3caca47c6e26e313c67c8eccb3d6bb1fa9aed282",
+  "milestones": {
+    "max": 4,
+    "passed": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "node": "RX-006",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:94f70ebad4c0d8a8d9503df641d500250b6f6263a7094acd4884287685b447ca",
+      "id": "battery-script",
+      "ref": "scripts/rx006-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:ab6712ad12e27ce06c387c3df78eafa8330116c0d7f23e1a17e80185879d19bd",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-006.sh"
+    },
+    {
+      "digest": "sha256:42bd8ec41abe21060b32b82b85ece662dc1916aa8545c5a8143ec7f0f345e556",
+      "id": "mesh-adapter",
+      "ref": "infra/headscale/src/mesh.rs"
+    },
+    {
+      "digest": "sha256:a70b0bb24ddb9ca0dbec8ad1c6663eece57630892d6278a9b307941ad0e98ee9",
+      "id": "mesh-unit-tests",
+      "ref": "infra/headscale/src/lib_tests.rs"
+    },
+    {
+      "digest": "sha256:7a8455312f17abfdfd19f49711bd2b63e1295c73907b22475a05b28edcc8020f",
+      "id": "mesh-live-proof",
+      "ref": "infra/headscale/examples/mesh_live_proof.rs"
+    },
+    {
+      "digest": "sha256:3f0a6b8f2c99bc7ae11a8ccf871fbf1fd5e784cda534a7ba6cfefbd762d080f4",
+      "id": "integration-suite",
+      "ref": "tests/trust/test_ep009_integration_headscale.py"
+    },
+    {
+      "digest": "sha256:9b088adf8228486548f2546509c87c4504d1782c61202b446887fda2f9608747",
+      "id": "trust-mesh-contract",
+      "ref": "crates/nexus-trust/src/mesh.rs"
+    },
+    {
+      "digest": "sha256:6bdb98d1931d8501e2e8f9835f771444da70a70ec2f6a9255c0721215a2c2941",
+      "id": "approval-binding",
+      "ref": "packages/mobile-contracts/lib/src/behavior/approval_binding.dart"
+    },
+    {
+      "digest": "sha256:5be6e1eb3fdc8866169f4fe2f5736e6416a2ee8e79c522aefc24f42d07669ad3",
+      "id": "approval-binding-tests",
+      "ref": "packages/mobile-contracts/test/ep034_unit_approval_binding_test.dart"
+    },
+    {
+      "digest": "sha256:d4bd772b75aa1ba130a0ae4e897eca5fbd5f9274d27856893e3669dfb77bceda",
+      "id": "setup-model",
+      "ref": "crates/nexus-setup/src/model.rs"
+    },
+    {
+      "digest": "sha256:b7c41f9716bfc389afb9cc5ec16ea2e0dfe2c3f7a0f8afe70c8f165ac5727bab",
+      "id": "setup-port",
+      "ref": "crates/nexus-setup/src/port.rs"
+    },
+    {
+      "digest": "sha256:61507ee09d645f3fdc4ca82f8e67bed6282cfebe0e9fe509ecb30b1e55291704",
+      "id": "setup-owner-tests",
+      "ref": "crates/nexus-setup/tests/ep035_unit_owner.rs"
+    },
+    {
+      "digest": "sha256:c62b18eeb4960ab7ee455f87267e277767824164787f65b54ab1addf4e75e0e4",
+      "id": "setup-recovery-tests",
+      "ref": "crates/nexus-setup/tests/ep035_unit_recovery.rs"
+    },
+    {
+      "digest": "sha256:c41a362ebc7a8cb588825e77735725ce1a1844b685bbfad42b1bdbefbee1dfc3",
+      "id": "setup-enrollment-tests",
+      "ref": "crates/nexus-setup/tests/ep035_unit_enrollment.rs"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:b5baf2a86fd4d8ccf76686713eba7321e3c2b1ff897f7ac8e3d176eb0f8ca22f",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "rx006-battery",
+        "passed": 8
+      },
+      {
+        "failed": 0,
+        "family": "rx006-unit",
+        "passed": 18
+      },
+      {
+        "failed": 0,
+        "family": "rx006-hostile",
+        "passed": 6
+      },
+      {
+        "failed": 0,
+        "family": "nexus-trust",
+        "passed": 17
+      },
+      {
+        "failed": 0,
+        "family": "headscale-openbao-integration",
+        "passed": 10
+      },
+      {
+        "failed": 0,
+        "family": "nexus-setup",
+        "passed": 83
+      },
+      {
+        "failed": 0,
+        "family": "approval-binding-mobile",
+        "passed": 20
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 253
+  },
+  "verify_log": ".agent/remediation/evidence/RX-006/verify.log|sha256:83d66c7388c98467c5efd4618964176ae2fc6c0aae92987c2069754ac5409699",
+  "verify_sentinel": "verify: ok"
+}
