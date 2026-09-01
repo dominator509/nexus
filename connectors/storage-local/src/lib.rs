@@ -84,18 +84,33 @@ impl LocalArtifactStore {
         self.root.join(layout::OBJECTS).join(hash.as_str())
     }
 
-    fn index_path(&self, id: &ArtifactId) -> PathBuf {
-        self.root.join(layout::INDEX).join(format!("{id}.json"))
+    /// Tenant-scoped index path. The index namespace is per-tenant: an
+    /// artifact id alone never resolves to another tenant's metadata on
+    /// a shared root (AUD-049). Objects remain content-addressed by hash
+    /// (a hash is not guessable; it is only reachable through an index
+    /// entry the caller's tenant owns).
+    fn index_path(&self, tenant: &TenantId, id: &ArtifactId) -> PathBuf {
+        self.root
+            .join(layout::INDEX)
+            .join(tenant.as_str())
+            .join(format!("{id}.json"))
     }
 
-    fn backup_manifest_path(&self, backup_id: &str) -> PathBuf {
+    /// Tenant-scoped backup manifest path (AUD-049: a backup id alone
+    /// never resolves to another tenant's manifest on a shared root).
+    fn backup_manifest_path(&self, tenant: &TenantId, backup_id: &str) -> PathBuf {
         self.root
             .join(layout::BACKUPS)
+            .join(tenant.as_str())
             .join(format!("{backup_id}.json"))
     }
 
-    fn read_metadata(&self, id: &ArtifactId) -> ArtifactResult<ArtifactMetadata> {
-        let path = self.index_path(id);
+    fn read_metadata(
+        &self,
+        tenant: &TenantId,
+        id: &ArtifactId,
+    ) -> ArtifactResult<ArtifactMetadata> {
+        let path = self.index_path(tenant, id);
         let raw = fs::read(&path).map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
                 ArtifactError::not_found(format!("artifact {id} not found"))
@@ -103,15 +118,33 @@ impl LocalArtifactStore {
                 ArtifactError::unavailable(format!("cannot read index for {id}: {e}"))
             }
         })?;
-        serde_json::from_slice(&raw)
-            .map_err(|e| ArtifactError::internal(format!("corrupt index for {id}: {e}")))
+        let metadata: ArtifactMetadata = serde_json::from_slice(&raw)
+            .map_err(|e| ArtifactError::internal(format!("corrupt index for {id}: {e}")))?;
+        // Tenant boundary is structural: an index entry is only reachable
+        // through the owning tenant's index namespace, and the sidecar
+        // must agree with the caller's tenant (AUD-049 fail closed).
+        if &metadata.tenant != tenant {
+            return Err(ArtifactError::policy(format!(
+                "artifact {id} belongs to a different tenant"
+            )));
+        }
+        Ok(metadata)
     }
 
-    fn write_metadata(&self, metadata: &ArtifactMetadata) -> ArtifactResult<()> {
-        let path = self.index_path(&metadata.artifact_id);
+    fn write_metadata(&self, tenant: &TenantId, metadata: &ArtifactMetadata) -> ArtifactResult<()> {
+        if &metadata.tenant != tenant {
+            return Err(ArtifactError::policy(
+                "cannot write artifact metadata for a different tenant",
+            ));
+        }
+        let path = self.index_path(tenant, &metadata.artifact_id);
         let raw = serde_json::to_vec(metadata)
             .map_err(|e| ArtifactError::internal(format!("cannot serialize metadata: {e}")))?;
         // Atomic write-then-rename: never leave a torn sidecar.
+        if let Some(dir) = path.parent() {
+            fs::create_dir_all(dir)
+                .map_err(|e| art_error(format!("cannot create index dir: {e}")))?;
+        }
         let tmp = path.with_extension("json.tmp");
         {
             let mut f = fs::File::create(&tmp)
@@ -193,9 +226,10 @@ impl LocalArtifactStore {
         self.read_object(hash).map(|_| ())
     }
 
-    fn metadata_path_for(&self, hash: &ArtifactHash) -> PathBuf {
+    fn metadata_path_for(&self, tenant: &TenantId, hash: &ArtifactHash) -> PathBuf {
         self.root
             .join(layout::OBJECTS)
+            .join(tenant.as_str())
             .join(format!("{}.meta", hash.as_str()))
     }
 }
@@ -203,7 +237,7 @@ impl LocalArtifactStore {
 impl ArtifactStore for LocalArtifactStore {
     fn put(
         &mut self,
-        _tenant: &TenantId,
+        tenant: &TenantId,
         artifact_id: &ArtifactId,
         expected_hash: &ArtifactHash,
         bytes: &[u8],
@@ -222,47 +256,58 @@ impl ArtifactStore for LocalArtifactStore {
                 "metadata artifact id does not match request id",
             ));
         }
+        // Tenant boundary: a caller may only write into its own tenant's
+        // index namespace (AUD-049 fail closed).
+        if &metadata.tenant != tenant {
+            return Err(ArtifactError::policy(
+                "cannot put artifact for a different tenant",
+            ));
+        }
         self.write_object(expected_hash, bytes)?;
         // Persist a metadata sidecar next to the object too (lineage).
-        let meta_sidecar = self.metadata_path_for(expected_hash);
+        let meta_sidecar = self.metadata_path_for(tenant, expected_hash);
+        if let Some(dir) = meta_sidecar.parent() {
+            fs::create_dir_all(dir)
+                .map_err(|e| art_error(format!("cannot create sidecar dir: {e}")))?;
+        }
         let raw = serde_json::to_vec(metadata)
             .map_err(|e| ArtifactError::internal(format!("cannot serialize metadata: {e}")))?;
         fs::write(&meta_sidecar, raw)
             .map_err(|e| art_error(format!("cannot write metadata sidecar: {e}")))?;
-        self.write_metadata(metadata)?;
+        self.write_metadata(tenant, metadata)?;
         Ok(metadata.clone())
     }
 
     fn get(
         &mut self,
-        _tenant: &TenantId,
+        tenant: &TenantId,
         artifact_id: &ArtifactId,
         _correlation: &CorrelationId,
     ) -> ArtifactResult<(ArtifactMetadata, Vec<u8>)> {
-        let metadata = self.read_metadata(artifact_id)?;
+        let metadata = self.read_metadata(tenant, artifact_id)?;
         let bytes = self.read_object(&metadata.content_hash)?;
         Ok((metadata, bytes))
     }
 
     fn verify(
         &mut self,
-        _tenant: &TenantId,
+        tenant: &TenantId,
         artifact_id: &ArtifactId,
         _correlation: &CorrelationId,
     ) -> ArtifactResult<ArtifactHash> {
-        let metadata = self.read_metadata(artifact_id)?;
+        let metadata = self.read_metadata(tenant, artifact_id)?;
         self.verify_object(&metadata.content_hash)?;
         Ok(metadata.content_hash)
     }
 
     fn delete(
         &mut self,
-        _tenant: &TenantId,
+        tenant: &TenantId,
         artifact_id: &ArtifactId,
         _correlation: &CorrelationId,
     ) -> ArtifactResult<()> {
-        let metadata = self.read_metadata(artifact_id)?;
-        let index = self.index_path(artifact_id);
+        let metadata = self.read_metadata(tenant, artifact_id)?;
+        let index = self.index_path(tenant, artifact_id);
         let object = self.object_path(&metadata.content_hash);
         // DELETE_REQUESTED -> DELETE_ACCEPTED -> RESOURCE_ABSENT_VERIFIED.
         // First verify the object exists, then remove both the index and
@@ -280,7 +325,7 @@ impl ArtifactStore for LocalArtifactStore {
 
     fn create_backup(
         &mut self,
-        _tenant: &TenantId,
+        tenant: &TenantId,
         backup: &BackupSet,
         _correlation: &CorrelationId,
     ) -> ArtifactResult<BackupSet> {
@@ -288,7 +333,12 @@ impl ArtifactStore for LocalArtifactStore {
         // manifest must verify on disk before the manifest is written
         // (backup created != backup verified, but a manifest with hashes
         // that do not verify is a corrupt backup and must be rejected).
-        let manifest_path = self.backup_manifest_path(&backup.backup_id);
+        if &backup.tenant != tenant {
+            return Err(ArtifactError::policy(
+                "cannot create backup for a different tenant",
+            ));
+        }
+        let manifest_path = self.backup_manifest_path(tenant, &backup.backup_id);
         if manifest_path.exists() {
             return Err(ArtifactError::conflict(format!(
                 "backup {} already exists",
@@ -300,6 +350,10 @@ impl ArtifactStore for LocalArtifactStore {
         }
         let raw = serde_json::to_vec(backup)
             .map_err(|e| ArtifactError::internal(format!("cannot serialize backup: {e}")))?;
+        if let Some(dir) = manifest_path.parent() {
+            fs::create_dir_all(dir)
+                .map_err(|e| art_error(format!("cannot create backup dir: {e}")))?;
+        }
         fs::write(&manifest_path, raw)
             .map_err(|e| art_error(format!("cannot write backup manifest: {e}")))?;
         let mut created = backup.clone();
@@ -309,7 +363,7 @@ impl ArtifactStore for LocalArtifactStore {
 
     fn restore(
         &mut self,
-        _tenant: &TenantId,
+        tenant: &TenantId,
         plan: &RestorePlan,
         _correlation: &CorrelationId,
     ) -> ArtifactResult<RestorePlan> {
@@ -318,7 +372,12 @@ impl ArtifactStore for LocalArtifactStore {
         // manifest's backing store; we verify each required hash on this
         // fresh root as it is restored, and record it. Validation
         // completes only when every required hash is verified.
-        let manifest_path = self.backup_manifest_path(&plan.source_backup);
+        if &plan.tenant != tenant {
+            return Err(ArtifactError::policy(
+                "cannot restore backup for a different tenant",
+            ));
+        }
+        let manifest_path = self.backup_manifest_path(tenant, &plan.source_backup);
         let raw = fs::read(&manifest_path).map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
                 ArtifactError::not_found(format!("backup {} not found", plan.source_backup))
@@ -354,7 +413,7 @@ impl ArtifactStore for LocalArtifactStore {
 
     fn migrate(
         &mut self,
-        _tenant: &TenantId,
+        tenant: &TenantId,
         migration: &StorageMigration,
         _correlation: &CorrelationId,
     ) -> ArtifactResult<StorageMigration> {
@@ -365,6 +424,11 @@ impl ArtifactStore for LocalArtifactStore {
         // source-root store separately for the copy phase via the
         // migration object's source backend (the harness drives the copy
         // through a source LocalArtifactStore).
+        if &migration.tenant != tenant {
+            return Err(ArtifactError::policy(
+                "cannot migrate objects for a different tenant",
+            ));
+        }
         let mut migrated = migration.clone();
         // Verify every object exists and matches on the target.
         for obj in &migration.object_refs {
@@ -379,12 +443,16 @@ impl ArtifactStore for LocalArtifactStore {
 
     fn list(
         &mut self,
-        _tenant: &TenantId,
+        tenant: &TenantId,
         cursor: Option<&str>,
         limit: usize,
     ) -> ArtifactResult<(Vec<ArtifactMetadata>, Option<String>)> {
         let mut entries: Vec<(String, ArtifactMetadata)> = Vec::new();
-        let index_dir = self.root.join(layout::INDEX);
+        let index_dir = self.root.join(layout::INDEX).join(tenant.as_str());
+        if !index_dir.exists() {
+            // An empty tenant namespace is not an error: it lists nothing.
+            return Ok((Vec::new(), None));
+        }
         for entry in
             fs::read_dir(&index_dir).map_err(|e| art_error(format!("cannot list index: {e}")))?
         {
@@ -426,14 +494,14 @@ impl ArtifactStore for LocalArtifactStore {
 
     fn set_retention(
         &mut self,
-        _tenant: &TenantId,
+        tenant: &TenantId,
         artifact_id: &ArtifactId,
         retention: RetentionClass,
         _correlation: &CorrelationId,
     ) -> ArtifactResult<()> {
-        let mut metadata = self.read_metadata(artifact_id)?;
+        let mut metadata = self.read_metadata(tenant, artifact_id)?;
         metadata.retention = retention;
-        self.write_metadata(&metadata)?;
+        self.write_metadata(tenant, &metadata)?;
         Ok(())
     }
 }

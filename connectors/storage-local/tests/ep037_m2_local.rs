@@ -20,6 +20,10 @@ fn tenant() -> TenantId {
     "01970000-0000-7000-8000-000000000001".parse().unwrap()
 }
 
+fn tenant_b() -> TenantId {
+    "01970000-0000-7000-8000-000000000002".parse().unwrap()
+}
+
 fn artifact_id(n: u8) -> ArtifactId {
     format!("01970000-0000-7000-8000-0000000000{n:02x}")
         .parse()
@@ -158,10 +162,14 @@ fn ep037_unit_local_put_content_addressed_dedup() {
     store
         .put(&tenant(), &id_b, &h, &bytes, &meta_b, &correlation())
         .unwrap();
-    // One object file for the shared digest.
+    // One object file for the shared digest. The tenant sidecar
+    // subdirectory must not be counted as a content object.
     let count = fs::read_dir(root.join("objects"))
         .unwrap()
-        .filter(|e| e.as_ref().unwrap().path().extension().is_none())
+        .filter(|e| {
+            let e = e.as_ref().unwrap();
+            e.file_type().unwrap().is_file() && e.path().extension().is_none()
+        })
         .count();
     assert_eq!(count, 1);
     teardown(&root);
@@ -216,8 +224,13 @@ fn ep037_unit_local_delete_verifies_absence() {
         .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
         .unwrap();
     store.delete(&tenant(), &id, &correlation()).unwrap();
-    // Resource absent verified: neither index nor object remains.
-    assert!(!root.join("index").join(format!("{id}.json")).exists());
+    // Resource absent verified: neither index nor object remains. The
+    // index lives under the tenant's namespace on a shared root.
+    assert!(!root
+        .join("index")
+        .join(tenant().as_str())
+        .join(format!("{id}.json"))
+        .exists());
     assert!(!root.join("objects").join(h.as_str()).exists());
     // A second delete is NotFound (fail-closed, no blind success).
     let err = store.delete(&tenant(), &id, &correlation()).unwrap_err();
@@ -257,7 +270,12 @@ fn ep037_unit_local_create_backup_verifies_hashes_and_writes_manifest() {
         .create_backup(&tenant(), &backup, &correlation())
         .unwrap();
     assert_eq!(created.state, nexus_artifacts::BackupState::Created);
-    assert!(root.join("backups").join("b-m2-1.json").exists());
+    // Backup manifests are tenant-scoped on a shared root (AUD-049).
+    assert!(root
+        .join("backups")
+        .join(tenant().as_str())
+        .join("b-m2-1.json")
+        .exists());
     teardown(&root);
 }
 
@@ -524,5 +542,196 @@ fn ep037_unit_local_sensitive_artifact_with_encryption_metadata_ok() {
         .unwrap();
     let (read_meta, _) = store.get(&tenant(), &id, &correlation()).unwrap();
     assert!(read_meta.encryption.is_some());
+    teardown(&root);
+}
+
+// ---------------------------------------------------------------------------
+// AUD-049 hostile regressions: tenant boundary on a shared root
+// ---------------------------------------------------------------------------
+
+fn metadata_for_tenant(
+    id: ArtifactId,
+    tenant: TenantId,
+    bytes: &[u8],
+    data_class: DataClass,
+) -> ArtifactResult<ArtifactMetadata> {
+    let mut meta = metadata_for(id, bytes, data_class)?;
+    meta.tenant = tenant;
+    Ok(meta)
+}
+
+#[test]
+fn ep037_aud049_tenant_b_cannot_get_tenant_a_artifact() {
+    let root = temp_root("aud049-get");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"tenant a secret".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(30);
+    let meta = metadata_for_tenant(id.clone(), tenant(), &bytes, DataClass::Sensitive).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    // Tenant B knows the artifact id but must NOT be able to read it.
+    let err = store.get(&tenant_b(), &id, &correlation()).unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::NotFound);
+    teardown(&root);
+}
+
+#[test]
+fn ep037_aud049_tenant_b_cannot_verify_or_delete_tenant_a_artifact() {
+    let root = temp_root("aud049-verify-del");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"tenant a protected".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(31);
+    let meta = metadata_for_tenant(id.clone(), tenant(), &bytes, DataClass::Sensitive).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    // Tenant B cannot verify the artifact (id knowledge alone is not a
+    // capability across the tenant boundary).
+    let err = store.verify(&tenant_b(), &id, &correlation()).unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::NotFound);
+    // Tenant B cannot delete the artifact; tenant A's data survives.
+    let err = store.delete(&tenant_b(), &id, &correlation()).unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::NotFound);
+    let (read_meta, read_bytes) = store.get(&tenant(), &id, &correlation()).unwrap();
+    assert_eq!(read_meta.artifact_id, id);
+    assert_eq!(read_bytes, bytes);
+    teardown(&root);
+}
+
+#[test]
+fn ep037_aud049_tenant_b_list_never_leaks_tenant_a_artifacts() {
+    let root = temp_root("aud049-list");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    // Tenant A stores two artifacts.
+    for n in 0..2u8 {
+        let bytes = format!("tenant a payload {n}").into_bytes();
+        let h = hash_of(&bytes);
+        let id = artifact_id(32 + n);
+        let meta = metadata_for_tenant(id.clone(), tenant(), &bytes, DataClass::Public).unwrap();
+        store
+            .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+            .unwrap();
+    }
+    // Tenant B lists the SAME shared root: must see none of A's entries.
+    let (page, cursor) = store.list(&tenant_b(), None, 10).unwrap();
+    assert!(page.is_empty());
+    assert!(cursor.is_none());
+    // Tenant A still sees its own two artifacts.
+    let (page_a, _) = store.list(&tenant(), None, 10).unwrap();
+    assert_eq!(page_a.len(), 2);
+    teardown(&root);
+}
+
+#[test]
+fn ep037_aud049_put_rejects_metadata_for_another_tenant() {
+    let root = temp_root("aud049-put");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"cross tenant write".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(34);
+    // Caller tenant() but the metadata claims tenant_b: must fail closed.
+    let meta = metadata_for_tenant(id.clone(), tenant_b(), &bytes, DataClass::Public).unwrap();
+    let err = store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Policy);
+    // Nothing written into either tenant's namespace.
+    assert!(!root
+        .join("index")
+        .join(tenant().as_str())
+        .join(format!("{id}.json"))
+        .exists());
+    assert!(!root
+        .join("index")
+        .join(tenant_b().as_str())
+        .join(format!("{id}.json"))
+        .exists());
+    teardown(&root);
+}
+
+#[test]
+fn ep037_aud049_set_retention_requires_owning_tenant() {
+    let root = temp_root("aud049-retention");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"retention boundary".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(35);
+    let meta = metadata_for_tenant(id.clone(), tenant(), &bytes, DataClass::Public).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    // Tenant B cannot mutate tenant A's retention policy.
+    let err = store
+        .set_retention(&tenant_b(), &id, RetentionClass::Permanent, &correlation())
+        .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::NotFound);
+    // Tenant A's retention is unchanged.
+    let (read_meta, _) = store.get(&tenant(), &id, &correlation()).unwrap();
+    assert_eq!(read_meta.retention, RetentionClass::LongTerm);
+    teardown(&root);
+}
+
+#[test]
+fn ep037_aud049_backup_and_restore_are_tenant_scoped() {
+    let root = temp_root("aud049-backup");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"tenant a backup".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(36);
+    let meta = metadata_for_tenant(id.clone(), tenant(), &bytes, DataClass::Personal).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    let backup = BackupSet::new(
+        "b-aud049",
+        tenant(),
+        vec![DataClass::Personal],
+        nexus_artifacts::BackendLocation::new(StorageBackend::Local, "backups/b-aud049.json")
+            .unwrap(),
+        vec![h.clone()],
+        None,
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
+    store
+        .create_backup(&tenant(), &backup, &correlation())
+        .unwrap();
+    // Tenant B cannot create a backup that claims tenant A's tenant.
+    let foreign = BackupSet::new(
+        "b-aud049-foreign",
+        tenant(),
+        vec![DataClass::Personal],
+        nexus_artifacts::BackendLocation::new(StorageBackend::Local, "backups/b-foreign.json")
+            .unwrap(),
+        vec![h.clone()],
+        None,
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
+    let err = store
+        .create_backup(&tenant_b(), &foreign, &correlation())
+        .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Policy);
+    // Tenant B cannot restore tenant A's backup by id knowledge alone.
+    let plan = nexus_artifacts::RestorePlan::new(
+        "r-aud049",
+        tenant_b(),
+        "b-aud049",
+        "fresh-target-b",
+        vec![h],
+        None,
+    )
+    .unwrap();
+    let err = store
+        .restore(&tenant_b(), &plan, &correlation())
+        .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::NotFound);
     teardown(&root);
 }
