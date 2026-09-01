@@ -1,0 +1,26 @@
+# RX-018 expected files: artifact storage truth (AUD-049 Local/NAS tenant
+#  boundary on a shared root; AUD-050 shared-content delete preserves
+#  still-referenced objects; AUD-051 encryption-before-egress verified against
+#  real ciphertext, not metadata alone)
+.agent/expected-files/RX-018.txt
+.agent/milestone-files/RX-018-M1.txt
+.agent/milestone-files/RX-018-M2.txt
+.agent/milestone-files/RX-018-M3.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/evidence/RX-018/
+Cargo.lock
+connectors/storage-local/src/lib.rs
+connectors/storage-local/tests/ep037_m2_local.rs
+connectors/storage-nas/Cargo.toml
+connectors/storage-nas/src/lib.rs
+connectors/storage-nas/tests/ep037_m3_nas.rs
+connectors/storage-s3/Cargo.toml
+connectors/storage-s3/src/lib.rs
+connectors/storage-s3/tests/ep037_m5_s3.rs
+connectors/storage-seaweedfs/src/lib.rs
+connectors/storage-seaweedfs/tests/ep037_m4_failures.rs
+crates/nexus-artifacts/src/model.rs
+crates/nexus-artifacts/tests/ep037_m1_contract.rs
+scripts/nodes/RX-018.sh
+scripts/rx018-remediation-tests.sh
+tests/livefire/storage/tests/lf002_restore_existing_nexus.rs

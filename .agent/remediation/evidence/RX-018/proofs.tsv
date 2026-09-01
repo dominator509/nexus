@@ -1,0 +1,4 @@
+tenant-boundary-local	connectors/storage-local/src/lib.rs	sha256:c5a78d21f1a0fb0ed4848254055551950ea25adbc27279d4c0969a6ab134cb61
+encryption-verifier	connectors/storage-nas/src/lib.rs	sha256:068d72b20b489754338ccb3aa0f59bd2f240238b4126e98e3f95b8b193674e8b
+encryption-verifier-model	crates/nexus-artifacts/src/model.rs	sha256:25ad5a04207a1861ed0835a837702a48b615af17a9d5c5d2eb1a709e5076e795
+egress-wiring-s3	connectors/storage-s3/src/lib.rs	sha256:d3ba19322c2e3c53552d56e0524751b5b7af00968ad83dccfb5ba2518142bffc
