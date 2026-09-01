@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 import { renderToString } from "react-dom/server";
 import {
@@ -58,6 +59,14 @@ describe("ep033_aud038_pwa_entry", () => {
   });
 
   it("production build output exists (dist/index.html + JS bundle)", () => {
+    // The unit suite must not depend on a pre-existing build artifact
+    // from a previous local run: a fresh checkout has no dist/. The
+    // REAL Vite build is the proof, so run it here (production build
+    // is deterministic and fast for this surface).
+    execSync("pnpm pwa:build", {
+      cwd: root,
+      stdio: "pipe",
+    });
     expect(existsSync(resolve(root, "dist/index.html"))).toBe(true);
     const assets = resolve(root, "dist/assets");
     const js = readFileSync(resolve(root, "dist/index.html"), "utf8");
