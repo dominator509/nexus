@@ -35,6 +35,9 @@ jobs:
       - name: Install clippy + rustfmt components
         run: rustup component add clippy rustfmt
 
+      - name: Sync Python environment (uv)
+        run: uv sync --frozen
+
       - name: Install pinned cargo security tools
         run: |
           if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
