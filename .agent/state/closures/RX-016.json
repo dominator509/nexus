@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:91ba5724c77ca6e9a33dd25dcab7608926d99cbf75c49046918993b41e9c26d1",
+  "attestation_digest": "sha256:7f15bc6a15e499fed9a1061d497730443f24e996bcc2236b768efa9f7805a4c4",
   "closure_commit": "dc459442e37b381a0dda693489fb6d16e8b4fe46",
   "created_at": "2026-09-01T17:24:01Z",
   "created_by": "node-close-v2.sh",
@@ -19,12 +19,12 @@
   "node_verify_exit": 0,
   "proofs": [
     {
-      "digest": "sha256:a191d26915060924ce37fad8c7a8a748bac5027a66230cc8b564038d20898009",
+      "digest": "sha256:c7bf0522fa63e3ca64d066e0be7aa2a1a4cda71c971ac55846d609f413cefc14",
       "id": "registered-profile-gate",
       "ref": "apps/web/src/contracts/capability.ts"
     },
     {
-      "digest": "sha256:a3c7edc8277394732d8fc6909bc049d2c9642239cd83bb624ee6f62a3ee22f90",
+      "digest": "sha256:d19d47af54ffe8eb17264391c587f099f1c7a839849ecb5f3402106de303b81d",
       "id": "dispatcher-registered-gate",
       "ref": "apps/desktop/src/dispatcher.ts"
     },
@@ -54,7 +54,7 @@
       "ref": "apps/mobile/test/ep034_native_security_channel_test.dart"
     },
     {
-      "digest": "sha256:260a4c3e40c100ca00c6c497a32adb7007bfdf556643775fa7f2f20e9d5034b0",
+      "digest": "sha256:53cb364bda4da5367509237c91b69a957bc817a014a9dfaea57e1e6c7cf360a0",
       "id": "pwa-entry",
       "ref": "apps/web/src/main.tsx"
     },
@@ -64,7 +64,7 @@
       "ref": "apps/web/vite.config.ts"
     },
     {
-      "digest": "sha256:2b1b19c372cf1ca9ccc2fced1e841ea85893cb93ce06ec0a5b6298b901db42bb",
+      "digest": "sha256:0ae2aefd94eea7ce7c5b24e05f6fb74613277146d2685a81a0806395aa177a52",
       "id": "pwa-hostile",
       "ref": "apps/web/src/__tests__/ep033_aud038_pwa_entry.test.tsx"
     },
