@@ -31,6 +31,8 @@ use crate::transport::OsqueryTransport;
 /// A normalized osquery telemetry observation.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct OsqueryQueryResult {
+    /// Durable endpoint identity of the reporting node (AUD-035).
+    pub host_identifier: String,
     /// Query id (documented distributed_write queries key).
     pub query_id: String,
     /// Row count observed.
@@ -116,15 +118,43 @@ impl<T: OsqueryTransport> EndpointTelemetryProvider for OsqueryEndpointTelemetry
                     None,
                 ));
             }
+            // AUD-035: telemetry without a durable endpoint identity is
+            // unattributable - fail closed rather than normalize a
+            // finding that cannot be traced to an endpoint.
+            if result.host_identifier.trim().is_empty() {
+                self.observability.record(SentinelAuditEntry::new(
+                    "osquery.read_telemetry",
+                    "failed",
+                    format!(
+                        "observed telemetry for query {} without durable endpoint identity",
+                        result.query_id
+                    ),
+                    tenant_id.as_str(),
+                ));
+                return Err(SentinelError::new(
+                    SentinelErrorCode::ExternalProvider,
+                    format!(
+                        "osquery observed telemetry for query {} has no durable endpoint identity",
+                        result.query_id
+                    ),
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
             let mut finding_count = 0usize;
             for (i, row) in result.rows.iter().enumerate() {
-                let Some(event) = normalize_row(tenant_id, &result.query_id, i, row)? else {
+                let Some(event) =
+                    normalize_row(tenant_id, &result.host_identifier, &result.query_id, i, row)?
+                else {
                     continue;
                 };
                 finding_count += 1;
                 events.push(event);
             }
             results.push(OsqueryQueryResult {
+                host_identifier: result.host_identifier.clone(),
                 query_id: result.query_id.clone(),
                 row_count: result.rows.len(),
                 finding_count,
@@ -147,9 +177,12 @@ impl<T: OsqueryTransport> EndpointTelemetryProvider for OsqueryEndpointTelemetry
 
 /// Normalize ONE observed osquery row into a canonical finding, or
 /// None when the row is observed telemetry that does not match an
-/// owned rule (never fabricated).
+/// owned rule (never fabricated). `host_identifier` is the durable
+/// endpoint identity of the reporting node (AUD-035): every normalized
+/// finding is attributable to a specific endpoint.
 fn normalize_row(
     tenant_id: &TenantId,
+    host_identifier: &str,
     query_id: &str,
     index: usize,
     row: &serde_json::Value,
@@ -182,16 +215,21 @@ fn normalize_row(
             None,
         )
     })?;
+    // AUD-035: the evidence reference and correlation BOTH carry the
+    // durable endpoint identity so a finding can always be traced to
+    // the endpoint that reported it.
     let event = SecurityEvent::new(
         event_id,
         tenant_id.clone(),
         AdvancedSensorProfile::Osquery,
         FindingKind::BaselineViolation,
         FindingSeverity::Low,
-        format!("osquery:{query_id}:{port}:{protocol}"),
+        format!("osquery:{host_identifier}:{query_id}:{port}:{protocol}"),
         "2026-08-20T00:00:00Z",
     )
-    .with_correlation(format!("address={address}:port={port}"))
+    .with_correlation(format!(
+        "host={host_identifier}:address={address}:port={port}"
+    ))
     .with_state(AlertState::Open);
     Ok(Some(event))
 }
@@ -199,12 +237,51 @@ fn normalize_row(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transport::ObservedOsqueryResult;
     use nexus_domain::TenantId;
     use std::collections::HashMap;
     use std::str::FromStr;
 
     fn tenant() -> TenantId {
         TenantId::from_str("018f0f6f-9c1e-7b6e-8000-000000000001").unwrap()
+    }
+
+    /// Stub transport that returns crafted observed results, used to
+    /// prove the adapter fails closed on telemetry WITHOUT a durable
+    /// endpoint identity (AUD-035).
+    #[derive(Debug, Default)]
+    struct StubObservedTransport {
+        observed: Vec<ObservedOsqueryResult>,
+    }
+
+    impl OsqueryTransport for StubObservedTransport {
+        fn drain_observed(&mut self) -> Vec<ObservedOsqueryResult> {
+            std::mem::take(&mut self.observed)
+        }
+    }
+
+    #[test]
+    fn ep031_unit_osquery_unattributable_telemetry_fails_closed() {
+        // AUD-035: a result with NO durable endpoint identity is
+        // unattributable - normalization must fail closed (External),
+        // never mint a finding that cannot be traced to an endpoint.
+        let transport = StubObservedTransport {
+            observed: vec![ObservedOsqueryResult {
+                host_identifier: String::new(),
+                query_id: "listening_ports".to_string(),
+                rows: vec![serde_json::json!({
+                    "address": "0.0.0.0", "port": "8443", "protocol": "tcp"
+                })],
+                status: 0,
+            }],
+        };
+        let p = OsqueryEndpointTelemetryProvider::new(transport);
+        let err = p.read_telemetry(&tenant()).unwrap_err();
+        assert_eq!(err.code, SentinelErrorCode::ExternalProvider);
+        assert!(
+            p.audit_entries().iter().any(|e| e.outcome == "failed"),
+            "denial recorded"
+        );
     }
 
     #[test]
@@ -251,6 +328,13 @@ mod tests {
         assert_eq!(events[0].kind, FindingKind::BaselineViolation);
         assert_eq!(events[0].severity, FindingSeverity::Low);
         assert!(events[0].evidence_ref.contains("8443"));
+        // AUD-035: the finding is attributable to the durable endpoint
+        // identity bound at enrollment.
+        assert!(events[0].evidence_ref.contains("host-1"));
+        assert_eq!(
+            events[0].correlation.as_deref(),
+            Some("host=host-1:address=0.0.0.0:port=8443")
+        );
         assert_eq!(events[0].state, AlertState::Open);
         let entries = p.audit_entries();
         assert_eq!(entries.len(), 1);

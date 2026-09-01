@@ -133,6 +133,85 @@ fn ep031_failure_osquery_enroll_secret_rejected_fails_closed() {
 }
 
 #[test]
+fn ep031_failure_osquery_enroll_without_host_identifier_fails_closed() {
+    // AUD-035: over a REAL socket, enrollment without a durable
+    // endpoint identity fails closed (documented failure shape) - the
+    // collector never binds an unnamed endpoint.
+    let ep = HttpOsqueryEndpoint::new(SECRET.to_string(), queries());
+    let port = ep.serve().expect("serve");
+    let body = format!(r#"{{"enroll_secret":"{}"}}"#, SECRET);
+    let resp = post(port, "/enroll", &body);
+    let v: serde_json::Value = serde_json::from_str(&resp).expect("json");
+    assert_eq!(v["node_key"], serde_json::Value::String(String::new()));
+    assert_eq!(v["node_invalid"], serde_json::Value::Bool(true));
+    assert!(ep.node_key().is_none());
+    assert!(ep.host_identifier().is_none());
+}
+
+#[test]
+fn ep031_failure_osquery_enroll_identity_conflict_denied_over_socket() {
+    // AUD-035: over a REAL socket, a DIFFERENT host cannot re-enroll
+    // and adopt the bound node's identity or credentials; the SAME
+    // host re-enrolling keeps its durable identity.
+    let ep = HttpOsqueryEndpoint::new(SECRET.to_string(), queries());
+    let port = ep.serve().expect("serve");
+    let body = format!(
+        r#"{{"enroll_secret":"{}","host_identifier":"host-1"}}"#,
+        SECRET
+    );
+    let resp = post(port, "/enroll", &body);
+    let v: serde_json::Value = serde_json::from_str(&resp).expect("json");
+    assert_eq!(v["node_invalid"], serde_json::Value::Bool(false));
+    assert_eq!(ep.host_identifier().as_deref(), Some("host-1"));
+    // Different host: denied.
+    let body = format!(
+        r#"{{"enroll_secret":"{}","host_identifier":"host-2"}}"#,
+        SECRET
+    );
+    let resp = post(port, "/enroll", &body);
+    let v: serde_json::Value = serde_json::from_str(&resp).expect("json");
+    assert_eq!(v["node_key"], serde_json::Value::String(String::new()));
+    assert_eq!(v["node_invalid"], serde_json::Value::Bool(true));
+    assert_eq!(ep.host_identifier().as_deref(), Some("host-1"));
+    // Same host: durable identity preserved, fresh session key.
+    let body = format!(
+        r#"{{"enroll_secret":"{}","host_identifier":"host-1"}}"#,
+        SECRET
+    );
+    let resp = post(port, "/enroll", &body);
+    let v: serde_json::Value = serde_json::from_str(&resp).expect("json");
+    assert!(!v["node_key"].as_str().unwrap_or("").is_empty());
+    assert_eq!(v["node_invalid"], serde_json::Value::Bool(false));
+    assert_eq!(ep.host_identifier().as_deref(), Some("host-1"));
+}
+
+#[test]
+fn ep031_failure_osquery_observed_results_carry_durable_identity() {
+    // AUD-035: after a REAL enroll -> read -> write lifecycle, the
+    // server attributes every observed result to the durable endpoint
+    // identity bound at enrollment.
+    let ep = HttpOsqueryEndpoint::new(SECRET.to_string(), queries());
+    let port = ep.serve().expect("serve");
+    let body = format!(
+        r#"{{"enroll_secret":"{}","host_identifier":"host-1"}}"#,
+        SECRET
+    );
+    let resp = post(port, "/enroll", &body);
+    let v: serde_json::Value = serde_json::from_str(&resp).expect("json");
+    let node_key = v["node_key"].as_str().unwrap().to_string();
+    let write = format!(
+        r#"{{"node_key":"{node_key}","queries":{{"listening_ports":[{{"address":"0.0.0.0","port":"8443","protocol":"tcp"}}]}},"statuses":{{"listening_ports":0}}}}"#
+    );
+    let resp = post(port, "/distributed_write", &write);
+    let v: serde_json::Value = serde_json::from_str(&resp).expect("json");
+    assert_eq!(v["node_invalid"], serde_json::Value::Bool(false));
+    let observed = ep.observed_results();
+    assert_eq!(observed.len(), 1);
+    assert_eq!(observed[0].host_identifier, "host-1");
+    assert_eq!(observed[0].query_id, "listening_ports");
+}
+
+#[test]
 fn ep031_failure_osquery_unknown_node_key_rejected() {
     let (port, _) = full_lifecycle(SECRET);
     let resp = post(

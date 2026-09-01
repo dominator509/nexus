@@ -601,6 +601,18 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         .expect("osquery telemetry");
     assert_eq!(osq_events.len(), 1);
     assert!(osq_events[0].evidence_ref.contains("8443"));
+    // AUD-035: the normalized finding is attributable to the durable
+    // endpoint identity enrolled over the REAL socket (srv-lab-1) -
+    // evidence reference AND correlation both bind the endpoint.
+    assert!(
+        osq_events[0].evidence_ref.contains("srv-lab-1"),
+        "finding evidence must carry the durable endpoint identity"
+    );
+    assert_eq!(
+        osq_events[0].correlation.as_deref(),
+        Some("host=srv-lab-1:address=0.0.0.0:port=8443"),
+        "finding correlation must bind the durable endpoint identity"
+    );
 
     let opn_caps = opnsense.capabilities();
     assert!(opn_caps.contains(SentinelCapabilityKind::ReadFirewallTelemetry));
@@ -650,7 +662,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "profile": "OSQUERY",
             "resource": "srv-lab-1",
             "observed": true,
-            "fact": "wildcard listening socket 0.0.0.0:8443 observed via listening_ports",
+            "fact": "wildcard listening socket 0.0.0.0:8443 observed via listening_ports on srv-lab-1 (durable endpoint identity)",
             "event_id": osq_events[0].event_id.as_str()
         }
     ]);
@@ -931,7 +943,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "suricata": { "events": suricata_events.len(), "source": SCANNER, "kind": "ScanDetected", "signature": "ET SCAN Potential SSH Scan" },
             "crowdsec": { "event": true, "indicator": SCANNER, "action": "ban" },
             "wazuh": { "alerts": wz_events.len(), "rule_level": 12, "severity": "HIGH" },
-            "osquery": { "events": osq_events.len(), "wildcard_listener": "0.0.0.0:8443" }
+            "osquery": { "events": osq_events.len(), "wildcard_listener": "0.0.0.0:8443", "endpoint_identity": osq_events[0].correlation.as_deref().unwrap_or("") }
         },
         "normalized_facts": normalized_facts,
         "incident": {

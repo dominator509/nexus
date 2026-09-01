@@ -66,7 +66,7 @@
     },
     {
       "event_id": "osquery-listening_ports-0",
-      "fact": "wildcard listening socket 0.0.0.0:8443 observed via listening_ports",
+      "fact": "wildcard listening socket 0.0.0.0:8443 observed via listening_ports on srv-lab-1 (durable endpoint identity)",
       "observed": true,
       "profile": "OSQUERY",
       "provider": "OsqueryEndpointTelemetryProvider",
@@ -87,7 +87,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "m10-aud034-1788236921",
+  "run_id": "m11-aud035-1788243944",
   "sensors": {
     "crowdsec": {
       "action": "ban",
@@ -95,6 +95,7 @@
       "indicator": "192.168.40.77"
     },
     "osquery": {
+      "endpoint_identity": "host=srv-lab-1:address=0.0.0.0:port=8443",
       "events": 1,
       "wildcard_listener": "0.0.0.0:8443"
     },

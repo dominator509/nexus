@@ -50,6 +50,10 @@ pub struct DistributedQuery {
 /// request entry + statuses entry).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ObservedOsqueryResult {
+    /// Durable endpoint identity (documented enroll host_identifier)
+    /// of the node that reported this result (AUD-035). Empty when no
+    /// identity was bound; the adapter fails closed on that case.
+    pub host_identifier: String,
     pub query_id: String,
     /// Observed rows (free-form osquery table rows; normalized at the
     /// adapter boundary, never a domain contract).
@@ -127,6 +131,10 @@ pub struct HttpOsqueryEndpoint {
 #[derive(Debug)]
 struct EndpointInner {
     enroll_secret: String,
+    /// Durable endpoint identity bound at enrollment (documented
+    /// host_identifier; AUD-035). Never minted, never replaced by a
+    /// different host while a node is bound.
+    host_identifier: Option<String>,
     node_key: Option<String>,
     queries: Vec<DistributedQuery>,
     observed: Vec<ObservedOsqueryResult>,
@@ -141,6 +149,7 @@ impl HttpOsqueryEndpoint {
         Self {
             inner: Arc::new(Mutex::new(EndpointInner {
                 enroll_secret: enroll_secret.into(),
+                host_identifier: None,
                 node_key: None,
                 queries,
                 observed: Vec::new(),
@@ -193,6 +202,11 @@ impl HttpOsqueryEndpoint {
     /// The node_key issued at enrollment, if any.
     pub fn node_key(&self) -> Option<String> {
         self.inner.lock().unwrap().node_key.clone()
+    }
+
+    /// The durable endpoint identity bound at enrollment (AUD-035).
+    pub fn host_identifier(&self) -> Option<String> {
+        self.inner.lock().unwrap().host_identifier.clone()
     }
 }
 
@@ -270,16 +284,40 @@ fn route_enroll(inner: &mut EndpointInner, body: &str) -> String {
         // Documented failure shape: blank node_key + node_invalid.
         return http_json(200, r#"{"node_key":"","node_invalid":true}"#);
     }
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    let node_key = format!("node-{nanos}");
+    // AUD-035: a durable endpoint identity is REQUIRED to enroll. The
+    // documented host_identifier is that identity; without it the
+    // collector cannot attribute telemetry to a durable endpoint, so
+    // enrollment fails closed (documented failure shape).
+    let host = req.host_identifier.unwrap_or_default();
+    if host.trim().is_empty() {
+        return http_json(200, r#"{"node_key":"","node_invalid":true}"#);
+    }
+    if let Some(bound) = &inner.host_identifier {
+        if bound != &host {
+            // Identity confusion: a different host must never adopt
+            // the bound node's identity or credentials.
+            return http_json(200, r#"{"node_key":"","node_invalid":true}"#);
+        }
+    }
+    inner.host_identifier = Some(host);
+    let node_key = mint_node_key();
     inner.node_key = Some(node_key.clone());
     http_json(
         200,
         &format!(r#"{{"node_key":"{node_key}","node_invalid":false}}"#),
     )
+}
+
+/// Mint a fresh session node_key (documented enroll response). The
+/// node_key is a SESSION CREDENTIAL, never the durable identity: the
+/// durable endpoint identity is the host_identifier bound at
+/// enrollment (AUD-035).
+fn mint_node_key() -> String {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    format!("node-{nanos}")
 }
 
 fn route_distributed_read(inner: &mut EndpointInner, body: &str) -> String {
@@ -322,6 +360,9 @@ fn route_distributed_write(inner: &mut EndpointInner, body: &str) -> String {
         let status = statuses.get(&id).and_then(|v| v.as_i64()).unwrap_or(-1);
         let rows = rows.as_array().cloned().unwrap_or_default();
         inner.observed.push(ObservedOsqueryResult {
+            // AUD-035: every observed result is attributed to the
+            // durable endpoint identity bound at enrollment.
+            host_identifier: inner.host_identifier.clone().unwrap_or_default(),
             query_id: id,
             rows,
             status,
@@ -358,12 +399,35 @@ impl OsqueryTransport for HttpOsqueryEndpoint {
                 None,
             ));
         }
-        let _ = host_identifier;
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
-        let node_key = format!("node-{nanos}");
+        // AUD-035: enrollment REQUIRES a durable endpoint identity
+        // (the documented host_identifier). Without it the collector
+        // cannot attribute telemetry to a durable endpoint, so
+        // enrollment fails closed. A different host must never adopt
+        // the bound node's identity or credentials.
+        if host_identifier.trim().is_empty() {
+            return Err(SentinelError::new(
+                SentinelErrorCode::Authorization,
+                "osquery enrollment requires a durable host identifier",
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+        if let Some(bound) = &inner.host_identifier {
+            if bound != host_identifier {
+                return Err(SentinelError::new(
+                    SentinelErrorCode::Authorization,
+                    "osquery enrollment identity conflict: node already bound to a different host",
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
+        }
+        inner.host_identifier = Some(host_identifier.to_string());
+        let node_key = mint_node_key();
         inner.node_key = Some(node_key.clone());
         Ok(node_key)
     }
@@ -400,9 +464,12 @@ impl OsqueryTransport for HttpOsqueryEndpoint {
                 None,
             ));
         }
+        let host_identifier = inner.host_identifier.clone().unwrap_or_default();
         for (id, rows) in queries {
             let status = statuses.get(id).copied().unwrap_or(-1);
             inner.observed.push(ObservedOsqueryResult {
+                // AUD-035: attribute to the durable endpoint identity.
+                host_identifier: host_identifier.clone(),
                 query_id: id.clone(),
                 rows: rows.clone(),
                 status,
@@ -469,6 +536,40 @@ mod tests {
         assert_eq!(observed.len(), 1);
         assert_eq!(observed[0].status, 0);
         assert_eq!(observed[0].rows.len(), 1);
+        // AUD-035: every observed result carries the durable endpoint
+        // identity bound at enrollment.
+        assert_eq!(observed[0].host_identifier, "host-1");
+    }
+
+    #[test]
+    fn ep031_unit_osquery_enroll_requires_durable_host_identity() {
+        // AUD-035: enrollment without a durable endpoint identity
+        // fails closed - the collector can never attribute telemetry
+        // to an unnamed endpoint.
+        let mut ep = HttpOsqueryEndpoint::new("ep031-secret", queries());
+        let err = ep.enroll("ep031-secret", "").unwrap_err();
+        assert_eq!(err.code, SentinelErrorCode::Authorization);
+        let err = ep.enroll("ep031-secret", "   ").unwrap_err();
+        assert_eq!(err.code, SentinelErrorCode::Authorization);
+        assert!(ep.node_key().is_none(), "no node key minted");
+        assert!(ep.host_identifier().is_none(), "no identity bound");
+    }
+
+    #[test]
+    fn ep031_unit_osquery_enroll_identity_conflict_denied() {
+        // AUD-035: a different host must never adopt the bound node's
+        // identity or credentials; the SAME host re-enrolling keeps
+        // its durable identity (session key rotates, identity does not).
+        let mut ep = HttpOsqueryEndpoint::new("ep031-secret", queries());
+        let key1 = ep.enroll("ep031-secret", "host-1").unwrap();
+        assert!(key1.starts_with("node-"));
+        let err = ep.enroll("ep031-secret", "host-2").unwrap_err();
+        assert_eq!(err.code, SentinelErrorCode::Authorization);
+        assert_eq!(ep.host_identifier().as_deref(), Some("host-1"));
+        // Same host re-enrolls: durable identity preserved.
+        let key2 = ep.enroll("ep031-secret", "host-1").unwrap();
+        assert!(key2.starts_with("node-"));
+        assert_eq!(ep.host_identifier().as_deref(), Some("host-1"));
     }
 
     #[test]
