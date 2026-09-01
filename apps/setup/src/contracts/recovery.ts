@@ -306,12 +306,22 @@ export function decideRecovery(evidence: RecoveryEvidence): RecoveryDecision {
     evidence.mutation_state === undefined ? "UNKNOWN" : evidence.mutation_state;
   switch (evidence.failure_class) {
     case "AMBIGUOUS":
-      if (evidence.mutation_state === "RECONCILED") {
+      // AUD-045: AMBIGUOUS + RECONCILED is NOT retry-safe by itself.
+      // Retrying after an ambiguous provider outcome can duplicate a
+      // consequential effect unless there is an EXPLICIT negative
+      // mutation observation (mutation_occurred === false) and the
+      // mutation is known. A reconciled state without that observation
+      // is still unsafe to retry.
+      if (
+        evidence.mutation_state === "RECONCILED" &&
+        evidence.mutation_known &&
+        evidence.mutation_occurred === false
+      ) {
         return new RecoveryDecision(
           "RETRYABLE",
           "RECONCILED",
           true,
-          "mutation reconciled; retry is safe",
+          "mutation reconciled with explicit negative observation; retry is safe",
         );
       }
       return new RecoveryDecision(
