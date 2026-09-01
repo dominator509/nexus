@@ -2,9 +2,9 @@
   "lf_id": "EP-036-M5",
   "node": "EP-036",
   "milestone": "M5",
-  "run_id": "ep036-m5-20260901T184944Z",
+  "run_id": "ep036-m5-20260901T192612Z",
   "slug": "compute-fabric-and-cloud-provisioning-closure",
-  "git_commit": "b17ac67ac44697b12adb4fdde36badfbdd8f5bde",
+  "git_commit": "c7f8425e8257e06a5b8fc9a3679b3a62cec71842",
   "owned_live_fire": "NONE_STANDALONE",
   "real_proofs_observed": {
     "M1_contract": "48 tests green (contract 32 + model 11 + dependency_direction 2 + digitalocean 3)",
