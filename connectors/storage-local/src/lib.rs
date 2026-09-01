@@ -226,6 +226,55 @@ impl LocalArtifactStore {
         self.read_object(hash).map(|_| ())
     }
 
+    /// True when another artifact's metadata references the same content
+    /// hash (AUD-050). Objects are globally hash-deduplicated across the
+    /// shared root, so the scan covers EVERY tenant's index namespace:
+    /// the caller's delete may not destroy content another artifact -
+    /// possibly another tenant's - still depends on. Mirrors the S3
+    /// adapter's other_refs_exist() guard.
+    fn other_refs_exist(&self, id: &ArtifactId, hash: &ArtifactHash) -> ArtifactResult<bool> {
+        let index_root = self.root.join(layout::INDEX);
+        if !index_root.exists() {
+            return Ok(false);
+        }
+        for tenant_dir in
+            fs::read_dir(&index_root).map_err(|e| art_error(format!("cannot scan index: {e}")))?
+        {
+            let tenant_dir =
+                tenant_dir.map_err(|e| art_error(format!("cannot read index dir: {e}")))?;
+            if !tenant_dir
+                .file_type()
+                .map_err(|e| art_error(e.to_string()))?
+                .is_dir()
+            {
+                continue;
+            }
+            for entry in fs::read_dir(tenant_dir.path())
+                .map_err(|e| art_error(format!("cannot scan tenant index: {e}")))?
+            {
+                let entry =
+                    entry.map_err(|e| art_error(format!("cannot read tenant index: {e}")))?;
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if !name.ends_with(".json") {
+                    continue;
+                }
+                let Some(meta_id) = name.strip_suffix(".json") else {
+                    continue;
+                };
+                if meta_id == id.as_str() {
+                    continue;
+                }
+                let Ok(meta) = self.read_metadata_from_path(&entry.path()) else {
+                    continue;
+                };
+                if &meta.content_hash == hash {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
+
     fn metadata_path_for(&self, tenant: &TenantId, hash: &ArtifactHash) -> PathBuf {
         self.root
             .join(layout::OBJECTS)
@@ -310,12 +359,23 @@ impl ArtifactStore for LocalArtifactStore {
         let index = self.index_path(tenant, artifact_id);
         let object = self.object_path(&metadata.content_hash);
         // DELETE_REQUESTED -> DELETE_ACCEPTED -> RESOURCE_ABSENT_VERIFIED.
-        // First verify the object exists, then remove both the index and
-        // the object, then verify absence.
+        // First verify the object exists, then remove the index entry.
+        // The content object is removed ONLY when no other artifact still
+        // references it (AUD-050): objects are globally hash-deduplicated,
+        // so an unconditional object removal could destroy content another
+        // artifact - possibly another tenant's - still depends on.
         self.verify_object(&metadata.content_hash)?;
+        let shared = self.other_refs_exist(artifact_id, &metadata.content_hash)?;
         fs::remove_file(&index).map_err(|e| art_error(format!("cannot remove index: {e}")))?;
-        fs::remove_file(&object).map_err(|e| art_error(format!("cannot remove object: {e}")))?;
-        if index.exists() || object.exists() {
+        if !shared {
+            fs::remove_file(&object)
+                .map_err(|e| art_error(format!("cannot remove object: {e}")))?;
+        }
+        // RESOURCE_ABSENT_VERIFIED: the index entry must be gone. A shared
+        // content object legitimately remains (other artifacts reference
+        // it), so absence verification applies to the deleted artifact's
+        // index entry, and to the object only when it was not shared.
+        if index.exists() || (!shared && object.exists()) {
             return Err(ArtifactError::verification(
                 "delete failed: resource not absent after delete",
             ));

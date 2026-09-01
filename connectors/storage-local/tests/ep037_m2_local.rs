@@ -735,3 +735,63 @@ fn ep037_aud049_backup_and_restore_are_tenant_scoped() {
     assert_eq!(err.code, ArtifactErrorCode::NotFound);
     teardown(&root);
 }
+
+// ---------------------------------------------------------------------------
+// AUD-050 hostile regressions: delete preserves shared content objects
+// ---------------------------------------------------------------------------
+
+#[test]
+fn ep037_aud050_delete_keeps_object_when_same_tenant_still_references_it() {
+    let root = temp_root("aud050-same-tenant");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"shared content, two artifacts same tenant".to_vec();
+    let h = hash_of(&bytes);
+    let id_a = artifact_id(40);
+    let id_b = artifact_id(41);
+    let meta_a = metadata_for(id_a.clone(), &bytes, DataClass::Public).unwrap();
+    let meta_b = metadata_for(id_b.clone(), &bytes, DataClass::Public).unwrap();
+    store
+        .put(&tenant(), &id_a, &h, &bytes, &meta_a, &correlation())
+        .unwrap();
+    store
+        .put(&tenant(), &id_b, &h, &bytes, &meta_b, &correlation())
+        .unwrap();
+    // Deleting artifact A must NOT remove the content object: artifact B
+    // still references the same hash (global content dedup).
+    store.delete(&tenant(), &id_a, &correlation()).unwrap();
+    assert!(root.join("objects").join(h.as_str()).exists());
+    // Artifact B still reads its bytes intact.
+    let (read_meta, read_bytes) = store.get(&tenant(), &id_b, &correlation()).unwrap();
+    assert_eq!(read_meta.content_hash, h);
+    assert_eq!(read_bytes, bytes);
+    // After B is also deleted (no refs remain), the object is removed.
+    store.delete(&tenant(), &id_b, &correlation()).unwrap();
+    assert!(!root.join("objects").join(h.as_str()).exists());
+    teardown(&root);
+}
+
+#[test]
+fn ep037_aud050_delete_keeps_object_when_another_tenant_references_it() {
+    let root = temp_root("aud050-cross-tenant");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"shared content across tenants".to_vec();
+    let h = hash_of(&bytes);
+    let id_a = artifact_id(42);
+    let id_b = artifact_id(43);
+    let meta_a = metadata_for_tenant(id_a.clone(), tenant(), &bytes, DataClass::Public).unwrap();
+    let meta_b = metadata_for_tenant(id_b.clone(), tenant_b(), &bytes, DataClass::Public).unwrap();
+    store
+        .put(&tenant(), &id_a, &h, &bytes, &meta_a, &correlation())
+        .unwrap();
+    store
+        .put(&tenant_b(), &id_b, &h, &bytes, &meta_b, &correlation())
+        .unwrap();
+    // Tenant A deleting its artifact must not destroy the object that
+    // tenant B still references (objects are globally hash-deduplicated).
+    store.delete(&tenant(), &id_a, &correlation()).unwrap();
+    assert!(root.join("objects").join(h.as_str()).exists());
+    let (read_meta, read_bytes) = store.get(&tenant_b(), &id_b, &correlation()).unwrap();
+    assert_eq!(read_meta.content_hash, h);
+    assert_eq!(read_bytes, bytes);
+    teardown(&root);
+}
