@@ -107,16 +107,30 @@ fn ep036_integration_existing_ssh_reaches_ephemeral_sshd() {
 
     // Probe with the real ssh-keyscan binary (reachability + host key).
     // The probe targets exactly the binding's declared target.
+    // CI runners are slow: the container's sshd may not have bound the
+    // mapped port yet when `docker run -d` returns, so the probe
+    // retries with a bounded backoff (readiness wait) instead of
+    // failing on the first connection-closed race.
     let binding =
         ExistingSshBinding::new("127.0.0.1", host_port, "root", tenant(), ref_()).expect("binding");
-    let mut probe = Command::new("ssh-keyscan");
-    probe
-        .arg("-p")
-        .arg(binding.port.to_string())
-        .arg("-T")
-        .arg("10")
-        .arg(&binding.host);
-    let (probe_ok, probe_out) = run(&mut probe);
+    let mut probe_out = String::new();
+    let mut probe_ok = false;
+    for _attempt in 0..15 {
+        let mut probe = Command::new("ssh-keyscan");
+        probe
+            .arg("-p")
+            .arg(binding.port.to_string())
+            .arg("-T")
+            .arg("5")
+            .arg(&binding.host);
+        let (ok, out) = run(&mut probe);
+        if ok && out.contains("ssh-") {
+            probe_ok = true;
+            probe_out = out;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+    }
     if !probe_ok {
         cleanup(&unique);
         panic!("ssh-keyscan failed: {probe_out}");
