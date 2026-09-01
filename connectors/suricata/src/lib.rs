@@ -1,11 +1,13 @@
 //! EP-031 Suricata connector (SPEC-013: Enhanced profile adds
-//! Suricata).
+//! Suricata; AUD-030).
 //!
 //! This crate is the Suricata network-detection adapter boundary: it
 //! implements the provider-neutral `NetworkDetectionProvider` port
-//! from nexus-sentinel-advanced. M1 owns the package boundary and the
-//! documented Suricata vocabulary (EVE JSON surface); the real
-//! transport adapter and live-fire proofs arrive in M2+.
+//! from nexus-sentinel-advanced over the DOCUMENTED Suricata EVE JSON
+//! surface (eve.json). The real transport parses newline-delimited
+//! EVE alert records from an arbitrary byte source (file, pipe,
+//! socket); the adapter normalizes observed alerts into canonical
+//! sentinel findings without inventing root causes.
 //!
 //! Dependency direction: this connector depends on nexus-domain,
 //! nexus-sentinel, and nexus-sentinel-advanced (contract crates). It
@@ -17,6 +19,16 @@
 /// eve.json output). Free-form provider payloads are normalized at
 /// the infrastructure boundary and never become domain contracts.
 pub mod eve;
+
+/// Real production transport over the documented EVE JSON alert
+/// surface (newline-delimited records; event_type discriminator).
+pub mod transport;
+
+/// Real production adapter behind the `NetworkDetectionProvider` port.
+pub mod adapter;
+
+pub use adapter::SuricataNetworkDetectionProvider;
+pub use transport::{JsonLinesSuricataTransport, SuricataAlert, SuricataTransport};
 
 #[cfg(test)]
 mod tests {

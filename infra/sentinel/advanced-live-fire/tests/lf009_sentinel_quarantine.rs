@@ -2,9 +2,10 @@
 //!
 //! Proves a REAL advanced-detection quarantine journey over REAL
 //! std::net sockets against controlled local fixtures emitting REAL
-//! Zeek-shaped, CrowdSec LAPI-shaped, Wazuh-shaped, osquery-shaped,
-//! and OPNsense-shaped responses. The PRODUCTION connectors
-//! (nexus-zeek-connector, nexus-crowdsec-connector,
+//! Zeek-shaped, Suricata EVE-shaped, CrowdSec LAPI-shaped,
+//! Wazuh-shaped, osquery-shaped, and OPNsense-shaped responses. The
+//! PRODUCTION connectors (nexus-zeek-connector,
+//! nexus-suricata-connector, nexus-crowdsec-connector,
 //! nexus-wazuh-connector, nexus-osquery-connector,
 //! nexus-opnsense-connector) are composed behind the
 //! nexus-sentinel-advanced contract; production transports are never
@@ -55,6 +56,7 @@ use nexus_sentinel_advanced_live_fire::{
     SentinelInvestigationService, SentinelResponsePlanner, SentinelTriageService,
     SentinelVerificationService,
 };
+use nexus_suricata_connector::{JsonLinesSuricataTransport, SuricataNetworkDetectionProvider};
 use nexus_wazuh_connector::{HttpWazuhTransport, WazuhEndpointTelemetryProvider};
 use nexus_zeek_connector::{JsonLinesZeekTransport, ZeekNetworkDetectionProvider};
 
@@ -188,6 +190,40 @@ fn spawn_http_fixture(
 /// Spawn a fixture that writes REAL Zeek notice.log JSON lines to the
 /// first accepted connection, then closes.
 fn spawn_zeek_fixture(lines: Vec<String>) -> (u16, thread::JoinHandle<()>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    let handle = thread::spawn(move || {
+        listener.set_nonblocking(true).expect("nonblocking");
+        let deadline = Instant::now() + Duration::from_secs(15);
+        let (mut stream, _) = loop {
+            match listener.accept() {
+                Ok(c) => break c,
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    if Instant::now() > deadline {
+                        return;
+                    }
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(_) => return,
+            }
+        };
+        for line in lines {
+            let _ = stream.write_all(line.as_bytes());
+            let _ = stream.write_all(b"\n");
+        }
+        let _ = stream.flush();
+    });
+    (port, handle)
+}
+
+// ---------------------------------------------------------------------------
+// Suricata fixture (REAL documented EVE JSON surface)
+// ---------------------------------------------------------------------------
+
+/// Spawn a fixture that writes REAL Suricata eve.json alert lines to
+/// the first accepted connection, then closes. AUD-030: the Enhanced
+/// profile sensor must actually operate in the live-fire journey.
+fn spawn_suricata_fixture(lines: Vec<String>) -> (u16, thread::JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
     let port = listener.local_addr().expect("addr").port();
     let handle = thread::spawn(move || {
@@ -401,6 +437,18 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     ];
     let (zeek_port, zeek_handle) = spawn_zeek_fixture(zeek_lines);
 
+    // Suricata (Enhanced profile): the same unknown device
+    // (192.168.40.77) triggers a documented ET SCAN alert on the
+    // scanned host. AUD-030: the advertised Suricata profile must
+    // operate, not merely exist as vocabulary.
+    let suricata_lines = vec![
+        format!(
+            r#"{{"timestamp":"2026-08-20T00:00:01.000000+0000","flow_id":9101,"event_type":"alert","src_ip":"{SCANNER}","src_port":40000,"dest_ip":"{TARGET}","dest_port":22,"proto":"TCP","alert":{{"action":"allowed","gid":1,"signature_id":2018358,"rev":10,"signature":"ET SCAN Potential SSH Scan","category":"Attempted Information Leak","severity":2}}}}"#
+        )
+        .to_string(),
+    ];
+    let (suricata_port, suricata_handle) = spawn_suricata_fixture(suricata_lines);
+
     // CrowdSec: a ban decision exists for the scanner.
     let (cs_port, cs_handle) = spawn_crowdsec_fixture();
 
@@ -486,6 +534,9 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     let zeek = ZeekNetworkDetectionProvider::new(JsonLinesZeekTransport::new(
         TcpStream::connect(("127.0.0.1", zeek_port)).expect("zeek connect"),
     ));
+    let suricata = SuricataNetworkDetectionProvider::new(JsonLinesSuricataTransport::new(
+        TcpStream::connect(("127.0.0.1", suricata_port)).expect("suricata connect"),
+    ));
     let crowdsec = CrowdSecThreatIntelProvider::new(HttpCrowdSecTransport::new(
         format!("http://127.0.0.1:{cs_port}"),
         CANARY_CS_ID,
@@ -522,6 +573,19 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         "zeek observed scan from the unknown device"
     );
 
+    let suricata_caps = suricata.capabilities();
+    assert!(suricata_caps.contains(SentinelCapabilityKind::ReadFindings));
+    let suricata_events = suricata.read_events(&tenant()).expect("suricata events");
+    assert_eq!(suricata_events.len(), 1, "one observed ET SCAN alert");
+    assert!(
+        suricata_events[0].evidence_ref.contains("ET SCAN"),
+        "suricata observed scan evidence"
+    );
+    assert_eq!(
+        suricata_events[0].correlation.as_deref(),
+        Some(&format!("src={SCANNER}") as &str)
+    );
+
     let cs_event = crowdsec
         .lookup_reputation(&tenant(), SCANNER)
         .expect("crowdsec lookup")
@@ -552,6 +616,15 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "observed": true,
             "fact": format!("Scan::Portscan from {SCANNER} to {TARGET}:22 (src={SCANNER})"),
             "event_id": zeek_events[0].event_id.as_str()
+        },
+        {
+            "source": "suricata",
+            "provider": "SuricataNetworkDetectionProvider",
+            "profile": "SURICATA",
+            "resource": "9101",
+            "observed": true,
+            "fact": format!("ET SCAN Potential SSH Scan from {SCANNER} to {TARGET}:22 (src={SCANNER})"),
+            "event_id": suricata_events[0].event_id.as_str()
         },
         {
             "source": "crowdsec",
@@ -590,6 +663,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     // the SAME indicator, never from raw sensor count.
     let triage = SentinelTriageService;
     let mut all_events = zeek_events.clone();
+    all_events.extend(suricata_events.clone());
     all_events.push(cs_event.clone());
     all_events.extend(wz_events.clone());
     all_events.extend(osq_events.clone());
@@ -785,10 +859,11 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         "node": "EP-031",
         "milestone": "M5",
         "proof": "LF-009",
-        "surface": "documented Zeek JSON Streaming Logs + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
-        "transport": "JsonLinesZeekTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
+        "surface": "documented Zeek JSON Streaming Logs + documented Suricata EVE JSON + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
+        "transport": "JsonLinesZeekTransport over REAL socket + JsonLinesSuricataTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
         "sensors": {
             "zeek": { "events": zeek_events.len(), "source": SCANNER, "kind": "ScanDetected" },
+            "suricata": { "events": suricata_events.len(), "source": SCANNER, "kind": "ScanDetected", "signature": "ET SCAN Potential SSH Scan" },
             "crowdsec": { "event": true, "indicator": SCANNER, "action": "ban" },
             "wazuh": { "alerts": wz_events.len(), "rule_level": 12, "severity": "HIGH" },
             "osquery": { "events": osq_events.len(), "wildcard_listener": "0.0.0.0:8443" }
@@ -818,6 +893,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         "certification": {
             "advanced_contract": "INTERNAL_CERTIFIED",
             "zeek_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
+            "suricata_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures (AUD-030)",
             "crowdsec_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
             "wazuh_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
             "osquery_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixture node",
@@ -830,6 +906,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
 
     // ---- 15. Zero-orphan cleanup: fixture threads bounded and done ----
     let _ = zeek_handle.join();
+    let _ = suricata_handle.join();
     let _ = cs_handle.join();
     let _ = wz_handle.join();
     let _ = opn_handle.join();

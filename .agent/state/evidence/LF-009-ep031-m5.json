@@ -6,6 +6,7 @@
     "osquery_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixture node",
     "real_firewall_appliance": "NOT_ASSERTED",
     "real_sensors": "NOT_ASSERTED",
+    "suricata_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures (AUD-030)",
     "wazuh_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
     "zeek_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures"
   },
@@ -17,12 +18,12 @@
   "incident": {
     "confidence": "HIGH",
     "correlation_id": "corr-lf009",
-    "event_count": 4,
+    "event_count": 5,
     "severity": "HIGH",
-    "summary": "observed source 192.168.40.77 corroborated across 3 independent plane(s) (network+reputation+endpoint), severity HIGH, 4 event(s) correlated"
+    "summary": "observed source 192.168.40.77 corroborated across 3 independent plane(s) (network+reputation+endpoint), severity HIGH, 5 event(s) correlated"
   },
   "investigation": {
-    "evidence_refs": 4
+    "evidence_refs": 5
   },
   "milestone": "M5",
   "node": "EP-031",
@@ -35,6 +36,15 @@
       "provider": "ZeekNetworkDetectionProvider",
       "resource": "C1",
       "source": "zeek"
+    },
+    {
+      "event_id": "suricata-9101-2018358",
+      "fact": "ET SCAN Potential SSH Scan from 192.168.40.77 to 192.168.40.1:22 (src=192.168.40.77)",
+      "observed": true,
+      "profile": "SURICATA",
+      "provider": "SuricataNetworkDetectionProvider",
+      "resource": "9101",
+      "source": "suricata"
     },
     {
       "event_id": "crowdsec-1",
@@ -77,7 +87,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "local-run",
+  "run_id": "m6-aud030-final-1788232768",
   "sensors": {
     "crowdsec": {
       "action": "ban",
@@ -87,6 +97,12 @@
     "osquery": {
       "events": 1,
       "wildcard_listener": "0.0.0.0:8443"
+    },
+    "suricata": {
+      "events": 1,
+      "kind": "ScanDetected",
+      "signature": "ET SCAN Potential SSH Scan",
+      "source": "192.168.40.77"
     },
     "wazuh": {
       "alerts": 1,
@@ -99,8 +115,8 @@
       "source": "192.168.40.77"
     }
   },
-  "surface": "documented Zeek JSON Streaming Logs + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
-  "transport": "JsonLinesZeekTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
+  "surface": "documented Zeek JSON Streaming Logs + documented Suricata EVE JSON + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
+  "transport": "JsonLinesZeekTransport over REAL socket + JsonLinesSuricataTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
   "triage": {
     "priority": "CRITICAL"
   },
