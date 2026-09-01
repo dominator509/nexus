@@ -23,7 +23,7 @@ fail() {
 }
 ok() { echo "EP-033 M4 gate: $1"; }
 
-PNPM="${PNPM_BIN:-/root/.local/share/mise/installs/pnpm/11.17.0/pnpm}"
+PNPM="${PNPM_BIN:-pnpm}"
 
 # Vacuity guard 0: the e2e failure package must exist.
 if [ ! -f tests/e2e/web/package.json ]; then

@@ -22,7 +22,7 @@ fail() {
 }
 ok() { echo "EP-035 M1 gate: $1"; }
 
-PNPM="${PNPM_BIN:-/root/.local/share/mise/installs/pnpm/11.17.0/pnpm}"
+PNPM="${PNPM_BIN:-pnpm}"
 
 # Vacuity guard 0: the setup package must exist.
 if [ ! -f apps/setup/package.json ]; then

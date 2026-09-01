@@ -17,7 +17,9 @@
     "@temporalio/testing": "1.17.2",
     "@temporalio/worker": "1.17.2",
     "@temporalio/workflow": "1.17.2",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.0.0",
+    "js-yaml": "^4.1.0",
     "typescript": "~5.9.0",
     "vitest": "^3.0.0"
   }

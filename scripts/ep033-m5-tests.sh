@@ -27,7 +27,7 @@ fail() {
 }
 ok() { echo "EP-033 M5 gate: $1"; }
 
-PNPM="${PNPM_BIN:-/root/.local/share/mise/installs/pnpm/11.17.0/pnpm}"
+PNPM="${PNPM_BIN:-pnpm}"
 PKG="tests/accessibility/web"
 
 # Vacuity guard 0: the a11y package must exist.
