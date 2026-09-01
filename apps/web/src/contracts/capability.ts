@@ -188,7 +188,9 @@ export class KnownCapabilityVocabulary {
    * dispatcher FAILS CLOSED on undefined for high-risk authorization
    * (AUD-039): an unregistered capability can never satisfy the gate.
    */
-  registeredProfile(capabilityId: string): RegisteredCapabilityProfile | undefined {
+  registeredProfile(
+    capabilityId: string,
+  ): RegisteredCapabilityProfile | undefined {
     return this.#profiles.get(capabilityId);
   }
 

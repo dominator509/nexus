@@ -87,7 +87,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "m13-aud037",
+  "run_id": "local-run",
   "sensors": {
     "crowdsec": {
       "action": "ban",
@@ -98,7 +98,7 @@
       "endpoint_identity": "host=srv-lab-1:address=0.0.0.0:port=8443",
       "event_id": "osquery-srv-lab-1-listening_ports-0-0",
       "events": 1,
-      "observed_at": "2026-09-01T15:05:03Z",
+      "observed_at": "2026-09-01T19:53:48Z",
       "tls": "REAL_TLS_PINNED",
       "wildcard_listener": "0.0.0.0:8443"
     },

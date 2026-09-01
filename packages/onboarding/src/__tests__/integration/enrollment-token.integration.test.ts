@@ -92,9 +92,9 @@ describe("ep035_integration_enrollment_token", () => {
     expect(row!.state).toBe("ISSUED");
 
     // Empty secret -> claim denied (hostile caller knowing only the ID).
-    expect(
-      await store.claim(credential.credential_id, "", now + 1),
-    ).toBe(false);
+    expect(await store.claim(credential.credential_id, "", now + 1)).toBe(
+      false,
+    );
     row = await store.read(credential.credential_id);
     expect(row!.state).toBe("ISSUED");
 
@@ -116,9 +116,9 @@ describe("ep035_integration_enrollment_token", () => {
 
     await store.issue(credential);
     // Claim after expiry -> denied.
-    expect(
-      await store.claim(credential.credential_id, secret, now + 200),
-    ).toBe(false);
+    expect(await store.claim(credential.credential_id, secret, now + 200)).toBe(
+      false,
+    );
     const row = await store.read(credential.credential_id);
     expect(row!.state).toBe("ISSUED"); // never flipped to USED
 
@@ -134,9 +134,9 @@ describe("ep035_integration_enrollment_token", () => {
     await store.issue(credential);
     expect(await store.revoke(credential.credential_id, now + 1)).toBe(true);
     // Revoked token can never be claimed.
-    expect(
-      await store.claim(credential.credential_id, secret, now + 2),
-    ).toBe(false);
+    expect(await store.claim(credential.credential_id, secret, now + 2)).toBe(
+      false,
+    );
     // Second revoke returns false (already revoked).
     expect(await store.revoke(credential.credential_id, now + 3)).toBe(false);
     const row = await store.read(credential.credential_id);

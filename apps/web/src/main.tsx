@@ -61,7 +61,12 @@ function shellState(): {
     }),
   );
   return {
-    shell: DashboardShell.create("approvals", "approvals", "CONNECTED", context),
+    shell: DashboardShell.create(
+      "approvals",
+      "approvals",
+      "CONNECTED",
+      context,
+    ),
     context,
   };
 }
@@ -121,7 +126,11 @@ if (root === null) {
 
 createRoot(root).render(
   <main id="main">
-    <DashboardShellView shell={shell} context={context} connectivity="CONNECTED" />
+    <DashboardShellView
+      shell={shell}
+      context={context}
+      connectivity="CONNECTED"
+    />
     <section aria-label="Capabilities">
       {capabilities().map((capability) => (
         <CapabilityButton

@@ -118,7 +118,12 @@ function pwaFixtures() {
       correlation: uuid(5),
     }),
   );
-  const shell = DashboardShell.create("approvals", "approvals", "CONNECTED", context);
+  const shell = DashboardShell.create(
+    "approvals",
+    "approvals",
+    "CONNECTED",
+    context,
+  );
   const capability = PresentedCapability.fromWire({
     capability_id: "home.lights.query",
     class: "QUERY",

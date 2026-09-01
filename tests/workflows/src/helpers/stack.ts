@@ -427,7 +427,9 @@ function validateDynamicConfig(): void {
   try {
     parsed = yaml.load(raw);
   } catch (err) {
-    throw new Error(`dynamic config YAML validation failed: ${path}: ${String(err)}`);
+    throw new Error(
+      `dynamic config YAML validation failed: ${path}: ${String(err)}`,
+    );
   }
   if (parsed === undefined || typeof parsed !== "object") {
     throw new Error(`dynamic config YAML must parse to an object: ${path}`);

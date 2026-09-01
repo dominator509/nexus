@@ -127,7 +127,10 @@ export class DesktopCommandDispatcher {
         request.invocation.correlation_id,
       );
     }
-    if (profile.risk !== request.risk || profile.approval !== request.approval_class) {
+    if (
+      profile.risk !== request.risk ||
+      profile.approval !== request.approval_class
+    ) {
       throw new Spec006Error(
         ErrorCode.Policy,
         `wire risk/approval for '${request.capability_id}' does not match its registered profile`,
