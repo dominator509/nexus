@@ -19,7 +19,7 @@
   },
   "cleanup": "fixtures joined; no orphan containers or processes",
   "correlation": {
-    "blocklist_domains": 1,
+    "blocklist_domains": 2,
     "dns_blocked": 2,
     "dns_total": 5,
     "openwrt_findings": 1,

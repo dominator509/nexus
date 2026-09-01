@@ -464,6 +464,28 @@ fn spawn_adguard_fixture(entries: Vec<QueryLogEntry>) -> (u16, thread::JoinHandl
                 "application/json".into(),
                 serde_json::json!({ "oldest": "", "data": data }).to_string(),
             )
+        } else if method == "GET" && path.contains("/control/filtering/status") {
+            // Documented FilterStatus (AUD-027): the CONFIGURED
+            // blocklist - enabled subscription + user rules.
+            (
+                200,
+                "application/json".into(),
+                serde_json::json!({
+                    "enabled": true,
+                    "interval": 86400,
+                    "filters": [{
+                        "enabled": true,
+                        "id": 1,
+                        "last_updated": "2026-08-20T00:00:00Z",
+                        "name": "AdGuard Simplified Domain Names filter",
+                        "rules_count": 5912,
+                        "url": "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt"
+                    }],
+                    "whitelist_filters": [],
+                    "user_rules": ["||evil.example.com^"]
+                })
+                .to_string(),
+            )
         } else {
             (404, "application/json".into(), "{}".into())
         }
@@ -650,9 +672,19 @@ fn ep030_m5_lf010_network_diagnosis() {
     let blocklist = adguard
         .read_blocklist(&tenant())
         .expect("adguard blocklist");
+    // AUD-027: blocklist reflects the CONFIGURED filter state - the
+    // enabled subscription and the user rule, never query-log hits.
     assert!(
-        blocklist.iter().any(|e| e.domain_ref == "evil.example.com"),
-        "observed blocklist entry required"
+        blocklist
+            .iter()
+            .any(|e| e.domain_ref == "||evil.example.com^"),
+        "configured blocklist user rule required"
+    );
+    assert!(
+        blocklist
+            .iter()
+            .any(|e| e.domain_ref == "AdGuard Simplified Domain Names filter"),
+        "configured blocklist subscription required"
     );
 
     // ---- 4. DERIVED: normalized facts with provenance ----
