@@ -36,10 +36,13 @@ function session(): AuthenticatedSession {
   });
 }
 
-const VOCABULARY = new KnownCapabilityVocabulary([
-  "home.lights.query",
-  "home.lights.set",
-]);
+const VOCABULARY = new KnownCapabilityVocabulary(
+  ["home.lights.query", "home.lights.set"],
+  [
+    { capability_id: "home.lights.query", risk: "R0", approval: "NONE" },
+    { capability_id: "home.lights.set", risk: "R1", approval: "NONE" },
+  ],
+);
 
 describe("ep033_failure_malformed_input", () => {
   it("rejects a session with unknown fields (deny-unknown fail closed)", () => {

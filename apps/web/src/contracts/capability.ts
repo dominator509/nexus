@@ -19,6 +19,7 @@ import {
   rejectUnknownFields,
 } from "./validate";
 import type { CapabilityDescriptor } from "@nexus/contracts";
+import type { ApprovalClass, RiskClass } from "./command";
 
 export const CAPABILITY_CLASSES = [
   "QUERY",
@@ -128,15 +129,35 @@ export class PresentedCapability {
 }
 
 /**
+ * Registered risk/approval profile for a known capability
+ * (AUD-039). The OPERATOR-DECLARED profile - never the wire - is
+ * the source of truth for the dispatcher's high-risk gate: a client
+ * cannot self-declare HUMAN (or any class) for a capability whose
+ * registered profile requires less or different authority.
+ */
+export interface RegisteredCapabilityProfile {
+  capability_id: string;
+  risk: RiskClass;
+  approval: ApprovalClass;
+}
+
+/**
  * Known capability vocabulary. A capability id outside this set is
  * UNSUPPORTED and must fail closed (directive E). The set is seeded
  * from the canonical repository capability namespace style
- * (e.g. "home.lights.query").
+ * (e.g. "home.lights.query"). `profiles` is the operator-declared
+ * risk/approval registry (AUD-039): unknown ids are UNSUPPORTED, and
+ * known-but-unregistered ids resolve for presentation but can never
+ * satisfy the dispatcher's high-risk gate.
  */
 export class KnownCapabilityVocabulary {
   readonly #known: ReadonlySet<string>;
+  readonly #profiles: ReadonlyMap<string, RegisteredCapabilityProfile>;
 
-  constructor(known: Iterable<string>) {
+  constructor(
+    known: Iterable<string>,
+    profiles?: Iterable<RegisteredCapabilityProfile>,
+  ) {
     const set = new Set<string>();
     for (const id of known) {
       if (typeof id !== "string" || id.length === 0) {
@@ -145,10 +166,30 @@ export class KnownCapabilityVocabulary {
       set.add(id);
     }
     this.#known = set;
+    const profileMap = new Map<string, RegisteredCapabilityProfile>();
+    for (const profile of profiles ?? []) {
+      if (!set.has(profile.capability_id)) {
+        throw new Error(
+          `registered profile for unknown capability '${profile.capability_id}'`,
+        );
+      }
+      profileMap.set(profile.capability_id, profile);
+    }
+    this.#profiles = profileMap;
   }
 
   isKnown(capabilityId: string): boolean {
     return this.#known.has(capabilityId);
+  }
+
+  /**
+   * The operator-declared risk/approval profile for a capability, or
+   * undefined when the capability is unknown OR unregistered. The
+   * dispatcher FAILS CLOSED on undefined for high-risk authorization
+   * (AUD-039): an unregistered capability can never satisfy the gate.
+   */
+  registeredProfile(capabilityId: string): RegisteredCapabilityProfile | undefined {
+    return this.#profiles.get(capabilityId);
   }
 
   /**

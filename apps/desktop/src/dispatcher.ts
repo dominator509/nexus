@@ -114,15 +114,36 @@ export class DesktopCommandDispatcher {
   }
 
   #enforceRiskApproval(request: TypedCommandRequest): void {
-    const riskIndex = RISK_CLASSES.indexOf(request.risk);
-    if (riskIndex < 3) {
-      return; // R0-R2 may proceed under the request's own approval class.
+    // AUD-039: the R3/R4 gate resolves the capability's risk and
+    // approval class from the OPERATOR-DECLARED registered profile -
+    // NEVER from the wire. A client that self-declares approval_class
+    // on the wire must not be able to mint authority for a capability
+    // whose registered profile requires less or different authority.
+    const profile = this.vocabulary.registeredProfile(request.capability_id);
+    if (profile === undefined) {
+      throw new Spec006Error(
+        ErrorCode.Policy,
+        `capability '${request.capability_id}' has no registered risk profile`,
+        request.invocation.correlation_id,
+      );
     }
-    // R3/R4: only HUMAN, STRONG_HUMAN, or FOUR_EYES may execute.
+    if (profile.risk !== request.risk || profile.approval !== request.approval_class) {
+      throw new Spec006Error(
+        ErrorCode.Policy,
+        `wire risk/approval for '${request.capability_id}' does not match its registered profile`,
+        request.invocation.correlation_id,
+      );
+    }
+    const riskIndex = RISK_CLASSES.indexOf(profile.risk);
+    if (riskIndex < 3) {
+      return; // R0-R2 may proceed under the registered approval class.
+    }
+    // R3/R4: only HUMAN, STRONG_HUMAN, or FOUR_EYES may execute -
+    // resolved from the REGISTERED profile, never the wire.
     if (
-      request.approval_class !== "HUMAN" &&
-      request.approval_class !== "STRONG_HUMAN" &&
-      request.approval_class !== "FOUR_EYES"
+      profile.approval !== "HUMAN" &&
+      profile.approval !== "STRONG_HUMAN" &&
+      profile.approval !== "FOUR_EYES"
     ) {
       throw new Spec006Error(
         ErrorCode.Policy,

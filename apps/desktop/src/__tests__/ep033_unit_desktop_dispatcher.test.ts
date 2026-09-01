@@ -52,11 +52,26 @@ function requestWire(
   };
 }
 
-const VOCABULARY = new KnownCapabilityVocabulary([
-  "home.lights.query",
-  "home.lights.set",
-  "sentinel.contain.quarantine",
-]);
+const VOCABULARY = new KnownCapabilityVocabulary(
+  ["home.lights.query", "home.lights.set", "sentinel.contain.quarantine"],
+  [
+    {
+      capability_id: "home.lights.query",
+      risk: "R0",
+      approval: "NONE",
+    },
+    {
+      capability_id: "home.lights.set",
+      risk: "R1",
+      approval: "NONE",
+    },
+    {
+      capability_id: "sentinel.contain.quarantine",
+      risk: "R4",
+      approval: "FOUR_EYES",
+    },
+  ],
+);
 
 describe("ep033_unit_desktop_dispatcher", () => {
   it("dispatches a validated command exactly once and returns EXECUTED", () => {
@@ -144,10 +159,12 @@ describe("ep033_unit_desktop_dispatcher", () => {
   it("fails closed on R3/R4 commands without human approval", () => {
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
     const active = session();
+    // Wire self-declares NONE (or any non-human class): must be denied
+    // regardless of what the wire claims.
     const risky = TypedCommandRequest.fromWire(
       requestWire({
         capability_id: "sentinel.contain.quarantine",
-        risk: "R3",
+        risk: "R4",
         approval_class: "NONE",
       }),
       VOCABULARY,
@@ -163,14 +180,90 @@ describe("ep033_unit_desktop_dispatcher", () => {
     }
   });
 
-  it("permits R3/R4 commands with HUMAN approval class", () => {
+  it("fails closed when the wire self-declares HUMAN for a capability registered as FOUR_EYES", () => {
+    // AUD-039 hostile regression: the wire must NEVER mint authority.
+    // sentinel.contain.quarantine is REGISTERED as R4/FOUR_EYES; a
+    // client that self-declares approval_class HUMAN on the wire must
+    // be denied - the registered profile is the only source of truth.
+    const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
+    const active = session();
+    const forged = TypedCommandRequest.fromWire(
+      requestWire({
+        capability_id: "sentinel.contain.quarantine",
+        risk: "R4",
+        approval_class: "HUMAN",
+      }),
+      VOCABULARY,
+      active,
+    );
+    try {
+      dispatcher.dispatch(forged, active, 1_700_000_001, () => {
+        expect.unreachable();
+      });
+      expect.unreachable();
+    } catch (error) {
+      expect((error as Spec006Error).code).toBe(ErrorCode.Policy);
+    }
+  });
+
+  it("fails closed when the wire self-declares a lower risk than registered", () => {
+    // AUD-039: risk is also registered, never self-declared. A client
+    // cannot downgrade sentinel.contain.quarantine to R1 to dodge the
+    // human-approval gate.
+    const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
+    const active = session();
+    const downgraded = TypedCommandRequest.fromWire(
+      requestWire({
+        capability_id: "sentinel.contain.quarantine",
+        risk: "R1",
+        approval_class: "NONE",
+      }),
+      VOCABULARY,
+      active,
+    );
+    try {
+      dispatcher.dispatch(downgraded, active, 1_700_000_001, () => {
+        expect.unreachable();
+      });
+      expect.unreachable();
+    } catch (error) {
+      expect((error as Spec006Error).code).toBe(ErrorCode.Policy);
+    }
+  });
+
+  it("fails closed when a capability has no registered risk profile", () => {
+    // AUD-039: an unregistered capability can never satisfy the
+    // high-risk gate - fail closed rather than trust the wire.
+    const bare = new KnownCapabilityVocabulary(["sentinel.contain.quarantine"]);
+    const dispatcher = new DesktopCommandDispatcher(bare);
+    const active = session();
+    const unregistered = TypedCommandRequest.fromWire(
+      requestWire({
+        capability_id: "sentinel.contain.quarantine",
+        risk: "R4",
+        approval_class: "FOUR_EYES",
+      }),
+      bare,
+      active,
+    );
+    try {
+      dispatcher.dispatch(unregistered, active, 1_700_000_001, () => {
+        expect.unreachable();
+      });
+      expect.unreachable();
+    } catch (error) {
+      expect((error as Spec006Error).code).toBe(ErrorCode.Policy);
+    }
+  });
+
+  it("permits R3/R4 commands whose wire class matches the registered profile", () => {
     const dispatcher = new DesktopCommandDispatcher(VOCABULARY);
     const active = session();
     const approved = TypedCommandRequest.fromWire(
       requestWire({
         capability_id: "sentinel.contain.quarantine",
-        risk: "R3",
-        approval_class: "HUMAN",
+        risk: "R4",
+        approval_class: "FOUR_EYES",
       }),
       VOCABULARY,
       active,
