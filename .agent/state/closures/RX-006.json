@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:ada12f9bc241ff950d49f18bf116e26d44db21a8174910e7babd16836590bd66",
+  "attestation_digest": "sha256:51a19cf75ff89e02ccddb76f9888e0539d802a4f33e7445c2db2aaf3e4b6ec0d",
   "closure_commit": "3caca47c6e26e313c67c8eccb3d6bb1fa9aed282",
   "created_at": "2026-08-31T12:14:32Z",
   "created_by": "node-close-v2.sh",
@@ -59,7 +59,7 @@
       "ref": "packages/mobile-contracts/lib/src/behavior/approval_binding.dart"
     },
     {
-      "digest": "sha256:c88cf1bbe34ac62674fe8ca58eb3c87bbdcd82bb0748f2cfa2a7649363ec7911",
+      "digest": "sha256:f3cfb85bbf7e1d578f32a5c305b35b3caf1c919782883ba65da7d042981e6714",
       "id": "approval-binding-tests",
       "ref": "packages/mobile-contracts/test/ep034_unit_approval_binding_test.dart"
     },
