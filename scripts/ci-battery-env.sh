@@ -172,6 +172,7 @@ export NEXUS_GLITCHTIP_DSN='${GT_DSN}'
 export NEXUS_GLITCHTIP_ORG='nexus-test-org'
 export NEXUS_GLITCHTIP_PROJECT='nexus-core'
 export NEXUS_GLITCHTIP_TOKEN='${gt_tok}'
-export NEXUS_GLITCHTIP_STOPPED_DSN=''
+export NEXUS_GLITCHTIP_REVOKED=''
+export NEXUS_GLITCHTIP_STOPPED_DSN='http://${keyhex}@127.0.0.1:1/${proj_id}'
 EOF
 ok "glitchtip provisioned and appended to battery env"

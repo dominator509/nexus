@@ -36,7 +36,7 @@ jobs:
         run: rustup component add clippy rustfmt
 
       - name: Sync Python environment (uv)
-        run: uv sync --frozen
+        run: uv sync --frozen --extra dev
 
       - name: Install pinned cargo security tools
         run: |
