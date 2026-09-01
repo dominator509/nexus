@@ -32,6 +32,9 @@ jobs:
           install: true
           cache: true
 
+      - name: Install clippy + rustfmt components
+        run: rustup component add clippy rustfmt
+
       - name: Install pinned cargo security tools
         run: |
           if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
@@ -102,6 +105,9 @@ jobs:
           install: true
           cache: true
 
+      - name: Install clippy + rustfmt components
+        run: rustup component add clippy rustfmt
+
       - name: Install pinned secrets tools (age, sops)
         run: |
           if ! age --version | grep -F '1.1.1'; then
@@ -133,5 +139,12 @@ jobs:
       - name: Preflight
         run: sh scripts/preflight.sh
 
+      - name: Provision battery fixtures (MinIO, SeaweedFS)
+        run: sh scripts/ci-battery-env.sh
+
       - name: Integration tests
-        run: sh scripts/test-integration.sh
+        run: |
+          set -a
+          . /tmp/battery.env
+          set +a
+          sh scripts/test-integration.sh
