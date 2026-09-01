@@ -58,11 +58,15 @@ describe("ep035_integration_enrollment_token", () => {
     expect("secret" in issued).toBe(false);
     expect("nonce" in issued).toBe(false);
 
-    // Fresh token -> claim succeeds.
-    expect(await store.claim(credential.credential_id, now + 1)).toBe(true);
+    // Fresh token + correct secret -> claim succeeds.
+    expect(await store.claim(credential.credential_id, secret, now + 1)).toBe(
+      true,
+    );
 
     // Replay -> denied (durable one-time boundary).
-    expect(await store.claim(credential.credential_id, now + 2)).toBe(false);
+    expect(await store.claim(credential.credential_id, secret, now + 2)).toBe(
+      false,
+    );
 
     // Exact-target readback: state is USED.
     const row = await store.read(credential.credential_id);
@@ -72,15 +76,49 @@ describe("ep035_integration_enrollment_token", () => {
     await db.close();
   });
 
+  it("denies consumption by credential ID alone (AUD-043)", async () => {
+    const db = await freshDb(stack);
+    const store = new EnrollmentTokenStore(db);
+    const now = 1_700_000_000;
+    const { credential, secret } = makeCredential(now);
+
+    await store.issue(credential);
+
+    // Wrong secret -> claim denied; the credential is NOT consumed.
+    expect(
+      await store.claim(credential.credential_id, "wrong-secret", now + 1),
+    ).toBe(false);
+    let row = await store.read(credential.credential_id);
+    expect(row!.state).toBe("ISSUED");
+
+    // Empty secret -> claim denied (hostile caller knowing only the ID).
+    expect(
+      await store.claim(credential.credential_id, "", now + 1),
+    ).toBe(false);
+    row = await store.read(credential.credential_id);
+    expect(row!.state).toBe("ISSUED");
+
+    // The correct secret still works afterwards (nothing was consumed).
+    expect(await store.claim(credential.credential_id, secret, now + 1)).toBe(
+      true,
+    );
+    row = await store.read(credential.credential_id);
+    expect(row!.state).toBe("USED");
+
+    await db.close();
+  });
+
   it("denies an expired token", async () => {
     const db = await freshDb(stack);
     const store = new EnrollmentTokenStore(db);
     const now = 1_700_000_000;
-    const { credential } = makeCredential(now, 100);
+    const { credential, secret } = makeCredential(now, 100);
 
     await store.issue(credential);
     // Claim after expiry -> denied.
-    expect(await store.claim(credential.credential_id, now + 200)).toBe(false);
+    expect(
+      await store.claim(credential.credential_id, secret, now + 200),
+    ).toBe(false);
     const row = await store.read(credential.credential_id);
     expect(row!.state).toBe("ISSUED"); // never flipped to USED
 
@@ -91,12 +129,14 @@ describe("ep035_integration_enrollment_token", () => {
     const db = await freshDb(stack);
     const store = new EnrollmentTokenStore(db);
     const now = 1_700_000_000;
-    const { credential } = makeCredential(now);
+    const { credential, secret } = makeCredential(now);
 
     await store.issue(credential);
     expect(await store.revoke(credential.credential_id, now + 1)).toBe(true);
     // Revoked token can never be claimed.
-    expect(await store.claim(credential.credential_id, now + 2)).toBe(false);
+    expect(
+      await store.claim(credential.credential_id, secret, now + 2),
+    ).toBe(false);
     // Second revoke returns false (already revoked).
     expect(await store.revoke(credential.credential_id, now + 3)).toBe(false);
     const row = await store.read(credential.credential_id);
@@ -131,12 +171,12 @@ describe("ep035_integration_enrollment_token", () => {
     const db = await freshDb(stack);
     const store = new EnrollmentTokenStore(db);
     const now = 1_700_000_000;
-    const { credential } = makeCredential(now);
+    const { credential, secret } = makeCredential(now);
 
     await store.issue(credential);
     const [a, b] = await Promise.all([
-      store.claim(credential.credential_id, now + 1),
-      store.claim(credential.credential_id, now + 1),
+      store.claim(credential.credential_id, secret, now + 1),
+      store.claim(credential.credential_id, secret, now + 1),
     ]);
     expect([a, b].filter(Boolean).length).toBe(1);
     const row = await store.read(credential.credential_id);

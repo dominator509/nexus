@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:125ca979b0079a9c0bee690bdf0cf48dab2bb0f92d4665510fc810e38fdcfe20",
+  "attestation_digest": "sha256:91ba5724c77ca6e9a33dd25dcab7608926d99cbf75c49046918993b41e9c26d1",
   "closure_commit": "dc459442e37b381a0dda693489fb6d16e8b4fe46",
   "created_at": "2026-09-01T17:24:01Z",
   "created_by": "node-close-v2.sh",
@@ -64,7 +64,7 @@
       "ref": "apps/web/vite.config.ts"
     },
     {
-      "digest": "sha256:82d1113685b7bbe47f19c8cf38c549beb0ecb883b6a7bdcf42592b90dd214461",
+      "digest": "sha256:2b1b19c372cf1ca9ccc2fced1e841ea85893cb93ce06ec0a5b6298b901db42bb",
       "id": "pwa-hostile",
       "ref": "apps/web/src/__tests__/ep033_aud038_pwa_entry.test.tsx"
     },

@@ -82,14 +82,21 @@ export class EnrollmentTokenStore {
   }
 
   /**
-   * Atomically claim a credential. Exactly one of:
-   *   - a fresh ISSUED credential within its window -> state USED, true
-   *   - anything else (used/revoked/expired/missing) -> false
-   * The single UPDATE is the durable one-time boundary: two concurrent
-   * claims race the row lock; exactly one flips ISSUED -> USED.
+   * Atomically claim a credential by proving possession of the bootstrap
+   * secret. Exactly one of:
+   *   - a fresh ISSUED credential within its window AND the presented
+   *     secret matching the stored hash -> state USED, true
+   *   - anything else (wrong secret, used/revoked/expired/missing) -> false
+   *
+   * AUD-043: consumption is bound to the secret IN THE SAME atomic
+   * UPDATE. The secret_hash comparison is part of the WHERE clause, so a
+   * caller knowing only the credential ID can never consume it; the
+   * single UPDATE is the durable one-time boundary (two concurrent
+   * claims race the row lock; exactly one flips ISSUED -> USED).
    */
   async claim(
     credentialId: string,
+    secret: string,
     nowUnixS: number,
     correlationId?: string,
   ): Promise<boolean> {
@@ -98,9 +105,10 @@ export class EnrollmentTokenStore {
           SET state = 'USED', used_at_unix_s = $2
         WHERE credential_id = $1
           AND state = 'ISSUED'
+          AND secret_hash = $3
           AND $2 BETWEEN issued_at_unix_s AND expires_at_unix_s
         RETURNING credential_id`,
-      [credentialId, nowUnixS],
+      [credentialId, nowUnixS, hashSecret(secret)],
       correlationId,
     );
     return (res.rowCount ?? 0) === 1;
