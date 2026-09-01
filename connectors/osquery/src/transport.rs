@@ -36,6 +36,7 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nexus_sentinel::{SentinelError, SentinelErrorCode};
+use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 use serde::{Deserialize, Serialize};
 
 /// A distributed query the collector issues to enrolled nodes
@@ -122,10 +123,31 @@ pub trait OsqueryTransport {
 /// Unit transport: always fails closed (used for the unbound case).
 impl OsqueryTransport for () {}
 
+/// TLS server identity of the collector endpoint (AUD-036). The
+/// documented osquery TLS remote API is served over REAL TLS only -
+/// never plaintext. The certificate is self-signed at construction
+/// (rcgen, ServerAuth); nodes pin it via `certificate_der()`.
+#[derive(Clone)]
+struct EndpointTlsIdentity {
+    server_config: Arc<rustls::ServerConfig>,
+    cert_der: Vec<u8>,
+}
+
+impl std::fmt::Debug for EndpointTlsIdentity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EndpointTlsIdentity")
+            .field("cert_der_len", &self.cert_der.len())
+            .finish()
+    }
+}
+
 /// Real osquery TLS remote API server (self-hosted collector).
 #[derive(Debug, Clone)]
 pub struct HttpOsqueryEndpoint {
     inner: Arc<Mutex<EndpointInner>>,
+    /// AUD-036: TLS server identity. None means certificate generation
+    /// failed and `serve()` fails closed - plaintext is never served.
+    identity: Option<Arc<EndpointTlsIdentity>>,
 }
 
 #[derive(Debug)]
@@ -144,7 +166,10 @@ struct EndpointInner {
 
 impl HttpOsqueryEndpoint {
     /// Create the endpoint. `queries` are the distributed queries the
-    /// collector issues to enrolled nodes.
+    /// collector issues to enrolled nodes. A self-signed TLS server
+    /// identity (ServerAuth, SAN localhost + 127.0.0.1) is generated;
+    /// `serve()` speaks the documented osquery TLS remote API over
+    /// REAL TLS only (AUD-036) - plaintext is never served.
     pub fn new(enroll_secret: impl Into<String>, queries: Vec<DistributedQuery>) -> Self {
         Self {
             inner: Arc::new(Mutex::new(EndpointInner {
@@ -156,6 +181,7 @@ impl HttpOsqueryEndpoint {
                 served: 0,
                 max_serves: 64,
             })),
+            identity: generate_tls_identity().map(Arc::new),
         }
     }
 
@@ -165,13 +191,31 @@ impl HttpOsqueryEndpoint {
         self.inner.lock().unwrap().enroll_secret.clone()
     }
 
+    /// The server certificate (DER) nodes pin to authenticate the
+    /// collector (AUD-036). Empty when TLS identity generation failed.
+    pub fn certificate_der(&self) -> Vec<u8> {
+        self.identity
+            .as_ref()
+            .map(|id| id.cert_der.clone())
+            .unwrap_or_default()
+    }
+
     /// Bind a REAL socket on 127.0.0.1 and serve sequential POST
-    /// requests with bounded capacity. Returns the bound port.
+    /// requests over REAL TLS with bounded capacity. Returns the bound
+    /// port. FAILS CLOSED (io error) without a TLS identity - the
+    /// documented osquery TLS remote API is never served as plaintext
+    /// (AUD-036).
     pub fn serve(&self) -> std::io::Result<u16> {
+        let Some(identity) = self.identity.clone() else {
+            return Err(std::io::Error::other(
+                "osquery endpoint has no TLS identity; refusing plaintext serve (AUD-036)",
+            ));
+        };
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let port = listener.local_addr()?.port();
         listener.set_nonblocking(false)?;
         let inner = Arc::clone(&self.inner);
+        let server_config = Arc::clone(&identity.server_config);
         thread::spawn(move || {
             let deadline = std::time::Instant::now() + Duration::from_secs(30);
             loop {
@@ -190,10 +234,7 @@ impl HttpOsqueryEndpoint {
                     break;
                 }
                 inner.served += 1;
-                let response = handle_request(&mut inner, &mut stream);
-                drop(inner);
-                let _ = stream.write_all(response.as_bytes());
-                let _ = stream.flush();
+                let _ = handle_tls_request(&mut inner, &mut stream, &server_config);
             }
         });
         Ok(port)
@@ -210,39 +251,118 @@ impl HttpOsqueryEndpoint {
     }
 }
 
-/// Serve one HTTP POST request (fail closed on malformed input).
-fn handle_request(inner: &mut EndpointInner, stream: &mut TcpStream) -> String {
+/// Generate a self-signed TLS server identity for the collector
+/// (AUD-036): rcgen KeyPair + ServerAuth certificate with SAN
+/// localhost + 127.0.0.1, loaded into a rustls ServerConfig (ring
+/// provider). None on any generation/load failure - the endpoint then
+/// refuses to serve (fail closed, no plaintext fallback).
+fn generate_tls_identity() -> Option<EndpointTlsIdentity> {
+    let key_pair = rcgen::KeyPair::generate().ok()?;
+    let mut params = rcgen::CertificateParams::new(Vec::new()).ok()?;
+    params
+        .subject_alt_names
+        .push(rcgen::SanType::DnsName("localhost".try_into().ok()?));
+    params
+        .subject_alt_names
+        .push(rcgen::SanType::IpAddress("127.0.0.1".parse().ok()?));
+    params.is_ca = rcgen::IsCa::NoCa;
+    params
+        .extended_key_usages
+        .push(rcgen::ExtendedKeyUsagePurpose::ServerAuth);
+    let cert = params.self_signed(&key_pair).ok()?;
+    let cert_der = cert.der().to_vec();
+    let key_der = key_pair.serialize_der();
+    let server_config = rustls::ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(
+            vec![CertificateDer::from(cert_der.clone())],
+            PrivateKeyDer::Pkcs8(key_der.into()),
+        )
+        .ok()?;
+    Some(EndpointTlsIdentity {
+        server_config: Arc::new(server_config),
+        cert_der,
+    })
+}
+
+/// Serve one HTTP POST request over REAL TLS (AUD-036: the documented
+/// osquery TLS remote API is never served as plaintext). Completes the
+/// TLS handshake (fail closed on any handshake error - plaintext bytes
+/// never reach routing), reads the request through the TLS stream,
+/// routes it, and writes the response through the same TLS connection.
+/// Returns false on any TLS/IO failure (the connection is unusable).
+fn handle_tls_request(
+    inner: &mut EndpointInner,
+    stream: &mut TcpStream,
+    server_config: &Arc<rustls::ServerConfig>,
+) -> bool {
     stream.set_read_timeout(Some(Duration::from_secs(5))).ok();
+    let mut conn = match rustls::ServerConnection::new(server_config.clone()) {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+    // Complete the TLS handshake; a client that cannot complete a real
+    // TLS handshake (e.g. plaintext bytes, untrusted client) fails
+    // closed here and never reaches the documented API surface.
+    loop {
+        match conn.complete_io(stream) {
+            Ok(_) => {
+                if !conn.is_handshaking() {
+                    break;
+                }
+            }
+            Err(_) => return false,
+        }
+    }
     let mut buf = Vec::new();
     let mut chunk = [0u8; 8192];
-    // Read until the header terminator is present.
-    let mut header_end = None;
-    loop {
-        match stream.read(&mut chunk) {
-            Ok(0) | Err(_) => break,
+    // Read until the header terminator is present. The loop only exits
+    // with the header-end offset (or fails closed); the terminator is
+    // therefore always present when the request is routed.
+    let header_end = loop {
+        match conn.reader().read(&mut chunk) {
+            Ok(0) => {
+                // No plaintext buffered: pump the socket, retry.
+                if conn.complete_io(stream).is_err() {
+                    return false;
+                }
+                continue;
+            }
             Ok(n) => {
                 buf.extend_from_slice(&chunk[..n]);
                 if let Some(pos) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
-                    header_end = Some(pos + 4);
-                    break;
+                    break pos + 4;
                 }
                 if buf.len() > 65536 {
-                    return http_json(400, r#"{"error":"request too large"}"#);
+                    return write_tls_response(
+                        &mut conn,
+                        stream,
+                        http_json(400, r#"{"error":"request too large"}"#),
+                    );
+                }
+            }
+            Err(_) => {
+                // WouldBlock: no plaintext buffered yet - pump the
+                // socket and retry (the peer's request may not have
+                // arrived in the handshake flight).
+                if conn.complete_io(stream).is_err() {
+                    return false;
                 }
             }
         }
-    }
-    let Some(end) = header_end else {
-        return http_json(400, r#"{"error":"malformed request"}"#);
     };
-    let head = String::from_utf8_lossy(&buf[..end]).to_string();
+    let head = String::from_utf8_lossy(&buf[..header_end]).to_string();
     let mut lines = head.lines();
     let request_line = lines.next().unwrap_or("");
     let mut parts = request_line.split_whitespace();
     let method = parts.next().unwrap_or("");
     let path = parts.next().unwrap_or("");
     if method != "POST" {
-        return http_json(405, r#"{"error":"method not allowed"}"#);
+        return write_tls_response(
+            &mut conn,
+            stream,
+            http_json(405, r#"{"error":"method not allowed"}"#),
+        );
     }
     // Content-Length framing.
     let mut content_length = 0usize;
@@ -252,16 +372,45 @@ fn handle_request(inner: &mut EndpointInner, stream: &mut TcpStream) -> String {
             content_length = v.trim().parse::<usize>().unwrap_or(0);
         }
     }
-    let mut body = buf[end..].to_vec();
+    let mut body = buf[header_end..].to_vec();
     while body.len() < content_length {
         let mut chunk = [0u8; 8192];
-        match stream.read(&mut chunk) {
-            Ok(0) | Err(_) => break,
+        match conn.reader().read(&mut chunk) {
+            Ok(0) => {
+                if conn.complete_io(stream).is_err() {
+                    return false;
+                }
+                continue;
+            }
             Ok(n) => body.extend_from_slice(&chunk[..n]),
+            Err(_) => {
+                if conn.complete_io(stream).is_err() {
+                    return false;
+                }
+            }
         }
     }
     let body = String::from_utf8_lossy(&body).to_string();
-    route(inner, path, &body)
+    let response = route(inner, path, &body);
+    write_tls_response(&mut conn, stream, response)
+}
+
+/// Write an HTTP response through the TLS connection and flush it to
+/// the socket (fail closed on any TLS/IO error). `complete_io` also
+/// reads; bound that wait so a client that stops sending after
+/// `Connection: close` does not stall the serve loop.
+fn write_tls_response(
+    conn: &mut rustls::ServerConnection,
+    stream: &mut TcpStream,
+    response: String,
+) -> bool {
+    if conn.writer().write_all(response.as_bytes()).is_err() {
+        return false;
+    }
+    stream
+        .set_read_timeout(Some(Duration::from_millis(50)))
+        .ok();
+    conn.complete_io(stream).is_ok()
 }
 
 /// Dispatch a documented endpoint (anti-hallucination: only the

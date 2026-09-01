@@ -17,6 +17,11 @@ nexus-osquery-connector = { path = "../../../connectors/osquery", version = "0.1
 nexus-opnsense-connector = { path = "../../../connectors/opnsense", version = "0.1.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# AUD-036: the LF-009 osquery node plays over REAL TLS (pinned
+# collector certificate) - the documented osquery TLS remote API is
+# never exercised over plaintext loopback.
+rustls = { version = "0.23.43", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rustls-pki-types = "1.15.1"
 
 [[test]]
 name = "lf009_sentinel_quarantine"

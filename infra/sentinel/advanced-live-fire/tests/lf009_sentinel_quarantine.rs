@@ -109,6 +109,68 @@ fn write_evidence(doc: serde_json::Value) {
     .expect("write evidence");
 }
 
+/// POST a documented osquery request to the collector over REAL TLS
+/// (AUD-036), pinning the collector's certificate. Returns the raw
+/// HTTP response body.
+fn osq_post(ep: &HttpOsqueryEndpoint, port: u16, path: &str, body: &str) -> String {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("connect osquery tls");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("timeout");
+    let mut roots = rustls::RootCertStore::empty();
+    roots
+        .add(rustls_pki_types::CertificateDer::from(ep.certificate_der()))
+        .expect("pin collector certificate");
+    let config = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    let mut conn = rustls::ClientConnection::new(
+        Arc::new(config),
+        "localhost".try_into().expect("server name"),
+    )
+    .expect("client connection");
+    conn.complete_io(&mut stream).expect("tls handshake");
+    let req = format!(
+        "POST {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    conn.writer().write_all(req.as_bytes()).expect("write");
+    conn.complete_io(&mut stream).expect("tls flush");
+    let mut resp: Vec<u8> = Vec::new();
+    let mut chunk = [0u8; 8192];
+    loop {
+        match conn.reader().read(&mut chunk) {
+            Ok(0) => break,
+            Ok(n) => {
+                resp.extend_from_slice(&chunk[..n]);
+                if let Some(end) = resp.windows(4).position(|w| w == b"\r\n\r\n") {
+                    let head = String::from_utf8_lossy(&resp[..end]);
+                    let clen = head
+                        .lines()
+                        .find_map(|l| {
+                            let l = l.to_ascii_lowercase();
+                            l.strip_prefix("content-length:")
+                                .and_then(|v| v.trim().parse::<usize>().ok())
+                        })
+                        .unwrap_or(0);
+                    if resp.len() >= end + 4 + clen {
+                        break;
+                    }
+                }
+            }
+            Err(_) => {
+                if conn.complete_io(&mut stream).is_err() {
+                    break;
+                }
+            }
+        }
+    }
+    let text = String::from_utf8_lossy(&resp).to_string();
+    let body_start = text.find("\r\n\r\n").map(|i| i + 4).unwrap_or(text.len());
+    text[body_start..].to_string()
+}
+
 // ---------------------------------------------------------------------------
 // Fixture plumbing (REAL sockets, controlled peers)
 // ---------------------------------------------------------------------------
@@ -456,7 +518,8 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     let (wz_port, wz_handle) = spawn_wazuh_fixture();
 
     // osquery: the production collector endpoint (self-hosted server);
-    // the test plays the enrolled node over a REAL socket.
+    // the test plays the enrolled node over a REAL TLS socket with the
+    // collector certificate pinned (AUD-036 - never plaintext).
     let osq_ep = HttpOsqueryEndpoint::new(
         CANARY_OSQ_SECRET.to_string(),
         vec![DistributedQuery {
@@ -465,65 +528,37 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         }],
     );
     let osq_port = osq_ep.serve().expect("osquery serve");
+    assert!(
+        !osq_ep.certificate_der().is_empty(),
+        "osquery collector must expose a TLS certificate to pin"
+    );
     {
-        // Node side (real socket): enroll, read the issued query, and
+        // Node side (REAL TLS): enroll, read the issued query, and
         // report an observed wildcard listener on the target host.
-        let mut stream = TcpStream::connect(("127.0.0.1", osq_port)).expect("connect osquery");
         let body =
             format!(r#"{{"enroll_secret":"{CANARY_OSQ_SECRET}","host_identifier":"srv-lab-1"}}"#);
-        let req = format!(
-            "POST /enroll HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        stream.write_all(req.as_bytes()).expect("enroll write");
-        let mut resp = String::new();
-        stream.read_to_string(&mut resp).expect("enroll read");
-        let node_key = serde_json::from_str::<serde_json::Value>(
-            &resp[resp.find("\r\n\r\n").map(|i| i + 4).unwrap_or(resp.len())..],
-        )
-        .expect("enroll json")
-        .get("node_key")
-        .and_then(|v| v.as_str())
-        .expect("node_key")
-        .to_string();
+        let resp = osq_post(&osq_ep, osq_port, "/enroll", &body);
+        let node_key = serde_json::from_str::<serde_json::Value>(&resp)
+            .expect("enroll json")
+            .get("node_key")
+            .and_then(|v| v.as_str())
+            .expect("node_key")
+            .to_string();
         assert!(!node_key.is_empty());
 
-        let mut stream = TcpStream::connect(("127.0.0.1", osq_port)).expect("connect osquery 2");
         let body = format!(r#"{{"node_key":"{node_key}"}}"#);
-        let req = format!(
-            "POST /distributed_read HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        stream.write_all(req.as_bytes()).expect("read write");
-        let mut resp = String::new();
-        stream.read_to_string(&mut resp).expect("read read");
-        let v: serde_json::Value = serde_json::from_str(
-            &resp[resp.find("\r\n\r\n").map(|i| i + 4).unwrap_or(resp.len())..],
-        )
-        .expect("read json");
+        let resp = osq_post(&osq_ep, osq_port, "/distributed_read", &body);
+        let v: serde_json::Value = serde_json::from_str(&resp).expect("read json");
         assert!(v["queries"]["listening_ports"]
             .as_str()
             .unwrap_or("")
             .contains("listening_ports"));
 
-        let mut stream = TcpStream::connect(("127.0.0.1", osq_port)).expect("connect osquery 3");
         let body = format!(
             r#"{{"node_key":"{node_key}","queries":{{"listening_ports":[{{"address":"0.0.0.0","port":"8443","protocol":"tcp","pid":"42"}}]}},"statuses":{{"listening_ports":0}}}}"#
         );
-        let req = format!(
-            "POST /distributed_write HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        stream.write_all(req.as_bytes()).expect("write write");
-        let mut resp = String::new();
-        stream.read_to_string(&mut resp).expect("write read");
-        let v: serde_json::Value = serde_json::from_str(
-            &resp[resp.find("\r\n\r\n").map(|i| i + 4).unwrap_or(resp.len())..],
-        )
-        .expect("write json");
+        let resp = osq_post(&osq_ep, osq_port, "/distributed_write", &body);
+        let v: serde_json::Value = serde_json::from_str(&resp).expect("write json");
         assert_eq!(v["node_invalid"], serde_json::Value::Bool(false));
     }
 
@@ -935,7 +970,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         "milestone": "M5",
         "proof": "LF-009",
         "surface": "documented Zeek JSON Streaming Logs + documented Suricata EVE JSON + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
-        "transport": "JsonLinesZeekTransport over REAL socket + JsonLinesSuricataTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
+        "transport": "JsonLinesZeekTransport over REAL socket + JsonLinesSuricataTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL TLS sockets, pinned collector certificate - AUD-036) + HttpOpnsenseTransport",
         "sensors": {
             // AUD-034: observed_at carries the TRUE minute - the epoch
             // formatter no longer shadows the minute with the month.
@@ -943,7 +978,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "suricata": { "events": suricata_events.len(), "source": SCANNER, "kind": "ScanDetected", "signature": "ET SCAN Potential SSH Scan" },
             "crowdsec": { "event": true, "indicator": SCANNER, "action": "ban" },
             "wazuh": { "alerts": wz_events.len(), "rule_level": 12, "severity": "HIGH" },
-            "osquery": { "events": osq_events.len(), "wildcard_listener": "0.0.0.0:8443", "endpoint_identity": osq_events[0].correlation.as_deref().unwrap_or("") }
+            "osquery": { "events": osq_events.len(), "wildcard_listener": "0.0.0.0:8443", "endpoint_identity": osq_events[0].correlation.as_deref().unwrap_or(""), "tls": "REAL_TLS_PINNED" }
         },
         "normalized_facts": normalized_facts,
         "incident": {
@@ -982,7 +1017,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "suricata_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures (AUD-030)",
             "crowdsec_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
             "wazuh_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
-            "osquery_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixture node",
+            "osquery_connector": "TRANSPORT_CERTIFIED over REAL TLS sockets vs controlled fixture node (AUD-036)",
             "opnsense_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
             "real_sensors": "NOT_ASSERTED",
             "real_firewall_appliance": "NOT_ASSERTED"

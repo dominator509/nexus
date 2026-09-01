@@ -11,3 +11,11 @@ nexus-sentinel = { path = "../../crates/nexus-sentinel", version = "0.1.0" }
 nexus-sentinel-advanced = { path = "../../infra/sentinel/advanced", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
+# AUD-036: the collector serves the DOCUMENTED osquery TLS remote API
+# over REAL TLS only - never plaintext loopback. Self-signed server
+# identity generated at the endpoint (rcgen, ServerAuth); rustls 0.23
+# (ring provider) matches the workspace lock graph (nexus-pki line).
+# Apache-2.0 OR MIT / Apache-2.0 OR ISC OR MIT.
+rcgen = "0.14.9"
+rustls = { version = "0.23.43", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rustls-pki-types = "1.15.1"

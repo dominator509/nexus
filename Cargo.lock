@@ -2192,6 +2192,9 @@ dependencies = [
  "nexus-domain",
  "nexus-sentinel",
  "nexus-sentinel-advanced",
+ "rcgen",
+ "rustls",
+ "rustls-pki-types",
  "serde",
  "serde_json",
 ]
@@ -2495,6 +2498,8 @@ dependencies = [
  "nexus-suricata-connector",
  "nexus-wazuh-connector",
  "nexus-zeek-connector",
+ "rustls",
+ "rustls-pki-types",
  "serde",
  "serde_json",
 ]

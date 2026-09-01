@@ -3,7 +3,7 @@
     "advanced_contract": "INTERNAL_CERTIFIED",
     "crowdsec_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
     "opnsense_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
-    "osquery_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixture node",
+    "osquery_connector": "TRANSPORT_CERTIFIED over REAL TLS sockets vs controlled fixture node (AUD-036)",
     "real_firewall_appliance": "NOT_ASSERTED",
     "real_sensors": "NOT_ASSERTED",
     "suricata_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures (AUD-030)",
@@ -87,7 +87,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "m11-aud035-1788243944",
+  "run_id": "m12-aud036-1788245885",
   "sensors": {
     "crowdsec": {
       "action": "ban",
@@ -97,6 +97,7 @@
     "osquery": {
       "endpoint_identity": "host=srv-lab-1:address=0.0.0.0:port=8443",
       "events": 1,
+      "tls": "REAL_TLS_PINNED",
       "wildcard_listener": "0.0.0.0:8443"
     },
     "suricata": {
@@ -118,7 +119,7 @@
     }
   },
   "surface": "documented Zeek JSON Streaming Logs + documented Suricata EVE JSON + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
-  "transport": "JsonLinesZeekTransport over REAL socket + JsonLinesSuricataTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
+  "transport": "JsonLinesZeekTransport over REAL socket + JsonLinesSuricataTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL TLS sockets, pinned collector certificate - AUD-036) + HttpOpnsenseTransport",
   "triage": {
     "priority": "CRITICAL"
   },
