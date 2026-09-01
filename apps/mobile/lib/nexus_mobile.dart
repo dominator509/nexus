@@ -19,3 +19,4 @@ export 'src/contracts/secure_store.dart';
 export 'src/contracts/session.dart';
 export 'src/contracts/validate.dart';
 export 'src/contracts/voice.dart';
+export 'src/native/security_channel.dart';

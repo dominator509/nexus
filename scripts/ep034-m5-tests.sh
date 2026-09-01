@@ -12,8 +12,16 @@
 #     the mobile step-up path, execute, and verify
 #   - current-run machine-readable evidence under .agent/state/evidence/
 #
-# Native biometric/passkey verification is NOT ASSERTED (deferred
-# native milestone); the journeys compose REAL production components.
+# AUD-040: the native security surface is IMPLEMENTED at the channel
+# contract - a real MethodChannel (nexus.mobile/security) with
+# Android (androidx.biometric + AndroidKeyStore) and iOS
+# (LocalAuthentication + Keychain) native implementations, and a
+# Dart shell that FAILS CLOSED on unbound/error/malformed platform
+# responses. HARDWARE verification (a physical biometric prompt on a
+# device) is NOT ASSERTED - no device is present on CI - so the
+# journeys compose REAL production components and the channel
+# contract is proven over the real MethodChannel machinery, while
+# hardware live-fire remains honestly unasserted.
 set -eu
 export CI=true
 
