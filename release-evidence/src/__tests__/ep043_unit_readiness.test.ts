@@ -8,6 +8,8 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { resolve } from "node:path";
+
 import {
   buildReleaseManifest,
   canonicalManifestPayload,
@@ -45,7 +47,7 @@ import {
   createShipGate,
 } from "@nexus/release-evidence";
 
-const ROOT = "/root/nexus";
+const ROOT = process.env.EP043_TEST_ROOT ?? resolve(process.cwd(), "..");
 const PATHS = defaultRepoPaths(ROOT);
 
 function allDoneNodes(count = 2): { nodeId: string; done: boolean }[] {

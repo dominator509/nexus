@@ -15,7 +15,7 @@
 import { execFile, spawn } from "node:child_process";
 import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -23,7 +23,7 @@ import { buildReleaseManifest, digestBytes } from "@nexus/release-evidence";
 
 const execFileAsync = promisify(execFile);
 
-const ROOT = process.env.EP043_TEST_ROOT ?? "/root/nexus";
+const ROOT = process.env.EP043_TEST_ROOT ?? resolve(process.cwd(), "..");
 const LOADER = join(
   ROOT,
   "release-evidence",
