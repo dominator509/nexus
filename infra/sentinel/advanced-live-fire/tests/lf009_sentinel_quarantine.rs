@@ -648,6 +648,25 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         Some("host=srv-lab-1:address=0.0.0.0:port=8443"),
         "finding correlation must bind the durable endpoint identity"
     );
+    // AUD-037: over the REAL socket the normalized finding carries the
+    // collector's REAL stamped observation time - never the fabricated
+    // constant - and a collision-proof event id binding the endpoint.
+    assert!(
+        osq_events[0].observed_at.ends_with('Z'),
+        "osquery observed_at is RFC3339 UTC"
+    );
+    assert!(
+        osq_events[0].observed_at != "2026-08-20T00:00:00Z",
+        "osquery observed_at must never be the fabricated constant"
+    );
+    assert!(
+        osq_events[0].event_id.as_str().contains("srv-lab-1"),
+        "event id binds the durable endpoint identity"
+    );
+    assert!(
+        osq_events[0].event_id.as_str().contains("listening_ports"),
+        "event id binds the query id"
+    );
 
     let opn_caps = opnsense.capabilities();
     assert!(opn_caps.contains(SentinelCapabilityKind::ReadFirewallTelemetry));
@@ -978,7 +997,11 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "suricata": { "events": suricata_events.len(), "source": SCANNER, "kind": "ScanDetected", "signature": "ET SCAN Potential SSH Scan" },
             "crowdsec": { "event": true, "indicator": SCANNER, "action": "ban" },
             "wazuh": { "alerts": wz_events.len(), "rule_level": 12, "severity": "HIGH" },
-            "osquery": { "events": osq_events.len(), "wildcard_listener": "0.0.0.0:8443", "endpoint_identity": osq_events[0].correlation.as_deref().unwrap_or(""), "tls": "REAL_TLS_PINNED" }
+            // AUD-036: REAL TLS pinned collector certificate.
+            // AUD-037: observed_at is the collector's REAL stamped
+            // observation time (never the fabricated constant) and the
+            // event id binds host + query + batch sequence + index.
+            "osquery": { "events": osq_events.len(), "wildcard_listener": "0.0.0.0:8443", "endpoint_identity": osq_events[0].correlation.as_deref().unwrap_or(""), "tls": "REAL_TLS_PINNED", "observed_at": osq_events[0].observed_at, "event_id": osq_events[0].event_id.as_str() }
         },
         "normalized_facts": normalized_facts,
         "incident": {

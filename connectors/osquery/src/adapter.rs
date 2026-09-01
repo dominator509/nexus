@@ -145,10 +145,28 @@ impl<T: OsqueryTransport> EndpointTelemetryProvider for OsqueryEndpointTelemetry
             }
             let mut finding_count = 0usize;
             for (i, row) in result.rows.iter().enumerate() {
-                let Some(event) =
-                    normalize_row(tenant_id, &result.host_identifier, &result.query_id, i, row)?
-                else {
-                    continue;
+                let event = match normalize_row(
+                    tenant_id,
+                    &result.host_identifier,
+                    &result.query_id,
+                    result.observed_at,
+                    result.batch_seq,
+                    i,
+                    row,
+                ) {
+                    Ok(Some(event)) => event,
+                    Ok(None) => continue,
+                    Err(err) => {
+                        // Fail-closed normalization is AUDITED like
+                        // every other denial (never silent).
+                        self.observability.record(SentinelAuditEntry::new(
+                            "osquery.read_telemetry",
+                            "failed",
+                            format!("row normalization failed: {}", err.message),
+                            tenant_id.as_str(),
+                        ));
+                        return Err(err);
+                    }
                 };
                 finding_count += 1;
                 events.push(event);
@@ -179,11 +197,18 @@ impl<T: OsqueryTransport> EndpointTelemetryProvider for OsqueryEndpointTelemetry
 /// None when the row is observed telemetry that does not match an
 /// owned rule (never fabricated). `host_identifier` is the durable
 /// endpoint identity of the reporting node (AUD-035): every normalized
-/// finding is attributable to a specific endpoint.
+/// finding is attributable to a specific endpoint. `observed_at` is
+/// the REAL observation time stamped by the collector at write
+/// receipt (AUD-037) - a finding NEVER carries a fabricated time, and
+/// telemetry without a stamped observation time fails closed. The
+/// event id binds host + query + batch sequence + row index so it can
+/// never collide across batches or endpoints (AUD-037).
 fn normalize_row(
     tenant_id: &TenantId,
     host_identifier: &str,
     query_id: &str,
+    observed_at: i64,
+    batch_seq: u64,
     index: usize,
     row: &serde_json::Value,
 ) -> Result<Option<SecurityEvent>, SentinelError> {
@@ -200,12 +225,35 @@ fn normalize_row(
     if address != "0.0.0.0" && address != "::" {
         return Ok(None);
     }
+    // AUD-037: a finding must carry the REAL observation time. If the
+    // transport never stamped one (0), normalization fails closed -
+    // fabricating a timestamp would repeat the audited lie.
+    if observed_at <= 0 {
+        return Err(SentinelError::new(
+            SentinelErrorCode::ExternalProvider,
+            format!(
+                "osquery observed telemetry for query {query_id} has no stamped observation time"
+            ),
+            None,
+            None,
+            None,
+            None,
+        ));
+    }
     let port = row.get("port").and_then(|v| v.as_str()).unwrap_or("?");
     let protocol = row
         .get("protocol")
         .and_then(|v| v.as_str())
         .unwrap_or_default();
-    let event_id = SecurityEventId::new(format!("osquery-{query_id}-{index}")).map_err(|_| {
+    // AUD-037: collision-proof event id. The previous osquery-{query}-
+    // {index} id collided across batches (same query, same row index)
+    // and across endpoints (same query, same index, different host).
+    // Host + query + batch sequence + row index is unique per
+    // observation.
+    let event_id = SecurityEventId::new(format!(
+        "osquery-{host_identifier}-{query_id}-{batch_seq}-{index}"
+    ))
+    .map_err(|_| {
         SentinelError::new(
             SentinelErrorCode::Validation,
             "osquery row cannot form event id",
@@ -215,6 +263,10 @@ fn normalize_row(
             None,
         )
     })?;
+    // AUD-037: the observed_at field is the collector's REAL stamped
+    // observation time rendered to RFC3339 UTC - never a fabricated
+    // constant.
+    let observed_at_rfc3339 = format!("{}Z", epoch_seconds_to_rfc3339(observed_at));
     // AUD-035: the evidence reference and correlation BOTH carry the
     // durable endpoint identity so a finding can always be traced to
     // the endpoint that reported it.
@@ -225,13 +277,35 @@ fn normalize_row(
         FindingKind::BaselineViolation,
         FindingSeverity::Low,
         format!("osquery:{host_identifier}:{query_id}:{port}:{protocol}"),
-        "2026-08-20T00:00:00Z",
+        observed_at_rfc3339,
     )
     .with_correlation(format!(
         "host={host_identifier}:address={address}:port={port}"
     ))
     .with_state(AlertState::Open);
     Ok(Some(event))
+}
+
+/// Minimal RFC3339 UTC rendering of epoch seconds (AUD-037). The
+/// month MUST NOT shadow the minute variable (AUD-034 reference): the
+/// month binds to `mo`, the minute stays `m`, so the RFC3339 minute
+/// field always carries the true minute.
+fn epoch_seconds_to_rfc3339(secs: i64) -> String {
+    // Days-from-epoch civil calendar (Howard Hinnant's algorithm).
+    let days = secs.div_euclid(86_400);
+    let rem = secs.rem_euclid(86_400);
+    let (h, m, s) = (rem / 3600, (rem % 3600) / 60, rem % 60);
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let mo = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if mo <= 2 { y + 1 } else { y };
+    format!("{y:04}-{mo:02}-{d:02}T{h:02}:{m:02}:{s:02}")
 }
 
 #[cfg(test)]
@@ -273,6 +347,8 @@ mod tests {
                     "address": "0.0.0.0", "port": "8443", "protocol": "tcp"
                 })],
                 status: 0,
+                observed_at: 1_720_000_000,
+                batch_seq: 1,
             }],
         };
         let p = OsqueryEndpointTelemetryProvider::new(transport);
@@ -336,9 +412,182 @@ mod tests {
             Some("host=host-1:address=0.0.0.0:port=8443")
         );
         assert_eq!(events[0].state, AlertState::Open);
+        // AUD-037: the finding's observed_at is the collector's REAL
+        // stamped observation time - never the fabricated constant
+        // "2026-08-20T00:00:00Z" - and the event id is collision-proof.
+        assert_ne!(events[0].observed_at, "2026-08-20T00:00:00Z");
+        assert!(
+            events[0].observed_at.ends_with('Z'),
+            "observed_at is RFC3339 UTC"
+        );
+        assert!(
+            events[0].event_id.as_str().contains("host-1"),
+            "event id binds the durable endpoint identity"
+        );
+        assert!(
+            events[0].event_id.as_str().contains("listening_ports"),
+            "event id binds the query id"
+        );
         let entries = p.audit_entries();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].outcome, "ok");
+    }
+
+    #[test]
+    fn ep031_unit_osquery_observed_at_is_real_stamped_time() {
+        // AUD-037: the RFC3339 observed_at must equal the collector's
+        // REAL stamped seconds rendered to UTC - never a fabricated
+        // constant. A fixed stamp is used so the assertion is exact.
+        let transport = StubObservedTransport {
+            observed: vec![ObservedOsqueryResult {
+                host_identifier: "host-1".to_string(),
+                query_id: "listening_ports".to_string(),
+                rows: vec![serde_json::json!({
+                    "address": "0.0.0.0", "port": "8443", "protocol": "tcp"
+                })],
+                status: 0,
+                observed_at: 1_720_000_000,
+                batch_seq: 7,
+            }],
+        };
+        let p = OsqueryEndpointTelemetryProvider::new(transport);
+        let events = p.read_telemetry(&tenant()).unwrap();
+        assert_eq!(events.len(), 1);
+        // 1720000000 = 2024-07-03T09:46:40Z (Python-confirmed).
+        assert_eq!(events[0].observed_at, "2024-07-03T09:46:40Z");
+        assert_eq!(
+            events[0].event_id.as_str(),
+            "osquery-host-1-listening_ports-7-0"
+        );
+    }
+
+    #[test]
+    fn ep031_unit_osquery_two_batches_same_host_no_id_collision() {
+        // AUD-037: two distributed_write batches from the SAME host
+        // with the SAME query and the SAME row shape must mint
+        // DISTINCT event ids - the previous osquery-{query}-{index}
+        // id collided because the row index repeats every batch.
+        let transport = StubObservedTransport {
+            observed: vec![
+                ObservedOsqueryResult {
+                    host_identifier: "host-1".to_string(),
+                    query_id: "listening_ports".to_string(),
+                    rows: vec![serde_json::json!({
+                        "address": "0.0.0.0", "port": "8443", "protocol": "tcp"
+                    })],
+                    status: 0,
+                    observed_at: 1_720_000_000,
+                    batch_seq: 1,
+                },
+                ObservedOsqueryResult {
+                    host_identifier: "host-1".to_string(),
+                    query_id: "listening_ports".to_string(),
+                    rows: vec![serde_json::json!({
+                        "address": "0.0.0.0", "port": "8443", "protocol": "tcp"
+                    })],
+                    status: 0,
+                    observed_at: 1_720_000_100,
+                    batch_seq: 2,
+                },
+            ],
+        };
+        let p = OsqueryEndpointTelemetryProvider::new(transport);
+        let events = p.read_telemetry(&tenant()).unwrap();
+        assert_eq!(events.len(), 2);
+        assert_ne!(events[0].event_id, events[1].event_id);
+        assert!(
+            events[0].event_id.as_str().contains("-1-0"),
+            "first batch sequence bound"
+        );
+        assert!(
+            events[1].event_id.as_str().contains("-2-0"),
+            "second batch sequence bound"
+        );
+    }
+
+    #[test]
+    fn ep031_unit_osquery_two_hosts_no_id_collision() {
+        // AUD-037: the SAME query and row index from DIFFERENT hosts
+        // must mint DISTINCT event ids - the previous id had no host
+        // component, so two endpoints produced identical ids.
+        let transport = StubObservedTransport {
+            observed: vec![
+                ObservedOsqueryResult {
+                    host_identifier: "host-1".to_string(),
+                    query_id: "listening_ports".to_string(),
+                    rows: vec![serde_json::json!({
+                        "address": "0.0.0.0", "port": "8443", "protocol": "tcp"
+                    })],
+                    status: 0,
+                    observed_at: 1_720_000_000,
+                    batch_seq: 1,
+                },
+                ObservedOsqueryResult {
+                    host_identifier: "host-2".to_string(),
+                    query_id: "listening_ports".to_string(),
+                    rows: vec![serde_json::json!({
+                        "address": "0.0.0.0", "port": "8443", "protocol": "tcp"
+                    })],
+                    status: 0,
+                    observed_at: 1_720_000_000,
+                    batch_seq: 1,
+                },
+            ],
+        };
+        let p = OsqueryEndpointTelemetryProvider::new(transport);
+        let events = p.read_telemetry(&tenant()).unwrap();
+        assert_eq!(events.len(), 2);
+        assert_ne!(events[0].event_id, events[1].event_id);
+        assert!(events[0].event_id.as_str().contains("host-1"));
+        assert!(events[1].event_id.as_str().contains("host-2"));
+    }
+
+    #[test]
+    fn ep031_unit_osquery_unstamped_observation_time_fails_closed() {
+        // AUD-037: telemetry WITHOUT a stamped observation time must
+        // fail closed (ExternalProvider) - the adapter never fabricates
+        // a timestamp to replace the missing observation time.
+        let transport = StubObservedTransport {
+            observed: vec![ObservedOsqueryResult {
+                host_identifier: "host-1".to_string(),
+                query_id: "listening_ports".to_string(),
+                rows: vec![serde_json::json!({
+                    "address": "0.0.0.0", "port": "8443", "protocol": "tcp"
+                })],
+                status: 0,
+                observed_at: 0,
+                batch_seq: 1,
+            }],
+        };
+        let p = OsqueryEndpointTelemetryProvider::new(transport);
+        let err = p.read_telemetry(&tenant()).unwrap_err();
+        assert_eq!(err.code, SentinelErrorCode::ExternalProvider);
+        assert!(
+            p.audit_entries().iter().any(|e| e.outcome == "failed"),
+            "denial recorded"
+        );
+    }
+
+    #[test]
+    fn ep031_unit_epoch_seconds_to_rfc3339_never_shadows_minute() {
+        // AUD-037 + AUD-034 reference: the RFC3339 minute field must
+        // carry the TRUE minute. 1755650000 = 2025-08-20T00:33:20Z
+        // (August) - a month/minute shadow would render 00:08:20.
+        assert_eq!(
+            epoch_seconds_to_rfc3339(1_755_650_000),
+            "2025-08-20T00:33:20"
+        );
+        assert_eq!(
+            epoch_seconds_to_rfc3339(1_755_650_099),
+            "2025-08-20T00:34:59"
+        );
+        // Late-year sample: 2025-12-31T23:59:59Z.
+        assert_eq!(
+            epoch_seconds_to_rfc3339(1_767_225_599),
+            "2025-12-31T23:59:59"
+        );
+        // Epoch 0 reference.
+        assert_eq!(epoch_seconds_to_rfc3339(0), "1970-01-01T00:00:00");
     }
 
     #[test]

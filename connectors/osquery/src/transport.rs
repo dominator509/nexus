@@ -62,6 +62,17 @@ pub struct ObservedOsqueryResult {
     /// SQLite status code; 0 = success, non-0 = query execution
     /// failure (documented).
     pub status: i64,
+    /// REAL observation time (unix seconds) stamped by the collector
+    /// when the distributed_write was received (AUD-037). 0 means no
+    /// observation time was stamped; the adapter fails closed rather
+    /// than fabricate one.
+    pub observed_at: i64,
+    /// Monotonic per-endpoint batch sequence (AUD-037): each
+    /// distributed_write receipt increments it once and every result
+    /// in that write carries the same sequence. Combined with the
+    /// durable host identity and the row index it makes event ids
+    /// collision-proof across batches and endpoints.
+    pub batch_seq: u64,
 }
 
 /// Documented enroll request body.
@@ -162,6 +173,10 @@ struct EndpointInner {
     observed: Vec<ObservedOsqueryResult>,
     served: usize,
     max_serves: usize,
+    /// Monotonic batch sequence (AUD-037): incremented once per
+    /// distributed_write receipt so event ids never collide across
+    /// batches from the same endpoint.
+    batch_seq: u64,
 }
 
 impl HttpOsqueryEndpoint {
@@ -180,6 +195,7 @@ impl HttpOsqueryEndpoint {
                 observed: Vec::new(),
                 served: 0,
                 max_serves: 64,
+                batch_seq: 0,
             })),
             identity: generate_tls_identity().map(Arc::new),
         }
@@ -469,6 +485,17 @@ fn mint_node_key() -> String {
     format!("node-{nanos}")
 }
 
+/// REAL observation time (unix seconds) at the instant a
+/// distributed_write is received (AUD-037). Never fabricated: 0 only
+/// when the system clock is before the epoch (impossible in
+/// practice), and the adapter fails closed on 0.
+fn now_unix_seconds() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
 fn route_distributed_read(inner: &mut EndpointInner, body: &str) -> String {
     let Ok(req) = serde_json::from_str::<serde_json::Value>(body) else {
         return http_json(400, r#"{"error":"malformed distributed_read request"}"#);
@@ -515,8 +542,16 @@ fn route_distributed_write(inner: &mut EndpointInner, body: &str) -> String {
             query_id: id,
             rows,
             status,
+            // AUD-037: the collector stamps the REAL observation time
+            // at write receipt - never a fabricated constant - and a
+            // monotonic batch sequence so ids never collide across
+            // batches.
+            observed_at: now_unix_seconds(),
+            batch_seq: inner.batch_seq,
         });
     }
+    // AUD-037: each write receipt is one batch.
+    inner.batch_seq += 1;
     http_json(200, r#"{"node_invalid":false}"#)
 }
 
@@ -614,6 +649,7 @@ impl OsqueryTransport for HttpOsqueryEndpoint {
             ));
         }
         let host_identifier = inner.host_identifier.clone().unwrap_or_default();
+        let batch_seq = inner.batch_seq;
         for (id, rows) in queries {
             let status = statuses.get(id).copied().unwrap_or(-1);
             inner.observed.push(ObservedOsqueryResult {
@@ -622,8 +658,16 @@ impl OsqueryTransport for HttpOsqueryEndpoint {
                 query_id: id.clone(),
                 rows: rows.clone(),
                 status,
+                // AUD-037: the collector stamps the REAL observation
+                // time at write receipt - never a fabricated constant
+                // - and a monotonic batch sequence so ids never
+                // collide across batches.
+                observed_at: now_unix_seconds(),
+                batch_seq,
             });
         }
+        // AUD-037: each write receipt is one batch.
+        inner.batch_seq += 1;
         Ok(())
     }
 
