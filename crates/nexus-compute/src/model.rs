@@ -178,6 +178,10 @@ pub struct ComputeNode {
     pub privacy: Privacy,
     pub api_health: ProviderApiHealth,
     pub resource_health: ResourceHealth,
+    /// AUD-048: an estimate of the node's monthly cost. None means the
+    /// cost is UNKNOWN - it is never fabricated. A placement constraint
+    /// with a cost ceiling fails closed on a node whose cost is unknown.
+    pub estimated_cost_per_month: Option<u64>,
 }
 
 impl ComputeNode {
@@ -212,6 +216,7 @@ impl ComputeNode {
             privacy,
             api_health: ProviderApiHealth::Unknown,
             resource_health: ResourceHealth::Unknown,
+            estimated_cost_per_month: None,
         })
     }
 }
@@ -393,6 +398,26 @@ impl PlacementConstraint {
                         node.node_id, required_vram
                     )));
                 }
+            }
+        }
+        // AUD-048: a declared cost ceiling is REAL. A node with no cost
+        // estimate cannot be proven within budget - fail closed rather
+        // than silently exceeding the operator's declared ceiling.
+        if let Some(max_cost) = self.max_estimated_cost_per_month {
+            match node.estimated_cost_per_month {
+                None => {
+                    return Err(ComputeError::policy(format!(
+                        "node {} has no estimated cost; cannot prove it is within declared budget ceiling {}",
+                        node.node_id, max_cost
+                    )));
+                }
+                Some(cost) if cost > max_cost => {
+                    return Err(ComputeError::policy(format!(
+                        "node {} estimated cost {} exceeds declared budget ceiling {}",
+                        node.node_id, cost, max_cost
+                    )));
+                }
+                Some(_) => {}
             }
         }
         Ok(())

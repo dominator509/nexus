@@ -712,6 +712,113 @@ fn ep036_unit_placement_ranks_observed_not_declared() {
 }
 
 #[test]
+fn ep036_unit_placement_cost_ceiling_exceeded_fails_closed() {
+    // AUD-048: a node whose estimated cost exceeds the operator's
+    // declared ceiling is never placed.
+    let mut n = node(
+        "n1",
+        ComputeClass::Cloud,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        8,
+        32,
+        200,
+    );
+    n.estimated_cost_per_month = Some(120);
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Cloud],
+        vec![],
+        Some(100),
+    )
+    .expect("constraint");
+    let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
+    assert!(!decision.is_assigned());
+    assert_eq!(
+        decision.failure_class,
+        Some(PlacementFailureClass::BudgetExceeded)
+    );
+}
+
+#[test]
+fn ep036_unit_placement_unknown_cost_fails_closed() {
+    // AUD-048: with a declared ceiling, a node whose cost has never been
+    // estimated cannot be proven within budget - fail closed, never
+    // assume the cost is acceptable.
+    let n = node(
+        "n1",
+        ComputeClass::Cloud,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        8,
+        32,
+        200,
+    );
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Cloud],
+        vec![],
+        Some(100),
+    )
+    .expect("constraint");
+    let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
+    assert!(!decision.is_assigned());
+    assert_eq!(
+        decision.failure_class,
+        Some(PlacementFailureClass::BudgetExceeded)
+    );
+}
+
+#[test]
+fn ep036_unit_placement_cost_ceiling_satisfied_selects() {
+    // AUD-048: a node proven within the declared ceiling is placed.
+    let mut n = node(
+        "n1",
+        ComputeClass::Cloud,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        8,
+        32,
+        200,
+    );
+    n.estimated_cost_per_month = Some(80);
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Cloud],
+        vec![],
+        Some(100),
+    )
+    .expect("constraint");
+    let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
+    assert!(decision.is_assigned());
+    assert_eq!(decision.failure_class, None);
+}
+
+#[test]
 fn ep036_unit_receipt_never_overclaims_readiness() {
     let receipt = ProvisioningReceipt::new(
         rid("r1"),
