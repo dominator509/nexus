@@ -20,7 +20,7 @@
     "correlation_id": "corr-lf009",
     "event_count": 5,
     "severity": "HIGH",
-    "summary": "observed source 192.168.40.77 corroborated across 3 independent plane(s) (network+reputation+endpoint), severity HIGH, 5 event(s) correlated"
+    "summary": "observed source 192.168.40.77 corroborated across 2 independent plane(s) (network+reputation), severity HIGH, 5 event(s) correlated"
   },
   "investigation": {
     "evidence_refs": 5
@@ -87,7 +87,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "local-run",
+  "run_id": "m8-aud032-1788233308",
   "sensors": {
     "crowdsec": {
       "action": "ban",
