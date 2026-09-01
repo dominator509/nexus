@@ -236,7 +236,6 @@ fn chrono_like_seconds_to_rfc3339(secs: i64) -> String {
     let days = secs.div_euclid(86_400);
     let rem = secs.rem_euclid(86_400);
     let (h, m, s) = (rem / 3600, (rem % 3600) / 60, rem % 60);
-    let _ = m;
     let z = days + 719_468;
     let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
     let doe = z - era * 146_097;
@@ -245,9 +244,13 @@ fn chrono_like_seconds_to_rfc3339(secs: i64) -> String {
     let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
     let mp = (5 * doy + 2) / 153;
     let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = if m <= 2 { y + 1 } else { y };
-    format!("{y:04}-{m:02}-{d:02}T{h:02}:{m:02}:{s:02}")
+    // AUD-034: the month MUST NOT shadow the minute variable. The
+    // previous code rebound `m` (the minute) to the month, so the
+    // RFC3339 minute field carried the month value (e.g. 08 for
+    // August) and the true minute was lost.
+    let mo = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if mo <= 2 { y + 1 } else { y };
+    format!("{y:04}-{mo:02}-{d:02}T{h:02}:{m:02}:{s:02}")
 }
 
 #[cfg(test)]
@@ -266,7 +269,34 @@ mod tests {
         assert_eq!(n.resp_p, Some(80));
         assert_eq!(n.note, "Scan::Port_Scan");
         assert_eq!(n.n, Some(42));
-        assert!(n.observed_at.starts_with("2025-08-20T"));
+        // AUD-034: the full timestamp must carry the TRUE minute, not
+        // the month. ts=1755650000 is 2025-08-20T00:33:20Z; the
+        // previous formatter corrupted the minute field to 08.
+        assert_eq!(n.observed_at, "2025-08-20T00:33:20.500Z");
+    }
+
+    #[test]
+    fn aud034_unit_zeek_rfc3339_keeps_minute_uncorrupted() {
+        // AUD-034 hostile regression: the epoch formatter previously
+        // shadowed the minute variable with the month, so the minute
+        // field of the RFC3339 timestamp carried the month value. A
+        // date/hour prefix check can never catch this - the full
+        // timestamp must be exact.
+        assert_eq!(
+            chrono_like_seconds_to_rfc3339(1_755_650_000),
+            "2025-08-20T00:33:20"
+        );
+        // Second sample with a different minute guards against a
+        // month-equals-minute coincidence (minute 34 vs month 08).
+        assert_eq!(
+            chrono_like_seconds_to_rfc3339(1_755_650_099),
+            "2025-08-20T00:34:59"
+        );
+        // Late-year sample: month 12 must not corrupt the minute.
+        assert_eq!(
+            chrono_like_seconds_to_rfc3339(1_765_972_800),
+            "2025-12-17T12:00:00"
+        );
     }
 
     #[test]

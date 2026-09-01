@@ -925,7 +925,9 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         "surface": "documented Zeek JSON Streaming Logs + documented Suricata EVE JSON + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
         "transport": "JsonLinesZeekTransport over REAL socket + JsonLinesSuricataTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
         "sensors": {
-            "zeek": { "events": zeek_events.len(), "source": SCANNER, "kind": "ScanDetected" },
+            // AUD-034: observed_at carries the TRUE minute - the epoch
+            // formatter no longer shadows the minute with the month.
+            "zeek": { "events": zeek_events.len(), "source": SCANNER, "kind": "ScanDetected", "observed_at": zeek_events[0].observed_at },
             "suricata": { "events": suricata_events.len(), "source": SCANNER, "kind": "ScanDetected", "signature": "ET SCAN Potential SSH Scan" },
             "crowdsec": { "event": true, "indicator": SCANNER, "action": "ban" },
             "wazuh": { "alerts": wz_events.len(), "rule_level": 12, "severity": "HIGH" },

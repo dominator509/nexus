@@ -87,7 +87,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "m9-aud033-1788235386",
+  "run_id": "m10-aud034-1788236921",
   "sensors": {
     "crowdsec": {
       "action": "ban",
@@ -112,6 +112,7 @@
     "zeek": {
       "events": 1,
       "kind": "ScanDetected",
+      "observed_at": "2024-07-03T09:46:40.000Z",
       "source": "192.168.40.77"
     }
   },
