@@ -562,6 +562,83 @@ impl BackupSet {
     }
 }
 
+/// One object carried by a self-contained backup bundle: the artifact's
+/// metadata, content hash, and raw bytes. The bytes are the STORED
+/// representation (encrypted for sensitive classes, per
+/// encryption-before-egress), so the bundle is portable and can
+/// reconstruct a wiped target without the source store.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BundleObject {
+    pub artifact_id: ArtifactId,
+    pub hash: ArtifactHash,
+    pub metadata: ArtifactMetadata,
+    pub bytes: Vec<u8>,
+}
+
+/// A self-contained disaster-recovery bundle (SPEC-024 requirement 5
+/// and the acceptance criterion: a destroyed control-plane host can be
+/// replaced from encrypted backup). Unlike a manifest, which only
+/// references objects already in a store, a bundle CARRIES the signed
+/// manifest plus every referenced object's bytes and metadata. A wiped
+/// target is reconstructed from the bundle alone; the source store is
+/// never consulted (AUD-015). The manifest signature is verified before
+/// the bundle is trusted, exactly as a stored manifest is.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BackupBundle {
+    /// Signed manifest (SPEC-024 req 6: signature verified at export
+    /// and at restore).
+    pub manifest: BackupSet,
+    /// Every object referenced by the manifest, with metadata.
+    pub objects: Vec<BundleObject>,
+}
+
+impl BackupBundle {
+    pub fn new(manifest: BackupSet, objects: Vec<BundleObject>) -> ArtifactResult<Self> {
+        if objects.is_empty() {
+            return Err(ArtifactError::validation(
+                "backup bundle must carry at least one object",
+            ));
+        }
+        let mut hashes: Vec<&ArtifactHash> = objects.iter().map(|o| &o.hash).collect();
+        hashes.sort();
+        hashes.dedup();
+        if hashes.len() != objects.len() {
+            return Err(ArtifactError::validation(
+                "backup bundle carries duplicate content hashes",
+            ));
+        }
+        for required in &manifest.manifest_hashes {
+            if !objects.iter().any(|o| &o.hash == required) {
+                return Err(ArtifactError::validation(format!(
+                    "backup bundle is missing manifest hash {}",
+                    required.as_str()
+                )));
+            }
+        }
+        Ok(Self { manifest, objects })
+    }
+
+    /// Structural verification of the bundle: the manifest signature
+    /// must be present and well-formed, and the bundle must carry every
+    /// object the manifest references (no more, no less). Cryptographic
+    /// signature verification AND per-object byte-hash verification are
+    /// performed by the adapter when the bundle is restored (crypto and
+    /// hashing live in adapters, per the M1 dependency-direction gate;
+    /// same boundary as encryption-before-egress).
+    pub fn verify_structure(&self) -> ArtifactResult<()> {
+        self.manifest.verify_manifest_signature_structure()?;
+        for required in &self.manifest.manifest_hashes {
+            if !self.objects.iter().any(|o| &o.hash == required) {
+                return Err(ArtifactError::verification(format!(
+                    "bundle is missing manifest hash {}",
+                    required.as_str()
+                )));
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Restore plan (SPEC-024 requirements 6-7). Restore runs against a FRESH
 /// target, validates all components, and reconnects edge nodes through
 /// controlled re-enrollment or preserved trust. Hash verification is

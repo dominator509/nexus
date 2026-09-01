@@ -940,3 +940,310 @@ fn ep037_aud050_delete_keeps_object_when_another_tenant_references_it() {
     assert_eq!(read_bytes, bytes);
     teardown(&root);
 }
+
+// ---------------------------------------------------------------------------
+// AUD-015: self-contained disaster recovery (BackupBundle)
+// ---------------------------------------------------------------------------
+
+/// Export a bundle, WIPE the source root, and reconstruct a fresh
+/// target from the bundle alone. The source store is never consulted:
+/// the bundle carries the signed manifest + every object's bytes and
+/// metadata, so a destroyed host can be replaced (SPEC-024 acceptance).
+#[test]
+fn ep037_aud015_bundle_reconstructs_wiped_target() {
+    let source_root = temp_root("aud015-source");
+    let mut source = LocalArtifactStore::open(&source_root).unwrap();
+    let bytes = b"aud015 dr payload".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(50);
+    let meta = metadata_for(id.clone(), &bytes, DataClass::Security).unwrap();
+    source
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    let backup = BackupSet::new(
+        "b-aud015-dr",
+        tenant(),
+        vec![DataClass::Security],
+        nexus_artifacts::BackendLocation::new(StorageBackend::Local, "backups/b-aud015-dr.json")
+            .unwrap(),
+        vec![h.clone()],
+        Some("vault:keys/aud015".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
+    let signed = sign_backup(backup.clone());
+    source
+        .create_backup(&tenant(), &signed, &correlation())
+        .unwrap();
+    // Export the self-contained bundle.
+    let bundle =
+        nexus_artifacts::dr::export_backup_bundle(&mut source, &tenant(), &signed, &correlation())
+            .unwrap();
+    assert_eq!(bundle.objects.len(), 1);
+    assert_eq!(bundle.objects[0].hash, h);
+    assert_eq!(bundle.objects[0].bytes, bytes);
+    // The bundle is self-contained: it must serialize and carry the
+    // bytes without the source store.
+    let serialized = serde_json::to_vec(&bundle).unwrap();
+    let reparsed: nexus_artifacts::BackupBundle = serde_json::from_slice(&serialized).unwrap();
+    assert_eq!(reparsed, bundle);
+
+    // WIPE the source root: the destroyed host has NO store left.
+    teardown(&source_root);
+    assert!(!source_root.exists());
+
+    // Fresh target: reconstructed from the bundle alone.
+    let fresh_root = temp_root("aud015-fresh");
+    let mut fresh = LocalArtifactStore::open(&fresh_root).unwrap();
+    let plan = nexus_artifacts::RestorePlan::new(
+        "r-aud015",
+        tenant(),
+        "b-aud015-dr",
+        "fresh-target",
+        vec![h.clone()],
+        Some(correlation()),
+    )
+    .unwrap();
+    let executed =
+        nexus_artifacts::dr::restore_bundle(&mut fresh, &tenant(), &plan, &bundle, &correlation())
+            .unwrap();
+    assert!(executed.all_hashes_verified());
+    assert_eq!(
+        executed.state,
+        nexus_artifacts::RestoreVerificationState::Validated
+    );
+    // The reconstructed target serves the artifact through the REAL
+    // adapter surface.
+    let (read_meta, read_bytes) = fresh.get(&tenant(), &id, &correlation()).unwrap();
+    assert_eq!(read_meta.content_hash, h);
+    assert_eq!(read_bytes, bytes);
+    teardown(&fresh_root);
+}
+
+/// Export fails closed when a manifest hash is not materializable
+/// (object deleted after backup): an incomplete bundle is never emitted.
+#[test]
+fn ep037_aud015_export_fails_closed_on_missing_object() {
+    let root = temp_root("aud015-export-missing");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"aud015 missing payload".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(51);
+    let meta = metadata_for(id.clone(), &bytes, DataClass::Personal).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    let backup = BackupSet::new(
+        "b-aud015-missing",
+        tenant(),
+        vec![DataClass::Personal],
+        nexus_artifacts::BackendLocation::new(
+            StorageBackend::Local,
+            "backups/b-aud015-missing.json",
+        )
+        .unwrap(),
+        vec![h.clone()],
+        Some("vault:keys/aud015".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
+    let signed = sign_backup(backup.clone());
+    store
+        .create_backup(&tenant(), &signed, &correlation())
+        .unwrap();
+    // Delete the object AFTER the backup: the manifest references a hash
+    // that can no longer be materialized.
+    store.delete(&tenant(), &id, &correlation()).unwrap();
+    let err =
+        nexus_artifacts::dr::export_backup_bundle(&mut store, &tenant(), &signed, &correlation())
+            .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Validation);
+    teardown(&root);
+}
+
+/// Restore fails closed when bundle object bytes are tampered: the
+/// adapter's hash-verified put rejects them before anything is written.
+#[test]
+fn ep037_aud015_restore_rejects_tampered_bundle_bytes() {
+    let source_root = temp_root("aud015-tamper-source");
+    let mut source = LocalArtifactStore::open(&source_root).unwrap();
+    let bytes = b"aud015 tamper payload".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(52);
+    let meta = metadata_for(id.clone(), &bytes, DataClass::Personal).unwrap();
+    source
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    let backup = BackupSet::new(
+        "b-aud015-tamper",
+        tenant(),
+        vec![DataClass::Personal],
+        nexus_artifacts::BackendLocation::new(
+            StorageBackend::Local,
+            "backups/b-aud015-tamper.json",
+        )
+        .unwrap(),
+        vec![h.clone()],
+        Some("vault:keys/aud015".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
+    let signed = sign_backup(backup.clone());
+    source
+        .create_backup(&tenant(), &signed, &correlation())
+        .unwrap();
+    let mut bundle =
+        nexus_artifacts::dr::export_backup_bundle(&mut source, &tenant(), &signed, &correlation())
+            .unwrap();
+    // Tamper with the carried bytes: the hash no longer matches.
+    bundle.objects[0].bytes = b"TAMPERED BYTES".to_vec();
+    let fresh_root = temp_root("aud015-tamper-fresh");
+    let mut fresh = LocalArtifactStore::open(&fresh_root).unwrap();
+    let plan = nexus_artifacts::RestorePlan::new(
+        "r-aud015-tamper",
+        tenant(),
+        "b-aud015-tamper",
+        "fresh-target",
+        vec![h.clone()],
+        Some(correlation()),
+    )
+    .unwrap();
+    let err =
+        nexus_artifacts::dr::restore_bundle(&mut fresh, &tenant(), &plan, &bundle, &correlation())
+            .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Verification);
+    // Zero partial reconstruction: the object was never written.
+    assert!(fresh.get(&tenant(), &id, &correlation()).is_err());
+    teardown(&source_root);
+    teardown(&fresh_root);
+}
+
+/// Restore fails closed on an unsigned manifest inside the bundle: the
+/// adapter's create_backup signature verification rejects it before
+/// any manifest is trusted (SPEC-024 req 6).
+#[test]
+fn ep037_aud015_restore_rejects_unsigned_bundle_manifest() {
+    let root = temp_root("aud015-unsigned");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"aud015 unsigned payload".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(53);
+    let meta = metadata_for(id.clone(), &bytes, DataClass::Personal).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    let backup = BackupSet::new(
+        "b-aud015-unsigned",
+        tenant(),
+        vec![DataClass::Personal],
+        nexus_artifacts::BackendLocation::new(
+            StorageBackend::Local,
+            "backups/b-aud015-unsigned.json",
+        )
+        .unwrap(),
+        vec![h.clone()],
+        Some("vault:keys/aud015".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
+    let signed = sign_backup(backup.clone());
+    store
+        .create_backup(&tenant(), &signed, &correlation())
+        .unwrap();
+    let bundle =
+        nexus_artifacts::dr::export_backup_bundle(&mut store, &tenant(), &signed, &correlation())
+            .unwrap();
+    // Strip the signature: the bundle is now unsigned.
+    let mut unsigned = bundle.clone();
+    unsigned.manifest.manifest_signature = None;
+    let plan = nexus_artifacts::RestorePlan::new(
+        "r-aud015-unsigned",
+        tenant(),
+        "b-aud015-unsigned",
+        "fresh-target",
+        vec![h.clone()],
+        Some(correlation()),
+    )
+    .unwrap();
+    let fresh_root = temp_root("aud015-unsigned-fresh");
+    let mut fresh = LocalArtifactStore::open(&fresh_root).unwrap();
+    let err = nexus_artifacts::dr::restore_bundle(
+        &mut fresh,
+        &tenant(),
+        &plan,
+        &unsigned,
+        &correlation(),
+    )
+    .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Verification);
+    teardown(&root);
+    teardown(&fresh_root);
+}
+
+/// A bundle for a foreign tenant is denied before any write.
+#[test]
+fn ep037_aud015_restore_rejects_foreign_tenant_bundle() {
+    let root = temp_root("aud015-foreign");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"aud015 foreign payload".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(54);
+    let meta = metadata_for(id.clone(), &bytes, DataClass::Personal).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    let backup = BackupSet::new(
+        "b-aud015-foreign",
+        tenant(),
+        vec![DataClass::Personal],
+        nexus_artifacts::BackendLocation::new(
+            StorageBackend::Local,
+            "backups/b-aud015-foreign.json",
+        )
+        .unwrap(),
+        vec![h.clone()],
+        Some("vault:keys/aud015".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
+    let signed = sign_backup(backup.clone());
+    store
+        .create_backup(&tenant(), &signed, &correlation())
+        .unwrap();
+    let bundle =
+        nexus_artifacts::dr::export_backup_bundle(&mut store, &tenant(), &signed, &correlation())
+            .unwrap();
+    // Restore the tenant-A bundle as tenant B: denied.
+    let plan = nexus_artifacts::RestorePlan::new(
+        "r-aud015-foreign",
+        tenant_b(),
+        "b-aud015-foreign",
+        "fresh-target",
+        vec![h.clone()],
+        Some(correlation()),
+    )
+    .unwrap();
+    let fresh_root = temp_root("aud015-foreign-fresh");
+    let mut fresh = LocalArtifactStore::open(&fresh_root).unwrap();
+    let err = nexus_artifacts::dr::restore_bundle(
+        &mut fresh,
+        &tenant_b(),
+        &plan,
+        &bundle,
+        &correlation(),
+    )
+    .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Policy);
+    teardown(&root);
+    teardown(&fresh_root);
+}
