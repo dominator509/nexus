@@ -385,6 +385,79 @@ void main() {
     );
 
     test(
+      'AUD-041: session whose tenant differs from the prompt is refused (AUTHORIZATION)',
+      () {
+        // The session must own the SAME tenant named by the approval
+        // prompt - a session from a different tenant can never bind
+        // this approval.
+        final service = ApprovalBindingService();
+        expect(
+          () => service.approve(
+            prompt: _prompt(),
+            session: _session(tenantId: '99999999-9999-4999-8999-999999999999'),
+            binding: _binding(),
+            actingDeviceId: '22222222-2222-4222-8222-222222222222',
+            actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+            nowUnixS: 500,
+          ),
+          throwsA(
+            isA<Spec006Error>().having(
+              (e) => e.code,
+              'code',
+              ErrorCode.authorization,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'AUD-041: binding that does not own the prompt tenant is refused (AUTHORIZATION)',
+      () {
+        // The device binding must own the SAME tenant named by the
+        // approval prompt - a binding registered under a different
+        // tenant can never authorize this approval.
+        final service = ApprovalBindingService();
+        expect(
+          () => service.approve(
+            prompt: _prompt(),
+            session: _session(),
+            binding: _binding(tenantId: '99999999-9999-4999-8999-999999999999'),
+            actingDeviceId: '22222222-2222-4222-8222-222222222222',
+            actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+            nowUnixS: 500,
+          ),
+          throwsA(
+            isA<Spec006Error>().having(
+              (e) => e.code,
+              'code',
+              ErrorCode.authorization,
+            ),
+          ),
+        );
+      },
+    );
+
+    test('AUD-041: NONE-strength session is refused for R4 (POLICY)', () {
+      // A session that never completed any authentication cannot
+      // resolve a high-risk approval.
+      final service = ApprovalBindingService();
+      expect(
+        () => service.approve(
+          prompt: _prompt(),
+          session: _session(strength: SessionStrength.none),
+          binding: _binding(),
+          actingDeviceId: '22222222-2222-4222-8222-222222222222',
+          actingPrincipalId: '33333333-3333-4333-8333-333333333333',
+          nowUnixS: 500,
+        ),
+        throwsA(
+          isA<Spec006Error>().having((e) => e.code, 'code', ErrorCode.policy),
+        ),
+      );
+    });
+
+    test(
       'AUD-041: R1 approval with a single-factor session is still accepted',
       () {
         final service = ApprovalBindingService();
