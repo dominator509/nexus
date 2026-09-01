@@ -23,6 +23,7 @@ import {
   readFileSync,
   renameSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -138,12 +139,47 @@ function rejectFileTarget(target: string): void {
  * Write a file atomically (temp file + rename) so cancelled or failed
  * work never leaves a partial target file (M4 partial-side-effect
  * guarantee). The temp path is owned by this process and removed by
- * the rename; a kill mid-write can only strand a .tmp-<pid> file.
+ * the rename; a kill mid-write strands a .tmp-<pid> file, so the path
+ * is tracked and unlinked by the SIGTERM/SIGINT cleanup handler below.
  */
+let pendingTmp: string | null = null;
+
 function writeAtomic(target: string, content: string): void {
   const tmp = `${target}.tmp-${process.pid}`;
-  writeFileSync(tmp, content, "utf8");
-  renameSync(tmp, target);
+  pendingTmp = tmp;
+  try {
+    writeFileSync(tmp, content, "utf8");
+    renameSync(tmp, target);
+  } finally {
+    pendingTmp = null;
+  }
+}
+
+/**
+ * Install SIGTERM/SIGINT cleanup so cancelled work never strands the
+ * atomic-write temp file (M4 no-partial-output guarantee, EP-043
+ * ep043_failure_cancelled_work_no_partial_output). With a handler
+ * installed, the process is not killed mid-syscall by the default
+ * signal behavior: a signal that arrives during the synchronous
+ * write+rename pair is delivered after the pair completes (target
+ * complete, no residue), and one that arrives before or between
+ * operations unlinks any tracked temp path. Either way no .tmp-*
+ * residue remains. The conventional exit codes are preserved (143 for
+ * SIGTERM, 130 for SIGINT).
+ */
+function installSignalCleanup(): void {
+  const cleanup = (code: number): void => {
+    if (pendingTmp !== null) {
+      try {
+        unlinkSync(pendingTmp);
+      } catch {
+        // Best effort: the temp file may already be renamed or absent.
+      }
+    }
+    process.exit(code);
+  };
+  process.on("SIGTERM", () => cleanup(143));
+  process.on("SIGINT", () => cleanup(130));
 }
 
 function runId(prefix: string): string {
@@ -411,8 +447,19 @@ async function commandVerifyManifest(): Promise<void> {
   const fullPath = resolve(root, manifestPath);
   let raw: string;
   try {
+    const st = statSync(fullPath);
+    if (!st.isFile()) {
+      // A FIFO (or socket/device) blocks reads forever; the manifest
+      // must be a regular file. Fail closed instead of hanging the
+      // bounded budget (ep043_failure_timeout_blocked_dependency).
+      throw new ShipError(
+        "VALIDATION_FAILED",
+        `release manifest is not a regular file: ${manifestPath}`,
+      );
+    }
     raw = readFileSync(fullPath, "utf8");
-  } catch {
+  } catch (error) {
+    if (error instanceof ShipError) throw error;
     throw new ShipError(
       "NOT_FOUND",
       `release manifest not found or unreadable: ${manifestPath}`,
@@ -473,6 +520,9 @@ async function commandVerifyManifest(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // M4 no-partial-output guarantee: cancelled work must never strand
+  // an atomic-write temp file.
+  installSignalCleanup();
   switch (command) {
     case "readiness":
       await commandReadiness();
