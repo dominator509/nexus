@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:69a2f8f4e50bc39620931f78cf763316183ae98368588678ab767b40546003f4",
+  "attestation_digest": "sha256:c8878fb90acb1e82fdf208bc2cab65d4ed0dceb3d0c1d19c393ad1c98ae25de2",
   "closure_commit": "9f8f7b6ce8d699d36112f9d6cbf86c699a9eefbe",
   "created_at": "2026-08-31T20:39:03Z",
   "created_by": "node-close-v2.sh",
@@ -18,7 +18,7 @@
   "node_verify_exit": 0,
   "proofs": [
     {
-      "digest": "sha256:354408ada3b5b85099bd8f159d11642c7db178455f32f5f01a90f3b9ef881686",
+      "digest": "sha256:8763740dc8b8d86b0732dbb04a8b845ede943d1f46bb0088dee6d05a9da1c9cd",
       "id": "manifest-real-artifacts",
       "ref": "release-evidence/src/cli.ts"
     },
@@ -33,17 +33,17 @@
       "ref": "release-evidence/src/repo-state.ts"
     },
     {
-      "digest": "sha256:d452ff26d8bfdedf9a65a83db07e4f98141896524c15522c7bb08882663cc53c",
+      "digest": "sha256:c292adc7bbce2f1fea9c3e6d5938cc8df0f4b8a15f8e727a5dbf95f087fc4f03",
       "id": "integration-proofs",
       "ref": "release-evidence/src/__tests__/ep043_integration.test.ts"
     },
     {
-      "digest": "sha256:72f3ea2e332bf600157514882d8ee4f59570b2759479de9035a44f4f4c60a832",
+      "digest": "sha256:86535113e224f6d2c97ffd1b6f3d5d214a8e32c0959fbb13b3acd06827810612",
       "id": "failure-proofs",
       "ref": "release-evidence/src/__tests__/ep043_failure.test.ts"
     },
     {
-      "digest": "sha256:573938646382b64b119351dab3a05a3751a78e26079d6f9d26d923828e79180f",
+      "digest": "sha256:6b16238f60052054ccb6beb7fd3aceb24628fc9885de4619331d6bb385a96a37",
       "id": "readiness-proofs",
       "ref": "release-evidence/src/__tests__/ep043_unit_readiness.test.ts"
     },

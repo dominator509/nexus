@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:22a23f1e7ace33f8f7b97d0ded970d02f7108ac90fd4259e3f692b22ab5e1d16",
+  "attestation_digest": "sha256:9daeabf62902344e62a91ac056cca1a7b4ead8333a826c7cd20a282a7c534439",
   "closure_commit": "ec0600001ad92096ec31d2586b75bb063a32aa16",
   "created_at": "2026-08-29T19:26:29Z",
   "created_by": "node-close-v2.sh",
@@ -35,7 +35,7 @@
       "ref": "scripts/rx003-ci-authority-tests.sh"
     },
     {
-      "digest": "sha256:ad6abf9cd82d0471053aef02b25add79bfc247d694a85cd19ff574add59a27a0",
+      "digest": "sha256:062e1fdc96fa317a00abd6d126bb1dedff9a5f1ffd16544998f38a1e20143715",
       "id": "ci-workflow",
       "ref": ".github/workflows/ci.yml"
     },

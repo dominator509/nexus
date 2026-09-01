@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:992e1e9ef89afffe7c0e20fa09d484ee9982b05deb169019ad7068dddf791d9b",
+  "attestation_digest": "sha256:1263d21dea6b7823bc228d4f80569c8bdf4b60aac8358456d84214507bee4a61",
   "closure_commit": "48518d583fc8fe944f57e54b19a42f14865b35d0",
   "created_at": "2026-08-30T23:58:07Z",
   "created_by": "node-close-v2.sh",
@@ -74,7 +74,7 @@
       "ref": "infra/temporal/vitest.config.ts"
     },
     {
-      "digest": "sha256:2423b6ec350a8408ccd3dc85c936a913a14e475f916b22493b1d24c3656cea51",
+      "digest": "sha256:138f57296a9e2a8b8ae23676cd222c502f16eb5c943b74035e0ba4a63420bf32",
       "id": "workflows_tests_pkg",
       "ref": "tests/workflows/package.json"
     }

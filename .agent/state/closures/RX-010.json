@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:2f90e60dfe543b54a8d8abadc503cfad69edebb697f726a408c45831eb5bfe32",
+  "attestation_digest": "sha256:f7e5b8fac66675b32595f7d6c5416659bb1f06d2d534b9983fe8ce98655f77fc",
   "closure_commit": "4943bfdb95dbdb50eeaa5708d68f750605eb3813",
   "created_at": "2026-08-31T17:56:45Z",
   "created_by": "node-close-v2.sh",
@@ -44,7 +44,7 @@
       "ref": "release-evidence/src/__tests__/ep043_unit_contract.test.ts"
     },
     {
-      "digest": "sha256:573938646382b64b119351dab3a05a3751a78e26079d6f9d26d923828e79180f",
+      "digest": "sha256:6b16238f60052054ccb6beb7fd3aceb24628fc9885de4619331d6bb385a96a37",
       "id": "readiness-tests",
       "ref": "release-evidence/src/__tests__/ep043_unit_readiness.test.ts"
     },

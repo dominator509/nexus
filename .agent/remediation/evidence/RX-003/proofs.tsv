@@ -1,6 +1,6 @@
 verify-log	.agent/remediation/evidence/RX-003/verify.log	sha256:e70355fed718e140b224c9cb4db15721aea9206af9fd7fb15cf0b1b7649a3007
 ladder-script	.agent/remediation/evidence/RX-003/ladder.sh	sha256:a93ef0b0f4d97f918c12ef60bc6c2dae18bf1c41998dd2c99bb0a16585ac6853
 battery-script	scripts/rx003-ci-authority-tests.sh	sha256:1bbe7ccf1e75e1bca9fe18a47ef82eb0f1e8af4feee7ea45eacc2c88c0049225
-ci-workflow	.github/workflows/ci.yml	sha256:ad6abf9cd82d0471053aef02b25add79bfc247d694a85cd19ff574add59a27a0
+ci-workflow	.github/workflows/ci.yml	sha256:062e1fdc96fa317a00abd6d126bb1dedff9a5f1ffd16544998f38a1e20143715
 release-workflow	.github/workflows/release.yml	sha256:9e9024999c32bf5f423820d4c5281465b150d11294633db0c1d55b40c81bda7b
 node-verify	scripts/nodes/RX-003.sh	sha256:0f00402f7186bca5d500da53eada6ea3591c56d33fab3676a5d9e6cfe46840e9
