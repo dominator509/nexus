@@ -87,7 +87,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "m6-aud030-final-1788232768",
+  "run_id": "local-run",
   "sensors": {
     "crowdsec": {
       "action": "ban",

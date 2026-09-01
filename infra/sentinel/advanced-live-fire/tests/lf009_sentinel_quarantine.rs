@@ -403,10 +403,10 @@ fn unknown_device() -> NetworkDevice {
     )
 }
 
-fn approved_proposal(provider: &OpnsenseFirewallProvider, d: &NetworkDevice) -> QuarantineProposal {
-    let proposal = provider
-        .propose_containment(&tenant(), None, d, Some(SCANNER))
-        .unwrap();
+fn approved_proposal_from(
+    provider: &OpnsenseFirewallProvider,
+    proposal: QuarantineProposal,
+) -> QuarantineProposal {
     // AUD-025: approval is an immutable receipt binding the exact
     // action - never a bare state mutation. The journey must go
     // through the real approve() binding.
@@ -703,6 +703,22 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     assert!(investigation.evidence_refs.len() >= 4);
 
     // ---- 8. RECOMMENDED: quarantine proposal (DATA, zero mutation) ----
+    // The provider proposal is DATA - creating it mutates nothing. It
+    // carries the provider-specific reversibility proof (AUD-031):
+    // only a proposal the provider certifies as reversible can
+    // preauthorize auto-execution.
+    let device = unknown_device();
+    let proposed = opnsense
+        .propose_containment(&tenant(), None, &device, Some(SCANNER))
+        .expect("propose containment");
+    assert_eq!(proposed.state, QuarantineState::Proposed);
+    assert!(proposed.preauthorized && proposed.reversible);
+    assert_eq!(proposed.approval_class, ApprovalClass::Human);
+    let reversibility_proof = format!(
+        "opnsense:proposal:{}:reversible",
+        proposed.proposal_id.as_str()
+    );
+
     let planner = SentinelResponsePlanner;
     let plan = planner
         .plan_response(
@@ -711,13 +727,37 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             &incident,
             ResponseKind::Quarantine,
             ApprovalClass::Human,
+            Some(&reversibility_proof),
         )
         .expect("quarantine plan");
     assert!(
         plan.preauthorized,
-        "bounded containment may be preauthorized"
+        "high-confidence bounded containment with provider reversibility proof may be preauthorized"
     );
     assert_eq!(plan.kind, ResponseKind::Quarantine);
+    assert_eq!(
+        plan.reversibility_proof.as_deref(),
+        Some(reversibility_proof.as_str()),
+        "preauthorization binds the provider reversibility proof"
+    );
+
+    // AUD-031: a bounded plan WITHOUT the provider reversibility
+    // proof is NOT preauthorized - it may execute under human
+    // approval but never auto-execute.
+    let no_proof_plan = planner
+        .plan_response(
+            &tenant(),
+            ResponsePlanId::new("plan-no-proof").unwrap(),
+            &incident,
+            ResponseKind::Quarantine,
+            ApprovalClass::Human,
+            None,
+        )
+        .expect("bounded plan without proof is still a plan");
+    assert!(
+        !no_proof_plan.preauthorized,
+        "bounded plan without provider reversibility proof must fail closed"
+    );
 
     // DESTRUCTIVE NEVER PREAUTHORIZED: no threat score may mint
     // authorization. Planning a wipe under Policy fails closed; even
@@ -728,6 +768,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         &incident,
         ResponseKind::Wipe,
         ApprovalClass::Policy,
+        None,
     );
     assert!(
         denied.is_err(),
@@ -740,6 +781,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             &incident,
             ResponseKind::Wipe,
             ApprovalClass::Human,
+            None,
         )
         .expect("human wipe plan allowed");
     assert!(
@@ -748,14 +790,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     );
 
     // ---- 9. AUTHORIZED: policy permits (approved + reversible) ----
-    let device = unknown_device();
-    let proposed = opnsense
-        .propose_containment(&tenant(), None, &device, Some(SCANNER))
-        .expect("propose containment");
-    assert_eq!(proposed.state, QuarantineState::Proposed);
-    assert!(proposed.preauthorized && proposed.reversible);
-    assert_eq!(proposed.approval_class, ApprovalClass::Human);
-    let approved = approved_proposal(&opnsense, &device);
+    let approved = approved_proposal_from(&opnsense, proposed);
 
     // ---- 10. EXECUTED: real provider mutation (addRule + apply) ----
     let applied = opnsense

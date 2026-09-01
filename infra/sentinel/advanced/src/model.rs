@@ -13,6 +13,8 @@ use nexus_domain::{ApprovalClass, IncidentId, TenantId};
 use nexus_sentinel::{FindingKind, FindingSeverity, NetworkDeviceId};
 use serde::{Deserialize, Serialize};
 
+use crate::error::AdvancedSentinelError;
+
 use crate::vocabulary::{
     AdvancedSensorProfile, AlertState, CorrelationConfidence, HoneypotId, HoneypotKind,
     HoneypotState, IncidentCorrelationId, IncidentState, InvestigationCaseId, InvestigationState,
@@ -293,6 +295,13 @@ impl InvestigationCase {
 /// destructive response (wipes, factory resets, broad lockouts,
 /// credential rotation) always requires human procedure and is never
 /// auto-applicable.
+/// A response plan (SPEC-013: response planning; AUD-031).
+///
+/// Preauthorization is NEVER derived from the kind alone. A plan is
+/// preauthorized only after `preauthorize()` binds BOTH the incident
+/// confidence (High) AND a provider-specific reversibility proof -
+/// only preauthorized high-confidence reversible containment may
+/// auto-execute.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResponsePlan {
     pub plan_id: ResponsePlanId,
@@ -302,7 +311,9 @@ pub struct ResponsePlan {
     pub state: ResponsePlanState,
     /// True when the plan is preauthorized high-confidence reversible
     /// (SPEC-013 behavior 5). Destructive kinds are never
-    /// preauthorized.
+    /// preauthorized; bounded kinds are preauthorized ONLY when
+    /// `preauthorize()` bound High confidence AND a provider-specific
+    /// reversibility proof (AUD-031).
     pub preauthorized: bool,
     /// Approval class required to execute (SPEC-013 behavior 6:
     /// destructive remediation requires human procedure).
@@ -310,6 +321,10 @@ pub struct ResponsePlan {
     /// Provider-neutral quarantine proposal reference when this plan
     /// carries containment.
     pub quarantine_proposal_ref: Option<String>,
+    /// Provider-specific reversibility proof bound at preauthorization
+    /// (AUD-031). None until the provider proved the containment is
+    /// reversible.
+    pub reversibility_proof: Option<String>,
     /// RFC3339 timestamp of plan creation.
     pub proposed_at: String,
 }
@@ -324,20 +339,50 @@ impl ResponsePlan {
         approval_class: ApprovalClass,
         proposed_at: impl Into<String>,
     ) -> Self {
-        // Destructive response can never be preauthorized: it always
-        // requires human procedure (SPEC-013 behavior 6).
-        let preauthorized = kind.is_bounded_containment();
+        // AUD-031: fail closed. Preauthorization is never derived from
+        // the kind alone; it is bound explicitly by preauthorize().
         Self {
             plan_id,
             incident_id,
             tenant_id,
             kind,
             state: ResponsePlanState::Proposed,
-            preauthorized,
+            preauthorized: false,
             approval_class,
             quarantine_proposal_ref: None,
+            reversibility_proof: None,
             proposed_at: proposed_at.into(),
         }
+    }
+
+    /// Bind preauthorization ONLY when the containment is bounded
+    /// reversible, the incident is high confidence, and the provider
+    /// supplied a reversibility proof (AUD-031). Fails closed
+    /// (Policy) otherwise - no threat score may mint authorization.
+    pub fn preauthorize(
+        mut self,
+        confidence: CorrelationConfidence,
+        reversibility_proof: impl Into<String>,
+    ) -> Result<Self, AdvancedSentinelError> {
+        if !self.kind.is_bounded_containment() {
+            return Err(AdvancedSentinelError::policy(
+                "only bounded reversible containment may be preauthorized",
+            ));
+        }
+        if confidence != CorrelationConfidence::High {
+            return Err(AdvancedSentinelError::policy(
+                "preauthorization requires high incident confidence",
+            ));
+        }
+        let proof = reversibility_proof.into();
+        if proof.trim().is_empty() {
+            return Err(AdvancedSentinelError::policy(
+                "preauthorization requires a provider-specific reversibility proof",
+            ));
+        }
+        self.preauthorized = true;
+        self.reversibility_proof = Some(proof);
+        Ok(self)
     }
 
     pub fn with_quarantine(mut self, proposal_ref: impl Into<String>) -> Self {
@@ -459,8 +504,10 @@ mod tests {
 
     #[test]
     fn ep031_unit_response_plan_destructive_never_preauthorized() {
-        // Bounded reversible containment may be preauthorized; a
-        // destructive plan always requires human procedure.
+        // AUD-031: preauthorization requires high confidence AND a
+        // provider-specific reversibility proof. A bounded plan is NOT
+        // preauthorized from the kind alone; a destructive plan is
+        // never preauthorized under any conditions.
         let containment = ResponsePlan::new(
             ResponsePlanId::new("plan-1").unwrap(),
             incident_id(),
@@ -469,7 +516,18 @@ mod tests {
             ApprovalClass::Human,
             "2026-08-20T00:00:00Z",
         );
-        assert!(containment.preauthorized);
+        assert!(
+            !containment.preauthorized,
+            "kind alone never mints preauthorization (AUD-031)"
+        );
+        let preauthorized = containment
+            .clone()
+            .preauthorize(
+                CorrelationConfidence::High,
+                "opnsense:proposal:p-1:reversible",
+            )
+            .expect("high-confidence bounded with provider proof may preauthorize");
+        assert!(preauthorized.preauthorized);
         let destructive = ResponsePlan::new(
             ResponsePlanId::new("plan-2").unwrap(),
             incident_id(),
@@ -481,6 +539,15 @@ mod tests {
         assert!(
             !destructive.preauthorized,
             "destructive never preauthorized"
+        );
+        assert!(
+            destructive
+                .preauthorize(
+                    CorrelationConfidence::High,
+                    "opnsense:proposal:p-1:reversible"
+                )
+                .is_err(),
+            "destructive cannot be preauthorized even with proof"
         );
         assert!(ResponseKind::Wipe.is_destructive());
     }

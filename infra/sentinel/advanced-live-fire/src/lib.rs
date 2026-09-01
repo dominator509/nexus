@@ -249,6 +249,11 @@ impl SecurityInvestigator for SentinelInvestigationService {
 /// Response planner: bounded containment may be preauthorized;
 /// destructive response always requires human procedure and is never
 /// preauthorized.
+///
+/// AUD-031: preauthorization is bound only when the incident is high
+/// confidence AND a provider-specific reversibility proof is supplied.
+/// A bounded plan without the proof is NOT preauthorized - it may be
+/// executed under explicit human approval, but never auto-executed.
 #[derive(Debug, Clone, Default)]
 pub struct SentinelResponsePlanner;
 
@@ -260,6 +265,7 @@ impl ResponsePlanner for SentinelResponsePlanner {
         incident: &Incident,
         kind: ResponseKind,
         approval_class: ApprovalClass,
+        reversibility_proof: Option<&str>,
     ) -> Result<ResponsePlan, SentinelError> {
         if kind.is_destructive() {
             // SPEC-013 behavior 6: destructive remediation requires
@@ -280,14 +286,24 @@ impl ResponsePlanner for SentinelResponsePlanner {
                 }
             }
         }
-        Ok(ResponsePlan::new(
+        let plan = ResponsePlan::new(
             plan_id,
             incident.incident_id.clone(),
             tenant_id.clone(),
             kind,
             approval_class,
             "2026-08-20T00:00:00Z",
-        ))
+        );
+        // AUD-031: bounded containment is preauthorized ONLY with high
+        // incident confidence AND a provider-specific reversibility
+        // proof. Without the proof the plan fails closed (not
+        // preauthorized); it may still execute under human approval.
+        if plan.kind.is_bounded_containment() {
+            if let Some(proof) = reversibility_proof {
+                return plan.preauthorize(incident.confidence, proof);
+            }
+        }
+        Ok(plan)
     }
 }
 

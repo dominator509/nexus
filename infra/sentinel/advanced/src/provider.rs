@@ -135,6 +135,12 @@ pub trait ResponsePlanner {
     /// response kind is allowed under the approval class: destructive
     /// kinds require human procedure (ApprovalClass::Human or
     /// stronger) and are never preauthorized.
+    ///
+    /// AUD-031: a bounded containment plan is preauthorized ONLY when
+    /// the incident is high confidence AND the caller supplies a
+    /// provider-specific reversibility proof. Without the proof the
+    /// plan is NOT preauthorized (fail closed); it may still be
+    /// executed under explicit human approval, but never auto-executed.
     fn plan_response(
         &self,
         tenant_id: &TenantId,
@@ -142,6 +148,7 @@ pub trait ResponsePlanner {
         incident: &Incident,
         kind: ResponseKind,
         approval_class: ApprovalClass,
+        reversibility_proof: Option<&str>,
     ) -> Result<ResponsePlan, AdvancedSentinelError>;
 }
 
@@ -309,6 +316,7 @@ impl ResponsePlanner for UnboundResponsePlanner {
         _incident: &Incident,
         _kind: ResponseKind,
         _approval_class: ApprovalClass,
+        _reversibility_proof: Option<&str>,
     ) -> Result<ResponsePlan, AdvancedSentinelError> {
         Err(AdvancedSentinelError::unavailable(
             "no response planner bound",
@@ -407,6 +415,7 @@ mod tests {
                 &incident,
                 ResponseKind::Quarantine,
                 ApprovalClass::Human,
+                None,
             )
             .is_err());
         let v = UnboundSecurityVerifier;
