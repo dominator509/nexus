@@ -1,0 +1,120 @@
+{
+  "attestation_digest": "sha256:559d1d034b4838312b31ab8dc8ab27a55763f424533231c70cce203aaf3bfbc0",
+  "closure_commit": "3824328a0ef35fd6c5f2c4c82fefa48170c43066",
+  "created_at": "2026-09-01T23:47:46Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:a6c636a8fb5d5bc02cb6057a271158cfe2e741c05363b9996f0f3c0a82fd1532",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-018/3824328a0ef35fd6c5f2c4c82fefa48170c43066",
+  "milestones": {
+    "max": 6,
+    "passed": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  "node": "RX-018",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:2487c461105741bd4a6fde432ddc26c40da615aee729d57c15af574e4beafd1f",
+      "id": "tenant-boundary-local",
+      "ref": "connectors/storage-local/src/lib.rs"
+    },
+    {
+      "digest": "sha256:2487c461105741bd4a6fde432ddc26c40da615aee729d57c15af574e4beafd1f",
+      "id": "shared-content-delete-local",
+      "ref": "connectors/storage-local/src/lib.rs"
+    },
+    {
+      "digest": "sha256:068d72b20b489754338ccb3aa0f59bd2f240238b4126e98e3f95b8b193674e8b",
+      "id": "encryption-verifier",
+      "ref": "connectors/storage-nas/src/lib.rs"
+    },
+    {
+      "digest": "sha256:75cbb3eaa1ea2ed5945a394694a112ed43fd141461383928740f7fa3165da16e",
+      "id": "encryption-verifier-model",
+      "ref": "crates/nexus-artifacts/src/model.rs"
+    },
+    {
+      "digest": "sha256:b7a140d41e4aedc6ec4b6bba5601a509fb9e05acbd8020f44d653b96132de1b5",
+      "id": "egress-wiring-s3",
+      "ref": "connectors/storage-s3/src/lib.rs"
+    },
+    {
+      "digest": "sha256:75cbb3eaa1ea2ed5945a394694a112ed43fd141461383928740f7fa3165da16e",
+      "id": "signed-manifest-model",
+      "ref": "crates/nexus-artifacts/src/model.rs"
+    },
+    {
+      "digest": "sha256:2487c461105741bd4a6fde432ddc26c40da615aee729d57c15af574e4beafd1f",
+      "id": "signed-manifest-adapter-local",
+      "ref": "connectors/storage-local/src/lib.rs"
+    },
+    {
+      "digest": "sha256:7b3d116a2dbdff821288fb597d3a7204c6e60849dff37de4279111ed822374fe",
+      "id": "self-contained-dr-bundle",
+      "ref": "crates/nexus-artifacts/src/dr.rs"
+    },
+    {
+      "digest": "sha256:f8638ce961954533601dc3077116229c2189432c956470e36f9e933e7d23de39",
+      "id": "destroyed-host-dr-lf002",
+      "ref": "tests/livefire/storage/tests/lf002_restore_existing_nexus.rs"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:a6c636a8fb5d5bc02cb6057a271158cfe2e741c05363b9996f0f3c0a82fd1532",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "nexus-artifacts-contract",
+        "passed": 30
+      },
+      {
+        "failed": 0,
+        "family": "storage-local",
+        "passed": 31
+      },
+      {
+        "failed": 0,
+        "family": "storage-nas",
+        "passed": 6
+      },
+      {
+        "failed": 0,
+        "family": "storage-s3",
+        "passed": 14
+      },
+      {
+        "failed": 0,
+        "family": "storage-seaweedfs",
+        "passed": 21
+      },
+      {
+        "failed": 0,
+        "family": "s3-lib",
+        "passed": 4
+      },
+      {
+        "failed": 0,
+        "family": "lf002-destroyed-host-livefire",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "lf020-portability-livefire",
+        "passed": 1
+      }
+    ],
+    "passed": 108
+  },
+  "verify_log": ".agent/remediation/evidence/RX-018/verify.log|sha256:1356919fbfb6b59cb1f974c870df94c7eef42b637048b6d223dddd11a7aa56e2",
+  "verify_sentinel": "verify: ok"
+}
