@@ -349,30 +349,17 @@ fn lf002_restore_existing_nexus_journey() {
         now_rfc3339(),
     )
     .unwrap();
-    let created = store
-        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
-        .unwrap();
-    assert_eq!(created.state, nexus_artifacts::BackupState::Created);
 
-    // ---------------------------------------------------------------- 4.
-    // FRESH deployment: genuinely fresh roots with NO pre-existing
-    // state for any domain.
-    let fresh_root = temp_root("fresh");
-    let mut fresh_store = LocalArtifactStore::open(&fresh_root).unwrap();
-    let fresh_skill_state = temp_root("skill-fresh").join("registry.json");
-    assert!(
-        !fresh_skill_state.exists(),
-        "fresh deployment must have no skills state"
-    );
-    let fresh_connector_registry = InMemoryCapabilityRegistry::new();
-
-    // ---------------------------------------------------------------- 5-6.
-    // Restore: the backup manifest + objects are copied to the fresh
-    // deployment through the PRODUCTION adapters (read source -> write
-    // fresh target -> hash verified), then the restore verification
-    // path proves every manifest hash on the fresh target; finally
-    // decrypt and reattach each domain in dependency order (identity ->
-    // policy -> memory -> skills -> connectors).
+    // ---------------------------------------------------------------- 4-6.
+    // DESTROYED-HOST DR (AUD-053): export a self-contained bundle,
+    // DESTROY the source deployment root (the control-plane host is
+    // gone - no store, no manifest, no objects left), then reconstruct
+    // a fresh deployment from the bundle ALONE through the production
+    // adapters. The source is never consulted after destruction; the
+    // bundle carries the signed manifest + every object's bytes and
+    // metadata (AUD-015). Finally decrypt and reattach each domain in
+    // dependency order (identity -> policy -> memory -> skills ->
+    // connectors).
     let plan = nexus_artifacts::RestorePlan::new(
         format!("lf002-restore-{run}"),
         tenant(),
@@ -382,48 +369,56 @@ fn lf002_restore_existing_nexus_journey() {
         Some(correlation()),
     )
     .unwrap();
-    // Copy the backup objects to the fresh deployment through the
-    // production adapters (this is the restore write; hashes are
-    // re-verified by the local adapter's put readback).
-    for (name, h, sealed) in &stored_objects {
-        let (meta, _) = store
-            .get(
-                &tenant(),
-                &artifact_id(
-                    stored_objects
-                        .iter()
-                        .position(|(n, _, _)| n == name)
-                        .unwrap() as u8
-                        + 1,
-                ),
-                &correlation(),
-            )
-            .unwrap();
-        let id = meta.artifact_id.clone();
-        fresh_store
-            .put(&tenant(), &id, h, sealed, &meta, &correlation())
-            .unwrap();
-    }
-    // Copy the backup manifest so the fresh target owns the BackupSet.
-    // Manifests are tenant-scoped on a shared root (AUD-049).
-    let backup_raw = std::fs::read(
-        source_root
-            .join("backups")
-            .join(tenant().as_str())
-            .join(format!("{}.json", backup.backup_id)),
-    )
-    .unwrap();
-    let manifest_dir = fresh_root.join("backups").join(tenant().as_str());
-    std::fs::create_dir_all(&manifest_dir).unwrap();
-    std::fs::write(
-        manifest_dir.join(format!("{}.json", backup.backup_id)),
-        backup_raw,
-    )
-    .unwrap();
-
-    let executed = fresh_store
-        .restore(&tenant(), &plan, &correlation())
+    let signed_backup = sign_backup(backup.clone());
+    let created = store
+        .create_backup(&tenant(), &signed_backup, &correlation())
         .unwrap();
+    assert_eq!(created.state, nexus_artifacts::BackupState::Created);
+    // Export the self-contained DR bundle from the live source.
+    let bundle = nexus_artifacts::dr::export_backup_bundle(
+        &mut store,
+        &tenant(),
+        &signed_backup,
+        &correlation(),
+    )
+    .expect("bundle exports from the live source");
+    assert_eq!(bundle.objects.len(), stored_objects.len());
+    for object in &bundle.objects {
+        assert!(
+            manifest_hashes.contains(&object.hash),
+            "bundle must carry every manifest hash"
+        );
+    }
+
+    // DESTROY the source host: the deployment root (objects, index,
+    // backups, manifest) is wiped. A destroyed control-plane machine
+    // has NO store left to consult.
+    let source_root = source_root.clone();
+    let _ = std::fs::remove_dir_all(&source_root);
+    assert!(
+        !source_root.exists(),
+        "source deployment must be destroyed before DR restore"
+    );
+
+    // FRESH deployment: genuinely fresh roots with NO pre-existing
+    // state for any domain, reconstructed from the bundle alone.
+    let fresh_root = temp_root("fresh");
+    let mut fresh_store = LocalArtifactStore::open(&fresh_root).unwrap();
+    let fresh_skill_state = temp_root("skill-fresh").join("registry.json");
+    assert!(
+        !fresh_skill_state.exists(),
+        "fresh deployment must have no skills state"
+    );
+    let fresh_connector_registry = InMemoryCapabilityRegistry::new();
+
+    let executed = nexus_artifacts::dr::restore_bundle(
+        &mut fresh_store,
+        &tenant(),
+        &plan,
+        &bundle,
+        &correlation(),
+    )
+    .expect("bundle alone reconstructs the destroyed host");
     assert!(executed.all_hashes_verified());
     assert_eq!(
         executed.state,
@@ -550,10 +545,13 @@ fn lf002_restore_existing_nexus_journey() {
         "node": "EP-037",
         "milestone": "M5",
         "run_id": run,
-        "slug": "restore-existing-nexus",
+        "slug": "destroyed-host-restore",
         "git_commit": git,
         "source_provider": "LOCAL",
+        "source_state": "DESTROYED_BEFORE_RESTORE",
         "destination_provider": "FRESH_DEPLOYMENT_LOCAL",
+        "dr_mechanism": "SELF_CONTAINED_BUNDLE",
+        "restore_source_consulted": "FALSE_SOURCE_ROOT_WIPED",
         "encryption": "AES-256-GCM",
         "encryption_proof": "PLAINTEXT_CANARY_ABSENT_IN_STORED_PAYLOAD",
         "hash_verification": "ALL_MANIFEST_HASHES_VERIFIED",
@@ -570,7 +568,7 @@ fn lf002_restore_existing_nexus_journey() {
             "nexus-artifacts": "INTERNAL CONTRACT CERTIFIED",
             "storage-local": "REAL FILESYSTEM CERTIFIED",
             "Principal/RelationshipTuple/MemoryRecord/SkillRegistry/CapabilityRegistry": "REAL DOMAIN TYPES USED (composition)",
-            "LF-002": "COMPOSITION CERTIFIED for exact fresh-deployment restore path (encrypted state -> fresh target -> five domains reattach)",
+            "LF-002": "COMPOSITION CERTIFIED for destroyed-host DR (encrypted bundle export -> source root wiped -> fresh target reconstructed from bundle alone -> five domains reattach)",
             "real Keycloak identity": "NOT ASSERTED",
             "real OpenFGA/OPA policy provider": "NOT ASSERTED",
             "real pgvector memory store": "NOT ASSERTED",
