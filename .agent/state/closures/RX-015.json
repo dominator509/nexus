@@ -1,0 +1,182 @@
+{
+  "attestation_digest": "sha256:cc676693801214d01ae02f8465a5a424e166b56e78b35a8ea602c97590d00086",
+  "closure_commit": "4de7e71c73366d6962908e783aa49aa06c66e397",
+  "created_at": "2026-09-01T15:06:18Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:ff904af742a602a54aa75131c606cf9b57fbc33ece3c312860c060ba1c17c723",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-015/4de7e71c73366d6962908e783aa49aa06c66e397",
+  "milestones": {
+    "max": 13,
+    "passed": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "node": "RX-015",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:e574e70c88d25a7ecaa2785f1cc1e789236310a17f40f8b04ff0a28a5304ff05",
+      "id": "approval-receipt",
+      "ref": "crates/nexus-sentinel/src/model.rs"
+    },
+    {
+      "digest": "sha256:aedf45ad0e3a3192d4d7def96bff893e7b2de9e2a8d856b14545adc32d5ad77a",
+      "id": "observed-source-binding",
+      "ref": "crates/nexus-sentinel/src/provider.rs"
+    },
+    {
+      "digest": "sha256:ae6aa0fb5c48c0b9c31d91e767e3ab3e268f8e9455177ab412c38324b90251f1",
+      "id": "owner-notification",
+      "ref": "connectors/openwrt/src/adapter.rs"
+    },
+    {
+      "digest": "sha256:7af508702bd30d992f55e1730526c8031dc74bf540501f4b4e79773d666eb46f",
+      "id": "filtering-status",
+      "ref": "connectors/adguard-home/src/transport.rs"
+    },
+    {
+      "digest": "sha256:790c5a39c845c82b17f14d6a462f8d685453bfdddfa9b8d58af91545367f7021",
+      "id": "arp-inventory",
+      "ref": "connectors/opnsense/src/inventory.rs"
+    },
+    {
+      "digest": "sha256:ec720ef1e014b793b405449f9b5cb77bdeb73b5cfd4f0cd366d51e1c6c2bea61",
+      "id": "suricata-eve",
+      "ref": "connectors/suricata/src/transport.rs"
+    },
+    {
+      "digest": "sha256:a9ec47f24a888435a3e310aa21501b9436f1545516ec515b4bf7a40990333ec7",
+      "id": "preauthorize-proof",
+      "ref": "infra/sentinel/advanced/src/provider.rs"
+    },
+    {
+      "digest": "sha256:a9ec47f24a888435a3e310aa21501b9436f1545516ec515b4bf7a40990333ec7",
+      "id": "same-indicator-confidence",
+      "ref": "infra/sentinel/advanced/src/provider.rs"
+    },
+    {
+      "digest": "sha256:a9ec47f24a888435a3e310aa21501b9436f1545516ec515b4bf7a40990333ec7",
+      "id": "verifier-proposal-binding",
+      "ref": "infra/sentinel/advanced/src/provider.rs"
+    },
+    {
+      "digest": "sha256:6fb3e37edff55ff155c5e13831b2d08b4e9c85e5eed38759e39b275cc9107291",
+      "id": "zeek-minute-truth",
+      "ref": "connectors/zeek/src/transport.rs"
+    },
+    {
+      "digest": "sha256:970e39fe159d63802e5eca28e61627cdf97d57f90877393410a01916c4130b97",
+      "id": "osquery-identity",
+      "ref": "connectors/osquery/src/transport.rs"
+    },
+    {
+      "digest": "sha256:970e39fe159d63802e5eca28e61627cdf97d57f90877393410a01916c4130b97",
+      "id": "osquery-tls",
+      "ref": "connectors/osquery/src/transport.rs"
+    },
+    {
+      "digest": "sha256:6ec663864cbb92bd001f3016ffe4468164341f8bbd28050a5476588ddfa99f6e",
+      "id": "osquery-observation-time",
+      "ref": "connectors/osquery/src/adapter.rs"
+    },
+    {
+      "digest": "sha256:9edeccadd60b00a0a8b6e1a444573dbe8ca6cbf8109bb44b3b2473053a6446b5",
+      "id": "lf009-livefire",
+      "ref": "infra/sentinel/advanced-live-fire/tests/lf009_sentinel_quarantine.rs"
+    },
+    {
+      "digest": "sha256:b13452bda848471ee6127033fcb3e2124925e4c52bd8ecd3ad21518ec4b0430d",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-015.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:ff904af742a602a54aa75131c606cf9b57fbc33ece3c312860c060ba1c17c723",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "nexus-sentinel-aud025",
+        "passed": 28
+      },
+      {
+        "failed": 0,
+        "family": "nexus-sentinel-advanced-aud025-aud031-aud032-aud033",
+        "passed": 80
+      },
+      {
+        "failed": 0,
+        "family": "nexus-opnsense-connector-aud026-aud028",
+        "passed": 48
+      },
+      {
+        "failed": 0,
+        "family": "nexus-openwrt-aud029",
+        "passed": 22
+      },
+      {
+        "failed": 0,
+        "family": "nexus-adguard-connector-aud027",
+        "passed": 23
+      },
+      {
+        "failed": 0,
+        "family": "nexus-suricata-connector-aud030",
+        "passed": 10
+      },
+      {
+        "failed": 0,
+        "family": "nexus-zeek-connector-aud034",
+        "passed": 8
+      },
+      {
+        "failed": 0,
+        "family": "nexus-osquery-connector-aud035-aud036-aud037",
+        "passed": 31
+      },
+      {
+        "failed": 0,
+        "family": "lf009-quarantine-journey",
+        "passed": 6
+      },
+      {
+        "failed": 0,
+        "family": "lf010-network-diagnosis",
+        "passed": 2
+      },
+      {
+        "failed": 0,
+        "family": "clippy",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "fmt",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "workspace-check",
+        "passed": 1
+      }
+    ],
+    "passed": 261
+  },
+  "verify_log": ".agent/remediation/evidence/RX-015/verify.log|sha256:9acbe2f61fa5d90bed9c3d2e0034e3937c717a7dda594b6d6813352d7edca441",
+  "verify_sentinel": "verify: ok"
+}
