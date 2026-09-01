@@ -102,6 +102,7 @@ fn hash_of(bytes: &[u8]) -> ArtifactHash {
 }
 
 fn metadata_for(
+    tenant: TenantId,
     id: ArtifactId,
     bytes: &[u8],
     data_class: DataClass,
@@ -112,7 +113,7 @@ fn metadata_for(
     let h = hash_of(bytes);
     ArtifactMetadata::new(
         id,
-        tenant(1),
+        tenant,
         "m4-seaweedfs-test-artifact",
         h.clone(),
         "application/octet-stream",
@@ -357,6 +358,7 @@ fn ep037_integration_seaweedfs_positive_roundtrip() {
     let h = hash_of(&bytes);
     let id = artifact_id(1);
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -396,6 +398,7 @@ fn ep037_failure_encryption_missing_zero_provider_mutation() {
     // Model-level metadata is built with backend LOCAL so the adapter
     // boundary is the only enforcement point (same pattern as M3 NAS).
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Sensitive,
@@ -434,6 +437,7 @@ fn ep037_failure_corrupted_stored_bytes_verification() {
     let h = hash_of(&bytes);
     let id = artifact_id(3);
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -499,6 +503,7 @@ fn ep037_failure_volume_dat_corruption_fails_closed() {
     let h = hash_of(&bytes);
     let id = artifact_id(4);
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -751,6 +756,7 @@ fn ep037_failure_ambiguous_put_deduplicates() {
 
     let mut store = store();
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -783,6 +789,7 @@ fn ep037_failure_delete_absent_verified_ladder() {
     let h = hash_of(&bytes);
     let id = artifact_id(7);
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -823,6 +830,7 @@ fn ep037_failure_wrong_target_delete_preserves_other() {
     let id_a = artifact_id(8);
     let id_b = artifact_id(9);
     let meta_a = metadata_for(
+        t.clone(),
         id_a.clone(),
         &bytes_a,
         DataClass::Public,
@@ -832,6 +840,7 @@ fn ep037_failure_wrong_target_delete_preserves_other() {
     )
     .unwrap();
     let meta_b = metadata_for(
+        t.clone(),
         id_b.clone(),
         &bytes_b,
         DataClass::Public,
@@ -867,6 +876,7 @@ fn ep037_failure_shared_content_delete_preserves_object() {
     let id_a = artifact_id(10);
     let id_b = artifact_id(11);
     let meta_a = metadata_for(
+        t.clone(),
         id_a.clone(),
         &bytes,
         DataClass::Public,
@@ -876,6 +886,7 @@ fn ep037_failure_shared_content_delete_preserves_object() {
     )
     .unwrap();
     let meta_b = metadata_for(
+        t.clone(),
         id_b.clone(),
         &bytes,
         DataClass::Public,
@@ -926,6 +937,7 @@ fn ep037_failure_backup_member_corruption_blocks_verify() {
     let id_a = artifact_id(12);
     let id_b = artifact_id(13);
     let meta_a = metadata_for(
+        t.clone(),
         id_a.clone(),
         &bytes_a,
         DataClass::Personal,
@@ -935,6 +947,7 @@ fn ep037_failure_backup_member_corruption_blocks_verify() {
     )
     .unwrap();
     let meta_b = metadata_for(
+        t.clone(),
         id_b.clone(),
         &bytes_b,
         DataClass::Personal,
@@ -1009,6 +1022,7 @@ fn ep037_failure_restore_requires_hash_verification() {
     let h = hash_of(&bytes);
     let id = artifact_id(14);
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Personal,
@@ -1079,6 +1093,7 @@ fn ep037_failure_migration_success_verifies_destination() {
     let h = hash_of(&bytes);
     let id = artifact_id(15);
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -1135,6 +1150,7 @@ fn ep037_failure_migration_destination_failure_preserves_source() {
     let h = hash_of(&bytes);
     let id = artifact_id(16);
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -1208,6 +1224,7 @@ fn ep037_failure_retry_hash_aware_no_duplicate() {
         .unwrap();
     let mut target = store();
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -1256,6 +1273,7 @@ fn ep037_failure_timeout_is_timeout() {
     let h = hash_of(&bytes);
     let id = artifact_id(18);
     let meta = metadata_for(
+        tenant(16),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -1300,6 +1318,7 @@ fn ep037_failure_malformed_response_external() {
     let h = hash_of(&bytes);
     let id = artifact_id(19);
     let meta = metadata_for(
+        tenant(17),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -1335,6 +1354,7 @@ fn ep037_failure_provider_restart_bounded_recovery() {
     let h = hash_of(&bytes);
     let id = artifact_id(20);
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -1397,6 +1417,7 @@ fn ep037_integration_seaweedfs_list_pagination() {
         let h = hash_of(&bytes);
         let id = artifact_id(22 + i);
         let meta = metadata_for(
+            t.clone(),
             id.clone(),
             &bytes,
             DataClass::Public,
@@ -1461,6 +1482,7 @@ fn ep037_failure_redaction_canary_zero_leakage() {
     let h = hash_of(&bytes);
     let id = artifact_id(26);
     let meta = metadata_for(
+        t.clone(),
         id.clone(),
         &bytes,
         DataClass::Public,
@@ -1502,6 +1524,7 @@ fn ep037_failure_redaction_canary_zero_leakage() {
     let bad_h = hash_of(&bad_bytes);
     let bad_id = artifact_id(28);
     let bad_meta = metadata_for(
+        t.clone(),
         bad_id.clone(),
         &bad_bytes,
         DataClass::Public,

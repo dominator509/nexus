@@ -369,16 +369,13 @@ impl ArtifactStore for SeaweedFsArtifactStore {
     ) -> ArtifactResult<ArtifactMetadata> {
         let started = started();
         // ENCRYPTION-BEFORE-EGRESS: SeaweedFS leaves the node. A
-        // sensitive-class artifact WITHOUT encryption metadata fails
-        // closed BEFORE any byte crosses the network (zero provider
-        // mutation on policy failure).
-        if metadata.data_class.requires_encryption_before_egress() && metadata.encryption.is_none()
-        {
-            return Err(ArtifactError::policy(format!(
-                "sensitive artifact on SeaweedFS backend must be encrypted before egress (class {})",
-                metadata.data_class
-            )));
-        }
+        // sensitive-class artifact must carry encryption metadata AND the
+        // bytes about to be persisted must not be the plaintext (AUD-051)
+        // - verified BEFORE any byte crosses the network (zero provider
+        // mutation on policy failure). The adapter never holds the key;
+        // the encrypting caller recorded the plaintext's SHA-256 in the
+        // metadata, and we verify the stored bytes hash differs from it.
+        metadata.verify_encryption_before_egress(&sha256_hex(bytes))?;
         if &metadata.content_hash != expected_hash {
             return Err(ArtifactError::validation(
                 "metadata content hash does not match expected hash",

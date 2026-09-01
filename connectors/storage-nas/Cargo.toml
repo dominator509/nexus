@@ -11,7 +11,13 @@ nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
 nexus-provider-storage-local = { path = "../storage-local", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
+# Real SHA-256 for the encryption-before-egress plaintext-hash check.
+sha2 = "0.10"
 
 [dev-dependencies]
-sha2 = "0.10"
 tempfile = "3"
+# Real AES-256-GCM for the encryption-before-egress proof (AUD-051):
+# the roundtrip test encrypts with REAL authenticated encryption so the
+# adapter verifies ciphertext != plaintext (same ring line as the
+# live-fire storage harness).
+ring = "0.17"

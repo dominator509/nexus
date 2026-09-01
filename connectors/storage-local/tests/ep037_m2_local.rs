@@ -531,7 +531,7 @@ fn ep037_unit_local_sensitive_artifact_with_encryption_metadata_ok() {
     let bytes = b"encrypted sensitive payload".to_vec();
     let h = hash_of(&bytes);
     let id = artifact_id(14);
-    let enc = EncryptionMetadata::new("AES-256-GCM", "vault:keys/m2-test").unwrap();
+    let enc = EncryptionMetadata::new("AES-256-GCM", "vault:keys/m2-test", h.as_str()).unwrap();
     let meta = metadata_for(id.clone(), &bytes, DataClass::Sensitive).unwrap();
     let mut meta = meta;
     meta.encryption = Some(enc);

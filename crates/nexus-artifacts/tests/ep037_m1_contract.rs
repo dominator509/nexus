@@ -3,9 +3,9 @@
 //! state ladder, restore/migration hash gating, and dependency direction.
 
 use nexus_artifacts::{
-    ArtifactHash, ArtifactMetadata, ArtifactVersion, BackendLocation, BackupSet, BackupState,
-    DataClass, EncryptionMetadata, ObjectRef, RecoveryKey, RestorePlan, RestoreVerificationState,
-    RetentionClass, StorageBackend, StorageMigration,
+    ArtifactErrorCode, ArtifactHash, ArtifactMetadata, ArtifactVersion, BackendLocation, BackupSet,
+    BackupState, DataClass, EncryptionMetadata, ObjectRef, RecoveryKey, RestorePlan,
+    RestoreVerificationState, RetentionClass, StorageBackend, StorageMigration,
 };
 use nexus_domain::{ArtifactId, CorrelationId, TenantId};
 
@@ -212,7 +212,15 @@ fn ep037_unit_metadata_sensitive_on_local_backend_allows_plaintext_at_rest() {
 
 #[test]
 fn ep037_unit_metadata_encrypted_sensitive_on_remote_backend_ok() {
-    let enc = EncryptionMetadata::new("AES-256-GCM", "vault:keys/nexus-backup-1").unwrap();
+    // The plaintext hash is a REQUIRED, verifiable part of the
+    // encryption claim (AUD-051): a remote sensitive artifact must prove
+    // its stored bytes are not the plaintext.
+    let enc = EncryptionMetadata::new(
+        "AES-256-GCM",
+        "vault:keys/nexus-backup-1",
+        format!("{:064x}", 0xaa),
+    )
+    .unwrap();
     let m = metadata(
         artifact_id(4),
         hash(2),
@@ -221,6 +229,56 @@ fn ep037_unit_metadata_encrypted_sensitive_on_remote_backend_ok() {
         StorageBackend::R2,
     );
     assert!(m.is_ok());
+}
+
+#[test]
+fn ep037_unit_metadata_encryption_requires_plaintext_hash() {
+    // AUD-051: an encryption claim without a plaintext hash is rejected
+    // by the contract itself - the metadata cannot certify encryption of
+    // bytes it cannot distinguish from the plaintext.
+    let err = EncryptionMetadata::new("AES-256-GCM", "vault:keys/nexus-backup-1", "").unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Validation);
+}
+
+#[test]
+fn ep037_unit_verify_encryption_before_egress_rejects_plaintext_bytes() {
+    // AUD-051 hostile: metadata claims AES-GCM but the stored bytes hash
+    // to the recorded plaintext - the bytes ARE the plaintext, so the
+    // claim fails closed Policy.
+    let enc = EncryptionMetadata::new(
+        "AES-256-GCM",
+        "vault:keys/nexus-backup-1",
+        format!("{:064x}", 0xbb),
+    )
+    .unwrap();
+    let m = metadata(
+        artifact_id(4),
+        hash(2),
+        DataClass::Security,
+        Some(enc),
+        StorageBackend::R2,
+    )
+    .unwrap();
+    let err = m
+        .verify_encryption_before_egress(&format!("{:064x}", 0xbb))
+        .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Policy);
+    // A bytes hash that differs from the recorded plaintext passes.
+    assert!(m
+        .verify_encryption_before_egress(&format!("{:064x}", 0xcc))
+        .is_ok());
+    // Public classes are exempt (no egress encryption requirement).
+    let public = metadata(
+        artifact_id(4),
+        hash(2),
+        DataClass::Public,
+        None,
+        StorageBackend::R2,
+    )
+    .unwrap();
+    assert!(public
+        .verify_encryption_before_egress(&format!("{:064x}", 0xbb))
+        .is_ok());
 }
 
 #[test]

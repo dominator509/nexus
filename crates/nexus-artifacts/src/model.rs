@@ -105,15 +105,24 @@ pub struct EncryptionMetadata {
     /// Opaque reference to the key held outside the storage backend
     /// (never the key material itself).
     pub key_reference: String,
+    /// SHA-256 hex of the PLAINTEXT (pre-encryption bytes). Recorded by
+    /// the encrypting caller so a storage adapter can verify, without
+    /// holding the key, that the bytes it is about to persist are NOT
+    /// the plaintext (AUD-051): if sha256(stored bytes) equals
+    /// plaintext_hash, the "ciphertext" is actually the plaintext and
+    /// encryption-before-egress was never performed.
+    pub plaintext_hash: String,
 }
 
 impl EncryptionMetadata {
     pub fn new(
         algorithm: impl Into<String>,
         key_reference: impl Into<String>,
+        plaintext_hash: impl Into<String>,
     ) -> ArtifactResult<Self> {
         let algorithm = algorithm.into();
         let key_reference = key_reference.into();
+        let plaintext_hash = plaintext_hash.into();
         if algorithm.trim().is_empty() {
             return Err(ArtifactError::validation(
                 "encryption algorithm must not be empty",
@@ -124,9 +133,15 @@ impl EncryptionMetadata {
                 "encryption key reference must not be empty",
             ));
         }
+        if plaintext_hash.trim().is_empty() {
+            return Err(ArtifactError::validation(
+                "encryption plaintext hash must not be empty",
+            ));
+        }
         Ok(Self {
             algorithm,
             key_reference,
+            plaintext_hash,
         })
     }
 }
@@ -252,6 +267,43 @@ impl ArtifactMetadata {
             lineage,
             location,
         })
+    }
+}
+
+impl ArtifactMetadata {
+    /// Verify an encryption-before-egress claim for the bytes about to
+    /// be persisted (AUD-051). Sensitive classes that leave the node MUST
+    /// carry encryption metadata AND the stored bytes must not be the
+    /// plaintext: the encrypting caller records the plaintext's SHA-256
+    /// in the metadata, and the adapter (which never holds the key)
+    /// verifies sha256(stored bytes) != plaintext_hash. If the bytes hash
+    /// to the recorded plaintext, the "ciphertext" is actually the
+    /// plaintext and encryption-before-egress never happened.
+    ///
+    /// `bytes_sha256` is the caller-computed SHA-256 hex of the bytes to
+    /// persist (kept dependency-free: the storage adapter already has a
+    /// sha2 implementation).
+    pub fn verify_encryption_before_egress(&self, bytes_sha256: &str) -> ArtifactResult<()> {
+        if !self.data_class.requires_encryption_before_egress() {
+            return Ok(());
+        }
+        let Some(enc) = &self.encryption else {
+            return Err(ArtifactError::policy(format!(
+                "sensitive artifact must be encrypted before egress (class {})",
+                self.data_class
+            )));
+        };
+        if enc.plaintext_hash.trim().is_empty() {
+            return Err(ArtifactError::policy(
+                "encryption metadata must record the plaintext hash",
+            ));
+        }
+        if enc.plaintext_hash == bytes_sha256 {
+            return Err(ArtifactError::policy(
+                "stored bytes hash to the recorded plaintext: bytes are not ciphertext",
+            ));
+        }
+        Ok(())
     }
 }
 

@@ -15,3 +15,8 @@ serde_json.workspace = true
 [dev-dependencies]
 tempfile = "3"
 nexus-provider-storage-local = { path = "../storage-local", version = "0.1.0" }
+# Real AES-256-GCM for the encryption-before-egress proof (AUD-051):
+# the roundtrip test encrypts with REAL authenticated encryption so the
+# adapter verifies ciphertext != plaintext (same ring line as the
+# live-fire storage harness).
+ring = "0.17"

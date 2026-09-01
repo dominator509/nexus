@@ -298,8 +298,12 @@ fn lf002_restore_existing_nexus_journey() {
         let sealed = encrypt_aes256gcm(&key, &with_canary);
         let h = hash_of(&sealed);
         let id = artifact_id(stored_objects.len() as u8 + 1);
-        let enc =
-            EncryptionMetadata::new("AES-256-GCM", format!("vault:keys/lf002-{run}")).unwrap();
+        let enc = EncryptionMetadata::new(
+            "AES-256-GCM",
+            format!("vault:keys/lf002-{run}"),
+            sha256_hex(&with_canary),
+        )
+        .unwrap();
         let meta = build_metadata(id.clone(), &sealed, name, Some(enc)).unwrap();
         store
             .put(&tenant(), &id, &h, &sealed, &meta, &correlation())
@@ -384,13 +388,15 @@ fn lf002_restore_existing_nexus_journey() {
             .unwrap();
     }
     // Copy the backup manifest so the fresh target owns the BackupSet.
+    // Manifests are tenant-scoped on a shared root (AUD-049).
     let backup_raw = std::fs::read(
         source_root
             .join("backups")
+            .join(tenant().as_str())
             .join(format!("{}.json", backup.backup_id)),
     )
     .unwrap();
-    let manifest_dir = fresh_root.join("backups");
+    let manifest_dir = fresh_root.join("backups").join(tenant().as_str());
     std::fs::create_dir_all(&manifest_dir).unwrap();
     std::fs::write(
         manifest_dir.join(format!("{}.json", backup.backup_id)),

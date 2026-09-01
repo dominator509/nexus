@@ -14,11 +14,12 @@
 use std::path::PathBuf;
 
 use nexus_artifacts::{
-    ArtifactError, ArtifactHash, ArtifactMetadata, ArtifactResult, ArtifactStore, BackupSet,
-    RestorePlan, RetentionClass, StorageMigration,
+    ArtifactHash, ArtifactMetadata, ArtifactResult, ArtifactStore, BackupSet, RestorePlan,
+    RetentionClass, StorageMigration,
 };
 use nexus_domain::{ArtifactId, CorrelationId, TenantId};
 use nexus_provider_storage_local::LocalArtifactStore;
+use sha2::{Digest, Sha256};
 
 /// NAS ArtifactStore over a mounted NAS root.
 ///
@@ -40,6 +41,15 @@ impl NasArtifactStore {
     pub fn root(&self) -> &std::path::Path {
         self.inner.root()
     }
+
+    /// Real SHA-256 of bytes (canonical lowercase hex) for the
+    /// encryption-before-egress plaintext-hash verification.
+    fn sha256_hex(bytes: &[u8]) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        let out = hasher.finalize();
+        out.iter().map(|b| format!("{b:02x}")).collect()
+    }
 }
 
 impl ArtifactStore for NasArtifactStore {
@@ -53,15 +63,13 @@ impl ArtifactStore for NasArtifactStore {
         correlation: &CorrelationId,
     ) -> ArtifactResult<ArtifactMetadata> {
         // Encryption-before-egress: NAS leaves the node. A sensitive-class
-        // artifact without encryption metadata must fail closed BEFORE
-        // any byte reaches the share.
-        if metadata.data_class.requires_encryption_before_egress() && metadata.encryption.is_none()
-        {
-            return Err(ArtifactError::policy(format!(
-                "sensitive artifact on NAS backend must be encrypted before egress (class {})",
-                metadata.data_class
-            )));
-        }
+        // artifact must carry encryption metadata AND the bytes about to
+        // be persisted must not be the plaintext (AUD-051) - verified
+        // BEFORE any byte reaches the share. The adapter never holds the
+        // key; the encrypting caller recorded the plaintext's SHA-256 in
+        // the metadata, and we verify the stored bytes hash differs from
+        // it.
+        metadata.verify_encryption_before_egress(&Self::sha256_hex(bytes))?;
         self.inner.put(
             tenant,
             artifact_id,
