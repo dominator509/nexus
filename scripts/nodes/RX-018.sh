@@ -1,8 +1,9 @@
 #!/usr/bin/env sh
-# RX-018 node verify - artifact storage truth
+# RX-018 node verify - artifact storage + DR truth
 # (AUD-049 Local/NAS tenant boundary on a shared root; AUD-050 shared-content
 #  delete preserves still-referenced objects; AUD-051 encryption-before-egress
-#  verified against real ciphertext, not metadata alone)
+#  verified against real ciphertext, not metadata alone; AUD-052 signed backup
+#  manifests; AUD-015 self-contained DR bundle; AUD-053 destroyed-host DR proof)
 set -eu
 export CI=true
 export GIT_TERMINAL_PROMPT=0
