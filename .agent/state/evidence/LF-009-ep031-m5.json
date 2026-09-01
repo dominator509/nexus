@@ -87,7 +87,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "m8-aud032-1788233308",
+  "run_id": "m9-aud033-1788235386",
   "sensors": {
     "crowdsec": {
       "action": "ban",
@@ -121,6 +121,7 @@
     "priority": "CRITICAL"
   },
   "verification": {
+    "plan_binds_proposal": true,
     "state": "VERIFIED"
   }
 }

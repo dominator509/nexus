@@ -370,6 +370,42 @@ impl SecurityVerifier for SentinelVerificationService {
             .unwrap()
             .clone()
             .ok_or_else(|| SentinelError::unavailable("no applied containment registered"))?;
+        // AUD-033: the plan must BIND to the registered applied
+        // proposal before any firewall readback. Evidence from
+        // proposal B can never produce VERIFIED for plan A: the plan's
+        // quarantine proposal ref must match the applied proposal id
+        // AND the tenants must match. A plan that references a
+        // different proposal (or none) fails closed.
+        let plan_ref = plan.quarantine_proposal_ref.as_deref().ok_or_else(|| {
+            SentinelError::new(
+                SentinelErrorCode::Verification,
+                "plan does not reference a quarantine proposal",
+                None,
+                None,
+                None,
+                None,
+            )
+        })?;
+        if plan_ref != applied.proposal_id.as_str() {
+            return Err(SentinelError::new(
+                SentinelErrorCode::Verification,
+                "plan references a different containment proposal than the applied one",
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+        if &applied.tenant_id != tenant_id || &plan.tenant_id != tenant_id {
+            return Err(SentinelError::new(
+                SentinelErrorCode::Verification,
+                "tenant mismatch between plan, proposal, and verification",
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
         let firewall = self
             .firewall
             .lock()
@@ -408,6 +444,7 @@ fn _cap(_: &SentinelCapabilityMap) {}
 mod tests {
     use super::*;
     use nexus_domain::TenantId;
+    use nexus_sentinel::{NetworkDevice, NetworkSegment};
     use nexus_sentinel_advanced::SecurityEventId;
 
     fn tenant() -> TenantId {
@@ -534,5 +571,143 @@ mod tests {
             )
             .unwrap_err();
         assert_eq!(err.code, SentinelErrorCode::Validation);
+    }
+
+    fn proposal(tenant_id: &TenantId, id: &str, device: &str) -> QuarantineProposal {
+        QuarantineProposal::new(
+            nexus_sentinel::QuarantineProposalId::new(id).unwrap(),
+            tenant_id.clone(),
+            nexus_sentinel::NetworkDeviceId::new(device).unwrap(),
+            NetworkSegment::Iot,
+            nexus_sentinel::FirewallAction::Drop,
+            true,
+            true,
+            nexus_domain::ApprovalClass::Human,
+            "2026-08-20T00:00:00Z",
+        )
+        .with_source_net("192.168.40.77")
+    }
+
+    fn plan(plan_id: &str, proposal_ref: Option<&str>) -> ResponsePlan {
+        let incident_id =
+            nexus_domain::IncidentId::from_str("018f0f6f-9c1e-7b6e-8000-0000000000aa").unwrap();
+        let mut p = ResponsePlan::new(
+            ResponsePlanId::new(plan_id).unwrap(),
+            incident_id,
+            tenant(),
+            ResponseKind::Quarantine,
+            ApprovalClass::Human,
+            "2026-08-20T00:00:00Z",
+        );
+        if let Some(r) = proposal_ref {
+            p = p.with_quarantine(r);
+        }
+        p
+    }
+
+    #[test]
+    fn aud033_unit_verify_fails_closed_when_plan_binds_different_proposal() {
+        // AUD-033: verification must bind the plan to the EXACT
+        // applied proposal. Evidence from proposal B can never produce
+        // VERIFIED for plan A.
+        let t = tenant();
+        let applied = proposal(&t, "proposal-a", "dev-a");
+        let plan_a = plan("plan-a", Some("proposal-a"));
+        let plan_b = plan("plan-b", Some("proposal-b"));
+
+        let verifier = SentinelVerificationService::new();
+        verifier.register_applied(applied);
+        // A firewall that would verify anything (the binding check must
+        // fire BEFORE any readback, so the engine never answers).
+        verifier.bind_firewall(Arc::new(NeverVerifyingFirewall));
+
+        // Plan A bound to proposal A: passes the binding gate; the
+        // readback then runs against the real (never-verifying) engine
+        // and yields Failed - still a valid verification path.
+        let rec = verifier
+            .verify_response(&t, VerificationRecordId::new("v-a").unwrap(), &plan_a)
+            .expect("bound plan verifies");
+        assert_eq!(rec.state, VerificationState::Failed);
+
+        // Plan B bound to a DIFFERENT proposal: fails closed with
+        // Verification BEFORE any firewall readback.
+        let err = verifier
+            .verify_response(&t, VerificationRecordId::new("v-b").unwrap(), &plan_b)
+            .unwrap_err();
+        assert_eq!(err.code, SentinelErrorCode::Verification);
+    }
+
+    #[test]
+    fn aud033_unit_verify_fails_closed_when_plan_has_no_proposal_ref() {
+        let t = tenant();
+        let applied = proposal(&t, "proposal-a", "dev-a");
+        let no_ref = plan("plan-noref", None);
+        let verifier = SentinelVerificationService::new();
+        verifier.register_applied(applied);
+        verifier.bind_firewall(Arc::new(NeverVerifyingFirewall));
+        let err = verifier
+            .verify_response(&t, VerificationRecordId::new("v-noref").unwrap(), &no_ref)
+            .unwrap_err();
+        assert_eq!(err.code, SentinelErrorCode::Verification);
+    }
+
+    /// Firewall engine that never answers (binding must fail BEFORE
+    /// readback - if the engine is reached, the test is wrong).
+    struct NeverVerifyingFirewall;
+
+    impl nexus_sentinel::FirewallProvider for NeverVerifyingFirewall {
+        fn capabilities(&self) -> SentinelCapabilityMap {
+            SentinelCapabilityMap::new()
+        }
+        fn read_telemetry(
+            &self,
+            _tenant_id: &TenantId,
+        ) -> Result<Vec<nexus_sentinel::NetworkFinding>, SentinelError> {
+            Err(SentinelError::unavailable("never"))
+        }
+        fn propose_containment(
+            &self,
+            _tenant_id: &TenantId,
+            _business_id: Option<&nexus_domain::BusinessId>,
+            _device: &NetworkDevice,
+            _observed_source: Option<&str>,
+        ) -> Result<QuarantineProposal, SentinelError> {
+            Err(SentinelError::unavailable("never"))
+        }
+        fn apply_containment(
+            &self,
+            _proposal: &QuarantineProposal,
+        ) -> Result<QuarantineProposal, SentinelError> {
+            Err(SentinelError::unavailable("never"))
+        }
+        fn verify_containment(
+            &self,
+            proposal: &QuarantineProposal,
+        ) -> Result<nexus_sentinel::ContainmentVerification, SentinelError> {
+            // Never reports verified: the readback answers but can
+            // never prove the effect. A bound plan therefore yields a
+            // Failed record; the binding gate must fire BEFORE this.
+            Ok(nexus_sentinel::ContainmentVerification::new(
+                proposal.proposal_id.clone(),
+                proposal.device_id.clone(),
+                false,
+                "readback:never-verified",
+                "2026-08-20T00:00:00Z",
+            ))
+        }
+        fn revoke_containment(
+            &self,
+            _proposal: &QuarantineProposal,
+        ) -> Result<QuarantineProposal, SentinelError> {
+            Err(SentinelError::unavailable("never"))
+        }
+        fn notify_owner(
+            &self,
+            _proposal: &QuarantineProposal,
+            _owner_ref: &str,
+            _channel: &str,
+        ) -> Result<QuarantineProposal, SentinelError> {
+            Err(SentinelError::unavailable("never"))
+        }
     }
 }

@@ -729,7 +729,11 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             ApprovalClass::Human,
             Some(&reversibility_proof),
         )
-        .expect("quarantine plan");
+        .expect("quarantine plan")
+        // AUD-033: the plan BINDS the exact proposal it will verify.
+        // Verification of this plan can never read back a different
+        // proposal's evidence.
+        .with_quarantine(proposed.proposal_id.as_str());
     assert!(
         plan.preauthorized,
         "high-confidence bounded containment with provider reversibility proof may be preauthorized"
@@ -829,6 +833,30 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         );
     }
 
+    // AUD-033 hostile live-fire: a plan bound to a DIFFERENT proposal
+    // is refused BEFORE any firewall readback - even against the real
+    // engine, proposal B's evidence can never verify plan A.
+    let other_plan = planner
+        .plan_response(
+            &tenant(),
+            ResponsePlanId::new("plan-other").unwrap(),
+            &incident,
+            ResponseKind::Quarantine,
+            ApprovalClass::Human,
+            Some(&reversibility_proof),
+        )
+        .expect("other quarantine plan")
+        .with_quarantine("proposal-other");
+    let denied = verifier.verify_response(
+        &tenant(),
+        VerificationRecordId::new("verify-other").unwrap(),
+        &other_plan,
+    );
+    assert!(
+        denied.is_err(),
+        "cross-proposal verification must fail closed"
+    );
+
     // ---- 12. REVOKED: reversible rollback (toggleRule 0 + apply) ----
     let revoked = opnsense
         .revoke_containment(&applied)
@@ -921,7 +949,16 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "destructive_never_preauthorized": true
         },
         "execution": { "state": applied.state.as_str(), "rule_ref": applied.rule_ref },
-        "verification": { "state": verification.state.as_str() },
+        "verification": {
+            "state": verification.state.as_str(),
+            // AUD-033: the verified record binds the plan to the EXACT
+            // applied proposal; a different proposal's evidence can
+            // never satisfy this plan.
+            "plan_binds_proposal": matches!(
+                plan.quarantine_proposal_ref.as_deref(),
+                Some(r) if r == applied.proposal_id.as_str()
+            )
+        },
         "rollback": { "state": revoked.state.as_str(), "verify_after_revoke": false },
         "correlation_rule": "incident confidence derives from independent observation planes corroborating the SAME observed source indicator; raw sensor count never inflates confidence",
         "redaction": "ZERO_LEAKAGE",
