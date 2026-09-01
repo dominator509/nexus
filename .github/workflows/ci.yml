@@ -150,4 +150,9 @@ jobs:
           set -a
           . /tmp/battery.env
           set +a
-          sh scripts/test-integration.sh
+          # lf018 exercises the REAL AUD-011 namespace sandbox
+          # (unshare/mount/seccomp) which requires CAP_SYS_ADMIN; the
+          # GitHub-hosted runner user is non-root. The local closure
+          # ladder runs as root, so mirror that privilege level for the
+          # integration suite (gate unchanged - sandbox still enforced).
+          sudo -E env "HOME=$HOME" "PATH=$PATH" sh scripts/test-integration.sh
