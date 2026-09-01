@@ -374,12 +374,16 @@ fn approved_proposal(provider: &OpnsenseFirewallProvider, d: &NetworkDevice) -> 
     // AUD-025: approval is an immutable receipt binding the exact
     // action - never a bare state mutation. The journey must go
     // through the real approve() binding.
-    proposal.approve(
+    let approved = proposal.approve(
         nexus_domain::ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
         nexus_domain::PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
         nexus_domain::ApprovalClass::Human,
         "2026-08-20T00:00:00Z",
-    )
+    );
+    // AUD-029: automated containment ALWAYS notifies the owner.
+    provider
+        .notify_owner(&approved, "person-owner-1", "push")
+        .unwrap()
 }
 
 // ---------------------------------------------------------------------------

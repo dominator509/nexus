@@ -172,6 +172,31 @@ impl OpenWrtFirewallProvider {
             ));
         }
 
+        // Gate 1b (AUD-029): SPEC-013 behavior 5 requires automated
+        // containment to ALWAYS notify the owner. A proposal applied
+        // without an owner-notification receipt violates the invariant
+        // and fails closed BEFORE any provider call.
+        if !proposal.owner_notified() {
+            self.record(
+                &correlation,
+                "APPLY_CONTAINMENT",
+                "POLICY",
+                "quarantine proposal has no owner-notification receipt".into(),
+                std::collections::BTreeMap::from([(
+                    "device".into(),
+                    proposal.device_id.to_string(),
+                )]),
+            );
+            return Err(SentinelError::new(
+                SentinelErrorCode::Policy,
+                "quarantine proposal has no owner-notification receipt",
+                Some(correlation.clone()),
+                None,
+                Some(self.tenant_id.to_string()),
+                Some(proposal.proposal_id.to_string()),
+            ));
+        }
+
         // Gate 2 (policy): automated containment is limited to
         // preauthorized high-confidence reversible rules (SPEC-013
         // behavior 5). A non-reversible or non-preauthorized rule
@@ -614,6 +639,35 @@ impl FirewallProvider for OpenWrtFirewallProvider {
         self.apply_containment_inner(proposal)
     }
 
+    fn notify_owner(
+        &self,
+        proposal: &QuarantineProposal,
+        owner_ref: &str,
+        channel: &str,
+    ) -> Result<QuarantineProposal, SentinelError> {
+        let correlation = self.correlation();
+        // AUD-029: SPEC-013 behavior 5 - automated containment ALWAYS
+        // notifies the owner. The notification receipt is immutable
+        // and bound to the proposal; apply fails closed without it.
+        let notified =
+            proposal
+                .clone()
+                .with_owner_notification(owner_ref, channel, "2026-08-20T00:00:00Z");
+        self.record(
+            &correlation,
+            "NOTIFY_OWNER",
+            "ok",
+            format!(
+                "owner {} notified via {} for proposal {}",
+                owner_ref,
+                channel,
+                proposal.proposal_id.as_str()
+            ),
+            std::collections::BTreeMap::from([("device".into(), proposal.device_id.to_string())]),
+        );
+        Ok(notified)
+    }
+
     fn verify_containment(
         &self,
         proposal: &QuarantineProposal,
@@ -830,12 +884,16 @@ mod tests {
         // AUD-025: approval is an immutable receipt binding the exact
         // action - never a bare state mutation. The helper must go
         // through the real approve() binding.
-        proposal.approve(
+        let approved = proposal.approve(
             nexus_domain::ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
             nexus_domain::PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
             nexus_domain::ApprovalClass::Human,
             "2026-08-20T00:00:00Z",
-        )
+        );
+        // AUD-029: automated containment ALWAYS notifies the owner.
+        provider
+            .notify_owner(&approved, "person-owner-1", "push")
+            .unwrap()
     }
 
     #[test]

@@ -437,6 +437,11 @@ fn ep030_integration_containment_lifecycle_over_real_sockets() {
         nexus_domain::ApprovalClass::Human,
         "2026-08-20T00:00:00Z",
     );
+    // AUD-029: automated containment ALWAYS notifies the owner; apply
+    // fails closed without the immutable notification receipt.
+    let approved = provider
+        .notify_owner(&approved, "person-owner-1", "push")
+        .unwrap();
     let applied = provider.apply_containment(&approved).unwrap();
     assert_eq!(applied.state, QuarantineState::Applied);
     assert!(applied.rule_ref.is_some());

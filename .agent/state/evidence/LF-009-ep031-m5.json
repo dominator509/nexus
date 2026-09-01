@@ -77,7 +77,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "run-20260831042016-ep031m5",
+  "run_id": "local-run",
   "sensors": {
     "crowdsec": {
       "action": "ban",

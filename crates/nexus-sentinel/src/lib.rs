@@ -40,7 +40,7 @@ pub use capability::{SentinelCapabilityKind, SentinelCapabilityMap};
 pub use error::{SentinelError, SentinelErrorCode};
 pub use model::{
     BehaviorBaseline, ContainmentVerification, DeviceFingerprint, DnsBlocklistEntry, DnsTelemetry,
-    NetworkDevice, NetworkFinding, QuarantineApproval, QuarantineProposal,
+    NetworkDevice, NetworkFinding, OwnerNotification, QuarantineApproval, QuarantineProposal,
 };
 pub use provider::{
     DnsSecurityProvider, FirewallProvider, NetworkInventory, UnboundDnsSecurityProvider,

@@ -297,6 +297,39 @@ impl QuarantineApproval {
     }
 }
 
+/// Immutable owner-notification receipt for a quarantine proposal
+/// (AUD-029). SPEC-013 behavior 5: automated containment ALWAYS
+/// notifies the owner. The receipt records WHO (owner reference), via
+/// WHAT channel, and WHEN. A proposal that was applied without a
+/// notification receipt violates the invariant and fails closed at
+/// apply time.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OwnerNotification {
+    /// Provider-neutral owner reference (person/household).
+    pub owner_ref: String,
+    /// Provider-neutral notification channel label (e.g. "push",
+    /// "sms", "email"). The concrete delivery is the notification
+    /// fabric's responsibility; the sentinel contract requires the
+    /// receipt.
+    pub channel: String,
+    /// RFC3339 timestamp of the notification.
+    pub notified_at: String,
+}
+
+impl OwnerNotification {
+    pub fn new(
+        owner_ref: impl Into<String>,
+        channel: impl Into<String>,
+        notified_at: impl Into<String>,
+    ) -> Self {
+        Self {
+            owner_ref: owner_ref.into(),
+            channel: channel.into(),
+            notified_at: notified_at.into(),
+        }
+    }
+}
+
 /// A quarantine proposal (SPEC-013: automated containment is limited
 /// to preauthorized high-confidence reversible rules and always
 /// notifies the owner; quarantine is a proposal until approved,
@@ -336,8 +369,9 @@ pub struct QuarantineProposal {
     /// Immutable approval receipt once approved (AUD-025). None until
     /// an approver actually binds the exact action.
     pub approval: Option<QuarantineApproval>,
-    /// Owner notification reference once notified.
-    pub notified_owner: bool,
+    /// Immutable owner-notification receipt (AUD-029). None until the
+    /// owner was actually notified; apply fails closed without it.
+    pub owner_notification: Option<OwnerNotification>,
     /// Correlation reference to the originating finding.
     pub correlation: Option<String>,
     /// RFC3339 timestamp of proposal creation.
@@ -371,7 +405,7 @@ impl QuarantineProposal {
             reversible,
             approval_class,
             approval: None,
-            notified_owner: false,
+            owner_notification: None,
             correlation: None,
             proposed_at: proposed_at.into(),
         }
@@ -404,6 +438,33 @@ impl QuarantineProposal {
     /// only when one was actually captured.
     pub fn has_observed_source(&self) -> bool {
         self.source_net.as_deref().is_some_and(|s| !s.is_empty())
+    }
+
+    /// Record the mandatory owner notification (AUD-029). SPEC-013
+    /// behavior 5: automated containment ALWAYS notifies the owner.
+    /// The receipt binds the owner reference and channel; apply fails
+    /// closed without it.
+    pub fn with_owner_notification(
+        mut self,
+        owner_ref: impl Into<String>,
+        channel: impl Into<String>,
+        notified_at: impl Into<String>,
+    ) -> Self {
+        self.owner_notification = Some(OwnerNotification::new(
+            owner_ref.into(),
+            channel.into(),
+            notified_at.into(),
+        ));
+        self
+    }
+
+    /// AUD-029 apply gate: the owner was notified only when an
+    /// immutable notification receipt exists with a non-empty owner
+    /// reference.
+    pub fn owner_notified(&self) -> bool {
+        self.owner_notification
+            .as_ref()
+            .is_some_and(|n| !n.owner_ref.is_empty())
     }
 
     /// SPEC-013 behavior 5: automated containment is limited to

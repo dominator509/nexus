@@ -55,10 +55,31 @@ pub trait FirewallProvider {
     /// Apply a quarantine proposal. Fails closed unless the proposal
     /// is preauthorized high-confidence reversible AND approved; the
     /// applied rule is recorded with a rule reference.
+    ///
+    /// AUD-029: SPEC-013 behavior 5 requires automated containment to
+    /// ALWAYS notify the owner. Apply fails closed unless the proposal
+    /// carries an owner-notification receipt.
     fn apply_containment(
         &self,
         proposal: &QuarantineProposal,
     ) -> Result<QuarantineProposal, SentinelError>;
+
+    /// Notify the device owner of an imminent containment (AUD-029).
+    /// SPEC-013 behavior 5: automated containment ALWAYS notifies the
+    /// owner. The operation records an immutable notification receipt
+    /// on the proposal; apply fails closed without it. The concrete
+    /// delivery (push/sms/email) is the notification fabric's
+    /// responsibility; the sentinel contract requires the receipt and
+    /// the audit record. Unbound providers fail closed.
+    fn notify_owner(
+        &self,
+        proposal: &QuarantineProposal,
+        owner_ref: &str,
+        channel: &str,
+    ) -> Result<QuarantineProposal, SentinelError> {
+        let _ = (proposal, owner_ref, channel);
+        Err(SentinelError::unavailable("no firewall provider bound"))
+    }
 
     /// Verify containment by independent readback (exact-target: the
     /// verification binds to the exact proposal/device).
