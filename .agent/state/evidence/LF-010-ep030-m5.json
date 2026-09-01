@@ -22,6 +22,8 @@
     "blocklist_domains": 2,
     "dns_blocked": 2,
     "dns_total": 5,
+    "inventory_devices": 1,
+    "inventory_fingerprint": "aa:bb:cc:00:00:10",
     "openwrt_findings": 1,
     "opnsense_findings": 1
   },
@@ -74,6 +76,22 @@
       "resource": "evil.example.com",
       "segment": "IOT",
       "source": "adguard"
+    },
+    {
+      "fact": "ARP-discovered device iot-camera 192.168.30.10 vendor ACME Cameras; fingerprint bound; baseline LEARNING",
+      "observed": true,
+      "provider": "OpnsenseNetworkInventory",
+      "resource": "mac:aa:bb:cc:00:00:10",
+      "segment": "IOT",
+      "source": "opnsense"
+    },
+    {
+      "fact": "1 ARP devices discovered, permanent/expired entries excluded",
+      "observed": true,
+      "provider": "OpnsenseNetworkInventory",
+      "resource": "192.168.30.10",
+      "segment": "IOT",
+      "source": "opnsense"
     }
   ],
   "proof": "LF-010",
@@ -89,7 +107,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "local-run",
+  "run_id": "m5-final-1788232285",
   "segments_observed": [
     "IOT",
     "QUARANTINE"

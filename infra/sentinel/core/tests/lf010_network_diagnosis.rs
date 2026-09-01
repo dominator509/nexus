@@ -33,10 +33,12 @@ use std::time::{Duration, Instant};
 use nexus_adguard_connector::{AdGuardDnsSecurityProvider, HttpAdGuardTransport, QueryLogEntry};
 use nexus_domain::{ApprovalClass, TenantId};
 use nexus_openwrt_connector::{HttpOpenWrtTransport, OpenWrtFirewallProvider};
-use nexus_opnsense_connector::{HttpOpnsenseTransport, OpnsenseFirewallProvider};
+use nexus_opnsense_connector::{
+    HttpOpnsenseTransport, OpnsenseFirewallProvider, OpnsenseNetworkInventory,
+};
 use nexus_sentinel::{
-    DnsSecurityProvider, FirewallProvider, NetworkDevice, NetworkDeviceId, NetworkSegment,
-    QuarantineProposal, QuarantineState, SentinelCapabilityKind, TrustClass,
+    DnsSecurityProvider, FirewallProvider, NetworkDevice, NetworkDeviceId, NetworkInventory,
+    NetworkSegment, QuarantineProposal, QuarantineState, SentinelCapabilityKind, TrustClass,
 };
 
 const TENANT: &str = "018f0f6f-9c1e-7b6e-8000-000000000001";
@@ -196,7 +198,12 @@ fn spawn_opnsense_fixture(
 ) -> (u16, Arc<Mutex<Vec<OpnRule>>>, thread::JoinHandle<()>) {
     let state: Arc<Mutex<Vec<OpnRule>>> = Arc::new(Mutex::new(initial));
     let state2 = state.clone();
-    let (port, handle) = spawn_http_fixture(8, move |method, path, body| {
+    // Connection budget: capabilities (searchRule), telemetry
+    // (searchRule), 4x inventory ARP (capabilities, list_devices,
+    // fingerprint, baseline), apply (addRule + apply), verify
+    // (searchRule), revoke (toggleRule + apply), verify-after-revoke
+    // (searchRule) = 12 sequential real-socket requests.
+    let (port, handle) = spawn_http_fixture(16, move |method, path, body| {
         let mut st = state2.lock().unwrap();
         if method == "GET" && path.contains("/api/firewall/filter/searchRule") {
             let phrase = path.split("searchPhrase=").nth(1).unwrap_or("").to_string();
@@ -262,6 +269,39 @@ fn spawn_opnsense_fixture(
             (200, "application/json".into(), "{}".into())
         } else if method == "POST" && path.contains("/api/firewall/filter/apply") {
             (200, "application/json".into(), "{}".into())
+        } else if method == "GET" && path.contains("/api/diagnostics/interface/getArp") {
+            // Documented ARP table (AUD-028): the OBSERVED inventory
+            // source. One neighbor (the IOT camera) plus the firewall's
+            // own permanent interface entry (never a discovered device).
+            (
+                200,
+                "application/json".into(),
+                serde_json::json!([
+                    {
+                        "mac": "aa:bb:cc:00:00:10",
+                        "ip": "192.168.30.10",
+                        "intf": "iot",
+                        "expired": false,
+                        "expires": 300,
+                        "permanent": false,
+                        "type": "ethernet",
+                        "manufacturer": "ACME Cameras",
+                        "hostname": "iot-camera"
+                    },
+                    {
+                        "mac": "aa:bb:cc:00:00:01",
+                        "ip": "192.168.30.1",
+                        "intf": "lan",
+                        "expired": false,
+                        "expires": 0,
+                        "permanent": true,
+                        "type": "ethernet",
+                        "manufacturer": "",
+                        "hostname": "firewall"
+                    }
+                ])
+                .to_string(),
+            )
         } else {
             (404, "application/json".into(), "{}".into())
         }
@@ -612,6 +652,20 @@ fn ep030_m5_lf010_network_diagnosis() {
         CANARY_OPN_KEY,
         CANARY_OPN_SECRET,
     );
+    // AUD-028: the production network inventory discovers devices from
+    // the router's OBSERVED ARP table (real transport to the fixture).
+    let inventory = OpnsenseNetworkInventory::new(
+        Box::new(HttpOpnsenseTransport::new(
+            format!("http://127.0.0.1:{opn_port}"),
+            CANARY_OPN_KEY,
+            CANARY_OPN_SECRET,
+            Duration::from_secs(2),
+        )),
+        tenant(),
+        NetworkSegment::Iot,
+        CANARY_OPN_KEY,
+        CANARY_OPN_SECRET,
+    );
     let openwrt = OpenWrtFirewallProvider::new(
         Box::new(HttpOpenWrtTransport::new(
             format!("http://127.0.0.1:{owrt_port}"),
@@ -686,6 +740,40 @@ fn ep030_m5_lf010_network_diagnosis() {
             .any(|e| e.domain_ref == "AdGuard Simplified Domain Names filter"),
         "configured blocklist subscription required"
     );
+    // AUD-028: the production inventory discovers devices from the
+    // router's OBSERVED ARP table. The IOT camera is discovered; the
+    // firewall's own permanent interface entry is never a device.
+    let caps = inventory.capabilities();
+    assert!(caps.contains(SentinelCapabilityKind::Inventory));
+    assert!(caps.contains(SentinelCapabilityKind::Fingerprint));
+    let devices = inventory
+        .list_devices(&tenant())
+        .expect("inventory devices");
+    let camera = devices
+        .iter()
+        .find(|d| d.device_id.as_str() == "mac:aa:bb:cc:00:00:10")
+        .expect("observed camera device");
+    assert_eq!(camera.label, "iot-camera");
+    assert_eq!(camera.vendor.as_deref(), Some("ACME Cameras"));
+    assert_eq!(camera.segment, NetworkSegment::Iot);
+    assert!(
+        !devices
+            .iter()
+            .any(|d| d.device_id.as_str() == "mac:aa:bb:cc:00:00:01"),
+        "permanent firewall entry is not a discovered device"
+    );
+    let fp = inventory
+        .fingerprint(camera)
+        .expect("observed camera fingerprint");
+    assert_eq!(fp.ip_ref.as_deref(), Some("192.168.30.10"));
+    assert_eq!(fp.mac_ref.as_deref(), Some("aa:bb:cc:00:00:10"));
+    let baseline = inventory
+        .baseline(camera)
+        .expect("observed camera baseline");
+    assert_eq!(
+        baseline.state,
+        nexus_sentinel::BehaviorBaselineState::Learning
+    );
 
     // ---- 4. DERIVED: normalized facts with provenance ----
     let normalized_facts = serde_json::json!([
@@ -720,7 +808,23 @@ fn ep030_m5_lf010_network_diagnosis() {
             "resource": "evil.example.com",
             "observed": true,
             "fact": "observed FilteredBlackList blocklist entry"
-        }
+        },
+        {
+            "source": "opnsense",
+            "provider": "OpnsenseNetworkInventory",
+            "segment": "IOT",
+            "resource": "mac:aa:bb:cc:00:00:10",
+            "observed": true,
+            "fact": "ARP-discovered device iot-camera 192.168.30.10 vendor ACME Cameras; fingerprint bound; baseline LEARNING"
+        },
+        {
+            "source": "opnsense",
+            "provider": "OpnsenseNetworkInventory",
+            "segment": "IOT",
+            "resource": "192.168.30.10",
+            "observed": true,
+            "fact": format!("{} ARP devices discovered, permanent/expired entries excluded", devices.len())
+        },
     ]);
 
     // ---- 5. INFERRED: bounded diagnosis from current-run facts ----
@@ -845,7 +949,9 @@ fn ep030_m5_lf010_network_diagnosis() {
             "openwrt_findings": owrt_findings.len(),
             "dns_total": dns.total_queries,
             "dns_blocked": dns.blocked_queries,
-            "blocklist_domains": blocklist.len()
+            "blocklist_domains": blocklist.len(),
+            "inventory_devices": devices.len(),
+            "inventory_fingerprint": fp.mac_ref.as_deref().unwrap_or("").to_string()
         },
         "redaction": "ZERO_LEAKAGE",
         "cleanup": "fixtures joined; no orphan containers or processes",
