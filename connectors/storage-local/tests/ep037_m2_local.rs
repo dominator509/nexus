@@ -45,6 +45,23 @@ fn hash_of(bytes: &[u8]) -> ArtifactHash {
     ArtifactHash::new(digest(bytes)).unwrap()
 }
 
+/// Sign a backup manifest with a REAL Ed25519 keypair (ring) so
+/// create_backup/restore signature verification (SPEC-024 req 6,
+/// AUD-052) has authentic material. Returns the backup with the
+/// signature attached.
+fn sign_backup(mut backup: BackupSet) -> BackupSet {
+    use ring::rand::SystemRandom;
+    use ring::signature::{Ed25519KeyPair, KeyPair};
+    let rng = SystemRandom::new();
+    let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+    let pair = Ed25519KeyPair::from_pkcs8(pkcs8.as_ref()).unwrap();
+    let public_key_hex = nexus_artifacts::hex_encode(pair.public_key().as_ref());
+    let message = backup.canonical_manifest_bytes().unwrap();
+    let signature_hex = nexus_artifacts::hex_encode(pair.sign(&message).as_ref());
+    backup.sign(nexus_artifacts::ManifestSignature::new(public_key_hex, signature_hex).unwrap());
+    backup
+}
+
 fn metadata_for(
     id: ArtifactId,
     bytes: &[u8],
@@ -267,7 +284,7 @@ fn ep037_unit_local_create_backup_verifies_hashes_and_writes_manifest() {
     )
     .unwrap();
     let created = store
-        .create_backup(&tenant(), &backup, &correlation())
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
         .unwrap();
     assert_eq!(created.state, nexus_artifacts::BackupState::Created);
     // Backup manifests are tenant-scoped on a shared root (AUD-049).
@@ -298,7 +315,7 @@ fn ep037_unit_local_create_backup_rejects_unverifiable_hash() {
     )
     .unwrap();
     let err = store
-        .create_backup(&tenant(), &backup, &correlation())
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
         .unwrap_err();
     // The hash does not exist on disk -> verification failure path.
     assert!(matches!(
@@ -333,12 +350,88 @@ fn ep037_unit_local_create_backup_duplicate_conflict() {
     )
     .unwrap();
     store
-        .create_backup(&tenant(), &backup, &correlation())
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
         .unwrap();
+    let err = store
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
+        .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Conflict);
+    teardown(&root);
+}
+
+#[test]
+fn ep037_unit_local_create_backup_rejects_unsigned_manifest() {
+    let root = temp_root("backup-unsigned");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"unsigned payload".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(37);
+    let meta = metadata_for(id.clone(), &bytes, DataClass::Personal).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    // SPEC-024 req 6 / AUD-052: an UNSIGNED backup manifest is rejected
+    // before it is written (fail closed) - signature verification is not
+    // optional.
+    let backup = BackupSet::new(
+        "b-unsigned",
+        tenant(),
+        vec![DataClass::Personal],
+        nexus_artifacts::BackendLocation::new(StorageBackend::Local, "backups/b-unsigned.json")
+            .unwrap(),
+        vec![h],
+        Some("vault:keys/m2-test".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
     let err = store
         .create_backup(&tenant(), &backup, &correlation())
         .unwrap_err();
-    assert_eq!(err.code, ArtifactErrorCode::Conflict);
+    assert_eq!(err.code, ArtifactErrorCode::Verification);
+    assert!(!root
+        .join("backups")
+        .join(tenant().as_str())
+        .join("b-unsigned.json")
+        .exists());
+    teardown(&root);
+}
+
+#[test]
+fn ep037_unit_local_create_backup_rejects_tampered_signature() {
+    let root = temp_root("backup-tampered");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"tampered sig payload".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(38);
+    let meta = metadata_for(id.clone(), &bytes, DataClass::Personal).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    // A signature that does not verify (garbage hex) is rejected.
+    let mut backup = BackupSet::new(
+        "b-tampered",
+        tenant(),
+        vec![DataClass::Personal],
+        nexus_artifacts::BackendLocation::new(StorageBackend::Local, "backups/b-tampered.json")
+            .unwrap(),
+        vec![h],
+        Some("vault:keys/m2-test".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
+    backup.sign(nexus_artifacts::ManifestSignature {
+        algorithm: nexus_artifacts::ManifestSignatureAlgorithm::Ed25519,
+        public_key_hex: "11".repeat(32),
+        signature_hex: "22".repeat(64),
+    });
+    let err = store
+        .create_backup(&tenant(), &backup, &correlation())
+        .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Verification);
     teardown(&root);
 }
 
@@ -371,7 +464,7 @@ fn ep037_unit_local_restore_requires_all_hashes_verified() {
     )
     .unwrap();
     store
-        .create_backup(&tenant(), &backup, &correlation())
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
         .unwrap();
     // Plan requires TWO hashes: one present, one absent -> cannot validate.
     let ghost = ArtifactHash::new(format!("{:064x}", 0x77)).unwrap();
@@ -386,6 +479,58 @@ fn ep037_unit_local_restore_requires_all_hashes_verified() {
     .unwrap();
     let err = store.restore(&tenant(), &plan, &correlation()).unwrap_err();
     // The ghost hash is not in the backup manifest -> verification failure.
+    assert_eq!(err.code, ArtifactErrorCode::Verification);
+    teardown(&root);
+}
+
+#[test]
+fn ep037_unit_local_restore_rejects_tampered_manifest() {
+    let root = temp_root("restore-tampered");
+    let mut store = LocalArtifactStore::open(&root).unwrap();
+    let bytes = b"restore tamper payload".to_vec();
+    let h = hash_of(&bytes);
+    let id = artifact_id(39);
+    let meta = metadata_for(id.clone(), &bytes, DataClass::Personal).unwrap();
+    store
+        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .unwrap();
+    let backup = BackupSet::new(
+        "b-m2-tampered",
+        tenant(),
+        vec![DataClass::Personal],
+        nexus_artifacts::BackendLocation::new(StorageBackend::Local, "backups/b-m2-tampered.json")
+            .unwrap(),
+        vec![h.clone()],
+        Some("vault:keys/m2-test".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-22T00:00:00Z",
+    )
+    .unwrap();
+    store
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
+        .unwrap();
+    // Tamper with the stored manifest: change an included class. The
+    // signature no longer verifies -> restore fails closed with
+    // Verification BEFORE any hash is trusted (AUD-052).
+    let manifest_path = root
+        .join("backups")
+        .join(tenant().as_str())
+        .join("b-m2-tampered.json");
+    let mut raw: serde_json::Value =
+        serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
+    raw["included_classes"] = serde_json::json!(["SENSITIVE"]);
+    fs::write(&manifest_path, serde_json::to_vec(&raw).unwrap()).unwrap();
+    let plan = nexus_artifacts::RestorePlan::new(
+        "r-m2-tampered",
+        tenant(),
+        "b-m2-tampered",
+        "fresh-target-1",
+        vec![h],
+        Some(correlation()),
+    )
+    .unwrap();
+    let err = store.restore(&tenant(), &plan, &correlation()).unwrap_err();
     assert_eq!(err.code, ArtifactErrorCode::Verification);
     teardown(&root);
 }
@@ -418,7 +563,7 @@ fn ep037_unit_local_restore_validates_when_all_hashes_present() {
     )
     .unwrap();
     store
-        .create_backup(&tenant(), &backup, &correlation())
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
         .unwrap();
     let plan = nexus_artifacts::RestorePlan::new(
         "r-m2-2",
@@ -699,7 +844,7 @@ fn ep037_aud049_backup_and_restore_are_tenant_scoped() {
     )
     .unwrap();
     store
-        .create_backup(&tenant(), &backup, &correlation())
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
         .unwrap();
     // Tenant B cannot create a backup that claims tenant A's tenant.
     let foreign = BackupSet::new(
@@ -716,7 +861,7 @@ fn ep037_aud049_backup_and_restore_are_tenant_scoped() {
     )
     .unwrap();
     let err = store
-        .create_backup(&tenant_b(), &foreign, &correlation())
+        .create_backup(&tenant_b(), &sign_backup(foreign.clone()), &correlation())
         .unwrap_err();
     assert_eq!(err.code, ArtifactErrorCode::Policy);
     // Tenant B cannot restore tenant A's backup by id knowledge alone.

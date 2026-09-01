@@ -22,6 +22,27 @@ use crate::vocabulary::{
 /// Canonical hex digest length for the supported hash algorithm.
 pub const SHA256_HEX_LEN: usize = 64;
 
+/// Hex-decode a string into bytes (pure std, fails closed on malformed
+/// input). Only used for signature material, never content.
+pub fn hex_decode(value: &str) -> Option<Vec<u8>> {
+    if !value.len().is_multiple_of(2) || !value.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    let bytes = value.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len() / 2);
+    for pair in bytes.chunks_exact(2) {
+        let hi = (pair[0] as char).to_digit(16)?;
+        let lo = (pair[1] as char).to_digit(16)?;
+        out.push(((hi << 4) | lo) as u8);
+    }
+    Some(out)
+}
+
+/// Hex-encode bytes (lowercase canonical form).
+pub fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
 /// Content-addressed artifact hash (SPEC-024 requirement 2). The digest is
 /// the lowercase canonical hex SHA-256 of the artifact bytes; any other
 /// length, non-hex character, or uppercase form is rejected. The hash is
@@ -325,6 +346,66 @@ impl ObjectRef {
     }
 }
 
+/// Signature algorithm for backup manifests (SPEC-024 requirement 6:
+/// every backup has a signed manifest). Ed25519 is the only supported
+/// algorithm; the same ring 0.17 line the skill package signatures use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ManifestSignatureAlgorithm {
+    #[serde(rename = "Ed25519")]
+    Ed25519,
+}
+
+impl ManifestSignatureAlgorithm {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Ed25519 => "Ed25519",
+        }
+    }
+}
+
+/// A signature over the canonical manifest bytes (SPEC-024 requirement 6).
+///
+/// The signature covers the canonical JSON serialization of the `BackupSet`
+/// EXCLUDING the `manifest_signature` field itself (self-exclusion, the
+/// same canonical-digest rule the closure attestation uses). The adapter
+/// verifies with the embedded public key; the private signing key lives in
+/// the vault and is never held by an adapter. A manifest whose signature is
+/// missing or fails verification is rejected before it is written (create)
+/// and before it is trusted (restore).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ManifestSignature {
+    pub algorithm: ManifestSignatureAlgorithm,
+    /// Hex-encoded Ed25519 public key (64 hex chars).
+    pub public_key_hex: String,
+    /// Hex-encoded Ed25519 signature (128 hex chars).
+    pub signature_hex: String,
+}
+
+impl ManifestSignature {
+    pub fn new(
+        public_key_hex: impl Into<String>,
+        signature_hex: impl Into<String>,
+    ) -> ArtifactResult<Self> {
+        let public_key_hex = public_key_hex.into();
+        let signature_hex = signature_hex.into();
+        if public_key_hex.len() != 64 || !public_key_hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(ArtifactError::validation(
+                "manifest signature public key must be 64 hex chars (Ed25519)",
+            ));
+        }
+        if signature_hex.len() != 128 || !signature_hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(ArtifactError::validation(
+                "manifest signature must be 128 hex chars (64-byte Ed25519 signature)",
+            ));
+        }
+        Ok(Self {
+            algorithm: ManifestSignatureAlgorithm::Ed25519,
+            public_key_hex,
+            signature_hex,
+        })
+    }
+}
+
 /// Backup set (SPEC-024 requirement 5). A backup is DECLARED, then
 /// CREATED with a signed manifest and hashes, then VERIFIED by readback,
 /// and only RESTORED when a fresh-target restore proves it (SPEC-024
@@ -350,6 +431,9 @@ pub struct BackupSet {
     pub schema_version: String,
     /// Backup creation timestamp (UTC RFC 3339).
     pub created_at: String,
+    /// Signature over the canonical manifest bytes (SPEC-024 req 6).
+    /// Required before a backup may be CREATED; verified before restore.
+    pub manifest_signature: Option<ManifestSignature>,
 }
 
 impl BackupSet {
@@ -403,7 +487,61 @@ impl BackupSet {
             application_version,
             schema_version,
             created_at,
+            manifest_signature: None,
         })
+    }
+
+    /// Attach a signature over the canonical manifest bytes. The caller
+    /// (the vault/operator that holds the signing key) computes the
+    /// signature via `BackupSet::canonical_manifest_bytes`; the adapter
+    /// only verifies with the embedded public key.
+    pub fn sign(&mut self, signature: ManifestSignature) {
+        self.manifest_signature = Some(signature);
+    }
+
+    /// Canonical manifest bytes the signature covers: the manifest with
+    /// the signature field EXCLUDED (self-exclusion, same rule as the
+    /// closure attestation digest). Deterministic JSON with sorted keys.
+    pub fn canonical_manifest_bytes(&self) -> ArtifactResult<Vec<u8>> {
+        let mut canonical = self.clone();
+        canonical.manifest_signature = None;
+        serde_json::to_vec(&canonical)
+            .map_err(|e| ArtifactError::internal(format!("cannot canonicalize backup: {e}")))
+    }
+
+    /// Verify the manifest signature STRUCTURE without crypto: the
+    /// signature must be present, Ed25519, well-formed hex, and carry a
+    /// 32-byte public key and 64-byte signature. Fails closed on missing
+    /// or malformed stored material. The CRYPTOGRAPHIC verification
+    /// (ring Ed25519 over the canonical bytes) is owned by the adapters,
+    /// which hold the crypto dependency (same boundary as
+    /// encryption-before-egress: the contract crate stays dependency-lean
+    /// per the M1 dependency-direction gate).
+    pub fn verify_manifest_signature_structure(&self) -> ArtifactResult<()> {
+        let sig = self.manifest_signature.as_ref().ok_or_else(|| {
+            ArtifactError::verification("backup manifest is not signed (SPEC-024 req 6)")
+        })?;
+        if sig.algorithm != ManifestSignatureAlgorithm::Ed25519 {
+            return Err(ArtifactError::verification(format!(
+                "unsupported manifest signature algorithm {:?}",
+                sig.algorithm
+            )));
+        }
+        if sig.public_key_hex.len() != 64
+            || !sig.public_key_hex.bytes().all(|b| b.is_ascii_hexdigit())
+        {
+            return Err(ArtifactError::verification(
+                "manifest signature public key is not 64 hex chars (Ed25519)",
+            ));
+        }
+        if sig.signature_hex.len() != 128
+            || !sig.signature_hex.bytes().all(|b| b.is_ascii_hexdigit())
+        {
+            return Err(ArtifactError::verification(
+                "manifest signature is not 128 hex chars (64-byte Ed25519 signature)",
+            ));
+        }
+        Ok(())
     }
 
     /// Advance the backup state ladder. DECLARED -> CREATED -> VERIFIED ->

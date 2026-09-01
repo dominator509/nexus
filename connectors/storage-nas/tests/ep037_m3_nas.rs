@@ -43,6 +43,22 @@ fn hash_of(bytes: &[u8]) -> ArtifactHash {
     ArtifactHash::new(digest(bytes)).unwrap()
 }
 
+/// Sign a backup manifest with a REAL Ed25519 keypair (ring) so
+/// create_backup/restore signature verification (SPEC-024 req 6,
+/// AUD-052) has authentic material.
+fn sign_backup(mut backup: nexus_artifacts::BackupSet) -> nexus_artifacts::BackupSet {
+    use ring::rand::SystemRandom;
+    use ring::signature::{Ed25519KeyPair, KeyPair};
+    let rng = SystemRandom::new();
+    let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+    let pair = Ed25519KeyPair::from_pkcs8(pkcs8.as_ref()).unwrap();
+    let public_key_hex = nexus_artifacts::hex_encode(pair.public_key().as_ref());
+    let message = backup.canonical_manifest_bytes().unwrap();
+    let signature_hex = nexus_artifacts::hex_encode(pair.sign(&message).as_ref());
+    backup.sign(nexus_artifacts::ManifestSignature::new(public_key_hex, signature_hex).unwrap());
+    backup
+}
+
 fn metadata_for(
     id: ArtifactId,
     bytes: &[u8],
@@ -293,7 +309,7 @@ fn ep037_integration_nas_backup_manifest_and_restore_validation() {
     )
     .unwrap();
     let created = store
-        .create_backup(&tenant(), &backup, &correlation())
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
         .unwrap();
     assert_eq!(created.state, nexus_artifacts::BackupState::Created);
     let plan = nexus_artifacts::RestorePlan::new(

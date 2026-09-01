@@ -101,6 +101,22 @@ fn hash_of(bytes: &[u8]) -> ArtifactHash {
     ArtifactHash::new(digest(bytes)).unwrap()
 }
 
+/// Sign a backup manifest with a REAL Ed25519 keypair (ring) so
+/// create_backup/restore signature verification (SPEC-024 req 6,
+/// AUD-052) has authentic material.
+fn sign_backup(mut backup: BackupSet) -> BackupSet {
+    use ring::rand::SystemRandom;
+    use ring::signature::{Ed25519KeyPair, KeyPair};
+    let rng = SystemRandom::new();
+    let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+    let pair = Ed25519KeyPair::from_pkcs8(pkcs8.as_ref()).unwrap();
+    let public_key_hex = nexus_artifacts::hex_encode(pair.public_key().as_ref());
+    let message = backup.canonical_manifest_bytes().unwrap();
+    let signature_hex = nexus_artifacts::hex_encode(pair.sign(&message).as_ref());
+    backup.sign(nexus_artifacts::ManifestSignature::new(public_key_hex, signature_hex).unwrap());
+    backup
+}
+
 fn metadata_for(
     tenant: TenantId,
     id: ArtifactId,
@@ -978,7 +994,9 @@ fn ep037_failure_backup_member_corruption_blocks_verify() {
         "2026-08-23T00:00:00Z",
     )
     .unwrap();
-    store.create_backup(&t, &backup, &correlation()).unwrap();
+    store
+        .create_backup(&t, &sign_backup(backup.clone()), &correlation())
+        .unwrap();
     // Corrupt member B on the provider.
     let bucket = format!("{}{}", bucket_prefix(), t.as_str());
     let direct = nexus_provider_storage_seaweedfs::transport::S3Client::connect(
@@ -1050,7 +1068,9 @@ fn ep037_failure_restore_requires_hash_verification() {
         "2026-08-23T00:00:00Z",
     )
     .unwrap();
-    store.create_backup(&t, &backup, &correlation()).unwrap();
+    store
+        .create_backup(&t, &sign_backup(backup.clone()), &correlation())
+        .unwrap();
     // Plan requires a hash that is NOT on the fresh target.
     let missing = ArtifactHash::new(format!("{:064x}", 0x42)).unwrap();
     let plan = nexus_artifacts::RestorePlan::new(

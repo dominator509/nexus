@@ -72,6 +72,23 @@ fn hash_of(bytes: &[u8]) -> ArtifactHash {
     ArtifactHash::new(sha256_hex(bytes)).unwrap()
 }
 
+/// Sign a backup manifest with a REAL Ed25519 keypair (ring) so
+/// create_backup/restore signature verification (SPEC-024 req 6,
+/// AUD-052) has authentic material. The private key is held by the
+/// caller (vault), never the adapter.
+fn sign_backup(mut backup: BackupSet) -> BackupSet {
+    use ring::rand::SystemRandom;
+    use ring::signature::{Ed25519KeyPair, KeyPair};
+    let rng = SystemRandom::new();
+    let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+    let pair = Ed25519KeyPair::from_pkcs8(pkcs8.as_ref()).unwrap();
+    let public_key_hex = nexus_artifacts::hex_encode(pair.public_key().as_ref());
+    let message = backup.canonical_manifest_bytes().unwrap();
+    let signature_hex = nexus_artifacts::hex_encode(pair.sign(&message).as_ref());
+    backup.sign(nexus_artifacts::ManifestSignature::new(public_key_hex, signature_hex).unwrap());
+    backup
+}
+
 fn temp_root(tag: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!(
         "nexus-ep037-m5-lf002-{tag}-{}-{}",
@@ -333,7 +350,7 @@ fn lf002_restore_existing_nexus_journey() {
     )
     .unwrap();
     let created = store
-        .create_backup(&tenant(), &backup, &correlation())
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
         .unwrap();
     assert_eq!(created.state, nexus_artifacts::BackupState::Created);
 

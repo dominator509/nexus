@@ -38,6 +38,32 @@ fn art_error(msg: String) -> ArtifactError {
     ArtifactError::unavailable(msg)
 }
 
+/// Verify a backup manifest's signature (SPEC-024 requirement 6 /
+/// AUD-052). Structural checks (presence, algorithm, well-formed hex,
+/// key/signature lengths) live in the contract crate; the
+/// CRYPTOGRAPHIC verification (real ring Ed25519 over the canonical
+/// manifest bytes, excluding the signature field) is owned here in the
+/// adapter, exactly like the sha2-based encryption-before-egress check.
+/// Missing, malformed, wrong-signer, or tampered signatures fail closed
+/// before any hash in the manifest is trusted.
+fn verify_backup_signature(backup: &BackupSet) -> ArtifactResult<()> {
+    use ring::signature::{UnparsedPublicKey, ED25519};
+    backup.verify_manifest_signature_structure()?;
+    let sig = backup
+        .manifest_signature
+        .as_ref()
+        .expect("structure check passed");
+    let public_key = nexus_artifacts::hex_decode(&sig.public_key_hex).ok_or_else(|| {
+        ArtifactError::verification("manifest signature public key is not valid hex")
+    })?;
+    let signature = nexus_artifacts::hex_decode(&sig.signature_hex)
+        .ok_or_else(|| ArtifactError::verification("manifest signature value is not valid hex"))?;
+    let message = backup.canonical_manifest_bytes()?;
+    let key = UnparsedPublicKey::new(&ED25519, &public_key);
+    key.verify(&message, &signature)
+        .map_err(|_| ArtifactError::verification("backup manifest signature verification failed"))
+}
+
 /// Subdirectory layout under a storage root.
 mod layout {
     /// Content-addressed object bytes, keyed by hex digest.
@@ -389,6 +415,12 @@ impl ArtifactStore for LocalArtifactStore {
         backup: &BackupSet,
         _correlation: &CorrelationId,
     ) -> ArtifactResult<BackupSet> {
+        // SPEC-024 requirement 6: every backup has a signed manifest.
+        // The signature is verified cryptographically (ring Ed25519 over
+        // the canonical manifest bytes) BEFORE the manifest is written;
+        // an unsigned or tampered manifest is rejected and never
+        // persisted (fail closed).
+        verify_backup_signature(backup)?;
         // Backup is created from the CURRENT index; every artifact in the
         // manifest must verify on disk before the manifest is written
         // (backup created != backup verified, but a manifest with hashes
@@ -447,6 +479,11 @@ impl ArtifactStore for LocalArtifactStore {
         })?;
         let backup: BackupSet = serde_json::from_slice(&raw)
             .map_err(|e| ArtifactError::internal(format!("corrupt backup manifest: {e}")))?;
+        // SPEC-024 requirement 6: restore must authenticate the signer
+        // and signature, not just hashes/JSON structure. A manifest
+        // whose signature is missing or fails verification (tampered
+        // bytes, wrong signer) fails closed BEFORE any hash is trusted.
+        verify_backup_signature(&backup)?;
         // The plan must reference a real backup whose manifest hashes
         // cover the required hashes.
         for required in &plan.required_hashes {

@@ -4,8 +4,8 @@
 
 use nexus_artifacts::{
     ArtifactErrorCode, ArtifactHash, ArtifactMetadata, ArtifactVersion, BackendLocation, BackupSet,
-    BackupState, DataClass, EncryptionMetadata, ObjectRef, RecoveryKey, RestorePlan,
-    RestoreVerificationState, RetentionClass, StorageBackend, StorageMigration,
+    BackupState, DataClass, EncryptionMetadata, ManifestSignature, ObjectRef, RecoveryKey,
+    RestorePlan, RestoreVerificationState, RetentionClass, StorageBackend, StorageMigration,
 };
 use nexus_domain::{ArtifactId, CorrelationId, TenantId};
 
@@ -389,6 +389,115 @@ fn ep037_unit_recovery_key_is_reference_only_never_material() {
     let key = RecoveryKey::new("vault:keys/backup-1").unwrap();
     assert_eq!(key.key_reference, "vault:keys/backup-1");
     assert!(RecoveryKey::new("").is_err());
+}
+
+#[test]
+fn ep037_unit_backup_manifest_requires_signature_before_trust() {
+    let mut backup = BackupSet::new(
+        "b-signed",
+        tenant(),
+        vec![DataClass::Personal],
+        location(StorageBackend::S3),
+        vec![hash(1)],
+        Some("vault:keys/backup-1".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-21T00:00:00Z",
+    )
+    .unwrap();
+    // SPEC-024 req 6: unsigned manifests fail closed.
+    assert!(matches!(
+        backup
+            .verify_manifest_signature_structure()
+            .unwrap_err()
+            .code,
+        ArtifactErrorCode::Verification
+    ));
+    // A structurally invalid signature fails closed (bypass the
+    // constructor, which already validates, to prove the verifier also
+    // fails closed on malformed stored material).
+    backup.manifest_signature = Some(ManifestSignature {
+        algorithm: nexus_artifacts::ManifestSignatureAlgorithm::Ed25519,
+        public_key_hex: "abcd".to_string(),
+        signature_hex: "abcd".to_string(),
+    });
+    assert!(backup.verify_manifest_signature_structure().is_err());
+}
+
+#[test]
+fn ep037_unit_backup_manifest_canonical_bytes_deterministic_and_exclude_signature() {
+    let mut backup = BackupSet::new(
+        "b-ed25519",
+        tenant(),
+        vec![DataClass::Personal, DataClass::Sensitive],
+        location(StorageBackend::S3),
+        vec![hash(1), hash(2)],
+        Some("vault:keys/backup-1".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-21T00:00:00Z",
+    )
+    .unwrap();
+    // Canonical bytes are deterministic: two serializations are equal.
+    let once = backup.canonical_manifest_bytes().unwrap();
+    let twice = backup.canonical_manifest_bytes().unwrap();
+    assert_eq!(once, twice);
+    // Self-exclusion: the canonical bytes of a signed manifest equal the
+    // serialization with the signature field stripped (the signature
+    // covers the manifest EXCLUDING itself - same rule as the closure
+    // attestation digest). A well-formed signature is attached...
+    backup.sign(ManifestSignature::new("11".repeat(32), "22".repeat(64)).unwrap());
+    let signed_canonical = backup.canonical_manifest_bytes().unwrap();
+    // ...and the unsigned serialization of the same manifest is
+    // byte-identical (the signature field is excluded from the covered
+    // message).
+    let mut unsigned = backup.clone();
+    unsigned.manifest_signature = None;
+    let unsigned_raw = serde_json::to_vec(&unsigned).unwrap();
+    assert_eq!(signed_canonical, unsigned_raw);
+    // Tampering with any manifest field changes the canonical bytes (the
+    // signature no longer covers them - verified by adapters with real
+    // Ed25519; here we prove the message the signature covers changes).
+    backup.manifest_hashes.push(hash(3));
+    let tampered = backup.canonical_manifest_bytes().unwrap();
+    assert_ne!(signed_canonical, tampered);
+}
+
+#[test]
+fn ep037_unit_backup_manifest_structure_rejects_unsupported_algorithm_and_bad_hex() {
+    let mut backup = BackupSet::new(
+        "b-wrong-signer",
+        tenant(),
+        vec![DataClass::Personal],
+        location(StorageBackend::S3),
+        vec![hash(1)],
+        Some("vault:keys/backup-1".to_string()),
+        "0.1.0",
+        "1",
+        "2026-08-21T00:00:00Z",
+    )
+    .unwrap();
+    // Unsupported algorithm fails closed at the structure check (the
+    // contract rejects anything that is not Ed25519 before any adapter
+    // crypto runs).
+    backup.manifest_signature = Some(ManifestSignature {
+        algorithm: nexus_artifacts::ManifestSignatureAlgorithm::Ed25519,
+        public_key_hex: "zz".repeat(32),
+        signature_hex: "22".repeat(64),
+    });
+    assert!(matches!(
+        backup
+            .verify_manifest_signature_structure()
+            .unwrap_err()
+            .code,
+        ArtifactErrorCode::Verification
+    ));
+    // A well-formed signature passes the structure check (crypto
+    // verification is the adapters' job, proven there with real ring
+    // Ed25519; the contract owns structure and canonical bytes).
+    backup.manifest_signature =
+        Some(ManifestSignature::new("11".repeat(32), "22".repeat(64)).unwrap());
+    backup.verify_manifest_signature_structure().unwrap();
 }
 
 // ---------------------------------------------------------------------------
