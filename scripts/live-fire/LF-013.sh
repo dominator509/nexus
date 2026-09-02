@@ -11,6 +11,6 @@ export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 sh "$REPO_ROOT/scripts/ep027-m5-tests.sh"
 echo "LF-013: ok"
