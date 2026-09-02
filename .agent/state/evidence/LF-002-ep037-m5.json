@@ -12,7 +12,7 @@
   "destination_provider": "FRESH_DEPLOYMENT_LOCAL",
   "domain_reattachment": {
     "connectors": {
-      "capability_id": "lf002-connector-ep037-m5-1788306221415-188717",
+      "capability_id": "lf002-connector-ep037-m5-1788377366262-35e8ce",
       "state": "RESTORED"
     },
     "identity": {
@@ -35,17 +35,17 @@
   "dr_mechanism": "SELF_CONTAINED_BUNDLE",
   "encryption": "AES-256-GCM",
   "encryption_proof": "PLAINTEXT_CANARY_ABSENT_IN_STORED_PAYLOAD",
-  "git_commit": "b9f845a7c11888a1ad93a1ab20afd57907fd71f1",
+  "git_commit": "5c981c0ff45979ab605dfc56e9425a0a8b40e5c3",
   "hash_verification": "ALL_MANIFEST_HASHES_VERIFIED",
   "lf_id": "LF-002",
   "milestone": "M5",
   "node": "EP-037",
   "restore_source_consulted": "FALSE_SOURCE_ROOT_WIPED",
   "restore_state": "VALIDATED",
-  "run_id": "ep037-m5-1788306221415-188717",
+  "run_id": "ep037-m5-1788377366262-35e8ce",
   "slug": "destroyed-host-restore",
   "source_provider": "LOCAL",
   "source_state": "DESTROYED_BEFORE_RESTORE",
-  "written_at": "2026-09-01T23:43:41Z",
+  "written_at": "2026-09-02T19:29:26Z",
   "wrong_key": "FAIL_CLOSED_ZERO_PARTIAL_RESTORED_AUTHORITY"
 }

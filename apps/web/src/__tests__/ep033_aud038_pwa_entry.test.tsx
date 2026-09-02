@@ -58,22 +58,30 @@ describe("ep033_aud038_pwa_entry", () => {
     expect(source).toContain('document.getElementById("root")');
   });
 
-  it("production build output exists (dist/index.html + JS bundle)", () => {
-    // The unit suite must not depend on a pre-existing build artifact
-    // from a previous local run: a fresh checkout has no dist/. The
-    // REAL Vite build is the proof, so run it here (production build
-    // is deterministic and fast for this surface).
-    execSync("pnpm pwa:build", {
-      cwd: root,
-      stdio: "pipe",
-    });
-    expect(existsSync(resolve(root, "dist/index.html"))).toBe(true);
-    const assets = resolve(root, "dist/assets");
-    const js = readFileSync(resolve(root, "dist/index.html"), "utf8");
-    expect(js).toContain("/assets/");
-    expect(js).toContain(".js");
-    expect(existsSync(assets)).toBe(true);
-  });
+  it(
+    "production build output exists (dist/index.html + JS bundle)",
+    () => {
+      // The unit suite must not depend on a pre-existing build artifact
+      // from a previous local run: a fresh checkout has no dist/. The
+      // REAL Vite build is the proof, so run it here (production build
+      // is deterministic and fast for this surface). The build is a real
+      // subprocess; under parallel ship-gate load it can exceed vitest's
+      // 5000ms default, so this proof owns an explicit 30s budget. The
+      // assertion is unchanged - dist/index.html must still exist and
+      // reference the emitted JS bundle.
+      execSync("pnpm pwa:build", {
+        cwd: root,
+        stdio: "pipe",
+      });
+      expect(existsSync(resolve(root, "dist/index.html"))).toBe(true);
+      const assets = resolve(root, "dist/assets");
+      const js = readFileSync(resolve(root, "dist/index.html"), "utf8");
+      expect(js).toContain("/assets/");
+      expect(js).toContain(".js");
+      expect(existsSync(assets)).toBe(true);
+    },
+    30_000,
+  );
 
   it("the PWA components render the same production markup server-side", () => {
     const { context, shell, capability } = pwaFixtures();

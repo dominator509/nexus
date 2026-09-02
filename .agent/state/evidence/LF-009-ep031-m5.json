@@ -98,7 +98,7 @@
       "endpoint_identity": "host=srv-lab-1:address=0.0.0.0:port=8443",
       "event_id": "osquery-srv-lab-1-listening_ports-0-0",
       "events": 1,
-      "observed_at": "2026-09-01T19:53:48Z",
+      "observed_at": "2026-09-02T19:28:26Z",
       "tls": "REAL_TLS_PINNED",
       "wildcard_listener": "0.0.0.0:8443"
     },
