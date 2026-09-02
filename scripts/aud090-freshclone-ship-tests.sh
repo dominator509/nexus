@@ -98,13 +98,26 @@ grep -q '"exit_code"' "$SHIP_ACCEPT" \
   || fail "acceptance JSON missing exit_code"
 ok "acceptance emits structured ExecutionEvidence JSON"
 
-# --- 4. real hostile: acceptance refuses on the CURRENT (non-ALL_DONE) tree -----
-#    The current tree is under quarantine (RX-020+ pending), so running the
-#    acceptance here MUST refuse and MUST NOT write evidence anywhere.
+# --- 4. real hostile: acceptance refuses on a genuinely non-ALL_DONE tree -----
+#    The live tree is ALL_DONE once the remediation graph closes, so the
+#    hostile proof must construct a not-done tree itself: clone the repo
+#    into a sandbox, remove the final closure manifest, and run the
+#    acceptance there. The acceptance MUST refuse and MUST NOT write
+#    evidence anywhere (fail closed on a knowingly-NOT_READY tree).
 sandbox=$(mktemp -d /tmp/aud090-hostile.XXXXXX)
 trap 'rm -rf "$sandbox"' EXIT INT TERM
+if ! /usr/bin/git clone -q "$repo_root" "$sandbox/clone" 2>"$sandbox/clone.log"; then
+  fail "cannot create hostile sandbox clone: $(tail -2 "$sandbox/clone.log")"
+fi
+# Break the clone graph: remove every closure manifest so node-status sees
+# a not-done tree (RESUME/BLOCKED, never ALL_DONE).
+rm -f "$sandbox"/clone/.agent/state/closures/RX-*.json
+clone_dispatch=$(cd "$sandbox/clone" && sh scripts/graph-next.sh 2>/dev/null || true)
+case "$clone_dispatch" in
+  ALL_DONE|ALL_DONE_V2) fail "hostile sandbox unexpectedly ALL_DONE" ;;
+esac
 set +e
-( cd "$repo_root" && sh scripts/ep043-freshclone-accept.sh "$sandbox/evidence" \
+( cd "$sandbox/clone" && sh scripts/ep043-freshclone-accept.sh "$sandbox/evidence" \
   >"$sandbox/run.log" 2>&1 )
 rc=$?
 set -e

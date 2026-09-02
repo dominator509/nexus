@@ -6,9 +6,9 @@
 //! synchronization. This journal persists both surfaces as JSON-lines
 //! files under a runtime-owned state directory:
 //!
-//! - `quarantine.jsonl` — one serialized `Incident` per line (the
+//! - `quarantine.jsonl` - one serialized `Incident` per line (the
 //!   quarantined fallback records that have not reached the provider);
-//! - `audit.jsonl` — one serialized `AuditRecord` per line.
+//! - `audit.jsonl` - one serialized `AuditRecord` per line.
 //!
 //! The journal is append-and-rewrite (bounded, low volume), opens with
 //! mode 0600 files under a mode 0700 directory, and every write is
