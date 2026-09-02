@@ -1,0 +1,2 @@
+rx023-battery	scripts/rx023-remediation-tests.sh	sha256:3e659d7da7435e4c281c90e6a3b9868c9ae44a37967ae0a631e5227abf0c5a53
+rx023-node-script	scripts/nodes/RX-023.sh	sha256:e298e1df710095867d18327a2f42a91061acac65fc5264d2f822ce3300cf8ccd
