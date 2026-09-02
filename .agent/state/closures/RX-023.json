@@ -1,0 +1,55 @@
+{
+  "attestation_digest": "sha256:7eff7cd4fe40b1859af9f308dfc8db0f71abb52ca2bbcca92f5c2c2f75c101e7",
+  "closure_commit": "1fcdf365c37e4777e05e2cc2a806d3d277a0704f",
+  "created_at": "2026-09-02T18:39:00Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:4c8faae545cf8f94b4a7b7f70b5dddcedec39c4ccfa0b6c258d9ad70bb3b413c",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-023/1fcdf365c37e4777e05e2cc2a806d3d277a0704f",
+  "milestones": {
+    "max": 1,
+    "passed": [
+      1
+    ]
+  },
+  "node": "RX-023",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:3e659d7da7435e4c281c90e6a3b9868c9ae44a37967ae0a631e5227abf0c5a53",
+      "id": "rx023-battery",
+      "ref": "scripts/rx023-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:e298e1df710095867d18327a2f42a91061acac65fc5264d2f822ce3300cf8ccd",
+      "id": "rx023-node-script",
+      "ref": "scripts/nodes/RX-023.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:4c8faae545cf8f94b4a7b7f70b5dddcedec39c4ccfa0b6c258d9ad70bb3b413c",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "rx023-battery",
+        "passed": 6
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 97
+  },
+  "verify_log": ".agent/remediation/evidence/RX-023/verify.log|sha256:10c096aa56b7a0fa7003b7280c6ad7c262afaca23217e70e803d5bec3b5184b2",
+  "verify_sentinel": "verify: ok"
+}
