@@ -134,8 +134,8 @@ impl IncidentSink for GlitchTipIncidentSink {
         severity: Severity,
         classification: &str,
         source: &str,
-        _correlation: Option<CorrelationId>,
-        redacted_context: RedactedEnvelope,
+        correlation: Option<CorrelationId>,
+        mut redacted_context: RedactedEnvelope,
     ) -> IncidentDeliveryResult {
         // M1 dedupe semantics: an open/acknowledged incident with the
         // same dedupe key at equal or lower severity is deduplicated.
@@ -145,6 +145,16 @@ impl IncidentSink for GlitchTipIncidentSink {
             }
             // Escalation: record at the higher severity; the mapping
             // carries the escalated level.
+        }
+
+        // AUD-056: the sink previously ignored its correlation argument.
+        // The port correlation is authoritative for incident correlation
+        // (SPEC-007 behavior 3); when the caller supplied one it is
+        // threaded into the envelope context so the event mapping below
+        // can render it to the provider. An envelope that already
+        // carries the same correlation is left untouched.
+        if correlation.is_some() {
+            redacted_context.context.correlation = correlation;
         }
 
         let outcome = self.deliver_incident(
@@ -305,5 +315,110 @@ mod tests {
         assert!(h.starts_with("Sentry sentry_version=7"));
         assert!(h.contains("sentry_client=nexus-glitchtip/"));
         assert!(h.contains("sentry_key="));
+    }
+
+    /// AUD-056 hostile wire proof: the sink previously ignored its
+    /// correlation argument (`_correlation`), so a reported incident
+    /// reached the provider with NO correlation context. The sink now
+    /// threads the port correlation into the envelope context and the
+    /// event mapping renders it. A real local HTTP fixture captures the
+    /// POST body and proves the correlation id lands on the wire.
+    #[test]
+    fn aud056_sink_correlation_reaches_wire_event() {
+        use std::io::Read;
+        use std::io::Write;
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind listener");
+        let addr = listener.local_addr().expect("local addr");
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buf = [0u8; 8192];
+            let n = stream.read(&mut buf).unwrap_or(0);
+            let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+            buf[..n].to_vec()
+        });
+
+        // Plaintext HTTP DSN is local-fixture-only (AUD-055 contract:
+        // http stays plaintext for local fixtures).
+        let dsn = Dsn::parse(&format!(
+            "http://0123456789abcdef0123456789abcdef@127.0.0.1:{}/42",
+            addr.port()
+        ))
+        .expect("http dsn");
+        let mut s = GlitchTipIncidentSink::new(dsn, "nexus@0.1.0", "test");
+        let corr: CorrelationId = "01970000-0000-7000-8000-000000000011".parse().unwrap();
+        let mut fields = BTreeMap::new();
+        fields.insert("message".to_string(), "correlated boom".to_string());
+        let result = s.report(
+            IncidentId::new("018e5c5e-4d9b-7f0c-8a2b-3c4d5e6f7a83").expect("valid id"),
+            "aud056:sink:correlation".to_string(),
+            Severity::Error,
+            "unavailable",
+            "storage",
+            Some(corr.clone()),
+            redacted(fields),
+        );
+        assert!(
+            matches!(result, IncidentDeliveryResult::Recorded),
+            "expected Recorded, got {result:?}"
+        );
+        let captured = server.join().expect("server join");
+        let text = String::from_utf8_lossy(&captured).to_string();
+        assert!(
+            text.contains(corr.as_str()),
+            "correlation id must reach the provider wire body"
+        );
+        assert!(
+            text.contains("correlation_id"),
+            "event must carry the correlation_id tag/extra"
+        );
+    }
+
+    /// AUD-056 control: the same wire fixture WITHOUT a correlation must
+    /// NOT fabricate one (no correlation_id appears when none was given).
+    #[test]
+    fn aud056_sink_no_correlation_omits_correlation_context() {
+        use std::io::Read;
+        use std::io::Write;
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind listener");
+        let addr = listener.local_addr().expect("local addr");
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buf = [0u8; 8192];
+            let n = stream.read(&mut buf).unwrap_or(0);
+            let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+            buf[..n].to_vec()
+        });
+
+        let dsn = Dsn::parse(&format!(
+            "http://0123456789abcdef0123456789abcdef@127.0.0.1:{}/42",
+            addr.port()
+        ))
+        .expect("http dsn");
+        let mut s = GlitchTipIncidentSink::new(dsn, "nexus@0.1.0", "test");
+        let mut fields = BTreeMap::new();
+        fields.insert("message".to_string(), "plain boom".to_string());
+        let result = s.report(
+            IncidentId::new("018e5c5e-4d9b-7f0c-8a2b-3c4d5e6f7a84").expect("valid id"),
+            "aud056:sink:no-correlation".to_string(),
+            Severity::Error,
+            "unavailable",
+            "storage",
+            None,
+            redacted(fields),
+        );
+        assert!(
+            matches!(result, IncidentDeliveryResult::Recorded),
+            "expected Recorded, got {result:?}"
+        );
+        let captured = server.join().expect("server join");
+        let text = String::from_utf8_lossy(&captured).to_string();
+        assert!(
+            !text.contains("correlation_id"),
+            "no correlation must mean no correlation context on the wire"
+        );
     }
 }

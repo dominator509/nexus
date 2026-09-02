@@ -103,7 +103,7 @@ impl ObservabilityRuntime {
         severity: Severity,
         observed: Vec<(String, String)>,
     ) -> ObservabilityResult<RedactedEnvelope> {
-        Ok(self.policy.apply(
+        self.redact_with_context(
             signal,
             TelemetryContext::new(
                 self.node.clone(),
@@ -121,7 +121,23 @@ impl ObservabilityRuntime {
             )
             .expect("valid telemetry context"),
             observed,
-        ))
+        )
+    }
+
+    /// Apply redaction under a caller-supplied, already-validated
+    /// `TelemetryContext`. AUD-056: incident redaction must NOT
+    /// reconstruct telemetry with correlation/trace/request/tenant
+    /// context absent. This entry point preserves whatever safe context
+    /// metadata the caller holds (correlation, trace ids, request id,
+    /// tenant, source interface) in the redacted envelope, so incident
+    /// delivery can correlate across the provider boundary.
+    pub fn redact_with_context(
+        &self,
+        signal: TelemetrySignal,
+        context: TelemetryContext,
+        observed: Vec<(String, String)>,
+    ) -> ObservabilityResult<RedactedEnvelope> {
+        Ok(self.policy.apply(signal, context, observed))
     }
 
     // ------------------------------------------------------- writers
@@ -168,13 +184,67 @@ impl ObservabilityRuntime {
         correlation: Option<CorrelationId>,
         observed: Vec<(String, String)>,
     ) -> IncidentDeliveryResult {
-        let envelope = match self.redact(
-            TelemetrySignal::Incident,
-            source,
-            "incident.report",
+        // AUD-056: the redacted envelope context must carry the incident
+        // correlation (and the canonical node/environment/operation
+        // metadata), never a context reconstructed with correlation
+        // absent. The caller-provided correlation is threaded into the
+        // envelope context so every downstream surface (recording sink,
+        // GlitchTip sink, audit correlation) sees the same correlation.
+        let context = match TelemetryContext::new(
+            self.node.clone(),
+            None,
+            None,
+            correlation.clone(),
+            None,
+            None,
+            None,
+            source.to_string(),
+            "incident.report".to_string(),
             severity,
-            observed,
+            Some(self.environment.clone()),
+            None,
         ) {
+            Ok(ctx) => ctx,
+            Err(reason) => {
+                return IncidentDeliveryResult::Failed {
+                    reason: reason.to_string(),
+                }
+            }
+        };
+        self.report_incident_with_context(
+            dedupe_key,
+            severity,
+            classification,
+            source,
+            context,
+            correlation,
+            observed,
+        )
+    }
+
+    /// Report an incident under a caller-supplied, already-validated
+    /// telemetry context (AUD-056). The context may carry correlation,
+    /// trace/span ids, request id, tenant, and source interface; those
+    /// safe fields are preserved in the redacted envelope and delivered
+    /// with the incident, so GlitchTip receives correlation/trace
+    /// context instead of a stripped envelope.
+    #[allow(clippy::too_many_arguments)]
+    pub fn report_incident_with_context(
+        &mut self,
+        dedupe_key: String,
+        severity: Severity,
+        classification: &str,
+        source: &str,
+        context: TelemetryContext,
+        correlation: Option<CorrelationId>,
+        observed: Vec<(String, String)>,
+    ) -> IncidentDeliveryResult {
+        // The sink-port correlation is authoritative when supplied;
+        // otherwise the context correlation (if any) is threaded so the
+        // port and the envelope never disagree.
+        let correlation = correlation.or_else(|| context.correlation.clone());
+        let envelope = match self.redact_with_context(TelemetrySignal::Incident, context, observed)
+        {
             Ok(e) => e,
             Err(reason) => {
                 return IncidentDeliveryResult::Failed {
@@ -502,6 +572,81 @@ mod tests {
         // incident is quarantined locally.
         assert_eq!(result, IncidentDeliveryResult::Recorded);
         assert_eq!(rt.quarantined_count(), 1);
+    }
+
+    /// AUD-056 hostile proof (runtime redaction): reporting an incident
+    /// WITH a correlation must preserve that correlation in the redacted
+    /// envelope context that is delivered/quarantined. Previously the
+    /// runtime reconstructed telemetry with correlation absent, so the
+    /// provider-facing envelope could never carry it.
+    #[test]
+    fn aud056_incident_report_preserves_correlation_in_envelope_context() {
+        let mut rt = ObservabilityRuntime::new(config()).unwrap();
+        let corr: CorrelationId = "01970000-0000-7000-8000-000000000011".parse().unwrap();
+        let result = rt.report_incident(
+            "aud056:correlation".to_string(),
+            Severity::Error,
+            "unavailable",
+            "storage",
+            Some(corr.clone()),
+            fields(vec![("message", "correlated incident")]),
+        );
+        assert_eq!(result, IncidentDeliveryResult::Recorded);
+        // The quarantined record must carry the correlation BOTH on the
+        // incident record and in the redacted envelope context (the form
+        // that egresses). The context field is what event mapping reads.
+        let incident = rt
+            .recording
+            .open_incidents()
+            .into_iter()
+            .find(|i| i.dedupe_key == "aud056:correlation")
+            .expect("quarantined incident exists");
+        assert_eq!(incident.correlation.as_ref(), Some(&corr));
+        assert_eq!(
+            incident.redacted_context.context.correlation.as_ref(),
+            Some(&corr),
+            "envelope context correlation must not be stripped by redaction"
+        );
+    }
+
+    /// AUD-056 positive proof (runtime redaction with context): the
+    /// context-aware redaction path preserves tenant/request/trace/span
+    /// metadata when the caller supplies a validated context, so
+    /// incident delivery can correlate at the provider.
+    #[test]
+    fn aud056_redact_with_context_preserves_full_context_metadata() {
+        let rt = ObservabilityRuntime::new(config()).unwrap();
+        let tenant: nexus_domain::TenantId =
+            "01970000-0000-7000-8000-000000000001".parse().unwrap();
+        let corr: CorrelationId = "01970000-0000-7000-8000-000000000011".parse().unwrap();
+        let context = TelemetryContext::new(
+            "n1",
+            Some(tenant),
+            None,
+            Some(corr),
+            Some("req-123".to_string()),
+            Some("0123456789abcdef0123456789abcdef".to_string()),
+            Some("0123456789abcdef".to_string()),
+            "storage",
+            "put",
+            Severity::Error,
+            Some("test".to_string()),
+            Some("s3".to_string()),
+        )
+        .expect("valid context");
+        let envelope = rt
+            .redact_with_context(
+                TelemetrySignal::Incident,
+                context.clone(),
+                fields(vec![("message", "boom")]),
+            )
+            .expect("redaction ok");
+        assert_eq!(envelope.context.correlation, context.correlation);
+        assert_eq!(envelope.context.tenant, context.tenant);
+        assert_eq!(envelope.context.request_id, context.request_id);
+        assert_eq!(envelope.context.trace_id, context.trace_id);
+        assert_eq!(envelope.context.span_id, context.span_id);
+        assert_eq!(envelope.context.source_interface, context.source_interface);
     }
 
     #[test]

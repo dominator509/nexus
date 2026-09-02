@@ -198,9 +198,9 @@ ok "fixture provisioned (org=$ORG project=$PROJECT)"
 if ! sh -c 'cargo test -p nexus-glitchtip --lib >> "$1" 2>&1' _ "$LOG"; then
   fail "unit tests failed" "$LOG"
 fi
-grep -q "test result: ok. 40 passed; 0 failed" "$LOG" \
-  || fail "unit vacuity guard (expect 40 passed)" "$LOG"
-ok "unit suite 40/40"
+grep -q "test result: ok. 48 passed; 0 failed" "$LOG" \
+  || fail "unit vacuity guard (expect 48 passed)" "$LOG"
+ok "unit suite 48/48"
 
 # ------------------------------------------------------------- integration
 if ! sh -c 'cargo test -p nexus-glitchtip-tests --test ep038_m3_integration -- --test-threads=1 >> "$1" 2>&1' _ "$LOG"; then

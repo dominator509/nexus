@@ -189,9 +189,9 @@ ok "fixture provisioned (org=$ORG project=$PROJECT)"
 if ! sh -c 'cargo test -p nexus-observability-ops --lib >> "$1" 2>&1' _ "$LOG"; then
   fail "unit tests failed" "$LOG"
 fi
-grep -q "test result: ok. 16 passed; 0 failed" "$LOG" \
-  || fail "unit vacuity guard (expect 16 passed)" "$LOG"
-ok "unit suite 16/16"
+grep -q "test result: ok. 18 passed; 0 failed" "$LOG" \
+  || fail "unit vacuity guard (expect 18 passed)" "$LOG"
+ok "unit suite 18/18"
 
 # ------------------------------------------------------------- integration
 if ! sh -c 'cargo test -p nexus-observability-ops-tests --test ep038_m4_failures -- --test-threads=1 >> "$1" 2>&1' _ "$LOG"; then

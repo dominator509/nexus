@@ -79,6 +79,38 @@ pub fn event_from_redacted(
         .extra("incident_id", short_fingerprint(incident_id))
         .extra("dedupe_key", dedupe_key.to_string());
 
+    // AUD-056: correlation/trace/request context must reach the
+    // provider (SPEC-007 behavior 3: GlitchTip receives release,
+    // environment, trace, and redacted references). The safe context
+    // metadata carried in the redacted envelope is rendered here; each
+    // value was validated at TelemetryContext construction (no
+    // secret-shaped content can enter) and the tenant is exported only
+    // as a stable hash, never the raw TenantId.
+    if let Some(corr) = &envelope.context.correlation {
+        builder = builder
+            .tag(EventTag::new("correlation_id", corr.as_str().to_string()))
+            .extra("correlation_id", corr.as_str().to_string());
+    }
+    if let Some(req) = &envelope.context.request_id {
+        builder = builder.extra("request_id", req.clone());
+    }
+    if let Some(tid) = &envelope.context.trace_id {
+        builder = builder.tag(EventTag::new("trace_id", tid.clone()));
+    }
+    if let Some(sid) = &envelope.context.span_id {
+        builder = builder.tag(EventTag::new("span_id", sid.clone()));
+    }
+    if let Some(tenant) = &envelope.context.tenant {
+        // Redacted reference only: SHA-256 of the canonical tenant id,
+        // mirroring the OTLP tenant-hash export convention.
+        builder = builder.extra("tenant_hash", sha256_fingerprint(tenant.as_str()));
+    }
+    if let Some(cap) = &envelope.context.source_interface {
+        // Capability/source-interface field (SPEC-007 behavior 1).
+        builder = builder.tag(EventTag::new("capability", cap.clone()));
+    }
+    builder = builder.extra("node", envelope.context.node.clone());
+
     // Safe envelope fields become event `extra` entries, bounded to
     // documented event metadata. Each value was already redacted by
     // the M1 policy and re-verified above.
@@ -323,6 +355,109 @@ mod tests {
         canary.push_str("IOSFODNN7");
         canary.push_str("EXAMPLE");
         assert!(!err.contains(&canary));
+    }
+
+    /// AUD-056 hostile proof (event mapping): an envelope whose context
+    /// carries correlation/trace/request/tenant metadata must render
+    /// that context into the delivered event payload. Previously the
+    /// mapping only emitted envelope.fields, so correlation/trace was
+    /// stripped before delivery and the sink's correlation argument was
+    /// ignored end to end.
+    #[test]
+    fn aud056_event_mapping_renders_correlation_and_trace_context() {
+        let tenant: nexus_domain::TenantId =
+            "01970000-0000-7000-8000-000000000001".parse().unwrap();
+        let corr: nexus_domain::CorrelationId =
+            "01970000-0000-7000-8000-000000000011".parse().unwrap();
+        let context = TelemetryContext::new(
+            "svc-1".to_string(),
+            Some(tenant.clone()),
+            None,
+            Some(corr.clone()),
+            Some("req-abc".to_string()),
+            Some("0123456789abcdef0123456789abcdef".to_string()),
+            Some("0123456789abcdef".to_string()),
+            "svc".to_string(),
+            "incident.report".to_string(),
+            Severity::Error,
+            Some("test".to_string()),
+            Some("http".to_string()),
+        )
+        .expect("valid context");
+        let envelope = RedactedEnvelope {
+            signal: TelemetrySignal::Incident,
+            context,
+            fields: {
+                let mut f = BTreeMap::new();
+                f.insert("message".to_string(), "correlated boom".to_string());
+                f
+            },
+            redacted_fields: vec![],
+            policy_applied: true,
+        };
+        let event = event_from_redacted(
+            &envelope,
+            "inc-4",
+            0,
+            "storage:unavailable",
+            Severity::Error,
+            "unavailable",
+            "storage",
+            "nexus@0.1.0",
+            "test",
+            "2026-08-23T00:00:00Z",
+        )
+        .expect("mapping ok");
+        let json = event.to_json();
+        // Correlation rendered as both a searchable tag and extra.
+        assert_eq!(json["tags"]["correlation_id"], corr.as_str());
+        assert_eq!(json["extra"]["correlation_id"], corr.as_str());
+        // Trace/span/request/tenant/node context rendered.
+        assert_eq!(json["tags"]["trace_id"], "0123456789abcdef0123456789abcdef");
+        assert_eq!(json["tags"]["span_id"], "0123456789abcdef");
+        assert_eq!(json["extra"]["request_id"], "req-abc");
+        assert_eq!(json["extra"]["node"], "svc-1");
+        assert_eq!(json["tags"]["capability"], "http");
+        // Tenant is a redacted reference (hash), never the raw id.
+        let tenant_hash = json["extra"]["tenant_hash"].as_str().unwrap().to_string();
+        assert!(
+            tenant_hash.starts_with("sha256:"),
+            "tenant must be exported as a hash, got {tenant_hash}"
+        );
+        let rendered = serde_json::to_string(&json).unwrap();
+        assert!(
+            !rendered.contains(tenant.as_str()),
+            "raw tenant id must never reach the event payload"
+        );
+    }
+
+    /// AUD-056 boundary proof: even a correlation-shaped id embedded in
+    /// an observed FIELD is redacted (fields are the raw-data surface);
+    /// context metadata is the only correlation carrier.
+    #[test]
+    fn aud056_field_correlation_is_still_redacted() {
+        // Correlation flows through the safe context envelope, never by
+        // stuffing raw request data into observed fields.
+        let envelope = redacted_envelope_with(ok_fields());
+        let event = event_from_redacted(
+            &envelope,
+            "inc-5",
+            0,
+            "storage:unavailable",
+            Severity::Error,
+            "unavailable",
+            "storage",
+            "nexus@0.1.0",
+            "test",
+            "2026-08-23T00:00:00Z",
+        )
+        .expect("mapping ok");
+        let json = event.to_json();
+        // No correlation in the event when the context carries none.
+        assert!(json.get("tags").unwrap().get("correlation_id").is_none());
+        assert!(json["extra"].get("correlation_id").is_none());
+        assert!(json["extra"].get("request_id").is_none());
+        assert!(json["extra"].get("tenant_hash").is_none());
     }
 
     #[test]
