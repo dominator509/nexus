@@ -1,0 +1,15 @@
+.agent/remediation/REMEDIATION_STATE.env
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/verify-remediation-register.sh
+.agent/remediation/REMEDIATION_DAG.txt
+.agent/remediation/GAPS.md
+.agent/milestone-files/RX-022-M1.txt
+scripts/rx022-remediation-tests.sh
+scripts/nodes/RX-022.sh
+scripts/aud090-freshclone-ship-tests.sh
+scripts/ep043-freshclone-accept.sh
+scripts/ep043-m5-tests.sh
+scripts/rx003-ci-authority-tests.sh
+# AUD-090 absorb: pre-executed fix (dec5404) + structured JSON evidence
+# producer; the register row references this node's verify.log.
+.agent/remediation/evidence/RX-022/verify.log

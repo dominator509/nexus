@@ -1,0 +1,40 @@
+# RX-022 M1 — absorb + audit pre-executed AUD-090; certify AUD-075/089/090
+
+- Status: COMPLETE 2026-09-02
+- Register: AUD-075/089/090 VERIFIED_FIXED with fixed_commit + evidence_ref; register PASS 90/90.
+- Branch: rx014-rx015-remediation (HEAD 6f047cf after RX-021 closure + RX-020 attestation fix)
+
+## Scope
+
+RX-022 owns AUD-075 (fresh-clone evidence structured; RX-002 co-owner), AUD-089 (release
+workflow runs a real release-integrity surface; RX-003 co-owner), and AUD-090 (final ship
+uses a fresh-clone-equivalent environment, reruns verify + production-readiness + all
+active live-fire; RX-022 owner). The AUD-090 fix was pre-executed as gap work during the
+RX-020 lease (commits dec5404/7f2ce3c, manifest RX-020-pre-AUD-090.txt); RX-022's job is
+to absorb and audit that fix as the owning node and produce the register-referenced
+`.agent/remediation/evidence/RX-022/verify.log`.
+
+## What RX-022 verified (real execution)
+
+1. Acceptance surface (`scripts/ep043-freshclone-accept.sh`) covers: full git clone,
+   ALL_DONE fail-closed refusal, verify.sh + production-readiness + live-fire.sh ladder,
+   structured `ep043-freshclone-m5.json` evidence (schema_version, `"result": "VERIFIED"`),
+   NOT_READY handling; refuses a knowingly-NOT_READY tree (never accepts).
+2. Structured JSON evidence validated by the M5 gate; stale markdown evidence removed.
+3. RX-002 evidence-truth proof present (AUD-075 surface).
+4. RX-003 CI-authority battery green on HEAD (AUD-089 surface).
+5. AUD-090 hostile/positive freshclone battery green on HEAD.
+6. Evidence reproducibility: RX-000..RX-020 closure verify.logs all present and tracked
+   (scoped .gitignore negation committed in 1ff3751).
+7. Register rows AUD-075 (fixed_commit fc8c3927), AUD-089 (fixed_commit ec060000),
+   AUD-090 (fixed_commit dec5404) all VERIFIED_FIXED with regression_test + evidence_ref;
+   AUD-090 evidence_ref = .agent/remediation/evidence/RX-022/verify.log (produced here).
+8. Full register PASS 90/90 with quarantine active.
+
+## Files changed
+
+- scripts/rx022-remediation-tests.sh (new, 19-check audit battery)
+- scripts/nodes/RX-022.sh (node verify)
+- .agent/remediation/AUDIT_FINDINGS.tsv (AUD-075/089 fixed_commit filled)
+- .agent/expected-files/RX-022.txt
+- .agent/remediation/evidence/RX-022/{verify.log,tests.tsv,proofs.tsv} (at close)
