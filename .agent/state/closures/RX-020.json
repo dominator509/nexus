@@ -1,5 +1,5 @@
 {
- "attestation_digest": "sha256:977bd01a7c81fe7bd71c713150aa4fc2ad31682aec045ed347ca6a67ac7c1e23",
+ "attestation_digest": "sha256:693397a92b76b4d7d6fb1f09959403887913329a3c7b90b2397ef4639f0a73f2",
  "closure_commit": "24fdf26a187894dbd24e737a66b3fec456bfdcb8",
  "created_at": "2026-09-02T16:50:41Z",
  "created_by": "node-close-v2.sh",
@@ -16,7 +16,7 @@
  "node_verify_exit": 0,
  "proofs": [
   {
-   "digest": "sha256:5d7142e2c42b3e90970a08741e157a806b86b75a452297cd0a60677b5b123967",
+   "digest": "sha256:0a59575332999949db4da753d520e228043f4d90cadc604f307240b210553ad4",
    "id": "rx020-aud090-ship-accept",
    "ref": "scripts/ep043-freshclone-accept.sh"
   },

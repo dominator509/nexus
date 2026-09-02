@@ -483,3 +483,5 @@
 2026-09-02T18:33:47Z | ipman | RX-023 | MILESTONE_PASS | [M1] final graph closure: register 90/90 VERIFIED_FIXED, zero open rows; RX-000..RX-022 all V2-DONE; quarantine active; ship-gate ready
 2026-09-02T18:39:03Z | ipman | RX-023 | NODE_DONE | RX-023 closed (final node): register 90/90 VERIFIED_FIXED; RX-000..RX-023 all V2-DONE; battery 6/6; closure attestation sha256 7eff7cd4fe40b1859af9f308dfc8db0f71abb52ca2bbcca92f5c2c2f75c101e7; tag green-v2/RX-023/1fcdf36
 2026-09-02T18:43:17Z | ipman | RX-001 | MILESTONE_PASS | RX-001 closure re-attested: graph-next-v2 scheduler ALL_DONE fix (comment-line skip) updated pinned proof digest; attestation sha256 839d671dcd8f74438bbfcc95fb0fcef777bc1d56e419fec09b6a1a09945ae7aa
+2026-09-02T18:53:07Z | ipman | RX-020 | MILESTONE_PASS | RX-020 closure re-attested: ep043-freshclone-accept.sh ALL_DONE_V2 sentinel fix updated pinned proof digest
+2026-09-02T18:53:07Z | ipman | RX-022 | MILESTONE_PASS | RX-022 closure re-attested: ep043-freshclone-accept.sh ALL_DONE_V2 sentinel fix updated pinned proof digest
