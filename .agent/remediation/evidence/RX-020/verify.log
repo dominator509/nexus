@@ -1,0 +1,13 @@
+ok - rx001 battery green on HEAD
+ok - RX-002 release-evidence vitest green on HEAD
+ok - rx003 battery green on HEAD
+ok - rx008 battery green on HEAD
+ok - aud090 battery green on HEAD
+ok - remediation register PASS (90/90 registered, quarantine active)
+ok - zero P0/P1 findings remain not-VERIFIED_FIXED (scheduler gate recomputed)
+ok - every VERIFIED_FIXED row carries regression_test + evidence_ref
+ok - quarantine active: generation 2, release not allowed
+---
+RX-020 battery: 9 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-020: FAIL - missing .agent/remediation/evidence/RX-020/verify.log

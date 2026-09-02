@@ -1,0 +1,44 @@
+# RX-020 M1: register-wide P0/P1 closure proof
+
+Status: COMPLETE (2026-09-02)
+Agent: ipman
+Node contract: structural closure gate (owns no AUD finding). The
+scheduler (graph-next-v2.sh) refuses to schedule RX-020 while ANY P0/P1
+finding register-wide is not VERIFIED_FIXED. RX-020 DEPS RX-018,RX-019.
+
+## State entering RX-020 (10 blockers)
+
+1. AUD-001 (RX-001/RX-016) FIXED_UNVERIFIED - fixing node DONE, battery fresh-green.
+2. AUD-054 (RX-019/RX-008) FIXED_UNVERIFIED - RX-019 DONE, RX-008 battery fresh-green.
+3. AUD-071/072/073/074/087 (RX-002/RX-021) FIXED_UNVERIFIED - RX-002 DONE, release-evidence vitest fresh-green.
+4. AUD-075 (RX-002/RX-022) FIXED_UNVERIFIED - RX-002 DONE.
+5. AUD-089 (RX-003/RX-022) FIXED_UNVERIFIED - RX-003 DONE, ci-authority battery fresh-green.
+6. AUD-090 (RX-022, sole) OPEN - the only genuinely open P0/P1; owner sits
+   DOWNSTREAM of RX-020, so the register-wide gate is a sequencing trap
+   unless the fix is pre-executed.
+
+## Resolution (verify-and-flip + pre-executed AUD-090 gap work)
+
+- Rows 1-5 flipped to VERIFIED_FIXED on fresh upstream battery evidence at
+  HEAD (rx001 18/18, release-evidence vitest 160/160, rx003 18/18, rx008 7/7).
+- AUD-090 pre-executed as RX-022 gap work (approved by Dominic, option 1):
+  ep043-freshclone-accept.sh now performs the ship-standard fresh-clone run
+  (SPEC-008 behavior 4) - verify.sh + production-readiness + full live-fire
+  registry in the clone, fail-closed on any non-ALL_DONE tree, structured
+  ep043-freshclone-m5.json evidence (freshCloneRerun was always false before
+  because no structured producer existed). Discovered and fixed the
+  reproducibility blocker: 20 attested closure verify.log files were
+  gitignored, so a fresh clone could never reproduce node-DONE truth.
+  fast-uri >=3.1.6 override (4 high advisories on transitive 3.1.5).
+
+## Proof
+
+scripts/rx020-remediation-tests.sh - 9/9 green on HEAD:
+- rx001 battery fresh-green (AUD-001/085 hostiles)
+- release-evidence vitest 160/160 (RX-002 evidence truth)
+- rx003 battery fresh-green (AUD-003/089 release surface)
+- rx008 battery fresh-green (AUD-054/083/084)
+- aud090 battery fresh-green (ship-standard fresh-clone proof)
+- register 90/90 PASS, quarantine active
+- scheduler gate recomputed: zero P0/P1 not VERIFIED_FIXED
+- every VERIFIED_FIXED row carries regression_test + evidence_ref
