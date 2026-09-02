@@ -1,0 +1,75 @@
+{
+  "attestation_digest": "sha256:f2eae8b2f375a472f5e8f076453f1b19c40d0e65b19db462aae0d16b74e0cd7a",
+  "closure_commit": "24fdf26a187894dbd24e737a66b3fec456bfdcb8",
+  "created_at": "2026-09-02T16:50:41Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:701ed8aae66162bfa39871f4f146f9880a6e4d45a2e0a65c86891ffe491b15e9",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-020/24fdf26a187894dbd24e737a66b3fec456bfdcb8",
+  "milestones": {
+    "max": 1,
+    "passed": [
+      1
+    ]
+  },
+  "node": "RX-020",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:5ed4139194128ea3de625877023a98a3034b4292a1df66f9e380d5b941c68dcf",
+      "id": "rx020-register-zero-p1-open",
+      "ref": ".agent/remediation/AUDIT_FINDINGS.tsv"
+    },
+    {
+      "digest": "sha256:5d7142e2c42b3e90970a08741e157a806b86b75a452297cd0a60677b5b123967",
+      "id": "rx020-aud090-ship-accept",
+      "ref": "scripts/ep043-freshclone-accept.sh"
+    },
+    {
+      "digest": "sha256:db67df554c221753b7204d8d5ea085911f85a33caf22e07cf0e4ea260ee186a8",
+      "id": "rx020-aud090-battery",
+      "ref": "scripts/aud090-freshclone-ship-tests.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:701ed8aae66162bfa39871f4f146f9880a6e4d45a2e0a65c86891ffe491b15e9",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "rx020-register-closure",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "rx020-upstream-rx001",
+        "passed": 18
+      },
+      {
+        "failed": 0,
+        "family": "rx020-upstream-rx002-vitest",
+        "passed": 160
+      },
+      {
+        "failed": 0,
+        "family": "rx020-upstream-rx003",
+        "passed": 18
+      },
+      {
+        "failed": 0,
+        "family": "rx020-upstream-rx008",
+        "passed": 7
+      },
+      {
+        "failed": 0,
+        "family": "rx020-aud090-freshclone",
+        "passed": 6
+      }
+    ],
+    "passed": 210
+  },
+  "verify_log": ".agent/remediation/evidence/RX-020/verify.log|sha256:04c7722302109657e5a8de4f5bf9e2de23f14ff090f7d05eaee7b6ccc57c4888",
+  "verify_sentinel": "verify: ok"
+}
