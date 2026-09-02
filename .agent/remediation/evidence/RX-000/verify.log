@@ -1,0 +1,4 @@
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-000: ok
+RX-000 verify: ok
+verify: ok

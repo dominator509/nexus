@@ -1,0 +1,15 @@
+RX-019 node verify log (fresh run 2026-09-02T15:34Z, M1-M6 complete)
+ok - ep019-m1-tests.sh (AUD-017 IncidentEngine)
+ok - ep019-m2-tests.sh (AUD-017 IncidentEngine)
+ok - ep019-m3-tests.sh (AUD-017 IncidentEngine)
+ok - ep019-m4-tests.sh (AUD-017 IncidentEngine)
+ok - ep038-m3-tests.sh (AUD-055 https TLS + AUD-056 correlation context + AUD-058 ack/resolve)
+ok - ep038-m4-tests.sh (AUD-057 durable quarantine)
+ok - ep041-m5-tests.sh (AUD-064 declared promotion/evaluation evidence gate)
+ok - aud064 proofs 11/10 (declared promotion evidence gate)
+ok - clippy -D warnings clean
+ok - cargo fmt clean
+
+RX-019 battery: 10 ok, 0 fail
+verify: ok
+RX-019 verify: ok

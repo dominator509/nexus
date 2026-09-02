@@ -1,0 +1,19 @@
+ok - canary promotion suite (23 tests: signed approval records, bare-string denial, policy lookup, expiry, separation, signature tamper/wrong-key)
+ok - hostile AUD-070 sentinels present (bare-string/unauthorized/separation/expiry/future/tamper/wrong-key/binding/unsigned)
+ok - typecheck clean (apps/setup)
+ok - typecheck clean (tests/release)
+ok - EP-042 m1 gate green
+ok - EP-042 m2 gate green
+ok - EP-042 m3 gate green
+ok - EP-042 m4 gate green
+ok - EP-042 m5 gate green
+ok - workspace check clean
+ok - workspace clippy clean (-D warnings)
+ok - remediation register: VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+---
+RX-012 battery: 12 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-012: ok
+RX-012 verify: ok
+verify: ok
+RX012_VERIFY_EXIT=0

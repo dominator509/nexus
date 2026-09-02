@@ -1,0 +1,13 @@
+ok - ep037-m2-tests.sh (AUD-049 tenant boundary)
+ok - ep037-m3-tests.sh (AUD-049 tenant boundary)
+ok - ep037-m2-tests.sh (AUD-050 shared-content delete)
+ok - ep037-m3-tests.sh (AUD-051 encryption-before-egress)
+ok - ep037-m4-tests.sh (AUD-051 encryption-before-egress)
+ok - ep037-m5-tests.sh (AUD-051 encryption-before-egress)
+ok - clippy -D warnings clean
+ok - cargo fmt clean
+
+RX-018 battery: 8 ok, 0 fail
+expected files RX-018: ok
+RX-018 verify: ok
+verify: ok

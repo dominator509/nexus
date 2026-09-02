@@ -1,0 +1,13 @@
+ok - telemetry unit regressions (7 tests: context init, empty-component fail-closed, structured exportable line, tenant never leaks)
+ok - composition unit regressions (7 tests: descriptor, MCP session, A2A lifecycle, artifact hash-bound, outbox, router surfaces)
+ok - ep044 integration live-fire (11 tests: healthz/readyz/capabilities/discover, MCP init/list/call, A2A submit/run/stream, artifact publish/fetch + fabricated-404, events append/pending)
+ok - nexus-a2a suite (29 tests)
+ok - workspace check clean
+ok - control-plane + a2a clippy clean
+ok - remediation register: VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+---
+RX-008 battery: 7 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-008: ok
+RX-008 verify: ok
+verify: ok

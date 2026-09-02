@@ -1,0 +1,14 @@
+ok - desktop dispatcher (AUD-039 registered profile gate)
+ok - web contracts + PWA entry (AUD-038/039)
+ok - web e2e forced-failure (AUD-039)
+ok - ep034 M1 gate (mobile contract suite)
+ok - ep034 M2 gate (AUD-041 approval binding)
+ok - ep034 M3 gate (e2e transport)
+ok - ep034 M4 gate (failure suite)
+ok - ep034 M5 gate (live-fire LF-004 + LF-022)
+ok - ep033 M5 gate (PWA + a11y axe + LF-005)
+
+RX-016 battery: 9 ok, 0 fail
+expected files RX-016: ok
+RX-016 verify: ok
+verify: ok
