@@ -1,0 +1,65 @@
+{
+  "attestation_digest": "sha256:09ea742a02dc7f461c07ebea4490acd5b8a81447f9c67f9f34575d666f16c635",
+  "closure_commit": "5858438a73241f30acadc6704704fda623967e53",
+  "created_at": "2026-09-02T18:30:05Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:911164386d19d4640c552682b186c0685682ed2532303f5bebe1740bb6bed1d3",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-022/5858438a73241f30acadc6704704fda623967e53",
+  "milestones": {
+    "max": 1,
+    "passed": [
+      1
+    ]
+  },
+  "node": "RX-022",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:0171da73a9e4f89db1a357e2d6e3da7187ab912d2e3b709804cc7aec2f9f006d",
+      "id": "rx022-battery",
+      "ref": "scripts/rx022-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:4bfa59c3741942f5549d647c22267f94bfca9e8044768774520673eaab27ee60",
+      "id": "rx022-node-script",
+      "ref": "scripts/nodes/RX-022.sh"
+    },
+    {
+      "digest": "sha256:5d7142e2c42b3e90970a08741e157a806b86b75a452297cd0a60677b5b123967",
+      "id": "rx022-aud090-acceptance",
+      "ref": "scripts/ep043-freshclone-accept.sh"
+    },
+    {
+      "digest": "sha256:db67df554c221753b7204d8d5ea085911f85a33caf22e07cf0e4ea260ee186a8",
+      "id": "rx022-aud090-battery",
+      "ref": "scripts/aud090-freshclone-ship-tests.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:911164386d19d4640c552682b186c0685682ed2532303f5bebe1740bb6bed1d3",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "rx022-battery",
+        "passed": 19
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 110
+  },
+  "verify_log": ".agent/remediation/evidence/RX-022/verify.log|sha256:efd4a19887043ddcf7bd7dd646021d35b00c42952d300f9acbb63c936151594e",
+  "verify_sentinel": "verify: ok"
+}
