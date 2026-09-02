@@ -19,6 +19,7 @@ REGISTER="$ROOT/.agent/remediation/AUDIT_FINDINGS.tsv"
 # Blocked node takes priority.
 blocked=""
 while read -r id _ deps; do
+  case "$id" in \#*) continue;; esac
   [ "$id" = "RX-000" ] && continue
   if [ -f "$ROOT/.agent/state/closures/$id.json" ]; then
     continue
@@ -46,6 +47,7 @@ fi
 
 # Leased-but-unclosed node resumes first.
 while read -r id _ deps; do
+  case "$id" in \#*) continue;; esac
   st=$(status "$id")
   if [ "$st" = "IN_PROGRESS" ]; then
     echo "RESUME $id"
@@ -55,6 +57,7 @@ done < "$DAG"
 
 # First schedulable pending node (all V2-DONE deps).
 while read -r id _ deps; do
+  case "$id" in \#*) continue;; esac
   st=$(status "$id")
   [ "$st" = "PENDING" ] || continue
   ok=1
@@ -88,6 +91,7 @@ done < "$DAG"
 
 undone=""
 while read -r id _ deps; do
+  case "$id" in \#*) continue;; esac
   st=$(status "$id")
   [ "$st" = "DONE" ] || { undone="$id"; break; }
 done < "$DAG"
