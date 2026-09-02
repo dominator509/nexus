@@ -1,0 +1,4 @@
+rx022-battery	scripts/rx022-remediation-tests.sh	sha256:0171da73a9e4f89db1a357e2d6e3da7187ab912d2e3b709804cc7aec2f9f006d
+rx022-node-script	scripts/nodes/RX-022.sh	sha256:4bfa59c3741942f5549d647c22267f94bfca9e8044768774520673eaab27ee60
+rx022-aud090-acceptance	scripts/ep043-freshclone-accept.sh	sha256:5d7142e2c42b3e90970a08741e157a806b86b75a452297cd0a60677b5b123967
+rx022-aud090-battery	scripts/aud090-freshclone-ship-tests.sh	sha256:db67df554c221753b7204d8d5ea085911f85a33caf22e07cf0e4ea260ee186a8
