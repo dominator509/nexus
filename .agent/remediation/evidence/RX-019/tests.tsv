@@ -2,7 +2,7 @@ nexus-healing-ep019-unit	27	0
 nexus-healing-ep019-failure	13	0
 workflows-ep019-vitest	11	0
 healing-ep019-pytest	12	0
-glitchtip-lib	48	0
+glitchtip-lib	52	0
 glitchtip-ep038-integration	4	0
 glitchtip-ep038-stopped	1	0
 ops-lib	26	0
@@ -10,3 +10,5 @@ ops-ep038-failure	6	0
 ops-ep038-revoked	1	0
 ops-ep038-stopped	1	0
 ops-ep038-restart-recovery	1	0
+microbrain-ep041-m5	210	0
+microbrain-aud064	11	0
