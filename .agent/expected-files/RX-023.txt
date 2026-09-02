@@ -1,0 +1,10 @@
+.agent/remediation/REMEDIATION_STATE.env
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/verify-remediation-register.sh
+.agent/remediation/REMEDIATION_DAG.txt
+.agent/remediation/GAPS.md
+.agent/milestone-files/RX-023-M1.txt
+scripts/rx023-remediation-tests.sh
+scripts/nodes/RX-023.sh
+# Final node: register-wide closure proof + ship-gate readiness.
+.agent/remediation/evidence/RX-023/verify.log

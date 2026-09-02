@@ -1,0 +1,32 @@
+# RX-023 M1 — final graph closure: register 90/90, all nodes V2-DONE
+
+- Status: COMPLETE 2026-09-02
+- Register: 90/90 VERIFIED_FIXED; zero open rows; quarantine active (generation 2).
+- Branch: rx014-rx015-remediation (HEAD 5893d47 after RX-022 closure)
+
+## Scope
+
+RX-023 is the final node in the remediation graph (DEPS RX-022). It owns no findings; its
+contract is the register-wide closure state and graph ALL_DONE reachability. Closing
+RX-023 unblocks the ship gate (production-readiness-check.sh path: ALL_DONE +
+NEXUS_REQUIRE_ALL_PROOFS=1 verify + certification_validate + drills + RELEASE_MANIFEST).
+
+## What RX-023 verified (real execution)
+
+1. Register: exactly 90 findings, every row VERIFIED_FIXED with regression_test +
+   evidence_ref.
+2. Quarantine active: REMEDIATION_GENERATION=2, RELEASE_ALLOWED=false.
+3. Every graph node RX-000..RX-022 recomputed V2-DONE via node-status-v2.sh
+   (12 conditions each: closure manifest canonical digest, verify_log digest match,
+   expected-files digest, scope audit, node verify exit 0 + sentinels, required proofs,
+   owned findings, ledger milestones, green tag target == closure_commit).
+4. Graph scheduler dispatches RX-023 (all deps DONE).
+5. All RX-000..RX-022 closure manifests + verify.logs present.
+6. Zero P0/P1 findings not VERIFIED_FIXED (scheduler gate recomputed).
+
+## Files changed
+
+- scripts/rx023-remediation-tests.sh (new, 6-check final closure battery)
+- scripts/nodes/RX-023.sh (node verify)
+- .agent/expected-files/RX-023.txt
+- .agent/remediation/evidence/RX-023/{verify.log,tests.tsv,proofs.tsv} (at close)
