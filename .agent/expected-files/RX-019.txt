@@ -1,0 +1,40 @@
+# RX-019 expected files: EP-019 IncidentEngine production truth + EP-038
+# GlitchTip transport/incident correlation/durable quarantine truth
+# (AUD-017 production IncidentEngine; AUD-055 GlitchTip https:// DSNs sent
+#  over plaintext; AUD-056 correlation/trace context stripped before
+#  GlitchTip delivery; AUD-057 GlitchTip-outage quarantine process-local)
+.agent/expected-files/RX-019.txt
+.agent/milestone-files/RX-019-M1.txt
+.agent/milestone-files/RX-019-M2.txt
+.agent/milestone-files/RX-019-M3.txt
+.agent/milestone-files/RX-019-M4.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/evidence/RX-019/
+Cargo.lock
+crates/nexus-healing/Cargo.toml
+crates/nexus-healing/src/engine.rs
+crates/nexus-healing/src/error.rs
+crates/nexus-healing/src/lib.rs
+crates/nexus-healing/src/memory.rs
+crates/nexus-healing/tests/ep019_unit_contract.rs
+crates/nexus-healing/tests/lf019.rs
+infra/glitchtip/Cargo.toml
+infra/glitchtip/src/dsn.rs
+infra/glitchtip/src/incident.rs
+infra/glitchtip/src/lib.rs
+infra/glitchtip/src/sink.rs
+infra/glitchtip/src/transport.rs
+infra/observability/Cargo.toml
+infra/observability/src/journal.rs
+infra/observability/src/lib.rs
+infra/observability/src/runtime.rs
+scripts/ep019-m1-tests.sh
+scripts/ep019-m2-tests.sh
+scripts/ep019-m3-tests.sh
+scripts/ep019-m4-tests.sh
+scripts/ep038-m3-tests.sh
+scripts/ep038-m4-tests.sh
+scripts/nodes/RX-019.sh
+scripts/rx019-remediation-tests.sh
+tests/observability-ops/tests/ep038_m4_failures.rs
+tests/observability-ops/tests/ep038_m4_stopped.rs
