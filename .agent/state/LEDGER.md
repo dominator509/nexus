@@ -489,3 +489,4 @@
 2026-09-02T19:06:54Z | ipman | RX-019 | MILESTONE_PASS | RX-019 closure re-attested: ship-gate fix (journal.rs non-ASCII + aud090 hostile sandbox) updated pinned proof digest
 2026-09-02T19:06:54Z | ipman | RX-020 | MILESTONE_PASS | RX-020 closure re-attested: ship-gate fix (journal.rs non-ASCII + aud090 hostile sandbox) updated pinned proof digest
 2026-09-02T19:06:54Z | ipman | RX-022 | MILESTONE_PASS | RX-022 closure re-attested: ship-gate fix (journal.rs non-ASCII + aud090 hostile sandbox) updated pinned proof digest
+2026-09-02T20:59:11Z | ipman | RX-016 | MILESTONE_PASS | [re-attest] RX-016 closure re-attested: ship-gate aud038 PWA build proof gained explicit 30s vitest budget (real pnpm pwa:build exceeded 5s default under parallel load; assertions unchanged) - updated pwa-hostile proof digest; closure_commit 94e4aa6, tag green-v2/RX-016/94e4aa6

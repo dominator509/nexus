@@ -1,11 +1,11 @@
 {
-  "attestation_digest": "sha256:7f15bc6a15e499fed9a1061d497730443f24e996bcc2236b768efa9f7805a4c4",
-  "closure_commit": "dc459442e37b381a0dda693489fb6d16e8b4fe46",
-  "created_at": "2026-09-01T17:24:01Z",
+  "attestation_digest": "sha256:369ad7e66c1e8cccc5c66d9c0ab15fdcd4bf632e9fe57bf2909ae45c20f1df36",
+  "closure_commit": "94e4aa6072ad5a6b86ad4eb03ff4269c420ae124",
+  "created_at": "2026-09-02T20:59:06Z",
   "created_by": "node-close-v2.sh",
   "expected_files_digest": "sha256:57ddc4f1a089d42cd2a049c08b2abf50e60f83bae5a84fcfdfa24384fa16af7f",
   "generation": 2,
-  "green_v2_tag": "green-v2/RX-016/dc459442e37b381a0dda693489fb6d16e8b4fe46",
+  "green_v2_tag": "green-v2/RX-016/94e4aa6072ad5a6b86ad4eb03ff4269c420ae124",
   "milestones": {
     "max": 4,
     "passed": [
@@ -64,7 +64,7 @@
       "ref": "apps/web/vite.config.ts"
     },
     {
-      "digest": "sha256:0ae2aefd94eea7ce7c5b24e05f6fb74613277146d2685a81a0806395aa177a52",
+      "digest": "sha256:c2ecef303ff40d0b75901107fdcd262a531c0285c6ee7ae50a6cb7e123a2d9ff",
       "id": "pwa-hostile",
       "ref": "apps/web/src/__tests__/ep033_aud038_pwa_entry.test.tsx"
     },
