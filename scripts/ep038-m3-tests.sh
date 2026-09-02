@@ -6,7 +6,7 @@
 # integration proofs in tests/glitchtip/. The gate proves:
 #   - real postgres + redis + glitchtip fixture with runtime creds
 #   - provisioning of org/project/project-key/API token via Django shell
-#   - production adapter unit suite (40 proofs)
+#   - production adapter unit suite (52 proofs)
 #   - real-provider integration (4 proofs): envelope lands, readback
 #     verified, escalation + dedupe grouping, redaction canary absent
 #   - stopped-provider phase: fixture stopped, refused -> Unavailable
@@ -198,9 +198,9 @@ ok "fixture provisioned (org=$ORG project=$PROJECT)"
 if ! sh -c 'cargo test -p nexus-glitchtip --lib >> "$1" 2>&1' _ "$LOG"; then
   fail "unit tests failed" "$LOG"
 fi
-grep -q "test result: ok. 48 passed; 0 failed" "$LOG" \
-  || fail "unit vacuity guard (expect 48 passed)" "$LOG"
-ok "unit suite 48/48"
+grep -q "test result: ok. 52 passed; 0 failed" "$LOG" \
+  || fail "unit vacuity guard (expect 52 passed)" "$LOG"
+ok "unit suite 52/52"
 
 # ------------------------------------------------------------- integration
 if ! sh -c 'cargo test -p nexus-glitchtip-tests --test ep038_m3_integration -- --test-threads=1 >> "$1" 2>&1' _ "$LOG"; then

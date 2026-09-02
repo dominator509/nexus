@@ -1,0 +1,41 @@
+AUD-058: GlitchTip acknowledge/resolve state truth. The GlitchTip
+IncidentSink implementation had acknowledge() and resolve() as no-ops:
+both validated nothing, returned Ok(()) unconditionally, and NEVER
+removed/updated the incident in the open-dedupe map. A "resolved"
+fingerprint therefore stayed open forever and kept suppressing
+subsequent reports of the SAME incident (equal/lower severity returned
+Deduplicated), so a genuinely new occurrence of a resolved incident was
+silently dropped - SPEC-007 incident operations require acknowledge/
+resolve to mutate incident lifecycle state.
+
+Fixes (infra/glitchtip/src/sink.rs):
+- The sink now tracks incident lifecycle state per dedupe key (states
+  map: Open/Acknowledged/Resolved) plus an incident_id -> dedupe_key
+  index (by_incident), mirroring the M1 RecordingIncidentSink
+  semantics. Every accepted delivery records the fingerprint as Open.
+- acknowledge(incident_id) is now a REAL state transition
+  (Open -> Acknowledged): unknown incident ids fail NotFound, and an
+  already-resolved incident fails Conflict ("cannot acknowledge a
+  resolved incident"). An acknowledged incident still suppresses
+  equal/lower-severity duplicates (model parity) until resolved.
+- resolve(incident_id) is now a REAL state transition
+  (Open/Acknowledged -> Resolved) that REMOVES the fingerprint from the
+  open-dedupe map, so the NEXT report of the same dedupe key is a fresh
+  incident (delivered), not a suppressed duplicate. Unknown ids fail
+  NotFound; double-resolve fails Conflict ("incident already
+  resolved").
+
+Hostile + positive regressions (4 new aud058 proofs over a REAL local
+HTTP/1.1 wire fixture with multi-accept server):
+- aud058_resolve_removes_fingerprint_fresh_report_delivered (hostile:
+  report -> resolve -> report same key again; the second report MUST be
+  delivered (Recorded), never Deduplicated; 2 wire deliveries observed)
+- aud058_acknowledge_keeps_dedupe_until_resolved (positive: ack keeps
+  suppressing equal severity; only resolve re-enables fresh delivery)
+- aud058_acknowledge_resolve_unknown_incident_fails_closed (hostile:
+  unknown ids NotFound, never silent success)
+- aud058_resolve_twice_and_acknowledge_after_resolve_conflict
+  (hostile: state machine enforcement, model parity)
+
+nexus-glitchtip lib 52/52 (48 + 4 aud058), ep038-m3 gate unit guard
+48 -> 52, clippy -D warnings clean, fmt clean.
