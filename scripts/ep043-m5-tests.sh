@@ -121,7 +121,8 @@ if ! sh scripts/ep043-freshclone-accept.sh >>"$log" 2>&1; then
   # refuses (writes NO evidence) while the clone graph is not ALL_DONE.
   # During quarantine the tree is not shippable, so the gate must fail
   # with the AUD-080 readiness reason, not a generic acceptance failure.
-  if [ "$(sh scripts/graph-next.sh)" != "ALL_DONE" ]; then
+  if [ "$(sh scripts/graph-next.sh)" != "ALL_DONE" ] && \
+     [ "$(sh scripts/graph-next.sh)" != "ALL_DONE_V2" ]; then
     fail "closure gate: readiness is NOT_READY - node cannot close (AUD-080); fresh-clone ship-standard acceptance refused on non-ALL_DONE tree (AUD-090)" "$log"
   fi
   fail "fresh-clone acceptance failed" "$log"

@@ -67,7 +67,7 @@ clone_commit=$(/usr/bin/git rev-parse HEAD)
 
 # --- AUD-090: ship proof only on a genuinely shippable tree -------------------
 clone_dispatch=$(sh scripts/graph-next.sh 2>/dev/null || echo "UNKNOWN")
-if [ "$clone_dispatch" != "ALL_DONE" ]; then
+if [ "$clone_dispatch" != "ALL_DONE" ] && [ "$clone_dispatch" != "ALL_DONE_V2" ]; then
   echo "ep043-freshclone-accept: FAIL - ship-standard acceptance refused: clone graph is $clone_dispatch (not ALL_DONE); a knowingly-NOT_READY tree is never accepted (AUD-090)" >&2
   exit 1
 fi

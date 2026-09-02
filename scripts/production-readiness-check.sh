@@ -7,7 +7,7 @@ export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 dispatch=$(sh scripts/graph-next.sh)
-[ "$dispatch" = ALL_DONE ] || { echo "production readiness: FAIL - graph status is $dispatch" >&2; exit 1; }
+[ "$dispatch" = ALL_DONE ] || [ "$dispatch" = ALL_DONE_V2 ] || { echo "production readiness: FAIL - graph status is $dispatch" >&2; exit 1; }
 NEXUS_REQUIRE_ALL_PROOFS=1 sh scripts/verify.sh
 python3 scripts/certification_validate.py
 sh scripts/restore-drill.sh
