@@ -1,0 +1,15 @@
+.agent/remediation/REMEDIATION_STATE.env
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/verify-remediation-register.sh
+.agent/remediation/REMEDIATION_DAG.txt
+.agent/remediation/GAPS.md
+.agent/milestone-files/RX-021-M1.txt
+scripts/rx021-remediation-tests.sh
+scripts/nodes/RX-021.sh
+tests/performance/src/lib.rs
+tests/performance/src/bin/runtime_latency_probe.rs
+tests/performance/tests/aud063_runtime_observation.rs
+# AUD-063 leaf evidence: live runtime certification log is captured under
+# the evidence dir at node close (RX-021/verify.log references the battery
+# run that measured the real control plane).
+.agent/remediation/evidence/RX-021/verify.log

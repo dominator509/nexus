@@ -1,0 +1,65 @@
+# RX-021 M1 — AUD-063 leaf closure: performance certification measures a REAL runtime
+
+- Status: COMPLETE 2026-09-02
+- Register: AUD-063 flipped to VERIFIED_FIXED; register PASS 90/90, quarantine active.
+- Branch: rx014-rx015-remediation (HEAD after prior node closure 5ed5a4e)
+
+## Root cause (shared finding, leaf half)
+
+AUD-063 (P2, RX-004/RX-021): EP-040's performance certification never measured runtime
+performance. RX-004's committed half added a shell-level healthz latency check to the
+EP-040 M5 gate (`scripts/ep040-m5-tests.sh`, "real runtime latency observation evaluated").
+RX-021's leaf half addresses the crate-level gap: `tests/performance/src/lib.rs` still
+declared "Real performance harnesses, load generators, and hardware timing are NOT asserted
+in M1", and certification could only be fed hand-fed `.observe(180.0)`-style constants with
+no path that measures a live runtime.
+
+## Leaf fix (RX-021)
+
+1. `tests/performance/src/lib.rs` — added `RuntimeLatencyProbe` (std-only TCP round trip:
+   no new dependencies, crate dependency fence unchanged) + `RealLatencyObservation`
+   (endpoint, path, samples, p95_ms, max_ms, healthy; serde-serializable). The probe:
+   - performs real HTTP/1.1 GET round trips against a configured health endpoint with
+     per-request read/write timeouts;
+   - fails closed on connect failure, non-2xx response, or a body that does not report
+     healthy — it structurally cannot fabricate a value;
+   - rejects non-http endpoints loudly.
+   `RealLatencyObservation::evaluate()` routes the real p95 through the canonical
+   `DeterministicBudgetEvaluator`; `certify(budget)` observes the budget with the real p95
+   and evaluates it. Stale "NOT asserted" disclaimer removed.
+2. `tests/performance/tests/aud063_runtime_observation.rs` — 7 hostile + positive proofs:
+   unreachable endpoint fails closed; non-healthy endpoint fails closed; real wire latency
+   is a positive measurement (never a fabricated zero); real observation certifies a budget
+   via the canonical port; hand-fed constant is not runtime evidence (a fabricated 0.001ms
+   bound cannot certify against real p95; a loose budget certifies only with the probe's
+   real p95); non-http endpoint rejected; serde round-trip.
+3. `tests/performance/src/bin/runtime_latency_probe.rs` — shell-callable gate hook:
+   `runtime_latency_probe [base-url] [max-ms] [samples]`, exits 0 only on a real healthy
+   observation within bound; exits 1 (unreachable/unhealthy) or 2 (over budget); never
+   fabricates. Consumed by the RX-021 battery as the enforceable live-runtime path.
+4. `scripts/rx021-remediation-tests.sh` — 23-check battery: producer wiring greps, stale
+   disclaimer absence, 7 proof declarations, real cargo suite green (7/7 aud063 + 9/9 M1 +
+   contract 0), live runtime certification against the real control plane, hostile
+   unreachable fail-closed, upstream EP-040 M1 gate green, register 90/90 + AUD-063
+   VERIFIED_FIXED evidence columns.
+
+## Proofs observed (real execution)
+
+- cargo test -p nexus-test-performance --locked: 7/7 aud063 proofs + 9/9 M1 proofs, 0 failed.
+- Live control plane http://127.0.0.1:8443/healthz (real runtime, real TCP):
+  `AUD-063 runtime latency probe: endpoint=http://127.0.0.1:8443 path=/healthz samples=5 p95=3.05ms max=3.05ms healthy=true`
+  `AUD-063 runtime latency certify: ok observed=Some(3.047...) max=5000ms` (exit 0).
+- Hostile unreachable (127.0.0.1:59999): exit 1, no certification printed.
+- clippy -D warnings clean on nexus-test-performance --all-targets; cargo fmt clean.
+- EP-040 M1 gate: ok.
+- RX-021 battery: 23 passed, 0 failed.
+- Register: PASS (90/90 registered, quarantine active); AUD-063 VERIFIED_FIXED.
+
+## Files changed
+
+- tests/performance/src/lib.rs (probe + observation + doc update)
+- tests/performance/tests/aud063_runtime_observation.rs (new, 7 proofs)
+- tests/performance/src/bin/runtime_latency_probe.rs (new, gate hook)
+- scripts/rx021-remediation-tests.sh (new, 23-check battery)
+- scripts/nodes/RX-021.sh (node verify)
+- .agent/remediation/AUDIT_FINDINGS.tsv (AUD-063 row → VERIFIED_FIXED)
