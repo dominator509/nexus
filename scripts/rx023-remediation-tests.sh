@@ -57,12 +57,19 @@ else
   bad "nodes not DONE:$failed_nodes"
 fi
 
-# --- 4. Graph scheduler: no pending node before RX-023 (deps all DONE) ---
-if sh scripts/graph-next.sh 2>/dev/null | grep -q "NEXT RX-023"; then
-  note "graph-next dispatches RX-023 (all deps DONE)"
-else
-  bad "graph-next did not dispatch RX-023: $(sh scripts/graph-next.sh 2>/dev/null)"
-fi
+# --- 4. Graph scheduler: RX-023 is the dispatch target (all deps DONE) ---
+# Before RX-023 closes, graph-next prints RESUME RX-023 (the node itself is
+# not yet DONE); after closure it prints ALL_DONE. Either way the scheduler
+# must NOT name an earlier node: that proves every dependency is V2-DONE.
+next_out=$(sh scripts/graph-next.sh 2>/dev/null)
+case "$next_out" in
+  *"RX-023"*|ALL_DONE)
+    note "graph scheduler reached RX-023 (deps all DONE): $next_out"
+    ;;
+  *)
+    bad "graph scheduler did not reach RX-023: $next_out"
+    ;;
+esac
 
 # --- 5. Expected closure evidence for every closed node ---
 missing=0
