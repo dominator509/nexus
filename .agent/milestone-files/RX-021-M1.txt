@@ -1,4 +1,4 @@
-# RX-021 M1 — AUD-063 leaf closure: performance certification measures a REAL runtime
+# RX-021 M1 - AUD-063 leaf closure: performance certification measures a REAL runtime
 
 - Status: COMPLETE 2026-09-02
 - Register: AUD-063 flipped to VERIFIED_FIXED; register PASS 90/90, quarantine active.
@@ -16,28 +16,28 @@ no path that measures a live runtime.
 
 ## Leaf fix (RX-021)
 
-1. `tests/performance/src/lib.rs` — added `RuntimeLatencyProbe` (std-only TCP round trip:
+1. `tests/performance/src/lib.rs` - added `RuntimeLatencyProbe` (std-only TCP round trip:
    no new dependencies, crate dependency fence unchanged) + `RealLatencyObservation`
    (endpoint, path, samples, p95_ms, max_ms, healthy; serde-serializable). The probe:
    - performs real HTTP/1.1 GET round trips against a configured health endpoint with
      per-request read/write timeouts;
    - fails closed on connect failure, non-2xx response, or a body that does not report
-     healthy — it structurally cannot fabricate a value;
+     healthy - it structurally cannot fabricate a value;
    - rejects non-http endpoints loudly.
    `RealLatencyObservation::evaluate()` routes the real p95 through the canonical
    `DeterministicBudgetEvaluator`; `certify(budget)` observes the budget with the real p95
    and evaluates it. Stale "NOT asserted" disclaimer removed.
-2. `tests/performance/tests/aud063_runtime_observation.rs` — 7 hostile + positive proofs:
+2. `tests/performance/tests/aud063_runtime_observation.rs` - 7 hostile + positive proofs:
    unreachable endpoint fails closed; non-healthy endpoint fails closed; real wire latency
    is a positive measurement (never a fabricated zero); real observation certifies a budget
    via the canonical port; hand-fed constant is not runtime evidence (a fabricated 0.001ms
    bound cannot certify against real p95; a loose budget certifies only with the probe's
    real p95); non-http endpoint rejected; serde round-trip.
-3. `tests/performance/src/bin/runtime_latency_probe.rs` — shell-callable gate hook:
+3. `tests/performance/src/bin/runtime_latency_probe.rs` - shell-callable gate hook:
    `runtime_latency_probe [base-url] [max-ms] [samples]`, exits 0 only on a real healthy
    observation within bound; exits 1 (unreachable/unhealthy) or 2 (over budget); never
    fabricates. Consumed by the RX-021 battery as the enforceable live-runtime path.
-4. `scripts/rx021-remediation-tests.sh` — 23-check battery: producer wiring greps, stale
+4. `scripts/rx021-remediation-tests.sh` - 23-check battery: producer wiring greps, stale
    disclaimer absence, 7 proof declarations, real cargo suite green (7/7 aud063 + 9/9 M1 +
    contract 0), live runtime certification against the real control plane, hostile
    unreachable fail-closed, upstream EP-040 M1 gate green, register 90/90 + AUD-063
@@ -62,4 +62,4 @@ no path that measures a live runtime.
 - tests/performance/src/bin/runtime_latency_probe.rs (new, gate hook)
 - scripts/rx021-remediation-tests.sh (new, 23-check battery)
 - scripts/nodes/RX-021.sh (node verify)
-- .agent/remediation/AUDIT_FINDINGS.tsv (AUD-063 row → VERIFIED_FIXED)
+- .agent/remediation/AUDIT_FINDINGS.tsv (AUD-063 row -> VERIFIED_FIXED)

@@ -1,4 +1,4 @@
-# RX-022 M1 — absorb + audit pre-executed AUD-090; certify AUD-075/089/090
+# RX-022 M1 - absorb + audit pre-executed AUD-090; certify AUD-075/089/090
 
 - Status: COMPLETE 2026-09-02
 - Register: AUD-075/089/090 VERIFIED_FIXED with fixed_commit + evidence_ref; register PASS 90/90.

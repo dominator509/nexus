@@ -1,4 +1,4 @@
-# RX-023 M1 — final graph closure: register 90/90, all nodes V2-DONE
+# RX-023 M1 - final graph closure: register 90/90, all nodes V2-DONE
 
 - Status: COMPLETE 2026-09-02
 - Register: 90/90 VERIFIED_FIXED; zero open rows; quarantine active (generation 2).
