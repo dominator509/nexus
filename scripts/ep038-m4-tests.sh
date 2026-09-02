@@ -7,7 +7,7 @@
 # proves:
 #   - real postgres + redis + glitchtip fixture with runtime creds
 #   - provisioning of org/project/project-key/API token via Django shell
-#   - ops runtime unit suite (16 proofs)
+#   - ops runtime unit suite (26 proofs)
 #   - live-provider failure suite (6 proofs): incident delivery +
 #     audit correlation, duplicate dedupe, secret canary never egresses,
 #     diag ladder READY, metric cardinality denied, SLO no-data
@@ -189,9 +189,9 @@ ok "fixture provisioned (org=$ORG project=$PROJECT)"
 if ! sh -c 'cargo test -p nexus-observability-ops --lib >> "$1" 2>&1' _ "$LOG"; then
   fail "unit tests failed" "$LOG"
 fi
-grep -q "test result: ok. 18 passed; 0 failed" "$LOG" \
-  || fail "unit vacuity guard (expect 18 passed)" "$LOG"
-ok "unit suite 18/18"
+grep -q "test result: ok. 26 passed; 0 failed" "$LOG" \
+  || fail "unit vacuity guard (expect 26 passed)" "$LOG"
+ok "unit suite 26/26"
 
 # ------------------------------------------------------------- integration
 if ! sh -c 'cargo test -p nexus-observability-ops-tests --test ep038_m4_failures -- --test-threads=1 >> "$1" 2>&1' _ "$LOG"; then

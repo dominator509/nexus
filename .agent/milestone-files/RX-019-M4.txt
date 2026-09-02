@@ -1,0 +1,52 @@
+AUD-057: durable quarantine surviving process loss. The GlitchTip-outage
+quarantine was only process-local: the fallback incident sink and the
+audit log lived in memory, so a provider outage followed by process loss
+dropped the quarantined incident instead of preserving it for later
+synchronization (SPEC-007 behavior 8 requires the local fallback to
+preserve incidents until the provider is reachable again).
+
+Fixes:
+- New infra/observability/src/journal.rs: DurableJournal, a JSON-lines
+  durable store under a runtime-owned state_dir (dir mode 0700, files
+  mode 0600, fsync per write, atomic temp+rename rewrites). Two
+  journals: quarantine.jsonl (incidents keyed by incident_id, replace
+  on re-store, remove on provider acceptance) and audit.jsonl
+  (append-only audit records). Corrupt lines fail closed - a quarantine
+  record that cannot be parsed never disappears silently.
+- ObservabilityRuntime gained RuntimeConfig.state_dir: Option<PathBuf>
+  (None = process-local, preserving single-shot fixture semantics) and
+  a journal field. RuntimeConfig is not #[non_exhaustive]; the 3
+  in-repo construction sites were updated with state_dir: None.
+- Runtime start (new()) reloads both journals BEFORE serving anything:
+  quarantined incidents are re-recorded into the in-memory sink exactly
+  as they were quarantined (bounded recovery sees them), and the audit
+  trail is restored.
+- report_incident_with_context now journals an incident that did NOT
+  reach the provider (delivery Failed, or local-only fallback with no
+  DSN configured) - write-ahead durable quarantine - and removes it
+  when the provider accepts (Recorded), so a later restart never
+  replays/duplicates an already-delivered incident. Journal write
+  failure fails closed (delivery reported Failed, never silent loss).
+- recover_incident, on provider acceptance (Recorded), removes the
+  incident from the durable journal - nothing left to synchronize.
+- audit() is now durable: when a state_dir is configured the record is
+  journaled first (fsync) and returns ObservabilityResult so a journal
+  failure surfaces instead of silently losing the record.
+
+Hostile + positive regressions (8 new across journal + runtime):
+- journal: aud057_incident_survives_journal_rewrite (store/replace/
+  remove round trip), aud057_multiple_incidents_and_selective_remove,
+  aud057_audit_survives_append_and_reload, aud057_missing_journal_is_
+  empty, aud057_corrupt_incident_line_fails_closed (hostile).
+- runtime: aud057_quarantined_incident_survives_process_loss (hostile:
+  report with no provider, drop runtime, second runtime on the same
+  state_dir reloads the incident with full identity incl. correlation),
+  aud057_audit_trail_survives_process_loss (hostile: audit record
+  survives runtime restart), aud057_provider_accepted_incident_not_
+  replayed_after_restart (positive: real local HTTP/1.1 wire fixture -
+  provider accepts, journal empty, restart does not replay).
+
+Gate counts: ep038-m4-tests.sh unit vacuity guard 18 -> 26 (ops lib
+suite: 18 prior + 5 journal + 3 runtime aud057 proofs). glitchtip lib
+48/48 and nexus-observability 27/27 unaffected. cargo fmt/clippy
+(-D warnings) clean; workspace --tests check clean.

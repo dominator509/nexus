@@ -33,10 +33,12 @@
 
 pub mod audit;
 pub mod diag;
+pub mod journal;
 pub mod recovery;
 pub mod runtime;
 
 pub use audit::{AuditRecord, AuditSeverity};
 pub use diag::{OpsDiagnostic, StackState};
+pub use journal::DurableJournal;
 pub use recovery::{recover_with_budget, RecoveryBudget, RecoveryOutcome};
 pub use runtime::{fields, ops_metric_definitions, ObservabilityRuntime, RuntimeConfig};
