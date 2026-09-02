@@ -3,7 +3,7 @@
 //!
 //! A `BackupBundle` carries the signed manifest plus every referenced
 //! object's bytes and metadata, so a WIPED target can be reconstructed
-//! from the bundle alone — the source store is never consulted. This is
+//! from the bundle alone - the source store is never consulted. This is
 //! the difference between a manifest (a pointer into a live store) and a
 //! backup (a portable, self-contained recovery unit).
 //!

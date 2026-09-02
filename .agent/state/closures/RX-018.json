@@ -1,5 +1,5 @@
 {
-  "attestation_digest": "sha256:559d1d034b4838312b31ab8dc8ab27a55763f424533231c70cce203aaf3bfbc0",
+  "attestation_digest": "sha256:2f597d7db52b109ef3b97d5cd7871d7c6c6508a676462cd20a38d6cc0e86e114",
   "closure_commit": "3824328a0ef35fd6c5f2c4c82fefa48170c43066",
   "created_at": "2026-09-01T23:47:46Z",
   "created_by": "node-close-v2.sh",
@@ -56,7 +56,7 @@
       "ref": "connectors/storage-local/src/lib.rs"
     },
     {
-      "digest": "sha256:7b3d116a2dbdff821288fb597d3a7204c6e60849dff37de4279111ed822374fe",
+      "digest": "sha256:62d36a3917978f580dfad936487eebeb39e81692f0d29a754e85b9f0f0650353",
       "id": "self-contained-dr-bundle",
       "ref": "crates/nexus-artifacts/src/dr.rs"
     },
