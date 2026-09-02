@@ -1,3 +1,2 @@
-rx020-register-zero-p1-open	.agent/remediation/AUDIT_FINDINGS.tsv	sha256:5ed4139194128ea3de625877023a98a3034b4292a1df66f9e380d5b941c68dcf
 rx020-aud090-ship-accept	scripts/ep043-freshclone-accept.sh	sha256:5d7142e2c42b3e90970a08741e157a806b86b75a452297cd0a60677b5b123967
 rx020-aud090-battery	scripts/aud090-freshclone-ship-tests.sh	sha256:db67df554c221753b7204d8d5ea085911f85a33caf22e07cf0e4ea260ee186a8
