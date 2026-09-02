@@ -5,6 +5,15 @@
 //! SigV4/HTTP over `std::net::TcpStream`; we follow the same rule:
 //! no HTTP client SDK dependency for one small POST endpoint.
 //!
+//! TLS (AUD-055): the DSN scheme decides the transport. An `https`
+//! DSN MUST negotiate TLS through rustls before a single envelope
+//! byte is written; if TLS cannot be established the delivery fails
+//! closed with `TransportFailure::ExternalProvider` (TLS detail) and
+//! the envelope is NEVER sent in plaintext. An `http` DSN is accepted
+//! ONLY for local fixtures and stays plaintext. The scheme is the
+//! authority: a plaintext send on an https DSN is impossible by
+//! construction.
+//!
 //! Failure mapping follows SPEC-006 and the M3 directive:
 //!
 //! - connection refused            -> Unavailable
@@ -15,15 +24,19 @@
 //! - 5xx                           -> ExternalProvider
 //! - malformed response            -> ExternalProvider
 //! - redaction denied              -> Policy (enforced before transport)
+//! - TLS handshake/verify failure  -> ExternalProvider (TLS detail)
 //!
 //! Every connection is fresh per request: no persistent socket state
 //! is retained, so a provider restart cannot leave a stale socket.
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::sync::Arc;
 use std::time::Duration;
 
 use nexus_observability::model::short_fingerprint;
+use rustls::pki_types::ServerName;
+use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
 
 use crate::dsn::Dsn;
 
@@ -39,7 +52,7 @@ pub enum DeliveryOutcome {
     Accepted { status: u16 },
     /// The provider returned a distinguishable failure.
     Rejected { status: u16, reason: String },
-    /// Transport-level failure (refused / timeout / malformed).
+    /// Transport-level failure (refused / timeout / malformed / TLS).
     Failed {
         kind: TransportFailure,
         detail: String,
@@ -74,18 +87,53 @@ impl std::fmt::Display for TransportFailure {
     }
 }
 
+/// Build a rustls client configuration that trusts the standard web
+/// root store. Self-hosted GlitchTip deployments behind a private CA
+/// can supply their own `RootCertStore` via [`post_envelope_with_roots`]
+/// (or a dedicated constructor on the sink).
+pub fn client_config(roots: RootCertStore) -> Result<Arc<ClientConfig>, String> {
+    let config = ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    Ok(Arc::new(config))
+}
+
+/// Standard web root store (webpki-roots).
+pub fn web_roots() -> RootCertStore {
+    let mut roots = RootCertStore::empty();
+    roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    roots
+}
+
 /// Post one envelope to the DSN's envelope endpoint.
 ///
 /// `authorization_header` carries the `X-Sentry-Auth` value built by
 /// the caller (it includes the public key; we never log it here).
+///
+/// TLS policy: if `dsn.is_https()`, the request is sent through a
+/// rustls `ClientConnection`; any TLS failure fails closed with
+/// `ExternalProvider` (TLS detail) BEFORE the envelope is written.
+/// If `dsn` is `http`, the request stays plaintext (local fixtures).
 pub fn post_envelope(
     dsn: &Dsn,
     envelope: &str,
     authorization_header: &str,
     content_type: &str,
 ) -> DeliveryOutcome {
+    post_envelope_with_config(dsn, envelope, authorization_header, content_type, None)
+}
+
+/// Like [`post_envelope`] but with an explicit TLS client config
+/// (custom root store for self-hosted private CAs). `None` uses the
+/// standard web root store for https DSNs.
+pub fn post_envelope_with_config(
+    dsn: &Dsn,
+    envelope: &str,
+    authorization_header: &str,
+    content_type: &str,
+    tls_config: Option<Arc<ClientConfig>>,
+) -> DeliveryOutcome {
     let host = dsn.host().to_string();
-    let path = dsn.envelope_path();
 
     // Resolve to a concrete SocketAddr (connect_timeout requires one).
     use std::net::ToSocketAddrs;
@@ -107,7 +155,7 @@ pub fn post_envelope(
         }
     };
 
-    let stream = match TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT) {
+    let mut stream = match TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT) {
         Ok(s) => s,
         Err(e) => {
             return DeliveryOutcome::Failed {
@@ -129,7 +177,73 @@ pub fn post_envelope(
         };
     }
 
-    let host_header = host.clone();
+    // AUD-055: the https DSN MUST negotiate TLS before any envelope
+    // byte leaves this process. A plaintext send on an https DSN is
+    // the audited defect; it is impossible by construction here.
+    if dsn.is_https() {
+        let config = match tls_config {
+            Some(cfg) => cfg,
+            None => match client_config(web_roots()) {
+                Ok(cfg) => cfg,
+                Err(e) => {
+                    return DeliveryOutcome::Failed {
+                        kind: TransportFailure::ExternalProvider,
+                        detail: format!("tls client config: {e}"),
+                    }
+                }
+            },
+        };
+        // ServerName from the host, stripping any explicit port.
+        let server_name = match ServerName::try_from(host_without_port(&host).to_string()) {
+            Ok(name) => name,
+            Err(e) => {
+                return DeliveryOutcome::Failed {
+                    kind: TransportFailure::ExternalProvider,
+                    detail: format!("tls server name {}: {e}", short_fingerprint(&host)),
+                }
+            }
+        };
+        let conn = match ClientConnection::new(config, server_name) {
+            Ok(c) => c,
+            Err(e) => {
+                return DeliveryOutcome::Failed {
+                    kind: TransportFailure::ExternalProvider,
+                    detail: format!("tls handshake setup: {e}"),
+                }
+            }
+        };
+        let mut tls = StreamOwned::new(conn, stream);
+        return write_and_read(
+            dsn,
+            &mut tls,
+            envelope,
+            authorization_header,
+            content_type,
+            &host,
+        );
+    }
+
+    write_and_read(
+        dsn,
+        &mut stream,
+        envelope,
+        authorization_header,
+        content_type,
+        &host,
+    )
+}
+
+/// Serialize + send the HTTP request over an already-established
+/// stream (plain TCP or TLS), then read and classify the response.
+fn write_and_read<W: Write + Read>(
+    dsn: &Dsn,
+    stream: &mut W,
+    envelope: &str,
+    authorization_header: &str,
+    content_type: &str,
+    host: &str,
+) -> DeliveryOutcome {
+    let host_header = host.to_string();
     let request = format!(
         "POST {path} HTTP/1.1\r\n\
          Host: {host_header}\r\n\
@@ -139,14 +253,20 @@ pub fn post_envelope(
          Connection: close\r\n\
          \r\n\
          {envelope}",
-        envelope.len()
+        envelope.len(),
+        path = dsn.envelope_path()
     );
 
-    let mut stream = stream;
     if let Err(e) = stream.write_all(request.as_bytes()) {
         return DeliveryOutcome::Failed {
             kind: TransportFailure::ExternalProvider,
             detail: format!("write: {e}"),
+        };
+    }
+    if let Err(e) = stream.flush() {
+        return DeliveryOutcome::Failed {
+            kind: TransportFailure::ExternalProvider,
+            detail: format!("flush: {e}"),
         };
     }
 
@@ -164,6 +284,23 @@ pub fn post_envelope(
     }
 
     parse_response(&response)
+}
+
+/// Strip an explicit `:port` suffix from a host for TLS server-name
+/// construction. IPv6 literals (`::1`) are left intact; only a
+/// single `:digits` port suffix is stripped.
+fn host_without_port(host: &str) -> &str {
+    if let Some(idx) = host.rfind(':') {
+        // A second colon anywhere means an IPv6 literal, not a port.
+        if host[..idx].contains(':') {
+            return host;
+        }
+        let suffix = &host[idx + 1..];
+        if !suffix.is_empty() && suffix.bytes().all(|b| b.is_ascii_digit()) {
+            return &host[..idx];
+        }
+    }
+    host
 }
 
 /// Parse an HTTP response into a delivery outcome.
@@ -339,5 +476,155 @@ mod tests {
     fn resolve_host_defaults_port() {
         assert_eq!(resolve_host("glitchtip.local"), "glitchtip.local:8000");
         assert_eq!(resolve_host("127.0.0.1:9000"), "127.0.0.1:9000");
+    }
+
+    #[test]
+    fn host_without_port_strips_explicit_port() {
+        assert_eq!(host_without_port("glitchtip.local"), "glitchtip.local");
+        assert_eq!(host_without_port("glitchtip.local:443"), "glitchtip.local");
+        assert_eq!(host_without_port("127.0.0.1:9000"), "127.0.0.1");
+        assert_eq!(host_without_port("::1"), "::1");
+    }
+
+    /// A plain HTTP server must NOT accept an https DSN: the client
+    /// speaks TLS, the server speaks plaintext, so the handshake fails
+    /// and the delivery fails closed ExternalProvider. This is the
+    /// AUD-055 hostile proof: an https DSN is never sent plaintext.
+    #[test]
+    fn https_dsn_against_plaintext_server_fails_closed_tls() {
+        use std::io::Write as IoWrite;
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind listener");
+        let addr = listener.local_addr().expect("local addr");
+        let server = std::thread::spawn(move || {
+            // Plaintext HTTP/1.1 server: it only ever sees garbage if
+            // the client wrongly sends plaintext; a TLS client sends a
+            // ClientHello which this server cannot parse as an HTTP
+            // request line. We respond 400 to prove we were reached,
+            // then the TLS handshake on the client side has already
+            // failed or the client refused to send.
+            if let Ok((mut stream, _)) = listener.accept() {
+                let _ = stream.read(&mut [0u8; 1024]);
+                let _ = stream.write_all(b"HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n");
+            }
+        });
+
+        let dsn = Dsn::parse(&format!(
+            "https://0123456789abcdef0123456789abcdef@127.0.0.1:{}/42",
+            addr.port()
+        ))
+        .expect("https dsn");
+        assert!(dsn.is_https());
+        let outcome = post_envelope(
+            &dsn,
+            "envelope",
+            "X-Sentry-Auth: test",
+            "application/x-sentry-envelope",
+        );
+        server.join().expect("server join");
+        match outcome {
+            DeliveryOutcome::Failed { kind, detail } => {
+                assert_eq!(kind, TransportFailure::ExternalProvider);
+                assert!(
+                    detail.contains("tls")
+                        || detail.contains("TLS")
+                        || detail.contains("corrupt")
+                        || detail.contains("invalid"),
+                    "failure detail must evidence TLS-layer failure, got: {detail}"
+                );
+            }
+            other => panic!("https-to-plaintext must fail closed, got {other:?}"),
+        }
+    }
+
+    /// Positive TLS proof: an https DSN delivered to a REAL rustls TLS
+    /// server (self-signed cert trusted via a custom root store) is
+    /// Accepted. Proves the transport genuinely negotiates TLS instead
+    /// of silently sending plaintext.
+    #[test]
+    fn https_dsn_delivers_over_real_tls_server() {
+        use std::io::Write as IoWrite;
+        use std::net::TcpListener;
+        use std::sync::Arc;
+
+        // Self-signed certificate + key (rcgen, same locked chain as
+        // infra/pki). SAN must match the host we connect to.
+        let certified_key = rcgen::KeyPair::generate().expect("keypair");
+        let mut params = rcgen::CertificateParams::new(vec![]).expect("params");
+        params.subject_alt_names.push(rcgen::SanType::DnsName(
+            "localhost".try_into().expect("dns name"),
+        ));
+        params
+            .subject_alt_names
+            .push(rcgen::SanType::IpAddress(std::net::IpAddr::V4(
+                std::net::Ipv4Addr::LOCALHOST,
+            )));
+        let cert = params
+            .self_signed(&certified_key)
+            .expect("self-signed cert");
+        let cert_der = cert.der().clone();
+        let key_der = rustls::pki_types::PrivateKeyDer::Pkcs8(
+            rustls::pki_types::PrivatePkcs8KeyDer::from(certified_key.serialize_der()),
+        );
+
+        // rustls SERVER config.
+        let server_config = rustls::ServerConfig::builder()
+            .with_no_client_auth()
+            .with_single_cert(vec![cert_der.clone()], key_der)
+            .expect("server config");
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind listener");
+        let addr = listener.local_addr().expect("local addr");
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().expect("accept");
+            let conn =
+                rustls::ServerConnection::new(Arc::new(server_config)).expect("server connection");
+            let mut tls = rustls::StreamOwned::new(conn, stream);
+            // Read the request line; we only need to prove bytes
+            // arrived over TLS, then respond 200 and close cleanly.
+            let mut buf = [0u8; 2048];
+            let _ = tls.read(&mut buf);
+            let _ = tls.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+            tls.conn.send_close_notify();
+            let _ = tls.flush();
+        });
+
+        // Client trusts the self-signed cert via a custom root store.
+        let mut roots = RootCertStore::empty();
+        roots.add(cert_der).expect("add root");
+        let cfg = client_config(roots).expect("client config");
+
+        let dsn = Dsn::parse(&format!(
+            "https://0123456789abcdef0123456789abcdef@localhost:{}/42",
+            addr.port()
+        ))
+        .expect("https dsn");
+        let outcome = post_envelope_with_config(
+            &dsn,
+            "envelope-body",
+            "X-Sentry-Auth: test",
+            "application/x-sentry-envelope",
+            Some(cfg),
+        );
+        server.join().expect("server join");
+        assert_eq!(
+            outcome,
+            DeliveryOutcome::Accepted { status: 200 },
+            "https DSN must deliver over real TLS"
+        );
+    }
+
+    /// An https DSN with an empty host is rejected at parse time
+    /// (fail closed before any connection is attempted).
+    #[test]
+    fn https_dsn_rejects_empty_host_at_parse() {
+        let err = Dsn::parse("https://0123456789abcdef0123456789abcdef@/42").expect_err("dsn");
+        assert_eq!(err.reason, "empty credential or host");
+        // A valid https DSN is scheme-aware at the transport boundary.
+        let dsn =
+            Dsn::parse("https://0123456789abcdef0123456789abcdef@glitchtip.local/42").unwrap();
+        assert!(dsn.is_https());
+        assert_eq!(dsn.scheme(), "https");
     }
 }

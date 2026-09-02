@@ -1733,7 +1733,11 @@ dependencies = [
  "nexus-domain",
  "nexus-observability",
  "nexus-otel",
+ "rcgen",
+ "rustls",
+ "rustls-pki-types",
  "serde_json",
+ "webpki-roots",
 ]
 
 [[package]]
