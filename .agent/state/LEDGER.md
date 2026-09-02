@@ -485,3 +485,4 @@
 2026-09-02T18:43:17Z | ipman | RX-001 | MILESTONE_PASS | RX-001 closure re-attested: graph-next-v2 scheduler ALL_DONE fix (comment-line skip) updated pinned proof digest; attestation sha256 839d671dcd8f74438bbfcc95fb0fcef777bc1d56e419fec09b6a1a09945ae7aa
 2026-09-02T18:53:07Z | ipman | RX-020 | MILESTONE_PASS | RX-020 closure re-attested: ep043-freshclone-accept.sh ALL_DONE_V2 sentinel fix updated pinned proof digest
 2026-09-02T18:53:07Z | ipman | RX-022 | MILESTONE_PASS | RX-022 closure re-attested: ep043-freshclone-accept.sh ALL_DONE_V2 sentinel fix updated pinned proof digest
+2026-09-02T19:03:47Z | ipman | RX-023 | MILESTONE_PASS | RX-023 closure re-attested: battery ALL_DONE_V2 acceptance fix updated pinned proof digest; attestation sha256 68bf3e8e77980e5cf
