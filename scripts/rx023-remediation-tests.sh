@@ -63,7 +63,7 @@ fi
 # must NOT name an earlier node: that proves every dependency is V2-DONE.
 next_out=$(sh scripts/graph-next.sh 2>/dev/null)
 case "$next_out" in
-  *"RX-023"*|ALL_DONE)
+  *"RX-023"*|ALL_DONE|ALL_DONE_V2)
     note "graph scheduler reached RX-023 (deps all DONE): $next_out"
     ;;
   *)
