@@ -13,10 +13,10 @@ use nexus_domain::{
 };
 use nexus_healing::{
     CanaryPlan, CanaryState, DiagnosisConfidence, DiagnosisTask, HealingError, HealingErrorCode,
-    HealthCriterion, HealthCriterionState, InMemoryIncidentMemory, Incident, IncidentMemory,
-    IncidentSignal, IncidentSignalKind, IncidentState, PatchProposal, RemediationApproval,
-    ReviewDecision, ReviewVerdict, Risk, RollbackPlan, RollbackState, SandboxVerdict,
-    SecurityVerdict,
+    HealthCriterion, HealthCriterionState, InMemoryIncidentMemory, Incident, IncidentEngine,
+    IncidentMemory, IncidentSignal, IncidentSignalKind, IncidentState, PatchProposal,
+    RemediationApproval, ReviewDecision, ReviewVerdict, Risk, RollbackPlan, RollbackState,
+    SandboxVerdict, SecurityVerdict, StandardIncidentEngine,
 };
 use std::str::FromStr;
 
@@ -561,4 +561,356 @@ fn ep019_unit_dependency_direction_cargo_tree_has_no_runtime_deps() {
             );
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// PRODUCTION INCIDENT ENGINE (AUD-017): the port now has a real
+// implementation that owns the lifecycle, dedup, evidence gating,
+// patch-digest binding, and fail-closed verification.
+// ---------------------------------------------------------------------------
+
+fn new_engine() -> StandardIncidentEngine<InMemoryIncidentMemory> {
+    StandardIncidentEngine::new(InMemoryIncidentMemory::new())
+}
+
+fn patch_digest() -> String {
+    "a1b2c3d4e5f60718293a4b5c6d7e8f9012233445566778899aabbccddeeff0011".into()
+}
+
+fn sandbox_pass() -> SandboxVerdict {
+    SandboxVerdict {
+        pass: true,
+        checks: vec![
+            "patch applies cleanly".into(),
+            "build succeeds".into(),
+            "targeted reproduction FAIL->PASS".into(),
+            "regression tests pass".into(),
+        ],
+        evidence_ref: "engine-sandbox-evidence".into(),
+    }
+}
+
+fn security_pass() -> SecurityVerdict {
+    SecurityVerdict {
+        pass: true,
+        checks: vec![
+            "dependency audit ok".into(),
+            "license gate ok".into(),
+            "secret scanning ok".into(),
+        ],
+        evidence_ref: "engine-security-evidence".into(),
+    }
+}
+
+fn engine_approval(digest: &str) -> RemediationApproval {
+    RemediationApproval {
+        approval_id: ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6107").expect("valid"),
+        incident_id: IncidentId::new(correlation().as_str()).expect("derived incident id"),
+        tenant_id: tenant(),
+        correlation_id: correlation(),
+        patch_digest: digest.into(),
+        approval_class: ApprovalClass::Human,
+        approver: "human-owner".into(),
+        granted_at_epoch_ms: 10,
+    }
+}
+
+fn patch_proposal(digest: &str) -> PatchProposal {
+    PatchProposal {
+        patch_id: PatchId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6104").expect("valid"),
+        incident_id: IncidentId::new(correlation().as_str()).expect("derived incident id"),
+        tenant_id: tenant(),
+        correlation_id: correlation(),
+        files_changed: vec!["failing-worker.sh".into()],
+        diff: "--- a/failing-worker.sh\n+++ b/failing-worker.sh\n".into(),
+        rationale: "fix marker filename check".into(),
+        tests_changed: vec!["test_ep019_integration_healing_loop.py".into()],
+        risk: Risk::R1,
+        dependency_changes: vec![],
+        migration_impact: String::new(),
+        rollback_plan_ref: "rollback-plan-1".into(),
+        patch_digest: digest.into(),
+    }
+}
+
+/// Drive the engine through the full canonical lifecycle to CLOSED.
+fn drive_to_closed(engine: &StandardIncidentEngine<InMemoryIncidentMemory>) -> Incident {
+    let mut incident = engine.observe(signal()).expect("observe");
+    engine
+        .transition(&mut incident, IncidentState::Correlate)
+        .expect("correlate");
+    engine
+        .transition(&mut incident, IncidentState::Diagnose)
+        .expect("diagnose");
+    let mut diagnosis = engine
+        .create_diagnosis(&incident, "worker checks hard-coded wrong filename".into())
+        .expect("diagnosis");
+    engine
+        .update_diagnosis_confidence(
+            &mut diagnosis,
+            DiagnosisConfidence::Supported,
+            "correlated evidence: crash log".into(),
+        )
+        .expect("supported");
+    engine
+        .update_diagnosis_confidence(
+            &mut diagnosis,
+            DiagnosisConfidence::Reproduced,
+            "reproduction:exit=1".into(),
+        )
+        .expect("reproduced");
+    engine
+        .transition(&mut incident, IncidentState::Reproduce)
+        .expect("reproduce");
+    engine
+        .propose_patch(&incident, patch_proposal(&patch_digest()))
+        .expect("patch");
+    engine
+        .transition(&mut incident, IncidentState::PatchProposed)
+        .expect("patch proposed");
+    engine
+        .record_sandbox_validation(&mut incident, &sandbox_pass())
+        .expect("sandbox");
+    engine
+        .record_security_validation(&mut incident, &security_pass())
+        .expect("security");
+    engine
+        .record_approval(&mut incident, &engine_approval(&patch_digest()))
+        .expect("approval");
+    engine
+        .transition(&mut incident, IncidentState::StagedDeployment)
+        .expect("staged");
+    engine
+        .transition(&mut incident, IncidentState::PostDeployVerification)
+        .expect("post-deploy");
+    engine
+        .record_post_deploy_verification(&mut incident, true)
+        .expect("verified");
+    assert_eq!(incident.state, IncidentState::Closed);
+    incident
+}
+
+#[test]
+fn ep019_unit_engine_full_lifecycle_closes_with_real_verification() {
+    let engine = new_engine();
+    let incident = drive_to_closed(&engine);
+    assert_eq!(incident.state, IncidentState::Closed);
+    assert!(incident.state.is_terminal());
+    assert!(incident.state.is_healthy_terminal());
+    // Memory holds the terminal record.
+    let memory_records = engine.memory().find_by_dedup_key(&incident.dedup_key);
+    assert_eq!(memory_records.len(), 1);
+    assert_eq!(memory_records[0].final_state.as_deref(), Some("CLOSED"));
+}
+
+#[test]
+fn ep019_unit_engine_deduplicates_open_incidents_by_canonical_signature() {
+    let engine = new_engine();
+    let first = engine.observe(signal()).expect("first observe");
+    let second = engine.observe(signal()).expect("second observe");
+    assert_eq!(first.incident_id, second.incident_id);
+    assert_eq!(first.dedup_key, second.dedup_key);
+    // A different tenant with identical text is a DISTINCT incident
+    // (and a distinct correlation id, as a real foreign signal would
+    // carry).
+    let mut foreign = signal();
+    foreign.tenant_id = TenantId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6099").expect("valid");
+    foreign.correlation_id =
+        CorrelationId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6199").expect("valid");
+    let third = engine.observe(foreign).expect("foreign observe");
+    assert_ne!(first.incident_id, third.incident_id);
+}
+
+#[test]
+fn ep019_unit_engine_rejects_skipped_and_backwards_transitions() {
+    let engine = new_engine();
+    let mut incident = engine.observe(signal()).expect("observe");
+    // Skip CORRELATE -> DIAGNOSE is a non-canonical jump.
+    let err = engine
+        .transition(&mut incident, IncidentState::Diagnose)
+        .expect_err("skipped transition must fail");
+    assert_eq!(err.code, HealingErrorCode::Conflict);
+    // Backwards transition fails.
+    engine
+        .transition(&mut incident, IncidentState::Correlate)
+        .expect("correlate");
+    let err = engine
+        .transition(&mut incident, IncidentState::Incident)
+        .expect_err("backwards transition must fail");
+    assert_eq!(err.code, HealingErrorCode::Conflict);
+    // Terminal states never move: close then attempt resurrection.
+    let engine2 = new_engine();
+    let mut closed = drive_to_closed(&engine2);
+    let err = engine2
+        .transition(&mut closed, IncidentState::Incident)
+        .expect_err("terminal resurrection must fail");
+    assert_eq!(err.code, HealingErrorCode::Conflict);
+}
+
+#[test]
+fn ep019_unit_engine_requires_evidence_for_confidence_escalation() {
+    let engine = new_engine();
+    let mut incident = engine.observe(signal()).expect("observe");
+    engine
+        .transition(&mut incident, IncidentState::Correlate)
+        .expect("correlate");
+    engine
+        .transition(&mut incident, IncidentState::Diagnose)
+        .expect("diagnose");
+    let mut diagnosis = engine
+        .create_diagnosis(&incident, "hypothesis".into())
+        .expect("diagnosis");
+    // Empty evidence fails closed.
+    let err = engine
+        .update_diagnosis_confidence(&mut diagnosis, DiagnosisConfidence::Reproduced, "".into())
+        .expect_err("empty evidence must fail");
+    assert_eq!(err.code, HealingErrorCode::Verification);
+    // Skipping straight to VALIDATED fails closed (no evidence chain).
+    let err = engine
+        .update_diagnosis_confidence(
+            &mut diagnosis,
+            DiagnosisConfidence::Validated,
+            "reproduction:exit=1".into(),
+        )
+        .expect_err("skip to validated must fail");
+    assert_eq!(err.code, HealingErrorCode::Conflict);
+    assert_eq!(diagnosis.confidence, DiagnosisConfidence::Hypothesis);
+}
+
+#[test]
+fn ep019_unit_engine_sandbox_failure_fails_closed_to_validation_failed() {
+    let engine = new_engine();
+    let mut incident = engine.observe(signal()).expect("observe");
+    engine
+        .transition(&mut incident, IncidentState::Correlate)
+        .expect("correlate");
+    engine
+        .transition(&mut incident, IncidentState::Diagnose)
+        .expect("diagnose");
+    engine
+        .transition(&mut incident, IncidentState::Reproduce)
+        .expect("reproduce");
+    engine
+        .propose_patch(&incident, patch_proposal(&patch_digest()))
+        .expect("patch");
+    engine
+        .transition(&mut incident, IncidentState::PatchProposed)
+        .expect("patch proposed");
+    let failing = SandboxVerdict {
+        pass: false,
+        checks: vec!["build fails".into()],
+        evidence_ref: "engine-sandbox-failure".into(),
+    };
+    let err = engine
+        .record_sandbox_validation(&mut incident, &failing)
+        .expect_err("failing sandbox verdict must fail closed");
+    assert_eq!(err.code, HealingErrorCode::Verification);
+    assert_eq!(incident.state, IncidentState::ValidationFailed);
+    assert!(incident.state.is_terminal());
+}
+
+#[test]
+fn ep019_unit_engine_approval_digest_mismatch_fails_closed_policy() {
+    let engine = new_engine();
+    let mut incident = engine.observe(signal()).expect("observe");
+    engine
+        .transition(&mut incident, IncidentState::Correlate)
+        .expect("correlate");
+    engine
+        .transition(&mut incident, IncidentState::Diagnose)
+        .expect("diagnose");
+    engine
+        .transition(&mut incident, IncidentState::Reproduce)
+        .expect("reproduce");
+    engine
+        .propose_patch(&incident, patch_proposal(&patch_digest()))
+        .expect("patch");
+    engine
+        .transition(&mut incident, IncidentState::PatchProposed)
+        .expect("patch proposed");
+    engine
+        .record_sandbox_validation(&mut incident, &sandbox_pass())
+        .expect("sandbox");
+    engine
+        .record_security_validation(&mut incident, &security_pass())
+        .expect("security");
+    // Approval authorizes a DIFFERENT digest: the engine rejects it.
+    let wrong = approval("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    let err = engine
+        .record_approval(&mut incident, &wrong)
+        .expect_err("digest mismatch must fail closed");
+    assert_eq!(err.code, HealingErrorCode::Policy);
+    assert_eq!(incident.state, IncidentState::SecurityValidation);
+    // Approval before security validation fails closed conflict.
+    let premature_engine = new_engine();
+    let mut premature = premature_engine.observe(signal()).expect("observe");
+    let err = premature_engine
+        .record_approval(&mut premature, &engine_approval(&patch_digest()))
+        .expect_err("premature approval must fail");
+    assert_eq!(err.code, HealingErrorCode::Conflict);
+}
+
+#[test]
+fn ep019_unit_engine_verification_false_fails_closed_and_keeps_open() {
+    let engine = new_engine();
+    let mut incident = engine.observe(signal()).expect("observe");
+    engine
+        .transition(&mut incident, IncidentState::Correlate)
+        .expect("correlate");
+    engine
+        .transition(&mut incident, IncidentState::Diagnose)
+        .expect("diagnose");
+    engine
+        .transition(&mut incident, IncidentState::Reproduce)
+        .expect("reproduce");
+    engine
+        .propose_patch(&incident, patch_proposal(&patch_digest()))
+        .expect("patch");
+    engine
+        .transition(&mut incident, IncidentState::PatchProposed)
+        .expect("patch proposed");
+    engine
+        .record_sandbox_validation(&mut incident, &sandbox_pass())
+        .expect("sandbox");
+    engine
+        .record_security_validation(&mut incident, &security_pass())
+        .expect("security");
+    engine
+        .record_approval(&mut incident, &engine_approval(&patch_digest()))
+        .expect("approval");
+    engine
+        .transition(&mut incident, IncidentState::StagedDeployment)
+        .expect("staged");
+    engine
+        .transition(&mut incident, IncidentState::PostDeployVerification)
+        .expect("post-deploy");
+    let err = engine
+        .record_post_deploy_verification(&mut incident, false)
+        .expect_err("false verification must fail closed");
+    assert_eq!(err.code, HealingErrorCode::Verification);
+    assert_eq!(incident.state, IncidentState::PostDeployVerification);
+    assert!(!incident.state.is_terminal());
+}
+
+#[test]
+fn ep019_unit_engine_derived_ids_are_deterministic_and_retry_stable() {
+    let engine = new_engine();
+    let first = engine.observe(signal()).expect("observe");
+    // Re-observing the same signal while open returns the same incident.
+    let second = engine.observe(signal()).expect("observe");
+    assert_eq!(first.incident_id, second.incident_id);
+    // Derived diagnosis id is a canonical UUIDv7 and stable across the
+    // same engine instance.
+    let mut incident = first;
+    engine
+        .transition(&mut incident, IncidentState::Correlate)
+        .expect("correlate");
+    engine
+        .transition(&mut incident, IncidentState::Diagnose)
+        .expect("diagnose");
+    let d1 = engine
+        .create_diagnosis(&incident, "h".into())
+        .expect("diagnosis");
+    assert_eq!(d1.diagnosis_id.as_str().len(), 36);
+    assert!(IncidentId::new(d1.diagnosis_id.as_str()).is_ok());
 }

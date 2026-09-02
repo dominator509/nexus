@@ -34,6 +34,11 @@ pub trait IncidentMemory {
     /// Record an incident in memory (idempotent by incident id).
     fn record(&mut self, record: IncidentMemoryRecord) -> Result<(), HealingError>;
 
+    /// Record the terminal state of an already-recorded incident
+    /// (updates in place; the incident must exist). Used by the
+    /// production engine when real verification closes an incident.
+    fn record_final(&mut self, record: IncidentMemoryRecord) -> Result<(), HealingError>;
+
     /// Look up prior incidents by canonical dedup key (deduplication
     /// and repeated-incident handling).
     fn find_by_dedup_key(&self, dedup_key: &str) -> Vec<IncidentMemoryRecord>;
@@ -74,6 +79,18 @@ impl IncidentMemory for InMemoryIncidentMemory {
             ));
         }
         self.records.push(record);
+        Ok(())
+    }
+
+    fn record_final(&mut self, record: IncidentMemoryRecord) -> Result<(), HealingError> {
+        let idx = self
+            .records
+            .iter()
+            .position(|r| r.incident_id == record.incident_id)
+            .ok_or_else(|| HealingError::not_found("incident not recorded"))?;
+        let existing = &mut self.records[idx];
+        existing.final_state = record.final_state;
+        existing.skill_candidate_ref = record.skill_candidate_ref;
         Ok(())
     }
 
