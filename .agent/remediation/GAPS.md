@@ -578,3 +578,39 @@ ownership language (AUD-001...065). All rows OPEN; verifier green.
 
 **Resolution:** none yet - deferred per Dominic. Live accounts will be provided later; when available,
 run the `#[ignore]`d integration suites and record live-fire evidence before advertising operational.
+
+## GAP-004 (RX-019) - Real Microbrain QLoRA training/GGUF quantization execution deferred (AUD-064)
+
+**Status:** LOGGED 2026-09-02 - Dominic directive: defer real model training as a gap.
+
+**Severity:** P1 (reality-law boundary; EP-041 closed with policy proofs only)
+
+### Finding (verified against the tree 2026-09-02)
+
+1. **AUD-064** (register): "EP-041 closes a QLoRA/GGUF training node without
+   executing training or quantization... no model is trained or quantized, no
+   reproducibility or quantization comparison evidence exists."
+   - `microbrain/artifacts/fixtures/nexus-artifact-v1.gguf.marker` is a
+     deliberately fixture-only marker (labeled as such) - NOT a real quantized
+     model. Real GGUF quantization NOT ASSERTED.
+   - The committed QLoRA run record is declared-only (PENDING) - no real
+     training execution, no adapter artifact, no loss/metrics, no
+     reproducibility run, no quantization comparison vs the base model.
+
+2. **Enforcement half (FIXED in this milestone):** the promotion path now
+   requires a DECLARED promotion/evaluation evidence record bound to the
+   candidate before a PROMOTE verdict can issue (aud064 proofs). A model can
+   never become routable from caller-asserted booleans alone.
+
+3. **What remains deferred (this gap):** producing REAL training/quantization
+   artifacts - executing QLoRA on a real base model, exporting a real GGUF,
+   recording reproducibility + quantization comparison evidence. The host has
+   no GPU and no torch/llama.cpp toolchain installed (6 cores, 11 GB RAM);
+   real QLoRA training is not feasible in this environment without hardware
+   or a large toolchain install.
+
+**Resolution:** none yet - deferred per Dominic 2026-09-02. The promotion
+gate now fails closed without declared evidence, so no fixture-only or
+declared-only story can ever promote a model to routable. When a real
+training environment is available, execute EP-041 M5 training/quantization
+and record reproducibility + quantization comparison evidence.

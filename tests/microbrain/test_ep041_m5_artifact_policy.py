@@ -29,6 +29,7 @@ from nexus_microbrain import (
     MicrobrainError,
     OodVerdict,
     PromotionDecision,
+    PromotionEvidence,
     PromotionGate,
     PromotionPrerequisites,
     PromotionVerdict,
@@ -179,6 +180,55 @@ def _shadow_pass() -> ShadowGateVerdict:
         consequential_false_positives=0,
     )
     return shadow_gate_verdict(comparator)
+
+
+def _declared_evidence(
+    *,
+    candidate_id: str = "nexus-candidate-v1",
+    qlora_status: str = QloraStatus.COMPLETED.value,
+    artifact_digest: str | None = None,
+    shadow_run_id: str = "shadow-m5-1",
+    false_positive_count: int = 0,
+    certification_boundary: str = (
+        "policy-surface declared evidence; real training execution certified separately"
+    ),
+) -> PromotionEvidence:
+    """A declared promotion/evaluation evidence record (AUD-064).
+
+    The default is internally consistent with _real_prerequisites() and
+    _shadow_pass(): completed (executed) run, well-formed bound digests,
+    matching shadow run, zero false positives. Hostile proofs override
+    individual fields to show the gate fails closed.
+    """
+    artifact = _load_artifact()
+    dataset = _load_dataset()
+    suite = _load_suite()
+    plan = json.loads(
+        (
+            REPO_ROOT / "microbrain" / "training" / "plans" / "nexus-training-plan-v1.plan.json"
+        ).read_text(encoding="utf-8")
+    )
+    return PromotionEvidence(
+        run_id="run-m5-evidence-aud064",
+        git_commit="abc123",
+        candidate_id=candidate_id,
+        dataset_id=dataset.dataset_id,
+        dataset_digest=sha256_file(MANIFEST),
+        eval_suite_id=suite.suite_id,
+        eval_suite_digest=plan.get("eval_suite_digest", "sha256:" + "a" * 64),
+        plan_digest=plan.get("plan_digest", "sha256:" + "b" * 64),
+        qlora_run_id="run-m5-evidence-aud064",
+        qlora_status=qlora_status,
+        artifact_id=artifact.artifact_id,
+        artifact_digest=artifact_digest or artifact.digest,
+        quantization_format=artifact.format.value,
+        shadow_run_id=shadow_run_id,
+        shadow_decision="LOW_RISK_CANARY",
+        false_positive_count=false_positive_count,
+        promotion_decision="",
+        promotion_gate="",
+        certification_boundary=certification_boundary,
+    )
 
 
 def _secret_canary() -> str:
@@ -534,6 +584,7 @@ def ep041_unit_m5_promotion_all_prerequisites_met() -> None:
         prerequisites=_real_prerequisites(),
         shadow=shadow,
         eval_ref="nexus-frozen-suite-v1",
+        evidence=_declared_evidence(),
     )
     assert decision.verdict is PromotionVerdict.PROMOTE
     assert decision.gate is PromotionGate.GRADUAL
@@ -797,6 +848,7 @@ def ep041_unit_m5_promotion_decision_never_deploys() -> None:
         prerequisites=_real_prerequisites(),
         shadow=_shadow_pass(),
         eval_ref="nexus-frozen-suite-v1",
+        evidence=_declared_evidence(),
     )
     assert decision.verdict is PromotionVerdict.PROMOTE
     assert promotion_decision_never_deploys(decision)
@@ -906,15 +958,11 @@ def ep041_unit_m5_final_live_fire_current_run_redacted_evidence() -> None:
     )
     artifact = _load_artifact()
     shadow = _shadow_pass()
-    decision = promotion_gate_decision(
-        decision_id="dec-evidence",
-        candidate=candidate,
-        prerequisites=_real_prerequisites(),
-        shadow=shadow,
-        eval_ref=suite.suite_id,
-    )
-
-    evidence = PromotionEvidence(
+    # AUD-064: the committed QLoRA run story is declared-only (PENDING),
+    # so the DECLARED promotion/evaluation evidence can never support a
+    # PROMOTE verdict. Even with every owned prerequisite asserted, the
+    # gate must fail closed and the recorded evidence must say DENY.
+    declared_only_evidence = PromotionEvidence(
         run_id="ep041-m5-final-1",
         git_commit="abc123",
         candidate_id=candidate.candidate_id,
@@ -931,17 +979,52 @@ def ep041_unit_m5_final_live_fire_current_run_redacted_evidence() -> None:
         shadow_run_id=shadow.run_id,
         shadow_decision=shadow.next_gate,
         false_positive_count=0,
-        promotion_decision=decision.verdict.value,
-        promotion_gate=decision.gate.value,
+        promotion_decision="",
+        promotion_gate="",
         certification_boundary="artifact/GGUF manifest + shadow + promotion behavior "
         "INTERNAL BEHAVIOR CERTIFIED for exact exercised local surface; "
-        "real GGUF quantization NOT ASSERTED",
+        "real GGUF quantization NOT ASSERTED; declared-only QLoRA run "
+        "PENDING - training NOT executed",
         timestamp="2026-08-24T00:00:00Z",
+    )
+    decision = promotion_gate_decision(
+        decision_id="dec-evidence",
+        candidate=candidate,
+        prerequisites=_real_prerequisites(),
+        shadow=shadow,
+        eval_ref=suite.suite_id,
+        evidence=declared_only_evidence,
+    )
+    assert decision.verdict is PromotionVerdict.DENY
+    assert "training run not COMPLETED" in decision.reason
+
+    evidence = PromotionEvidence(
+        run_id=declared_only_evidence.run_id,
+        git_commit=declared_only_evidence.git_commit,
+        candidate_id=declared_only_evidence.candidate_id,
+        dataset_id=declared_only_evidence.dataset_id,
+        dataset_digest=declared_only_evidence.dataset_digest,
+        eval_suite_id=declared_only_evidence.eval_suite_id,
+        eval_suite_digest=declared_only_evidence.eval_suite_digest,
+        plan_digest=declared_only_evidence.plan_digest,
+        qlora_run_id=declared_only_evidence.qlora_run_id,
+        qlora_status=declared_only_evidence.qlora_status,
+        artifact_id=declared_only_evidence.artifact_id,
+        artifact_digest=declared_only_evidence.artifact_digest,
+        quantization_format=declared_only_evidence.quantization_format,
+        shadow_run_id=declared_only_evidence.shadow_run_id,
+        shadow_decision=declared_only_evidence.shadow_decision,
+        false_positive_count=declared_only_evidence.false_positive_count,
+        promotion_decision=decision.verdict.value,
+        promotion_gate=decision.gate.value,
+        certification_boundary=declared_only_evidence.certification_boundary,
+        timestamp=declared_only_evidence.timestamp,
     )
     payload = evidence.to_dict()
     assert payload["run_id"] == "ep041-m5-final-1"
     assert payload["git_commit"] == "abc123"
-    assert payload["promotion_decision"] == "PROMOTE"
+    assert payload["promotion_decision"] == "DENY"
+    assert payload["qlora_status"] == "PENDING"
     redacted = json.dumps(evidence.to_redacted_dict())
     assert _secret_canary() not in redacted
 
