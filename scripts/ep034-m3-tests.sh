@@ -50,7 +50,7 @@ fi
 ok "dart format clean"
 
 # Real test run: the full ep034_integration suite through flutter test.
-if ! (cd tests/e2e/mobile && $FLUTTER test >>"$log" 2>&1); then
+if ! (cd tests/e2e/mobile && $FLUTTER test --reporter expanded -j 1 >>"$log" 2>&1); then
   fail "flutter test failed" "$log"
 fi
 
