@@ -1,5 +1,5 @@
 {
- "attestation_digest": "sha256:6fc42df38c47491bd0f6cbfd5d50004ff6f15cf8d2306e63f84cb6122fabd4cb",
+ "attestation_digest": "sha256:08576211da19e6c82a10e16432c8844f224e8e333af88412bf2329517d8490ae",
  "closure_commit": "5858438a73241f30acadc6704704fda623967e53",
  "created_at": "2026-09-02T18:30:05Z",
  "created_by": "node-close-v2.sh",
@@ -31,7 +31,7 @@
    "ref": "scripts/ep043-freshclone-accept.sh"
   },
   {
-   "digest": "sha256:db67df554c221753b7204d8d5ea085911f85a33caf22e07cf0e4ea260ee186a8",
+   "digest": "sha256:6eecb565abfcefcfb74b76aa00f9eaba62553a614b0c6df40bcfd9b689af78a8",
    "id": "rx022-aud090-battery",
    "ref": "scripts/aud090-freshclone-ship-tests.sh"
   }

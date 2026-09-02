@@ -486,3 +486,6 @@
 2026-09-02T18:53:07Z | ipman | RX-020 | MILESTONE_PASS | RX-020 closure re-attested: ep043-freshclone-accept.sh ALL_DONE_V2 sentinel fix updated pinned proof digest
 2026-09-02T18:53:07Z | ipman | RX-022 | MILESTONE_PASS | RX-022 closure re-attested: ep043-freshclone-accept.sh ALL_DONE_V2 sentinel fix updated pinned proof digest
 2026-09-02T19:03:47Z | ipman | RX-023 | MILESTONE_PASS | RX-023 closure re-attested: battery ALL_DONE_V2 acceptance fix updated pinned proof digest; attestation sha256 68bf3e8e77980e5cf
+2026-09-02T19:06:54Z | ipman | RX-019 | MILESTONE_PASS | RX-019 closure re-attested: ship-gate fix (journal.rs non-ASCII + aud090 hostile sandbox) updated pinned proof digest
+2026-09-02T19:06:54Z | ipman | RX-020 | MILESTONE_PASS | RX-020 closure re-attested: ship-gate fix (journal.rs non-ASCII + aud090 hostile sandbox) updated pinned proof digest
+2026-09-02T19:06:54Z | ipman | RX-022 | MILESTONE_PASS | RX-022 closure re-attested: ship-gate fix (journal.rs non-ASCII + aud090 hostile sandbox) updated pinned proof digest
