@@ -333,11 +333,16 @@ describe("EP-043 M3 real dependency and transport integration", () => {
   });
 
   it("ep043_integration_certification_rows_read_real", async () => {
+    // Ship-gate ceremony: the pre-ship RELEASE-BLOCKING-PENDING placeholder
+    // rows in the real RESULTS.md files are replaced by the transcribed
+    // CERTIFICATION_REGISTRY.md rows (FULLY_LOCAL profile; optional providers
+    // honestly DEFERRED/NOT ASSERTED; no fabricated signing per AUD-074). The
+    // real files must still list both domains and no placeholder may remain.
     const result = await runCli(["certification-rows"]);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("PROVIDER");
     expect(result.stdout).toContain("HARDWARE");
-    expect(result.stdout).toContain("RELEASE-BLOCKING-PENDING");
+    expect(result.stdout).not.toContain("RELEASE-BLOCKING-PENDING");
     expect(result.stdout).toContain("certification rows: 2");
   });
 

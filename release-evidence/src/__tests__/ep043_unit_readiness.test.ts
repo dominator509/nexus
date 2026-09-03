@@ -678,9 +678,10 @@ describe("EP-043 M2 repository state adapter", () => {
     const ep042 = nodes.find((node) => node.nodeId === "EP-042");
     expect(ep042?.done).toBe(true);
     // Ledger truth: EP-043 carries a NODE_DONE entry (historical closure).
-    // The readiness engine still reports NOT_READY because certifications
-    // remain RELEASE-BLOCKING-PENDING (asserted in the next test). This
-    // test records the factual ledger state, not a readiness verdict.
+    // The ship-gate ceremony resolved the certification placeholder rows
+    // (registry transcription); readiness end-to-end is asserted in the
+    // dedicated NOT_READY test below. This test records the factual ledger
+    // state, not a readiness verdict.
     const ep043 = nodes.find((node) => node.nodeId === "EP-043");
     expect(ep043?.done).toBe(true);
   });
@@ -693,6 +694,13 @@ describe("EP-043 M2 repository state adapter", () => {
   });
 
   it("ep043_unit_repo_certifications_pending_honest", () => {
+    // Ship-gate ceremony: the pre-ship RELEASE-BLOCKING-PENDING placeholder
+    // rows in the real RESULTS.md files are resolved by transcribing
+    // CERTIFICATION_REGISTRY.md truth (FULLY_LOCAL profile; every row carries
+    // blocking_for_ship false). Honest current truth after the ceremony: rows
+    // still parse from both real files and NO placeholder row remains (no
+    // fabricated SIGNED rows either - textual markers are never verification,
+    // AUD-074).
     const certifications = collectCertifications(PATHS);
     const all = [
       ...certifications.providerRows,
@@ -702,13 +710,16 @@ describe("EP-043 M2 repository state adapter", () => {
     const pending = all.filter(
       (row) => row.state === "RELEASE-BLOCKING-PENDING",
     );
-    expect(pending.length).toBeGreaterThan(0); // honest current truth
+    expect(pending.length).toBe(0); // placeholder replaced by registry truth
   });
 
   it("ep043_unit_repo_readiness_current_state_not_ready", () => {
-    // The real repository today cannot be READY: certification rows are
-    // RELEASE-BLOCKING-PENDING, so readiness must report that truth
-    // deterministically even though the ledger records EP-043 NODE_DONE.
+    // The real repository today still cannot be READY end-to-end: even after
+    // the certification placeholder is resolved, the readiness engine fails
+    // closed on every row that is not a verified structured SIGNED record
+    // (AUD-074), and drills/reviews/release-tag obligations remain unmet. The
+    // ledger records EP-043 NODE_DONE (historical closure); that is not a
+    // readiness verdict.
     const certifications = collectCertifications(PATHS);
     const graph = collectGraphNodes(PATHS);
     expect(
@@ -720,6 +731,8 @@ describe("EP-043 M2 repository state adapter", () => {
       certifications.hardwareRows.some(
         (row: { state: string }) => row.state === "RELEASE-BLOCKING-PENDING",
       ),
-    ).toBe(true);
+    ).toBe(false); // no placeholder row remains after the ceremony
+    const obligation = evaluateCertificationObligation(certifications);
+    expect(obligation.met).toBe(false); // honest fail-closed until signed rows carry records
   });
 });

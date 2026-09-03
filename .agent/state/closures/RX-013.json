@@ -1,11 +1,11 @@
 {
-  "attestation_digest": "sha256:c8878fb90acb1e82fdf208bc2cab65d4ed0dceb3d0c1d19c393ad1c98ae25de2",
-  "closure_commit": "9f8f7b6ce8d699d36112f9d6cbf86c699a9eefbe",
-  "created_at": "2026-08-31T20:39:03Z",
+  "attestation_digest": "sha256:535e5031dc8479f6d7f51b02760a55f4723b56b97f504181cc39410324ec7915",
+  "closure_commit": "b1e1fdeee38c1af251a2de9fb687900deb2a706a",
+  "created_at": "2026-09-03T01:21:26Z",
   "created_by": "node-close-v2.sh",
   "expected_files_digest": "sha256:f6c02be46f890043f5c0891a01ccecb4233a934f6b2e95dc11fb11506fbb1754",
   "generation": 2,
-  "green_v2_tag": "green-v2/RX-013/9f8f7b6ce8d699d36112f9d6cbf86c699a9eefbe",
+  "green_v2_tag": "green-v2/RX-013/b1e1fdeee38c1af251a2de9fb687900deb2a706a",
   "milestones": {
     "max": 3,
     "passed": [
@@ -33,7 +33,7 @@
       "ref": "release-evidence/src/repo-state.ts"
     },
     {
-      "digest": "sha256:c292adc7bbce2f1fea9c3e6d5938cc8df0f4b8a15f8e727a5dbf95f087fc4f03",
+      "digest": "sha256:2954059308ff2341a232329bb3b013d947d268c3644fdf1017e7a86be7328f5d",
       "id": "integration-proofs",
       "ref": "release-evidence/src/__tests__/ep043_integration.test.ts"
     },
@@ -43,7 +43,7 @@
       "ref": "release-evidence/src/__tests__/ep043_failure.test.ts"
     },
     {
-      "digest": "sha256:6b16238f60052054ccb6beb7fd3aceb24628fc9885de4619331d6bb385a96a37",
+      "digest": "sha256:a6dbf21413d04b1fc0cc08866864a797ff599b0cebfce7425ec5b746a3557493",
       "id": "readiness-proofs",
       "ref": "release-evidence/src/__tests__/ep043_unit_readiness.test.ts"
     },
