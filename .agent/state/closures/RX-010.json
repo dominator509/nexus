@@ -1,11 +1,11 @@
 {
-  "attestation_digest": "sha256:f7e5b8fac66675b32595f7d6c5416659bb1f06d2d534b9983fe8ce98655f77fc",
-  "closure_commit": "4943bfdb95dbdb50eeaa5708d68f750605eb3813",
-  "created_at": "2026-08-31T17:56:45Z",
+  "attestation_digest": "sha256:68590ddbae1bd0cb882c024b4765e009753f2782717a975b89a03830e55ba899",
+  "closure_commit": "4651a2c6ae6320e434a3661046b67c5685e13aba",
+  "created_at": "2026-09-03T01:21:45Z",
   "created_by": "node-close-v2.sh",
   "expected_files_digest": "sha256:6e1877abb40e743b77407bd3db5605bff0e8da7b211f8ee2631ab47b2a61d93c",
   "generation": 2,
-  "green_v2_tag": "green-v2/RX-010/4943bfdb95dbdb50eeaa5708d68f750605eb3813",
+  "green_v2_tag": "green-v2/RX-010/4651a2c6ae6320e434a3661046b67c5685e13aba",
   "milestones": {
     "max": 4,
     "passed": [
@@ -44,7 +44,7 @@
       "ref": "release-evidence/src/__tests__/ep043_unit_contract.test.ts"
     },
     {
-      "digest": "sha256:6b16238f60052054ccb6beb7fd3aceb24628fc9885de4619331d6bb385a96a37",
+      "digest": "sha256:a6dbf21413d04b1fc0cc08866864a797ff599b0cebfce7425ec5b746a3557493",
       "id": "readiness-tests",
       "ref": "release-evidence/src/__tests__/ep043_unit_readiness.test.ts"
     },
