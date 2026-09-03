@@ -24,7 +24,7 @@ Real proof: sensitive response in an occupied room is routed privately, never sp
   },
   "tts_synthesized": {
     "duration_seconds": 5.275,
-    "rms": 0.050842,
+    "rms": 0.050822,
     "sample_rate_hz": 24000
   }
 }
