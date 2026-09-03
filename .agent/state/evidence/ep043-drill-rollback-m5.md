@@ -1,8 +1,8 @@
 # ROLLBACK DRILL EVIDENCE
 
-Run: ep043-rollback-drill-1788393701
-Git commit: 610823d81d965982f117857f38a42ad0e8a0a55b
-Generated: 2026-09-03T00:01:44Z
+Run: ep043-rollback-drill-1788401369
+Git commit: 667bb11b7dd6a3b4660ebb7e4260fee1c4e92a1f
+Generated: 2026-09-03T02:09:31Z
 
 State A captured: report 0136f0905308bfc9b9495dfe67541951c268de3fb9ec5a0b5b557713d297cd23 (committed bytes)
 State A manifest component digests:

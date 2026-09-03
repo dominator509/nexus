@@ -1,9 +1,9 @@
 {
-  "canary_digest": "e0da217e9fd75a53f0125b8a10baf930e73b328530e7ec192a0424a9f29f6860",
+  "canary_digest": "2b4c2c18bae01b16964e138d149bbd85be1534c87e9f71f36a62d94aecf56b2a",
   "cleanup": "fixture teardown + zero-orphan audit in gate",
   "connector": "nexus-imap-smtp (imap 3.0.0-alpha.15 + lettre 0.11.23)",
   "connector_classification": "IMPLEMENTED / PROTOCOL_CERTIFIED / TRANSPORT_CERTIFIED",
-  "correlation": "mail-lf011-1788392726389108693-1788392731813009299",
+  "correlation": "mail-lf011-1788400586177219968-1788400591616772409",
   "exact_target_verification": "Verified",
   "external_provider_certification": "NOT ASSERTED",
   "lf_id": "LF-011",
@@ -12,10 +12,10 @@
   "provider": "greenmail-2.1.0",
   "provider_classification": "CONTROLLED_TEST_FIXTURE",
   "recipient_account_fingerprint": "29de9c8126f98398181e304ff05b9f478ffd13fc2c9094b311185dd79bc1d02c",
-  "recipient_provider_id": "d-lf011-1788392726389108693@nexus.local",
-  "run_id": "1788392726389108693",
+  "recipient_provider_id": "d-lf011-1788400586177219968@nexus.local",
+  "run_id": "1788400586177219968",
   "sender_account_fingerprint": "cc371077ef32b52485f6f818cd4c2541aca8f34998922b5775f5245ceba079c5",
-  "sender_provider_id": "d-lf011-1788392726389108693@nexus.local",
+  "sender_provider_id": "d-lf011-1788400586177219968@nexus.local",
   "state_transitions": {
     "approval_class_0": "denied (zero mutation)",
     "approval_class_2": "approved",
@@ -25,13 +25,13 @@
   },
   "summary": {
     "body_bytes": 677,
-    "body_sha256": "f09d439b309c40091819c757022f1b74b16e4693e00258a691aa606acba1aa22",
+    "body_sha256": "f1f8c2185ae0f64c7587ad7e7a13348c302b16167f74732162be6e1088e9acb7",
     "flags": [
       "\\Seen"
     ],
     "from": "tenant-a@nexus.test",
-    "message_id": "d-lf011-1788392726389108693@nexus.local",
-    "subject": "lf011 LF011CANARY_1788392726389108693_1788392730443830228"
+    "message_id": "d-lf011-1788400586177219968@nexus.local",
+    "subject": "lf011 LF011CANARY_1788400586177219968_1788400590227554682"
   },
-  "timestamp": "1788392731"
+  "timestamp": "1788400591"
 }

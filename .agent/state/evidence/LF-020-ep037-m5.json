@@ -1,7 +1,7 @@
 {
   "adapter": "nexus-provider-storage-s3",
   "addressing": "PATH_STYLE",
-  "approval_reference": "approval-ep037-m5-1788393010473-18bda",
+  "approval_reference": "approval-ep037-m5-1788400866233-5adc5",
   "approval_required": true,
   "certification_boundary": {
     "AWS S3": "NOT ASSERTED",
@@ -15,28 +15,28 @@
   "destination_hashes_verified": true,
   "destination_intact_after_source_delete": true,
   "destination_provider": "MINIO",
-  "git_commit": "610823d81d965982f117857f38a42ad0e8a0a55b",
+  "git_commit": "667bb11b7dd6a3b4660ebb7e4260fee1c4e92a1f",
   "lf_id": "LF-020",
   "metadata_verified": true,
   "migration_state": "CANONICAL_LOCATION_CHANGED",
   "milestone": "M5",
   "node": "EP-037",
   "profile": "MINIO",
-  "run_id": "ep037-m5-1788393010473-18bda",
+  "run_id": "ep037-m5-1788400866233-5adc5",
   "slug": "storage-backend-portability",
   "source_delete": "RESOURCE_ABSENT_VERIFIED",
   "source_provider": "LOCAL",
   "versioned_artifacts": [
     {
-      "artifact_hash": "7b578c0b73267cf71680bcc6682931dca2600cf27e640c28acc7301116341a2a",
+      "artifact_hash": "a0d000ad1d51bd951e65ff3f180d57f19b4be73303779f654409f2720d0b77c0",
       "artifact_id": "01970000-0000-7000-8000-000000000140",
       "version": "1"
     },
     {
-      "artifact_hash": "1d1e05c4c63f776389e3ddbf2ca041cebd9e13cb48319e5f030fc9885bb3e6ad",
+      "artifact_hash": "038975c66e0b57c11506c835d62009454002902454717fd2ff7f24c9294a85de",
       "artifact_id": "01970000-0000-7000-8000-000000000141",
       "version": "2"
     }
   ],
-  "written_at": "2026-09-02T23:50:10Z"
+  "written_at": "2026-09-03T02:01:06Z"
 }
