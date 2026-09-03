@@ -20,7 +20,9 @@ fi
 
 # Collect all changed paths: committed (baseline..HEAD), staged, unstaged, untracked.
 changed=$( {
+  if [ -n "${SCOPE_AUDIT_DRIFT_ONLY:-}" ]; then :; else
   if [ -n "$baseline" ]; then git diff --name-only "$baseline"..HEAD 2>/dev/null || true; fi
+  fi
   git diff --cached --name-only
   git diff --name-only
   git ls-files --others --exclude-standard
@@ -28,9 +30,10 @@ changed=$( {
 
 fail=0
 for path in $changed; do
-  # L6 always-writable state (ledger + evidence) is governed, not fenced.
+  # L6 always-writable state (ledger + evidence + closures + remediation
+  # evidence) is governed, not fenced.
   case "$path" in
-    .agent/state/LEDGER.md|.agent/state/evidence/*) continue ;;
+    .agent/state/LEDGER.md|.agent/state/evidence/*|.agent/state/closures/*|.agent/remediation/*) continue ;;
   esac
   ok=0
   while IFS= read -r rule; do

@@ -75,6 +75,11 @@ ALLOW_DOUBLE_BRACE = {
     # EP-025 M3: endpoint digest passwords rendered per-run by the
     # same fixture bootstrap (never committed).
     "infra/asterisk/config/pjsip.conf.tmpl",
+    # RX-015 CI authority: GitHub Actions REQUIRES `${{ secrets.* }}`
+    # expression syntax to inject repository secrets (preflight's
+    # DEEPSEEK_API_KEY probe is a live API call). Same class as the
+    # template entities above - real required syntax, not a placeholder.
+    ".github/workflows/ci.yml",
 }
 
 for path in ROOT.rglob("*"):
@@ -83,6 +88,11 @@ for path in ROOT.rglob("*"):
     if any(part in IGNORE_DIRS for part in path.parts):
         continue
     if ".agent/state/evidence" in str(path.relative_to(ROOT)):
+        continue
+    # Remediation evidence logs are generated machine output (verify ladders,
+    # vitest/tool output) captured by the remediation graph. Same class as
+    # .agent/state/evidence: evidence stores are not blueprint source.
+    if ".agent/remediation/evidence" in str(path.relative_to(ROOT)):
         continue
     data = path.read_bytes()
     try:

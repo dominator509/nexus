@@ -1,0 +1,19 @@
+# RX-010 expected files: remediation surface for AUD-076 + AUD-077 + AUD-078 + AUD-079
+# (release tag readiness truth; artifact SHA-256 over real bytes; manifest
+#  digest binds nested component state; evidence digest binds nested state)
+.agent/expected-files/RX-010.txt
+.agent/milestone-files/RX-010-M1.txt
+.agent/milestone-files/RX-010-M2.txt
+.agent/milestone-files/RX-010-M3.txt
+.agent/milestone-files/RX-010-M4.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+release-evidence/src/repo-state.ts
+release-evidence/src/model.ts
+release-evidence/src/manifest.ts
+release-evidence/src/__tests__/ep043_unit_repo_state.test.ts
+release-evidence/src/__tests__/ep043_unit_contract.test.ts
+release-evidence/src/__tests__/ep043_unit_readiness.test.ts
+scripts/nodes/RX-010.sh
+scripts/rx010-remediation-tests.sh

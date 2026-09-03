@@ -27,9 +27,14 @@ function credential(
     issued_at_unix_s: issued,
     expires_at_unix_s: expires,
     state: "ISSUED",
-    secret: `nexus-secret-${id.replaceAll("-", "")}abcdefghijklmnopqrstuvwxyz`,
+    secret: secretFor(id),
     nonce: `nexus-nonce-${id.replaceAll("-", "")}0123456789abcdef0123456789`,
   });
+}
+
+/** Deterministic secret matching credential() so tests can prove it. */
+function secretFor(id: string): string {
+  return `nexus-secret-${id.replaceAll("-", "")}abcdefghijklmnopqrstuvwxyz`;
 }
 
 describe("ep035_failure_denied_permission", () => {
@@ -58,9 +63,9 @@ describe("ep035_failure_denied_permission", () => {
     );
 
     // Revoked token can never be claimed again.
-    await expect(store.claim(c.credential_id, 1_700_000_020)).resolves.toBe(
-      false,
-    );
+    await expect(
+      store.claim(c.credential_id, secretFor(c.credential_id), 1_700_000_020),
+    ).resolves.toBe(false);
     // Secret verification still answers (hash comparison) but the token
     // is not usable: claim is the durable gate.
     await expect(store.verifySecret(c.credential_id, c.secret)).resolves.toBe(
@@ -79,9 +84,9 @@ describe("ep035_failure_denied_permission", () => {
     await store.issue(c);
 
     // Claim after expiry is denied by the window condition.
-    await expect(store.claim(c.credential_id, 1_700_200_000)).resolves.toBe(
-      false,
-    );
+    await expect(
+      store.claim(c.credential_id, secretFor(c.credential_id), 1_700_200_000),
+    ).resolves.toBe(false);
   }, 30000);
 
   it("denies a replay of an already-used token", async () => {
@@ -94,13 +99,13 @@ describe("ep035_failure_denied_permission", () => {
     );
     await store.issue(c);
 
-    await expect(store.claim(c.credential_id, 1_700_000_010)).resolves.toBe(
-      true,
-    );
+    await expect(
+      store.claim(c.credential_id, secretFor(c.credential_id), 1_700_000_010),
+    ).resolves.toBe(true);
     // The same token presented again is a replay.
-    await expect(store.claim(c.credential_id, 1_700_000_020)).resolves.toBe(
-      false,
-    );
+    await expect(
+      store.claim(c.credential_id, secretFor(c.credential_id), 1_700_000_020),
+    ).resolves.toBe(false);
   }, 30000);
 
   it("rejects an invalid integration ladder leap with Policy", async () => {

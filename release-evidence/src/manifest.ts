@@ -14,7 +14,7 @@
  */
 
 import { ShipError } from "./errors.ts";
-import { sha256Hex } from "./model.ts";
+import { canonicalize, sha256Bytes, sha256Hex } from "./model.ts";
 
 /** Canonical release channel vocabulary (mirrors EP-042 M1). */
 export const RELEASE_CHANNELS = [
@@ -107,9 +107,12 @@ function signatureToWire(
   };
 }
 
-/** Real sha256 digest (alg:hex) over artifact bytes. */
+/** Real sha256 digest (alg:hex) over RAW artifact bytes (AUD-077). The
+ *  bytes are hashed directly - never decoded through TextDecoder first.
+ *  Lossy UTF-8 decoding collapses distinct binary sequences onto the
+ *  same replacement characters and would break the artifact binding. */
 export function digestBytes(bytes: Uint8Array): string {
-  return `sha256:${sha256Hex(new TextDecoder().decode(bytes))}`;
+  return `sha256:${sha256Bytes(bytes)}`;
 }
 
 function assertKnownChannel(value: unknown): ReleaseChannel {
@@ -142,7 +145,7 @@ function assertKnownProfile(value: unknown): DeploymentProfileMode {
 export function canonicalManifestPayload(
   manifest: Omit<ReleaseManifestWire, "manifest_digest">,
 ): string {
-  return JSON.stringify(manifest, Object.keys(manifest).sort());
+  return JSON.stringify(canonicalize(manifest));
 }
 
 export function manifestDigest(

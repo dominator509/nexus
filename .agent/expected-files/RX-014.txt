@@ -1,0 +1,42 @@
+# RX-014 expected files: provider adapter truth (AUD-009 Gmail wire-format
+#  + draft-id recipient; AUD-010 real attachment enumeration Gmail/Graph/IMAP;
+#  AUD-018 delivery policy enforced; AUD-019 router destination-aware SMS;
+#  AUD-020 ICTFax destination/document binding; AUD-021 consent before
+#  recording; AUD-024 X reply binds mention thread via official reply object)
+.agent/expected-files/RX-014.txt
+.agent/milestone-files/RX-014-M1.txt
+.agent/milestone-files/RX-014-M2.txt
+.agent/milestone-files/RX-014-M3.txt
+.agent/milestone-files/RX-014-M4.txt
+.agent/milestone-files/RX-014-M5.txt
+.agent/milestone-files/RX-014-M6.txt
+.agent/milestone-files/RX-014-M7.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+Cargo.lock
+connectors/gmail/src/adapter.rs
+connectors/gmail/src/transport.rs
+connectors/imap-smtp/Cargo.toml
+connectors/imap-smtp/src/adapter.rs
+connectors/imap-smtp/src/transport.rs
+connectors/microsoft-mail/src/adapter.rs
+connectors/microsoft-mail/src/transport.rs
+crates/nexus-notifications/src/lib.rs
+crates/nexus-notifications/src/model.rs
+crates/nexus-notifications/src/provider.rs
+crates/nexus-notifications/src/router.rs
+connectors/sms/src/adapter.rs
+docs/operations/EP-032-notifications.md
+tests/notifications/tests/e2e.rs
+tests/notifications/tests/livefire.rs
+connectors/ictfax/src/adapter.rs
+connectors/ictfax/src/transport.rs
+connectors/asterisk/tests/ep025_governed_live.rs
+infra/asterisk/fixture/lf012_orchestrator.py
+scripts/ep025-m5-tests.sh
+connectors/social-direct/src/adapter.rs
+connectors/social-direct/src/transport.rs
+connectors/social-direct/tests/ep029_m3_direct.rs
+scripts/nodes/RX-014.sh
+scripts/rx014-remediation-tests.sh

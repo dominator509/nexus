@@ -22,6 +22,11 @@ import type {
 } from "./readiness.ts";
 import { REVIEW_DOMAINS } from "./model.ts";
 import { ShipError } from "./errors.ts";
+import {
+  currentGitCommit,
+  loadValidatedEvidence,
+  loadEvidenceRecord,
+} from "./evidence.ts";
 
 export interface RepoPaths {
   root: string;
@@ -82,6 +87,7 @@ export function collectLiveFireProofs(paths: RepoPaths): LiveFireProofResult[] {
   if (!registry) {
     return [];
   }
+  const commit = currentGitCommit(paths.root);
   const results: LiveFireProofResult[] = [];
   for (const line of registry.split("\n")) {
     if (line.trim().length === 0 || line.startsWith("#")) continue;
@@ -91,12 +97,21 @@ export function collectLiveFireProofs(paths: RepoPaths): LiveFireProofResult[] {
     const slug = parts[3] ?? "";
     if (!/^LF-\d+$/.test(lfId)) continue;
     const evidenceFile = findEvidenceFile(paths.evidenceDir, lfId);
+    // RX-002: evidence is PASS only when the structured record validates
+    // (exit 0, PASS result, bound to the current commit, fresh). A bare
+    // filename without a valid structured record is NOT a pass.
+    const validatedRecord = evidenceFile
+      ? loadValidatedEvidence(paths.evidenceDir, lfId, {
+          expectedCommit: commit,
+        })
+      : undefined;
     results.push({
       lfId,
       ownerNode: owner,
       slug,
       ownerDone: new RegExp(`\\| ${owner} \\| NODE_DONE \\|`).test(ledgerText),
       evidenceRef: evidenceFile,
+      validated: validatedRecord !== undefined,
     });
   }
   return results;
@@ -120,9 +135,37 @@ export function collectCertifications(
   const providerText = readIfExists(paths.providerCertPath) ?? "";
   const hardwareText = readIfExists(paths.hardwareCertPath) ?? "";
   return {
-    providerRows: parseCertificationText(providerText, "PROVIDER"),
-    hardwareRows: parseCertificationText(hardwareText, "HARDWARE"),
+    providerRows: parseCertificationText(providerText, "PROVIDER").map((row) =>
+      verifyCertificationRow(row, paths),
+    ),
+    hardwareRows: parseCertificationText(hardwareText, "HARDWARE").map((row) =>
+      verifyCertificationRow(row, paths),
+    ),
   };
+}
+
+/**
+ * AUD-074: a SIGNED textual marker is never verification. A row is
+ * verified only when a structured execution evidence record with a
+ * VERIFIED/SIGNED/PASS result validates for that row's proof id. The
+ * evidenceRef is then the structured record path; otherwise the row
+ * stays SIGNED with verified=false so the obligation fails closed.
+ */
+function verifyCertificationRow(
+  row: CertificationMatrixInput["providerRows"][number],
+  paths: RepoPaths,
+): CertificationMatrixInput["providerRows"][number] {
+  if (row.state !== "SIGNED") return row;
+  const proofId = `ep043-cert-${row.rowId}`;
+  const record = loadValidatedEvidence(paths.evidenceDir, proofId, {
+    expectedCommit: currentGitCommit(paths.root),
+    requiredResult: ["VERIFIED", "SIGNED", "PASS"],
+  });
+  if (!record) {
+    return { ...row, verified: false };
+  }
+  const file = findEvidenceFile(paths.evidenceDir, proofId);
+  return { ...row, verified: true, evidenceRef: file };
 }
 
 function parseCertificationText(
@@ -175,24 +218,30 @@ function parseCertificationText(
   return rows;
 }
 
-/** Collect review results from gate evidence files. */
+/** Collect review results from structured gate evidence files. */
 export function collectReviews(paths: RepoPaths): ReviewInput[] {
   const reviews: ReviewInput[] = [];
+  const commit = currentGitCommit(paths.root);
   for (const domain of REVIEW_DOMAINS) {
-    const ref = join(
-      ".agent",
-      "state",
-      "evidence",
-      `ep043-review-${domain.toLowerCase()}`,
-    );
+    const prefix = `ep043-review-${domain.toLowerCase()}`;
     const found =
-      findEvidenceFile(
-        paths.evidenceDir,
-        `ep043-review-${domain.toLowerCase()}`,
-      ) || (exists(join(paths.root, ref)) ? ref : "");
+      findEvidenceFile(paths.evidenceDir, prefix) ||
+      (exists(join(paths.root, ".agent", "state", "evidence", prefix))
+        ? join(".agent", "state", "evidence", prefix)
+        : "");
+    // RX-002: a review passes only when the evidence file is a validated
+    // structured record with a PASS result. Filename presence alone is NOT_RUN.
+    let status: ReviewInput["status"] = "NOT_RUN";
+    if (found) {
+      const record = loadValidatedEvidence(paths.evidenceDir, prefix, {
+        expectedCommit: commit,
+        requiredResult: ["PASS", "APPROVED"],
+      });
+      status = record ? "PASS" : "NOT_RUN";
+    }
     reviews.push({
       domain,
-      status: found.length > 0 ? "PASS" : "NOT_RUN",
+      status,
       evidenceRef: found,
     });
   }
@@ -208,7 +257,7 @@ function exists(path: string): boolean {
   }
 }
 
-/** Collect drill evidence from the evidence dir. */
+/** Collect drill evidence from validated structured evidence records. */
 export function collectDrills(paths: RepoPaths): DrillInput[] {
   const drillKinds = [
     "RESTORE",
@@ -218,14 +267,26 @@ export function collectDrills(paths: RepoPaths): DrillInput[] {
     "SENTINEL_CONTAINMENT",
     "UPDATE_FAILURE",
   ] as const;
+  const commit = currentGitCommit(paths.root);
   const drills: DrillInput[] = [];
   for (const kind of drillKinds) {
     const prefix = `ep043-drill-${kind.toLowerCase()}`;
     const found = findEvidenceFile(paths.evidenceDir, prefix);
+    // RX-002: DATED_EVIDENCE only when the structured record validates
+    // (exit 0, DATED_EVIDENCE result, current commit, fresh). A bare
+    // filename is NOT_RUN.
+    let status: DrillInput["status"] = "NOT_RUN";
+    if (found) {
+      const record = loadValidatedEvidence(paths.evidenceDir, prefix, {
+        expectedCommit: commit,
+        requiredResult: ["DATED_EVIDENCE", "VERIFIED", "PASS"],
+      });
+      status = record ? "DATED_EVIDENCE" : "NOT_RUN";
+    }
     drills.push({
       kind,
-      status: found.length > 0 ? "DATED_EVIDENCE" : "NOT_RUN",
-      ...(found.length > 0
+      status,
+      ...(status === "DATED_EVIDENCE"
         ? { datedAt: new Date().toISOString(), evidenceRef: found }
         : {}),
     });
@@ -233,11 +294,22 @@ export function collectDrills(paths: RepoPaths): DrillInput[] {
   return drills;
 }
 
-/** Collect the release tag from the git refs (green/EP-043 or HEAD). */
+/** Collect the release tag from the git refs (AUD-076). A release tag
+ *  requires HEAD to resolve to a refs/tags/* ref. A branch pointer
+ *  (ref: refs/heads/...) or a detached commit is NOT a release tag and
+ *  fails closed to "" so the readiness gate can never be satisfied by
+ *  merely being on a branch. */
 export function collectReleaseTag(root: string): string {
   try {
     const head = readFileSync(join(root, ".git", "HEAD"), "utf8").trim();
-    return head;
+    if (!head.startsWith("ref:")) {
+      return "";
+    }
+    const refPath = head.slice(5).trim();
+    if (!refPath.startsWith("refs/tags/")) {
+      return "";
+    }
+    return refPath.slice("refs/tags/".length);
   } catch {
     return "";
   }
@@ -260,7 +332,10 @@ export function collectReadinessInputs(paths: RepoPaths): ReadinessInputs {
   const reviews = collectReviews(paths);
   const drills = collectDrills(paths);
   const releaseTag = collectReleaseTag(paths.root);
-  const manualDeployCommand = "sh scripts/deploy.sh --dry-run";
+  // AUD-081: the exact manual deploy command must be a REAL deployment
+  // action, not a dry-run. The operator-facing handoff carries the
+  // verified deploy invocation.
+  const manualDeployCommand = "sh scripts/deploy.sh --deploy";
   return {
     graphNodes,
     liveFireProofs,
@@ -274,14 +349,16 @@ export function collectReadinessInputs(paths: RepoPaths): ReadinessInputs {
 }
 
 /**
- * M5 fresh-clone acceptance read. The final acceptance rerun writes a
- * dated evidence file `ep043-freshclone-<run>.md` under the evidence
- * dir (bound to the exact candidate commit). Presence of that committed
- * evidence is the canonical signal that the fresh-clone-equivalent
- * rerun passed; absence means the obligation remains unmet and
- * readiness stays NOT_READY. This is the same evidence-dir mechanism
- * the adapter already uses for drills and reviews.
+ * RX-002 fresh-clone acceptance read. True only when a structured
+ * fresh-clone evidence record validates: result VERIFIED (or PASS),
+ * exit 0, bound to the current commit, and fresh. A bare filename is
+ * never proof (AUD-075).
  */
 export function collectFreshCloneEvidence(paths: RepoPaths): boolean {
-  return findEvidenceFile(paths.evidenceDir, "ep043-freshclone").length > 0;
+  const commit = currentGitCommit(paths.root);
+  const record = loadValidatedEvidence(paths.evidenceDir, "ep043-freshclone", {
+    expectedCommit: commit,
+    requiredResult: ["VERIFIED", "PASS"],
+  });
+  return record !== undefined;
 }

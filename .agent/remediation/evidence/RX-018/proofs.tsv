@@ -1,0 +1,9 @@
+tenant-boundary-local	connectors/storage-local/src/lib.rs	sha256:2487c461105741bd4a6fde432ddc26c40da615aee729d57c15af574e4beafd1f
+shared-content-delete-local	connectors/storage-local/src/lib.rs	sha256:2487c461105741bd4a6fde432ddc26c40da615aee729d57c15af574e4beafd1f
+encryption-verifier	connectors/storage-nas/src/lib.rs	sha256:068d72b20b489754338ccb3aa0f59bd2f240238b4126e98e3f95b8b193674e8b
+encryption-verifier-model	crates/nexus-artifacts/src/model.rs	sha256:75cbb3eaa1ea2ed5945a394694a112ed43fd141461383928740f7fa3165da16e
+egress-wiring-s3	connectors/storage-s3/src/lib.rs	sha256:b7a140d41e4aedc6ec4b6bba5601a509fb9e05acbd8020f44d653b96132de1b5
+signed-manifest-model	crates/nexus-artifacts/src/model.rs	sha256:75cbb3eaa1ea2ed5945a394694a112ed43fd141461383928740f7fa3165da16e
+signed-manifest-adapter-local	connectors/storage-local/src/lib.rs	sha256:2487c461105741bd4a6fde432ddc26c40da615aee729d57c15af574e4beafd1f
+self-contained-dr-bundle	crates/nexus-artifacts/src/dr.rs	sha256:62d36a3917978f580dfad936487eebeb39e81692f0d29a754e85b9f0f0650353
+destroyed-host-dr-lf002	tests/livefire/storage/tests/lf002_restore_existing_nexus.rs	sha256:f8638ce961954533601dc3077116229c2189432c956470e36f9e933e7d23de39

@@ -68,7 +68,7 @@ fn node(
     mem: u32,
     disk: u32,
 ) -> ComputeNode {
-    ComputeNode::new(
+    let mut n = ComputeNode::new(
         nid(id),
         class,
         ProviderKind::Local,
@@ -79,7 +79,18 @@ fn node(
         locality,
         Privacy::Household,
     )
-    .expect("node")
+    .expect("node");
+    // AUD-047: placement tests target constraint semantics, so the
+    // default fixture is an OBSERVED-healthy node (real fabric nodes
+    // are observed before they can be placed). Hostile AUD-047 tests
+    // below prove the fail-closed gate for declared-only/unknown nodes.
+    n.observed_capacity = Some(
+        CapacityProfile::new(cpu, mem, disk, None, None, CapacityProvenance::Observed)
+            .expect("observed capacity"),
+    );
+    n.api_health = ProviderApiHealth::Reachable;
+    n.resource_health = ResourceHealth::Ready;
+    n
 }
 
 #[test]
@@ -276,17 +287,22 @@ fn ep036_unit_provider_api_health_distinct_from_resource_health() {
     let provider =
         CloudProvider::new(binding(ProviderKind::Local, "t1", "home")).expect("provider");
     assert_eq!(provider.api_health, ProviderApiHealth::Unknown);
-    let n = node(
-        "n1",
+    // A raw node starts UNKNOWN on both axes (the observed-healthy
+    // fixture sets them only for placement tests) - the two health
+    // concepts stay distinct.
+    let raw = ComputeNode::new(
+        nid("n1"),
         ComputeClass::Local,
-        "t1",
+        ProviderKind::Local,
+        tid("t1"),
         "home",
+        CapacityProfile::new(4, 8, 50, None, None, CapacityProvenance::Declared).expect("cap"),
         Locality::HomeEdge,
-        4,
-        8,
-        50,
-    );
-    assert_eq!(n.resource_health, ResourceHealth::Unknown);
+        Privacy::Household,
+    )
+    .expect("node");
+    assert_eq!(raw.api_health, ProviderApiHealth::Unknown);
+    assert_eq!(raw.resource_health, ResourceHealth::Unknown);
     assert_ne!(
         ProviderApiHealth::Reachable.as_str(),
         ResourceHealth::Ready.as_str()
@@ -527,6 +543,279 @@ fn ep036_unit_placement_region_constraint_enforced() {
     .expect("constraint");
     let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
     assert!(!decision.is_assigned());
+}
+
+#[test]
+fn ep036_unit_placement_declared_only_capacity_fails_closed() {
+    // AUD-047: a node whose ONLY capacity truth is DECLARED (self-
+    // reported, never observed) can never be placed - the fabric must
+    // observe a node before trusting its resources.
+    let n = ComputeNode::new(
+        nid("n1"),
+        ComputeClass::Local,
+        ProviderKind::Local,
+        tid("t1"),
+        "home",
+        CapacityProfile::new(64, 256, 2000, None, None, CapacityProvenance::Declared)
+            .expect("capacity"),
+        Locality::HomeEdge,
+        Privacy::Household,
+    )
+    .expect("node");
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Local],
+        vec![],
+        None,
+    )
+    .expect("constraint");
+    let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
+    assert!(!decision.is_assigned());
+    assert_eq!(
+        decision.failure_class,
+        Some(PlacementFailureClass::NoEligibleTarget)
+    );
+}
+
+#[test]
+fn ep036_unit_placement_unknown_api_health_fails_closed() {
+    // AUD-047: observed capacity is not enough - an unknown/unreachable
+    // provider API means the node cannot be truthfully placed.
+    let mut n = node(
+        "n1",
+        ComputeClass::Local,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        8,
+        32,
+        200,
+    );
+    n.api_health = ProviderApiHealth::Unknown;
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Local],
+        vec![],
+        None,
+    )
+    .expect("constraint");
+    let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
+    assert!(!decision.is_assigned());
+    assert_eq!(
+        decision.failure_class,
+        Some(PlacementFailureClass::NoEligibleTarget)
+    );
+}
+
+#[test]
+fn ep036_unit_placement_unknown_resource_health_fails_closed() {
+    // AUD-047: a reachable API does not prove the RESOURCE is healthy -
+    // an unknown/failed resource is never placed.
+    let mut n = node(
+        "n1",
+        ComputeClass::Local,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        8,
+        32,
+        200,
+    );
+    n.resource_health = ResourceHealth::Failed;
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Local],
+        vec![],
+        None,
+    )
+    .expect("constraint");
+    let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
+    assert!(!decision.is_assigned());
+    assert_eq!(
+        decision.failure_class,
+        Some(PlacementFailureClass::NoEligibleTarget)
+    );
+}
+
+#[test]
+fn ep036_unit_placement_ranks_observed_not_declared() {
+    // AUD-047: ranking uses OBSERVED capacity, never the declared claim.
+    // The liar DECLARES 64 cores but is OBSERVED at 4 - it must be the
+    // least-powerful eligible node and be SELECTED. If ranking trusted
+    // declarations, the honest (declared 8) node would win instead.
+    let mut liar = node(
+        "liar",
+        ComputeClass::Local,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        64,
+        256,
+        2000,
+    );
+    liar.observed_capacity = Some(
+        CapacityProfile::new(4, 16, 100, None, None, CapacityProvenance::Observed)
+            .expect("observed"),
+    );
+    let honest = node(
+        "honest",
+        ComputeClass::Local,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        8,
+        32,
+        200,
+    );
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Local],
+        vec![],
+        None,
+    )
+    .expect("constraint");
+    let decision =
+        placement_decision(rid("r1"), mid("w1"), &constraint, &[liar, honest]).expect("decision");
+    assert!(decision.is_assigned());
+    assert_eq!(
+        decision.selected_node.as_ref().map(|id| id.as_str()),
+        Some("liar")
+    );
+}
+
+#[test]
+fn ep036_unit_placement_cost_ceiling_exceeded_fails_closed() {
+    // AUD-048: a node whose estimated cost exceeds the operator's
+    // declared ceiling is never placed.
+    let mut n = node(
+        "n1",
+        ComputeClass::Cloud,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        8,
+        32,
+        200,
+    );
+    n.estimated_cost_per_month = Some(120);
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Cloud],
+        vec![],
+        Some(100),
+    )
+    .expect("constraint");
+    let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
+    assert!(!decision.is_assigned());
+    assert_eq!(
+        decision.failure_class,
+        Some(PlacementFailureClass::BudgetExceeded)
+    );
+}
+
+#[test]
+fn ep036_unit_placement_unknown_cost_fails_closed() {
+    // AUD-048: with a declared ceiling, a node whose cost has never been
+    // estimated cannot be proven within budget - fail closed, never
+    // assume the cost is acceptable.
+    let n = node(
+        "n1",
+        ComputeClass::Cloud,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        8,
+        32,
+        200,
+    );
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Cloud],
+        vec![],
+        Some(100),
+    )
+    .expect("constraint");
+    let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
+    assert!(!decision.is_assigned());
+    assert_eq!(
+        decision.failure_class,
+        Some(PlacementFailureClass::BudgetExceeded)
+    );
+}
+
+#[test]
+fn ep036_unit_placement_cost_ceiling_satisfied_selects() {
+    // AUD-048: a node proven within the declared ceiling is placed.
+    let mut n = node(
+        "n1",
+        ComputeClass::Cloud,
+        "t1",
+        "home",
+        Locality::HomeEdge,
+        8,
+        32,
+        200,
+    );
+    n.estimated_cost_per_month = Some(80);
+    let constraint = PlacementConstraint::new(
+        4,
+        16,
+        100,
+        None,
+        None,
+        Locality::HomeEdge,
+        Privacy::Household,
+        tid("t1"),
+        vec![ComputeClass::Cloud],
+        vec![],
+        Some(100),
+    )
+    .expect("constraint");
+    let decision = placement_decision(rid("r1"), mid("w1"), &constraint, &[n]).expect("decision");
+    assert!(decision.is_assigned());
+    assert_eq!(decision.failure_class, None);
 }
 
 #[test]

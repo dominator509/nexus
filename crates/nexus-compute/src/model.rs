@@ -178,6 +178,10 @@ pub struct ComputeNode {
     pub privacy: Privacy,
     pub api_health: ProviderApiHealth,
     pub resource_health: ResourceHealth,
+    /// AUD-048: an estimate of the node's monthly cost. None means the
+    /// cost is UNKNOWN - it is never fabricated. A placement constraint
+    /// with a cost ceiling fails closed on a node whose cost is unknown.
+    pub estimated_cost_per_month: Option<u64>,
 }
 
 impl ComputeNode {
@@ -212,6 +216,7 @@ impl ComputeNode {
             privacy,
             api_health: ProviderApiHealth::Unknown,
             resource_health: ResourceHealth::Unknown,
+            estimated_cost_per_month: None,
         })
     }
 }
@@ -290,6 +295,11 @@ impl PlacementConstraint {
     /// Fail-closed evaluation against a node. Returns Ok(()) only when
     /// every constraint is satisfied; otherwise a Policy error with the
     /// exact failure class.
+    ///
+    /// AUD-047: a node is ELIGIBLE only when its capacity is OBSERVED
+    /// (never DECLARED alone) and its health is known-good. A node with
+    /// no observed capacity, unknown API health, or unknown/failed
+    /// resource health can never satisfy placement - it fails closed.
     pub fn evaluate(&self, node: &ComputeNode) -> ComputeResult<()> {
         if node.tenant != self.tenant {
             return Err(ComputeError::policy(format!(
@@ -321,26 +331,55 @@ impl PlacementConstraint {
                 node.node_id, node.locality, self.locality
             )));
         }
-        if node.declared_capacity.cpu_cores < self.min_cpu_cores {
+        // AUD-047: unknown/unhealthy nodes are never eligible.
+        if node.api_health != ProviderApiHealth::Reachable {
             return Err(ComputeError::policy(format!(
-                "node {} declared cpu {} < required {}",
-                node.node_id, node.declared_capacity.cpu_cores, self.min_cpu_cores
+                "node {} api health {} is not REACHABLE; unknown/unhealthy compute is never selected",
+                node.node_id, node.api_health
             )));
         }
-        if node.declared_capacity.memory_gib < self.min_memory_gib {
+        match node.resource_health {
+            ResourceHealth::Ready | ResourceHealth::Reachable => {}
+            _ => {
+                return Err(ComputeError::policy(format!(
+                    "node {} resource health {} is not Ready; unknown/unhealthy compute is never selected",
+                    node.node_id, node.resource_health
+                )));
+            }
+        }
+        // AUD-047: capacity must be OBSERVED (or CERTIFIED), never
+        // DECLARED alone. A node with no observed capacity cannot
+        // truthfully satisfy a resource requirement.
+        let capacity = match (&node.observed_capacity, &node.declared_capacity) {
+            (Some(observed), _) => observed,
+            (None, declared) if declared.provenance != CapacityProvenance::Declared => declared,
+            (None, _) => {
+                return Err(ComputeError::policy(format!(
+                    "node {} has no observed capacity (provenance DECLARED only); cannot place",
+                    node.node_id
+                )));
+            }
+        };
+        if capacity.cpu_cores < self.min_cpu_cores {
             return Err(ComputeError::policy(format!(
-                "node {} declared memory {} < required {}",
-                node.node_id, node.declared_capacity.memory_gib, self.min_memory_gib
+                "node {} observed cpu {} < required {}",
+                node.node_id, capacity.cpu_cores, self.min_cpu_cores
             )));
         }
-        if node.declared_capacity.disk_gib < self.min_disk_gib {
+        if capacity.memory_gib < self.min_memory_gib {
             return Err(ComputeError::policy(format!(
-                "node {} declared disk {} < required {}",
-                node.node_id, node.declared_capacity.disk_gib, self.min_disk_gib
+                "node {} observed memory {} < required {}",
+                node.node_id, capacity.memory_gib, self.min_memory_gib
+            )));
+        }
+        if capacity.disk_gib < self.min_disk_gib {
+            return Err(ComputeError::policy(format!(
+                "node {} observed disk {} < required {}",
+                node.node_id, capacity.disk_gib, self.min_disk_gib
             )));
         }
         if let Some(arch) = &self.required_architecture {
-            match &node.declared_capacity.architecture {
+            match &capacity.architecture {
                 Some(node_arch) if node_arch == arch => {}
                 _ => {
                     return Err(ComputeError::policy(format!(
@@ -351,14 +390,34 @@ impl PlacementConstraint {
             }
         }
         if let Some(required_vram) = self.required_gpu_vram_gib {
-            match node.declared_capacity.gpu_vram_gib {
+            match capacity.gpu_vram_gib {
                 Some(node_vram) if node_vram >= required_vram => {}
                 _ => {
                     return Err(ComputeError::policy(format!(
-                        "node {} declared gpu vram does not satisfy required {} GiB",
+                        "node {} observed gpu vram does not satisfy required {} GiB",
                         node.node_id, required_vram
                     )));
                 }
+            }
+        }
+        // AUD-048: a declared cost ceiling is REAL. A node with no cost
+        // estimate cannot be proven within budget - fail closed rather
+        // than silently exceeding the operator's declared ceiling.
+        if let Some(max_cost) = self.max_estimated_cost_per_month {
+            match node.estimated_cost_per_month {
+                None => {
+                    return Err(ComputeError::policy(format!(
+                        "node {} has no estimated cost; cannot prove it is within declared budget ceiling {}",
+                        node.node_id, max_cost
+                    )));
+                }
+                Some(cost) if cost > max_cost => {
+                    return Err(ComputeError::policy(format!(
+                        "node {} estimated cost {} exceeds declared budget ceiling {}",
+                        node.node_id, cost, max_cost
+                    )));
+                }
+                Some(_) => {}
             }
         }
         Ok(())
@@ -958,7 +1017,7 @@ mod tests {
     }
 
     fn node() -> ComputeNode {
-        ComputeNode::new(
+        let mut n = ComputeNode::new(
             ComputeNodeId::new("node-1").unwrap(),
             ComputeClass::Local,
             ProviderKind::Local,
@@ -968,7 +1027,16 @@ mod tests {
             Locality::HomeEdge,
             Privacy::Household,
         )
-        .unwrap()
+        .unwrap();
+        // AUD-047: the placement-satisfaction fixture is an OBSERVED
+        // healthy node; hostile declared-only/unknown-health cases are
+        // asserted separately in ep036_unit_contract.rs.
+        n.observed_capacity = Some(
+            CapacityProfile::new(4, 16, 100, None, None, CapacityProvenance::Observed).unwrap(),
+        );
+        n.api_health = ProviderApiHealth::Reachable;
+        n.resource_health = ResourceHealth::Ready;
+        n
     }
 
     #[test]

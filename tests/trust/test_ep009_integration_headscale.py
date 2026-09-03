@@ -22,10 +22,14 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import shutil
+import socket
 import subprocess
 import tempfile
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,11 +37,17 @@ DOCKER = "/usr/bin/docker"
 HEADSCALE_IMAGE = "headscale/headscale:0.23.0"
 HEADSCALE_DIGEST = "sha256:ffe793968ef6fbec78a8d095893fe03112e6a74231afe366eb504fbc822afea6"
 HEADSCALE_BIN = "/usr/local/bin/headscale"
+OPENBAO_IMAGE = "openbao/openbao:2.5.4"
+OPENBAO_DIGEST = "sha256:436eaf9778cad75507ff70ea26ace30dcbe15606e619ac3823495663d7f7c115"
+OPENBAO_ROOT_TOKEN = "nexus-ep009-dev-root"
 TMP = Path(tempfile.gettempdir())
 
 _CONTAINER = "nexus-ep009-hs"
 _NET = "nexus-ep009-hs-net"
+_BAO_CONTAINER = f"nexus-ep009-bao-{secrets.token_hex(4)}"
+_BAO_PORT = 0
 _api_key: str | None = None
+_bao_token: str | None = None
 _tls_dir: Path | None = None
 _data_dir: Path | None = None
 _config_path: Path | None = None
@@ -70,11 +80,90 @@ def _run_cli(args: list[str], key: str, timeout: int = 40) -> subprocess.Complet
     )
 
 
+def _free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def _bao_http(
+    method: str,
+    path: str,
+    body=None,
+    token: str | None = None,
+    timeout: float = 8.0,
+) -> tuple[int, dict]:
+    h = {"Content-Type": "application/json"}
+    if token:
+        h["X-Vault-Token"] = token
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{_BAO_PORT}{path}", method=method, headers=h, data=data
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read()
+            return resp.status, (json.loads(raw) if raw else {})
+    except urllib.error.HTTPError as e:
+        raw = e.read()
+        try:
+            return e.code, (json.loads(raw) if raw else {})
+        except Exception:
+            return e.code, {"raw": raw.decode(errors="replace")}
+
+
+def _bao_up() -> None:
+    """Start a real pinned OpenBao dev container (AUD-012: the mesh
+    private-key reference must resolve against a REAL secret store)."""
+    global _BAO_PORT, _bao_token
+    _BAO_PORT = _free_port()
+    subprocess.run(
+        [
+            DOCKER,
+            "run",
+            "-d",
+            "--name",
+            _BAO_CONTAINER,
+            "-p",
+            f"{_BAO_PORT}:8200",
+            "-e",
+            "BAO_DEV_LISTEN_ADDRESS=0.0.0.0:8200",
+            OPENBAO_IMAGE,
+            "server",
+            "-dev",
+            "-dev-root-token-id",
+            OPENBAO_ROOT_TOKEN,
+        ],
+        check=True,
+        capture_output=True,
+    )
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        try:
+            status, _ = _bao_http("GET", "/v1/sys/health", token=OPENBAO_ROOT_TOKEN)
+            if status == 200:
+                _bao_token = OPENBAO_ROOT_TOKEN
+                return
+        except Exception:
+            pass
+        time.sleep(0.5)
+    raise RuntimeError("OpenBao container did not become ready")
+
+
+def _bao_down() -> None:
+    if _BAO_CONTAINER:
+        _docker(["rm", "-f", _BAO_CONTAINER], check=False)
+
+
 def setup_module(module):
     global _api_key, _tls_dir, _data_dir, _config_path, _cli_config
 
     _docker(["rm", "-f", _CONTAINER], check=False)
     _docker(["network", "rm", _NET], check=False)
+
+    # AUD-012: the adapter live proof resolves mesh private keys against
+    # a REAL OpenBao, so provision it alongside Headscale.
+    _bao_up()
 
     # Real server TLS certificate (self-signed, test-only, ephemeral).
     _tls_dir = TMP / "nexus-ep009-hs-tls"
@@ -218,6 +307,7 @@ cli:
 def teardown_module(module):
     _docker(["rm", "-f", _CONTAINER], check=False)
     _docker(["network", "rm", _NET], check=False)
+    _bao_down()
     for p in (_config_path, _cli_config, _tls_dir, _data_dir):
         if p and p.exists():
             if p.is_dir():
@@ -345,13 +435,18 @@ def ep009_integration_headscale_adapter_live_proof():
     against the suite's REAL headscale container (full register ->
     list -> wireguard config -> revoke cycle)."""
     assert _api_key is not None
+    assert _bao_token is not None, "OpenBao must be provisioned for the mesh key binding proof"
     key_file = TMP / "nexus-ep009-hs-apikey.txt"
     key_file.write_text(_api_key + "\n")
+    bao_token_file = TMP / "nexus-ep009-bao-token.txt"
+    bao_token_file.write_text(_bao_token + "\n")
     env = dict(os.environ)
     env["NEXUS_HS_BINARY"] = HEADSCALE_BIN
     env["NEXUS_HS_CONFIG"] = str(_cli_config)
     env["NEXUS_HS_ADDRESS"] = f"127.0.0.1:{_grpc_port}"
     env["NEXUS_HS_API_KEY_FILE"] = str(key_file)
+    env["NEXUS_BAO_ADDR"] = f"http://127.0.0.1:{_BAO_PORT}"
+    env["NEXUS_BAO_TOKEN_FILE"] = str(bao_token_file)
     r = subprocess.run(
         [
             "/root/.cargo/bin/cargo",
@@ -369,8 +464,10 @@ def ep009_integration_headscale_adapter_live_proof():
         cwd=str(ROOT),
     )
     key_file.unlink(missing_ok=True)
+    bao_token_file.unlink(missing_ok=True)
     assert r.returncode == 0, f"adapter live proof failed:\n{r.stdout}\n{r.stderr}"
     assert "EP-009 M3 headscale live proof: ok" in r.stdout
+    assert "key_binding=REAL_X25519" in r.stdout
 
 
 def ep009_integration_headscale_teardown_leaves_no_orphans():

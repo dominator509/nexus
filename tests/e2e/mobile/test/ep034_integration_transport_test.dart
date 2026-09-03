@@ -43,7 +43,11 @@ MobileSession _session() {
     tenantId: '44444444-4444-4444-8444-444444444444',
     deviceId: '22222222-2222-4222-8222-222222222222',
     grantFlow: GrantFlow.authorizationCode,
-    strength: SessionStrength.multiFactor,
+    // AUD-041: high-risk (R4) approvals REQUIRE a STEP_UP session.
+    // This suite round-trips R4 prompts over the real transport, so
+    // the fixture session must be step-up - a multiFactor session
+    // would (correctly) be refused by the guard.
+    strength: SessionStrength.stepUp,
     createdAtUnixS: 0,
     expiresAtUnixS: 1000000000,
     revoked: false,

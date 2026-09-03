@@ -1,0 +1,70 @@
+{
+  "attestation_digest": "sha256:e2603f8de05beb7466acf3a39cd08369df95388627c6c1ac3aa9dd5f2b92c7ec",
+  "closure_commit": "e64dc03e3d591c4afc799e72184aaa92dee6bf51",
+  "created_at": "2026-09-02T18:20:36Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:9406b7b5cbd16bf47535f1b1e6090fc836fc943e1589f5616aaf656036871fc9",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-021/e64dc03e3d591c4afc799e72184aaa92dee6bf51",
+  "milestones": {
+    "max": 1,
+    "passed": [
+      1
+    ]
+  },
+  "node": "RX-021",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:9ba7c55a0381ac3ebfc958848a1e46dd5a8d1101a85b65006b494a05d51223a0",
+      "id": "rx021-probe-lib",
+      "ref": "tests/performance/src/lib.rs"
+    },
+    {
+      "digest": "sha256:59db7351c8e363ca342a25f3dd75ceec12e318d69a3e193cf73ef5889409c299",
+      "id": "rx021-aud063-proofs",
+      "ref": "tests/performance/tests/aud063_runtime_observation.rs"
+    },
+    {
+      "digest": "sha256:fb041c62a0c50daf369f842ea4213ee026311022712251ac8c79f35af8c512db",
+      "id": "rx021-live-probe-bin",
+      "ref": "tests/performance/src/bin/runtime_latency_probe.rs"
+    },
+    {
+      "digest": "sha256:7965fad831931bb3a90831a17149b3285808e636d5aa6f9fcbedaa76cd2049b7",
+      "id": "rx021-battery",
+      "ref": "scripts/rx021-remediation-tests.sh"
+    },
+    {
+      "digest": "sha256:bbf7fc6c7d0fbd8494f2be0aa824d6f525caa209b2c88fcb773273467813a94c",
+      "id": "rx021-node-script",
+      "ref": "scripts/nodes/RX-021.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:9406b7b5cbd16bf47535f1b1e6090fc836fc943e1589f5616aaf656036871fc9",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "rx021-battery",
+        "passed": 23
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 114
+  },
+  "verify_log": ".agent/remediation/evidence/RX-021/verify.log|sha256:bc312444170689a58aa35127529a11689b21811660ecd6562376d3a4200fb7a5",
+  "verify_sentinel": "verify: ok"
+}

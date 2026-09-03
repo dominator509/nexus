@@ -37,13 +37,13 @@ use std::sync::{Condvar, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nexus_email::{
-    Attachment, Draft, DraftId, EmailAddress, EmailProvider, MailChange, MailCommand,
+    Attachment, AttachmentId, Draft, DraftId, EmailAddress, EmailProvider, MailChange, MailCommand,
     MailDirection, MailError, MailPolicy, MailScope, MailState, MailboxId, Message, MessageId,
     SendRequest, ThreadId,
 };
 
 use crate::observability::MailObservability;
-use crate::transport::{ImapTransport, SmtpOutcome, SmtpTransport};
+use crate::transport::{ImapAttachmentMeta, ImapTransport, SmtpOutcome, SmtpTransport};
 
 /// In-flight idempotency entry for one command on one target.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -476,17 +476,46 @@ impl EmailProvider for ImapSmtpAdapter {
         Ok(msg)
     }
 
-    fn list_attachments(&self, _message: &MessageId) -> Result<Vec<Attachment>, MailError> {
+    fn list_attachments(&self, message: &MessageId) -> Result<Vec<Attachment>, MailError> {
         let correlation = self.observability.lock().expect("obs lock").correlation();
+        // The operation reads the message (Read) and accesses
+        // attachment artifacts (Attachments); both scopes are granted
+        // by the policy gate, which fails closed otherwise.
         self.gate(
             MailCommand::Fetch,
-            &[MailScope::Attachments],
+            &[MailScope::Read, MailScope::Attachments],
             1,
             &correlation,
         )?;
-        // IMAP attachment artifact materialization is M5-owned; an
-        // unbound list returns empty, never fabricated.
-        Ok(Vec::new())
+        let _permit = self.acquire_permit()?;
+        let mut session = self.imap.open()?;
+        // Resolve the canonical message id to a live UID, then read the
+        // REAL BODYSTRUCTURE. Only attachment-disposition/filename parts
+        // are reported; inline text is never fabricated as an attachment.
+        let imap_msg = session.uid_fetch_by_message_id("INBOX", message.as_str())?;
+        let metas: Vec<ImapAttachmentMeta> =
+            session.uid_fetch_attachments("INBOX", imap_msg.uid)?;
+        session.logout();
+        let mut attachments = Vec::with_capacity(metas.len());
+        for meta in metas {
+            attachments.push(Attachment {
+                id: AttachmentId::new(format!("{}:{}", message.as_str(), meta.part_number))
+                    .map_err(|_| MailError::external("invalid imap attachment id"))?,
+                filename: meta.filename,
+                content_type: meta.mime_type,
+                size_bytes: meta.size_bytes,
+                sha256: String::new(),
+                storage_ref: format!("imap:{}:{}", message.as_str(), meta.part_number),
+                scan_status: nexus_email::ScanStatus::Pending,
+            });
+        }
+        self.record(
+            correlation,
+            "FETCH",
+            "ok",
+            format!("{} attachments on {}", attachments.len(), message),
+        );
+        Ok(attachments)
     }
 
     fn save_draft(&self, draft: &Draft) -> Result<DraftId, MailError> {

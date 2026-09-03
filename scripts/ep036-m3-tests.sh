@@ -81,7 +81,11 @@ for sentinel in \
   ep036_unit_existing_ssh_binding_validates \
   ep036_unit_existing_ssh_binding_rejects_bad_host \
   ep036_unit_existing_ssh_binding_maps_to_generic_ssh \
-  ep036_real_transport_ssh_keyscan_probe; do
+  ep036_real_transport_ssh_keyscan_probe \
+  ep036_real_transport_generic_ssh_submit \
+  ep036_real_transport_generic_ssh_readback_reachable \
+  ep036_real_transport_generic_ssh_delete_accepted \
+  ep036_real_transport_generic_ssh_absence_verified; do
   if ! grep -q "$sentinel" "$log"; then
     fail "EP-036-owned proof did not run: $sentinel (anti-masking guard)" "$log"
   fi

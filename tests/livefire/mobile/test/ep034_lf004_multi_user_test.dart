@@ -66,7 +66,11 @@ EnrolledUser _enroll({
     tenantId: '44444444-4444-4444-8444-444444444444',
     deviceId: deviceId,
     grantFlow: GrantFlow.authorizationCode,
-    strength: SessionStrength.multiFactor,
+    // AUD-041: high-risk (R4) approvals REQUIRE a STEP_UP session.
+    // Enrolled users resolve high-risk approvals below, so the
+    // fixture must carry a step-up session - a multiFactor session
+    // would (correctly) be refused by the guard.
+    strength: SessionStrength.stepUp,
     createdAtUnixS: 0,
     expiresAtUnixS: 1000000000,
     revoked: false,

@@ -35,7 +35,11 @@ MobileSession _session() {
     tenantId: '44444444-4444-4444-8444-444444444444',
     deviceId: '22222222-2222-4222-8222-222222222222',
     grantFlow: GrantFlow.authorizationCode,
-    strength: SessionStrength.multiFactor,
+    // AUD-041: R4 approvals require a STEP_UP session. These tests
+    // exercise idempotency semantics, not session-strength policy
+    // (the denial path has its own authority tests), so the fixture
+    // session must satisfy the guard.
+    strength: SessionStrength.stepUp,
     createdAtUnixS: 0,
     expiresAtUnixS: 1000000000,
     revoked: false,

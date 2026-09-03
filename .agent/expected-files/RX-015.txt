@@ -1,0 +1,57 @@
+# RX-015 expected files: network defense truth (AUD-025 immutable approval
+#  receipt; AUD-026 quarantine binds observed network identity; AUD-027 AdGuard
+#  configured blocklist; AUD-028 production NetworkInventory; AUD-029 owner
+#  notification; AUD-030 Suricata profile/fallback; AUD-031 preauthorization
+#  truth; AUD-032 same-indicator confidence; AUD-033 verifier proposal binding;
+#  AUD-034 Zeek minute truth; AUD-035 osquery durable endpoint identity;
+#  AUD-036 osquery REAL TLS; AUD-037 osquery observation time + collision-proof
+#  event ids)
+.agent/expected-files/RX-015.txt
+.agent/milestone-files/RX-015-M1.txt
+.agent/milestone-files/RX-015-M2.txt
+.agent/milestone-files/RX-015-M3.txt
+.agent/milestone-files/RX-015-M4.txt
+.agent/milestone-files/RX-015-M5.txt
+.agent/milestone-files/RX-015-M6.txt
+.agent/milestone-files/RX-015-M7.txt
+.agent/milestone-files/RX-015-M8.txt
+.agent/milestone-files/RX-015-M9.txt
+.agent/milestone-files/RX-015-M10.txt
+.agent/milestone-files/RX-015-M11.txt
+.agent/milestone-files/RX-015-M12.txt
+.agent/milestone-files/RX-015-M13.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/evidence/RX-015/
+.agent/state/evidence/LF-009-ep031-m5.json
+.agent/state/evidence/LF-010-ep030-m5.json
+.agent/state/evidence/LF-010-ep030-m5-partial.json
+Cargo.lock
+connectors/adguard-home/src/adapter.rs
+connectors/adguard-home/src/transport.rs
+connectors/openwrt/src/adapter.rs
+connectors/openwrt/tests/ep030_m3_openwrt.rs
+connectors/opnsense/src/adapter.rs
+connectors/opnsense/src/inventory.rs
+connectors/opnsense/src/lib.rs
+connectors/opnsense/src/transport.rs
+connectors/osquery/Cargo.toml
+connectors/osquery/src/adapter.rs
+connectors/osquery/src/transport.rs
+connectors/osquery/tests/failure.rs
+connectors/suricata/src/adapter.rs
+connectors/suricata/src/lib.rs
+connectors/suricata/src/transport.rs
+connectors/zeek/src/transport.rs
+crates/nexus-sentinel/src/digest.rs
+crates/nexus-sentinel/src/lib.rs
+crates/nexus-sentinel/src/model.rs
+crates/nexus-sentinel/src/provider.rs
+infra/sentinel/advanced-live-fire/Cargo.toml
+infra/sentinel/advanced-live-fire/src/lib.rs
+infra/sentinel/advanced-live-fire/tests/lf009_sentinel_quarantine.rs
+infra/sentinel/advanced/src/model.rs
+infra/sentinel/advanced/src/provider.rs
+infra/sentinel/core/tests/lf010_network_diagnosis.rs
+scripts/rx015-remediation-tests.sh
+scripts/nodes/RX-015.sh
+tests/sentinel/advanced/tests/contract.rs

@@ -67,11 +67,13 @@ describe("ep035_failure_duplicate_request", () => {
     const [a, b] = await Promise.all([
       store.claim(
         credential.credential_id,
+        credential.secret,
         1_700_000_050,
         "30000000-0000-0000-0000-000000000003",
       ),
       store.claim(
         credential.credential_id,
+        credential.secret,
         1_700_000_050,
         "30000000-0000-0000-0000-000000000004",
       ),
@@ -82,6 +84,7 @@ describe("ep035_failure_duplicate_request", () => {
     await expect(
       store.claim(
         credential.credential_id,
+        credential.secret,
         1_700_000_060,
         "30000000-0000-0000-0000-000000000005",
       ),

@@ -37,15 +37,36 @@ describe("ep035_unit_recovery", () => {
     expect(decision.retry_safe).toBe(false);
   });
 
-  it("an ambiguous mutation is retry-safe only after reconciliation", () => {
+  it("an ambiguous mutation is retry-safe only with an explicit negative observation (AUD-045)", () => {
     const decision = decideRecovery(
       evidence("AMBIGUOUS", true, {
         mutation_occurred: true,
         mutation_state: "RECONCILED",
       }),
     );
+    expect(decision.outcome).toBe("RECONCILE");
+    expect(decision.retry_safe).toBe(false);
+  });
+
+  it("ambiguous + reconciled with KNOWN no-mutation is retry-safe (AUD-045)", () => {
+    const decision = decideRecovery(
+      evidence("AMBIGUOUS", true, {
+        mutation_occurred: false,
+        mutation_state: "RECONCILED",
+      }),
+    );
     expect(decision.outcome).toBe("RETRYABLE");
     expect(decision.retry_safe).toBe(true);
+  });
+
+  it("ambiguous + reconciled WITHOUT a known mutation is NOT retry-safe (AUD-045)", () => {
+    const decision = decideRecovery(
+      evidence("AMBIGUOUS", false, {
+        mutation_state: "RECONCILED",
+      }),
+    );
+    expect(decision.outcome).toBe("RECONCILE");
+    expect(decision.retry_safe).toBe(false);
   });
 
   it("timeout with unknown mutation is never blindly retried", () => {

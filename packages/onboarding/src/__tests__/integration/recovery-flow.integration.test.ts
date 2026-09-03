@@ -144,12 +144,81 @@ describe("ep035_integration_recovery_flow", () => {
     expect(reconciled.mutation_state).toBe("RECONCILED");
     expect(reconciled.reconciled_at_unix_s).toBe(now + 5);
 
-    // After reconciliation, retry is safe (mutation outcome known).
+    // After reconciliation WITH an explicit negative observation, retry
+    // is safe (the readback proved no mutation occurred).
     const postDecision = RecoveryCheckpointStore.decide(
-      evidence("AMBIGUOUS", { mutation_state: "RECONCILED" }),
+      evidence("AMBIGUOUS", {
+        mutation_state: "RECONCILED",
+        mutation_known: true,
+        mutation_occurred: false,
+      }),
     );
     expect(postDecision.outcome).toBe("RETRYABLE");
     expect(postDecision.retry_safe).toBe(true);
+
+    await db.close();
+  });
+
+  it("AMBIGUOUS + RECONCILED without negative observation is NOT retry-safe (AUD-045)", async () => {
+    const db = await freshDb(stack);
+    const store = new RecoveryCheckpointStore(db);
+    const mutationId = `mut-${randomUUID().slice(0, 8)}`;
+    const now = 1_700_000_000;
+
+    // Hostile: mutation_state RECONCILED alone (no mutation_known, no
+    // explicit negative observation). This is exactly the finding:
+    // recovery previously treated AMBIGUOUS + RECONCILED as safe to
+    // retry, enabling duplicate consequential effects.
+    const decision = RecoveryCheckpointStore.decide(
+      evidence("AMBIGUOUS", { mutation_state: "RECONCILED" }),
+    );
+    expect(decision.outcome).toBe("RECONCILE");
+    expect(decision.retry_safe).toBe(false);
+
+    const row = await store.record(
+      randomUUID(),
+      mutationId,
+      "deployment.mutate",
+      evidence("AMBIGUOUS", { mutation_state: "RECONCILED" }),
+      decision,
+      now,
+    );
+    expect(row.retry_safe).toBe(false);
+    expect(row.mutation_state).toBe("UNKNOWN");
+
+    await db.close();
+  });
+
+  it("AMBIGUOUS + RECONCILED + mutation_known but NO occurred=false is NOT retry-safe (AUD-045)", async () => {
+    const db = await freshDb(stack);
+    const store = new RecoveryCheckpointStore(db);
+    const mutationId = `mut-${randomUUID().slice(0, 8)}`;
+    const now = 1_700_000_000;
+
+    // Hostile: mutation is KNOWN and state RECONCILED, but the outcome
+    // is NOT proven absent (mutation_occurred undefined/true). Without
+    // the explicit negative observation retry is still unsafe.
+    const decision = RecoveryCheckpointStore.decide(
+      evidence("AMBIGUOUS", {
+        mutation_state: "RECONCILED",
+        mutation_known: true,
+      }),
+    );
+    expect(decision.outcome).toBe("RECONCILE");
+    expect(decision.retry_safe).toBe(false);
+
+    const row = await store.record(
+      randomUUID(),
+      mutationId,
+      "deployment.mutate",
+      evidence("AMBIGUOUS", {
+        mutation_state: "RECONCILED",
+        mutation_known: true,
+      }),
+      decision,
+      now,
+    );
+    expect(row.retry_safe).toBe(false);
 
     await db.close();
   });

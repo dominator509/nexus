@@ -1,0 +1,71 @@
+# RX-019 M6 - AUD-064: Microbrain promotion requires declared evidence
+
+**Status:** COMPLETE 2026-09-02 (ledger MILESTONE_PASS)
+**Finding:** AUD-064 (P1) - EP-041 closes a QLoRA/GGUF training node
+without executing training or quantization; promotion was issued from
+caller-asserted prerequisites with no DECLARED promotion/evaluation
+evidence binding. The M5 evidence proof even recorded a PENDING
+(declared-only) QLoRA run beside a PROMOTE verdict.
+
+## Defect halves
+
+1. **Enforcement absent (FIXED in code):** `promotion_gate_decision`
+   returned PROMOTE when the caller-asserted `PromotionPrerequisites`
+   booleans were all true. Nothing required a declared
+   promotion/evaluation evidence record, and nothing cross-checked the
+   record for internal consistency (candidate binding, executed run
+   status, artifact digest, dataset/eval/plan digests, shadow run,
+   false-positive count, certification boundary).
+
+2. **Real training/quantization execution (DEFERRED - GAP-004):**
+   producing real QLoRA training + GGUF quantization + reproducibility
+   and quantization-comparison evidence needs a GPU/toolchain this host
+   does not have. Logged in `.agent/remediation/GAPS.md` per Dominic
+   directive 2026-09-02. The gate now makes promotion impossible without
+   executed-training evidence, so the deferred gap cannot accidentally
+   promote a fixture.
+
+## Fix (python/nexus_microbrain/artifact_policy.py)
+
+- New `DeclaredEvidenceVerdict` + `declared_promotion_evidence_gate`:
+  binds a PROMOTE decision to the declared `PromotionEvidence` record and
+  fails closed when evidence is missing, candidate-mismatched, the QLoRA
+  run is not COMPLETED (declared-only/fixture runs can never promote),
+  digests are missing/malformed, the shadow run does not match, false
+  positives are nonzero, or the certification boundary is empty.
+- `promotion_gate_decision` now takes `evidence` and only returns PROMOTE
+  when every owned prerequisite is met AND the declared evidence gate
+  supports it; any inconsistency falls back to DENY with the exact reason.
+- Non-promotion decisions need no evidence (DENY already blocks).
+
+## Proofs
+
+- EP-041 M5 gate: `sh scripts/ep041-m5-tests.sh` -> ok (210 ep041_unit
+  proofs green, M1-M4 regressions, ruff check + format).
+- New `tests/microbrain/test_aud064_promotion_evidence.py`: 11 aud064
+  proofs green (0 failed):
+  - hostile: promote without declared evidence denies; declared-only
+    (PENDING) run denies (the exact M5 defect); malformed artifact digest
+    denies; candidate mismatch denies; shadow mismatch denies; false
+    positives deny; empty certification boundary denies; malformed
+    dataset digest denies.
+  - positive: complete declared evidence promotes (gate GRADUAL, never
+    autonomous deployment); declared-evidence gate redaction has no
+    secret; non-promote decisions need no evidence.
+- Existing EP-041 M5 promotion proofs updated to the new contract:
+  positive proofs pass a consistent declared-evidence record; the
+  redacted-evidence proof now honestly records DENY for the committed
+  declared-only run (it previously recorded PROMOTE beside PENDING - the
+  exact incoherence AUD-064 called out).
+
+## Gate wiring
+
+- `scripts/rx019-remediation-tests.sh` battery gains an M6 block:
+  EP-041 M5 gate + explicit aud064 pytest run (vacuity >= 10).
+
+## Gap
+
+GAP-004 logged: real Microbrain QLoRA training/GGUF quantization
+execution deferred (host has no GPU/toolchain). Promotion gate now fails
+closed without declared executed-training evidence, so the fixture-only
+marker and declared-only run can never promote a model to routable.

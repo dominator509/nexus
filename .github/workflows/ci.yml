@@ -2,29 +2,69 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
 
 jobs:
+  graphlock-v2:
+    name: GraphLock V2 integrity
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Remediation register (90/90 + quarantine)
+        run: bash .agent/remediation/verify-remediation-register.sh
+
   gate:
     name: GraphLock gates
     runs-on: ubuntu-latest
     env:
       CI: "true"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Install locked toolchain (mise)
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac
         with:
           version: 2026.8.5
           install: true
           cache: true
 
+      - name: Install clippy + rustfmt components
+        run: rustup component add clippy rustfmt
+
+      - name: Sync Python environment (uv)
+        run: uv sync --frozen --extra dev
+
       - name: Install pinned cargo security tools
         run: |
           if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
           if ! cargo-audit --version | grep -F '0.22.2'; then cargo install cargo-audit --locked --version 0.22.2; fi
+
+      - name: Install pinned secrets tools (age, sops)
+        run: |
+          if ! age --version | grep -F '1.1.1'; then
+            curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz -o /tmp/age.tar.gz
+            tar -xzf /tmp/age.tar.gz -C /tmp
+            sudo mv /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
+          fi
+          if ! sops --version | grep -F '3.13.0'; then
+            curl -fsSL https://github.com/getsops/sops/releases/download/v3.13.0/sops-v3.13.0.linux.amd64 -o /usr/local/bin/sops
+            sudo chmod +x /usr/local/bin/sops
+          fi
+
+      - name: Prepare CI environment (.env + age key)
+        run: |
+          cp .env.example .env
+          mkdir -p secrets
+          age-keygen -o secrets/age-key.txt >/dev/null 2>&1 || true
+          if [ -n "$DEEPSEEK_API_KEY" ]; then
+            sed -i "s|^DEEPSEEK_API_KEY=.*|DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY|" .env
+          fi
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
       - name: Preflight
         run: sh scripts/preflight.sh
@@ -59,17 +99,63 @@ jobs:
     env:
       CI: "true"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Install locked toolchain (mise)
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac
         with:
           version: 2026.8.5
           install: true
           cache: true
 
+      - name: Install clippy + rustfmt components
+        run: rustup component add clippy rustfmt
+
+      - name: Sync Python environment (uv)
+        run: uv sync --frozen --extra dev
+
+      - name: Install pinned secrets tools (age, sops)
+        run: |
+          if ! age --version | grep -F '1.1.1'; then
+            curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz -o /tmp/age.tar.gz
+            tar -xzf /tmp/age.tar.gz -C /tmp
+            sudo mv /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
+          fi
+          if ! sops --version | grep -F '3.13.0'; then
+            curl -fsSL https://github.com/getsops/sops/releases/download/v3.13.0/sops-v3.13.0.linux.amd64 -o /usr/local/bin/sops
+            sudo chmod +x /usr/local/bin/sops
+          fi
+
+      - name: Install pinned cargo security tools
+        run: |
+          if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
+          if ! cargo-audit --version | grep -F '0.22.2'; then cargo install cargo-audit --locked --version 0.22.2; fi
+
+      - name: Prepare CI environment (.env + age key)
+        run: |
+          cp .env.example .env
+          mkdir -p secrets
+          age-keygen -o secrets/age-key.txt >/dev/null 2>&1 || true
+          if [ -n "$DEEPSEEK_API_KEY" ]; then
+            sed -i "s|^DEEPSEEK_API_KEY=.*|DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY|" .env
+          fi
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+
       - name: Preflight
         run: sh scripts/preflight.sh
 
+      - name: Provision battery fixtures (MinIO, SeaweedFS)
+        run: sh scripts/ci-battery-env.sh
+
       - name: Integration tests
-        run: sh scripts/test-integration.sh
+        run: |
+          set -a
+          . /tmp/battery.env
+          set +a
+          # lf018 exercises the REAL AUD-011 namespace sandbox
+          # (unshare/mount/seccomp) which requires CAP_SYS_ADMIN; the
+          # GitHub-hosted runner user is non-root. The local closure
+          # ladder runs as root, so mirror that privilege level for the
+          # integration suite (gate unchanged - sandbox still enforced).
+          sudo -E env "HOME=$HOME" "PATH=$PATH" sh scripts/test-integration.sh

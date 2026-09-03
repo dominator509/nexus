@@ -87,11 +87,18 @@ function requestWire(
   };
 }
 
-const VOCABULARY = new KnownCapabilityVocabulary([
-  "home.lights.query",
-  "home.lights.set",
-  "sentinel.contain.quarantine",
-]);
+const VOCABULARY = new KnownCapabilityVocabulary(
+  ["home.lights.query", "home.lights.set", "sentinel.contain.quarantine"],
+  [
+    { capability_id: "home.lights.query", risk: "R0", approval: "NONE" },
+    { capability_id: "home.lights.set", risk: "R1", approval: "NONE" },
+    {
+      capability_id: "sentinel.contain.quarantine",
+      risk: "R4",
+      approval: "FOUR_EYES",
+    },
+  ],
+);
 
 describe("ep033_failure_state_authority", () => {
   it("invalidates a business-A projection after switching to business B (stale handle)", () => {

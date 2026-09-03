@@ -1,0 +1,14 @@
+ok - nexus-headscale unit regressions (18 tests: placeholder/empty keys rejected, no-store fail-closed, unresolved reference fail-closed)
+ok - rx006 hostile unit set (6 tests)
+ok - nexus-trust suite (17 tests)
+ok - ep009 headscale+openbao integration (10 tests, real server + real key binding)
+ok - EP-009 orphan audit clean
+ok - workspace check clean
+ok - nexus-headscale clippy clean
+ok - remediation register: VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+---
+RX-006 battery: 8 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-006: ok
+RX-006 verify: ok
+verify: ok

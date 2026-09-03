@@ -1,0 +1,29 @@
+ok - lib.rs covers RuntimeLatencyProbe
+ok - lib.rs covers RealLatencyObservation
+ok - lib.rs covers pub fn probe(
+ok - lib.rs covers probe connect failed
+ok - lib.rs covers did not report healthy
+ok - lib.rs no longer disclaims real runtime observation
+ok - proof aud063_probe_unreachable_fails_closed declared
+ok - proof aud063_probe_non_healthy_fails_closed declared
+ok - proof aud063_probe_measures_real_wire_latency declared
+ok - proof aud063_real_observation_certifies_budget declared
+ok - proof aud063_hand_fed_constant_not_runtime_evidence declared
+ok - proof aud063_probe_rejects_non_http_endpoint declared
+ok - proof aud063_real_observation_serde_roundtrip declared
+ok - nexus-test-performance cargo suite green
+ok - performance suite reports non-zero passed
+ok - live runtime latency certified within budget
+ok - live certify sentinel observed
+ok - live p95 is a real positive measurement
+ok - unreachable endpoint fails closed (hostile)
+ok - no certification printed for unreachable endpoint
+ok - EP-040 M1 gate green (contract + performance suites)
+ok - remediation register PASS (90/90 registered, quarantine active)
+ok - AUD-063 row is VERIFIED_FIXED with regression_test + evidence_ref
+---
+RX-021 battery: 23 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-021: ok
+RX-021 verify: ok
+verify: ok

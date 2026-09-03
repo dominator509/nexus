@@ -134,6 +134,40 @@ class ApprovalBindingService {
         correlationId: prompt.correlation,
       );
     }
+    // AUD-041: high-risk approvals require a cryptographic step-up
+    // session. A single-factor (or merely multi-factor, non-step-up)
+    // session is NEVER sufficient for R3/R4.
+    if (highRisk && session.strength != SessionStrength.stepUp) {
+      throw Spec006Error(
+        ErrorCode.policy,
+        'high-risk approval requires a STEP_UP session',
+        correlationId: prompt.correlation,
+      );
+    }
+    // AUD-041: the session must belong to the SAME principal, device,
+    // and tenant named by the prompt. An approval cannot be resolved
+    // with a session that does not own the acting identity.
+    if (session.principalId != prompt.principalId ||
+        session.deviceId != prompt.deviceId ||
+        session.tenantId != prompt.tenantId) {
+      throw Spec006Error(
+        ErrorCode.authorization,
+        'session identity does not match the approval binding',
+        correlationId: prompt.correlation,
+      );
+    }
+    // AUD-041: the device binding must actually OWN the device,
+    // principal, and tenant named by the prompt. A binding for a
+    // different device/user/tenant cannot authorize this approval.
+    if (binding.deviceId != prompt.deviceId ||
+        binding.principalId != prompt.principalId ||
+        binding.tenantId != prompt.tenantId) {
+      throw Spec006Error(
+        ErrorCode.authorization,
+        'device binding does not own the approval principal/device/tenant',
+        correlationId: prompt.correlation,
+      );
+    }
   }
 
   /// Approves [prompt] after binding checks. Idempotent: a previously

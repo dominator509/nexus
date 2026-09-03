@@ -43,6 +43,22 @@ fn hash_of(bytes: &[u8]) -> ArtifactHash {
     ArtifactHash::new(digest(bytes)).unwrap()
 }
 
+/// Sign a backup manifest with a REAL Ed25519 keypair (ring) so
+/// create_backup/restore signature verification (SPEC-024 req 6,
+/// AUD-052) has authentic material.
+fn sign_backup(mut backup: nexus_artifacts::BackupSet) -> nexus_artifacts::BackupSet {
+    use ring::rand::SystemRandom;
+    use ring::signature::{Ed25519KeyPair, KeyPair};
+    let rng = SystemRandom::new();
+    let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+    let pair = Ed25519KeyPair::from_pkcs8(pkcs8.as_ref()).unwrap();
+    let public_key_hex = nexus_artifacts::hex_encode(pair.public_key().as_ref());
+    let message = backup.canonical_manifest_bytes().unwrap();
+    let signature_hex = nexus_artifacts::hex_encode(pair.sign(&message).as_ref());
+    backup.sign(nexus_artifacts::ManifestSignature::new(public_key_hex, signature_hex).unwrap());
+    backup
+}
+
 fn metadata_for(
     id: ArtifactId,
     bytes: &[u8],
@@ -77,6 +93,48 @@ fn temp_root(tag: &str) -> PathBuf {
 
 fn teardown(root: &PathBuf) {
     let _ = fs::remove_dir_all(root);
+}
+
+/// Real AES-256-GCM encrypt (ring) - nonce || ciphertext || tag. The
+/// caller holds the key; the adapter never does (SPEC-024). Same ring
+/// line as the live-fire storage harness.
+fn encrypt_aes256gcm(key: &[u8; 32], plaintext: &[u8]) -> Vec<u8> {
+    use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
+    let unbound = UnboundKey::new(&AES_256_GCM, key).expect("valid key");
+    let sealing = LessSafeKey::new(unbound);
+    let mut nonce_bytes = [0u8; 12];
+    nonce_bytes.copy_from_slice(
+        &std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+            .to_le_bytes()[..12],
+    );
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let mut in_out = plaintext.to_vec();
+    sealing
+        .seal_in_place_append_tag(nonce, Aad::empty(), &mut in_out)
+        .expect("seal");
+    let mut out = Vec::with_capacity(12 + in_out.len());
+    out.extend_from_slice(&nonce_bytes);
+    out.extend_from_slice(&in_out);
+    out
+}
+
+/// Real AES-256-GCM decrypt (ring). Returns Err on wrong/missing key.
+fn decrypt_aes256gcm(key: &[u8; 32], sealed: &[u8]) -> Result<Vec<u8>, ring::error::Unspecified> {
+    use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
+    if sealed.len() < 12 {
+        return Err(ring::error::Unspecified);
+    }
+    let unbound = UnboundKey::new(&AES_256_GCM, key).expect("valid key");
+    let opening = LessSafeKey::new(unbound);
+    let mut nonce_bytes = [0u8; 12];
+    nonce_bytes.copy_from_slice(&sealed[..12]);
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let mut in_out = sealed[12..].to_vec();
+    let plain = opening.open_in_place(nonce, Aad::empty(), &mut in_out)?;
+    Ok(plain.to_vec())
 }
 
 #[test]
@@ -133,24 +191,65 @@ fn ep037_integration_nas_rejects_sensitive_without_encryption_before_egress() {
 fn ep037_integration_nas_sensitive_with_encryption_roundtrips() {
     let root = temp_root("sensitive-enc");
     let mut store = NasArtifactStore::open(&root).unwrap();
-    let bytes = b"nas encrypted sensitive payload".to_vec();
-    let h = hash_of(&bytes);
+    // REAL AES-256-GCM (ring): the caller encrypts before put, records
+    // the plaintext hash, and the adapter verifies the stored bytes are
+    // NOT the plaintext (AUD-051).
+    let plaintext = b"nas encrypted sensitive payload".to_vec();
+    let key = [0x42u8; 32];
+    let sealed = encrypt_aes256gcm(&key, &plaintext);
+    let h = hash_of(&sealed);
     let id = artifact_id(3);
-    let enc = EncryptionMetadata::new("AES-256-GCM", "vault:keys/nas-m3").unwrap();
+    let plaintext_hash = digest(&plaintext);
+    let enc = EncryptionMetadata::new("AES-256-GCM", "vault:keys/nas-m3", &plaintext_hash).unwrap();
     let meta = metadata_for(
         id.clone(),
-        &bytes,
+        &sealed,
         DataClass::Security,
         Some(enc),
         StorageBackend::Nas,
     )
     .unwrap();
     store
-        .put(&tenant(), &id, &h, &bytes, &meta, &correlation())
+        .put(&tenant(), &id, &h, &sealed, &meta, &correlation())
         .unwrap();
     let (read_meta, read_bytes) = store.get(&tenant(), &id, &correlation()).unwrap();
     assert!(read_meta.encryption.is_some());
-    assert_eq!(read_bytes, bytes);
+    // The stored bytes are the CIPHERTEXT, never the plaintext.
+    assert_eq!(read_bytes, sealed);
+    assert_ne!(read_bytes, plaintext);
+    // The caller (holding the key) can decrypt the returned bytes.
+    let decrypted = decrypt_aes256gcm(&key, &read_bytes).unwrap();
+    assert_eq!(decrypted, plaintext);
+    teardown(&root);
+}
+
+#[test]
+fn ep037_integration_nas_rejects_plaintext_labeled_as_encrypted() {
+    // AUD-051 hostile: the exact defect from the finding - plaintext
+    // bytes with AES-256-GCM metadata claiming they are ciphertext. The
+    // adapter must fail closed Policy BEFORE any byte reaches the share.
+    let root = temp_root("sensitive-fake-enc");
+    let mut store = NasArtifactStore::open(&root).unwrap();
+    let plaintext = b"nas plaintext labeled encrypted".to_vec();
+    let h = hash_of(&plaintext);
+    let id = artifact_id(4);
+    // plaintext_hash == hash of the SAME bytes the caller is putting:
+    // the "ciphertext" IS the plaintext.
+    let enc = EncryptionMetadata::new("AES-256-GCM", "vault:keys/nas-m3", h.as_str()).unwrap();
+    let meta = metadata_for(
+        id.clone(),
+        &plaintext,
+        DataClass::Sensitive,
+        Some(enc),
+        StorageBackend::Local,
+    )
+    .unwrap();
+    let err = store
+        .put(&tenant(), &id, &h, &plaintext, &meta, &correlation())
+        .unwrap_err();
+    assert_eq!(err.code, ArtifactErrorCode::Policy);
+    // Fail closed: no object written.
+    assert!(!root.join("objects").join(h.as_str()).exists());
     teardown(&root);
 }
 
@@ -210,7 +309,7 @@ fn ep037_integration_nas_backup_manifest_and_restore_validation() {
     )
     .unwrap();
     let created = store
-        .create_backup(&tenant(), &backup, &correlation())
+        .create_backup(&tenant(), &sign_backup(backup.clone()), &correlation())
         .unwrap();
     assert_eq!(created.state, nexus_artifacts::BackupState::Created);
     let plan = nexus_artifacts::RestorePlan::new(

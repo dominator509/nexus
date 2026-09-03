@@ -1,0 +1,19 @@
+ok - nexus-supply-chain suite (52 tests: ArtifactSigner keygen/sign/verify, deterministic RFC 8032, fail-closed typed errors)
+ok - EP-039 M1 gate green (dependency fence + signer surface)
+ok - EP-039 M4 gate green (forced failures: tamper, reseal, pubkey swap, ecosystems tamper)
+ok - EP-039 M5 gate green (crypto-sealed SBOM evidence + ecosystems inventory)
+ok - vitest bundle proofs (19 tests: produce/verify/missing/changed/malformed/duplicate/traversal/symlink/wrong-release/tamper/self-digest/offline-install/rollback/evidence with real Ed25519 component signatures)
+ok - typecheck clean (offline-bundle + tests/release)
+ok - bundle with real signatures verifies (VERIFIED)
+ok - dummy/placeholder signature fails closed (SIGNATURE_INVALID)
+ok - wrong-key signature fails closed (SIGNATURE_INVALID)
+ok - missing signing key fails closed (SIGNING_KEY_MISSING)
+ok - workspace check clean
+ok - workspace clippy clean (-D warnings)
+ok - remediation register: VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+---
+RX-009 battery: 13 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-009: ok
+RX-009 verify: ok
+verify: ok

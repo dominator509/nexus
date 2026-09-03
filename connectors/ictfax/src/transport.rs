@@ -103,23 +103,40 @@ pub trait IctFaxTransport {
         ))
     }
 
-    /// Upload document media for a previously created document.
-    fn upload_document_media(&self, document_id: &str) -> Result<(), FaxError> {
+    /// Create a document and upload its media bytes. Returns the
+    /// provider document id. The bytes are the controlled runtime
+    /// artifact (read from the job's storage_ref by the adapter);
+    /// the provider never receives a fabricated or empty body.
+    fn create_document_with_media(
+        &self,
+        filename: &str,
+        content_type: &str,
+        bytes: &[u8],
+    ) -> Result<String, FaxError> {
+        let _ = (filename, content_type, bytes);
+        Err(FaxError::unavailable(
+            "ictfax transport has no implementation bound",
+        ))
+    }
+
+    /// Create a sendfax program bound to a document and return its
+    /// reference.
+    fn create_sendfax_program(&self, document_id: &str) -> Result<String, FaxError> {
         let _ = document_id;
         Err(FaxError::unavailable(
             "ictfax transport has no implementation bound",
         ))
     }
 
-    /// Create a sendfax program and return its reference.
-    fn create_sendfax_program(&self) -> Result<String, FaxError> {
-        Err(FaxError::unavailable(
-            "ictfax transport has no implementation bound",
-        ))
-    }
-
-    /// Create a transmission for a sendfax program.
-    fn create_transmission(&self) -> Result<IctFaxTransmission, FaxError> {
+    /// Create a transmission bound to a destination, program, and
+    /// document.
+    fn create_transmission(
+        &self,
+        destination: &str,
+        program_id: &str,
+        document_id: &str,
+    ) -> Result<IctFaxTransmission, FaxError> {
+        let _ = (destination, program_id, document_id);
         Err(FaxError::unavailable(
             "ictfax transport has no implementation bound",
         ))
@@ -136,6 +153,16 @@ pub trait IctFaxTransport {
     /// Fetch one transmission by id (exact-target status readback).
     fn fetch_transmission(&self, transmission_id: &str) -> Result<IctFaxTransmission, FaxError> {
         let _ = transmission_id;
+        Err(FaxError::unavailable(
+            "ictfax transport has no implementation bound",
+        ))
+    }
+
+    /// Fetch the media bytes of a document by id (inbound content).
+    /// Returns the bytes plus the provider-reported metadata. Fail
+    /// closed when the document is missing or the bytes are empty.
+    fn fetch_document_media(&self, document_id: &str) -> Result<Vec<u8>, FaxError> {
+        let _ = document_id;
         Err(FaxError::unavailable(
             "ictfax transport has no implementation bound",
         ))
@@ -375,16 +402,63 @@ impl IctFaxTransport for HttpIctFaxTransport {
         ))
     }
 
-    fn upload_document_media(&self, document_id: &str) -> Result<(), FaxError> {
-        // Documented: POST /api/messages/documents/{document_id}/media
-        // (Add / Update Document file).
+    fn create_document_with_media(
+        &self,
+        filename: &str,
+        content_type: &str,
+        bytes: &[u8],
+    ) -> Result<String, FaxError> {
+        // Documented: POST /api/messages/documents (Create Document),
+        // then POST /api/messages/documents/{id}/media (Add / Update
+        // Document file) with the actual media body. The provider
+        // never receives an empty body.
+        if bytes.is_empty() {
+            return Err(FaxError::validation(
+                "ictfax document media must not be empty (fail closed)",
+            ));
+        }
+        let created: serde_json::Value = self.post_json(
+            "/api/messages/documents",
+            &serde_json::json!({
+                "filename": filename,
+                "content_type": content_type,
+                "size_bytes": bytes.len(),
+            }),
+        )?;
+        let document_id = created
+            .get("id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                FaxError::external("ictfax create document response has no id (fail closed)")
+            })?
+            .to_string();
+        // Upload the REAL media bytes to the created document. The
+        // documented endpoint accepts the raw media body.
         let path = format!("/api/messages/documents/{document_id}/media");
-        let body = serde_json::json!({});
-        self.post_empty(&path, &body)
+        let url = format!("{}{}", self.base_url, path);
+        let response = self
+            .authorize(self.client.post(&url).body(bytes.to_vec()))
+            .send()
+            .map_err(|e| self.send_error(e, "POST media"))?;
+        if !response.status().is_success() {
+            return Err(FaxError::new(
+                Self::map_status(response.status()),
+                format!("ictfax POST {path} returned {}", response.status()),
+                None,
+                None,
+            ));
+        }
+        Ok(document_id)
     }
 
-    fn create_sendfax_program(&self) -> Result<String, FaxError> {
-        let body = serde_json::json!({ "name": "nexus-sendfax" });
+    fn create_sendfax_program(&self, document_id: &str) -> Result<String, FaxError> {
+        // Documented: POST /api/programs/sendfax (Create Sendfax
+        // Program). The program is bound to the real document so the
+        // transmission carries the actual content.
+        let body = serde_json::json!({
+            "name": "nexus-sendfax",
+            "document_id": document_id,
+        });
         let created: serde_json::Value = self.post_json("/api/programs/sendfax", &body)?;
         created
             .get("id")
@@ -395,9 +469,43 @@ impl IctFaxTransport for HttpIctFaxTransport {
             })
     }
 
-    fn create_transmission(&self) -> Result<IctFaxTransmission, FaxError> {
-        let body = serde_json::json!({});
-        self.post_json("/api/transmissions", &body)
+    fn create_transmission(
+        &self,
+        destination: &str,
+        program_id: &str,
+        document_id: &str,
+    ) -> Result<IctFaxTransmission, FaxError> {
+        // Documented: POST /api/transmissions (Create Transmission).
+        // The transmission is bound to the canonical destination
+        // number, the sendfax program, and the document - the
+        // recipient/document data ALWAYS reach the provider request.
+        if destination.trim().is_empty() {
+            return Err(FaxError::validation(
+                "ictfax transmission destination must not be empty (fail closed)",
+            ));
+        }
+        let body = serde_json::json!({
+            "destination": destination,
+            "program_id": program_id,
+            "document_id": document_id,
+        });
+        let created: serde_json::Value = self.post_json("/api/transmissions", &body)?;
+        let id = created
+            .get("id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                FaxError::external("ictfax create transmission response has no id (fail closed)")
+            })?
+            .to_string();
+        Ok(IctFaxTransmission {
+            id,
+            destination: destination.to_string(),
+            status: "queued".to_string(),
+            program: Some(program_id.to_string()),
+            document_id: Some(document_id.to_string()),
+            attempts: 0,
+            pages: 0,
+        })
     }
 
     fn send_transmission(&self, transmission_id: &str) -> Result<(), FaxError> {
@@ -409,6 +517,40 @@ impl IctFaxTransport for HttpIctFaxTransport {
     fn fetch_transmission(&self, transmission_id: &str) -> Result<IctFaxTransmission, FaxError> {
         let path = format!("/api/transmissions/{transmission_id}");
         self.get_json(&path)
+    }
+
+    fn fetch_document_media(&self, document_id: &str) -> Result<Vec<u8>, FaxError> {
+        // Documented: GET /api/messages/documents/{id}/media (Get
+        // Document file). Returns the raw media bytes; empty or
+        // missing content fails closed (never a fabricated artifact).
+        let path = format!("/api/messages/documents/{document_id}/media");
+        let url = format!("{}{}", self.base_url, path);
+        let response = self
+            .authorize(self.client.get(&url))
+            .send()
+            .map_err(|e| self.send_error(e, "GET media"))?;
+        if !response.status().is_success() {
+            return Err(FaxError::new(
+                Self::map_status(response.status()),
+                format!("ictfax GET {path} returned {}", response.status()),
+                None,
+                None,
+            ));
+        }
+        let bytes = response.bytes().map_err(|e| {
+            FaxError::new(
+                FaxErrorCode::External,
+                format!("ictfax GET {path} body read failed: {e}"),
+                None,
+                None,
+            )
+        })?;
+        if bytes.is_empty() {
+            return Err(FaxError::external(format!(
+                "ictfax document {document_id} media is empty (fail closed)"
+            )));
+        }
+        Ok(bytes.to_vec())
     }
 
     fn list_transmissions(&self) -> Result<Vec<IctFaxTransmission>, FaxError> {

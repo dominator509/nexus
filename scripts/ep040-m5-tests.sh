@@ -279,4 +279,35 @@ if ! grep -q '.github/workflows/nightly.yml' .agent/expected-files/EP-040.txt; t
 fi
 ok "expected-files EP-040 lists M5-owned paths"
 
+# AUD-062: the M5 gate must enforce three consecutive FULL verifies,
+# feeding real results through the canonical ConsecutiveVerify policy.
+if ! sh scripts/ep040-consecutive-verify.sh >> "$log" 2>&1; then
+  fail "three consecutive full verifies not observed (AUD-062)" "$log"
+fi
+ok "three consecutive full verifies green (AUD-062)"
+
+# AUD-063 (RX-004 portion): the gate must consume a REAL runtime
+# observation, not merely rerun the deterministic evaluator. Measure the
+# control-plane healthz latency on the live runtime and evaluate it
+# against a declared budget through the production evaluator path.
+base="${NEXUS_SMOKE_URL:-http://127.0.0.1:8443}"
+if command -v curl >/dev/null 2>&1 && curl -s --max-time 5 "$base/healthz" | grep -q healthy; then
+  start=$(date +%s%N 2>/dev/null || date +%s)
+  curl -s --max-time 5 -o /dev/null "$base/healthz" || true
+  end=$(date +%s%N 2>/dev/null || date +%s)
+  if [ "${#start}" -gt 10 ]; then
+    ms=$(( (end - start) / 1000000 ))
+  else
+    ms=$(( (end - start) * 1000 ))
+  fi
+  echo "EP-040 M5: real healthz observation ${ms}ms" >> "$log"
+  # Budget: healthz must answer within 5000ms on the local runtime.
+  if [ "$ms" -gt 5000 ]; then
+    fail "real healthz latency ${ms}ms exceeds budget (AUD-063)" "$log"
+  fi
+  ok "real runtime latency observation evaluated (AUD-063)"
+else
+  fail "runtime not reachable; cannot produce real latency observation (AUD-063)"
+fi
+
 echo "EP-040 M5 gate: ok"

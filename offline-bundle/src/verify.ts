@@ -320,6 +320,64 @@ export async function verifyBundle(
   }
   filesVerified += 1;
 
+  // Cryptographic component signature verification (AUD-065). A bundle
+  // may only be VERIFIED when every SignedComponent.signature verifies
+  // with the bundle's signing public key over the canonical artifact
+  // digest. SIGNATURE PRESENT != SIGNATURE VALID: a dummy or missing
+  // signature fails closed here.
+  const signingKeyPath = join(bundleDir, "signing-key.pub.jwk");
+  let signingKeyBytes: Buffer;
+  try {
+    signingKeyBytes = readFileSync(signingKeyPath);
+  } catch {
+    throw new BundleError(
+      "SIGNING_KEY_MISSING",
+      `bundle signing public key missing: signing-key.pub.jwk`,
+    );
+  }
+  let signingJwk: JsonWebKey;
+  try {
+    signingJwk = JSON.parse(signingKeyBytes.toString("utf8")) as JsonWebKey;
+  } catch {
+    throw new BundleError(
+      "SIGNING_KEY_MISSING",
+      "bundle signing public key is not valid JWK JSON",
+    );
+  }
+  const signingKey = await importSigningKey(signingJwk);
+  for (const component of releaseManifest.components) {
+    const sigValue = component.signature?.value_b64;
+    if (typeof sigValue !== "string" || sigValue.length === 0) {
+      throw new BundleError(
+        "SIGNATURE_MISSING",
+        `component ${component.component_id} has no signature value`,
+        { componentId: component.component_id },
+      );
+    }
+    const sigBytes = decodeBase64(sigValue);
+    const digestBytes = toBytes(
+      Buffer.from(
+        component.digest.startsWith("sha256:")
+          ? component.digest
+          : `sha256:${component.digest}`,
+      ),
+    );
+    const valid = await globalThis.crypto.subtle.verify(
+      { name: "Ed25519" },
+      signingKey,
+      sigBytes,
+      digestBytes,
+    );
+    if (!valid) {
+      throw new BundleError(
+        "SIGNATURE_INVALID",
+        `component ${component.component_id} signature failed cryptographic verification`,
+        { componentId: component.component_id },
+      );
+    }
+  }
+  filesVerified += releaseManifest.components.length;
+
   // Referenced SBOM / license / migration files must exist in the bundle.
   const refFiles = [
     ...manifest.sbom_refs.map((name) => join(BUNDLE_KIND_DIRS.SBOM, name)),
@@ -386,6 +444,32 @@ function toBytes(bytes: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBuffer> {
     bytes.byteOffset,
     bytes.byteLength,
   ) as Uint8Array<ArrayBuffer>;
+}
+
+/** Import an Ed25519 JWK public key for verification (AUD-065). */
+async function importSigningKey(jwk: JsonWebKey): Promise<CryptoKey> {
+  try {
+    return await globalThis.crypto.subtle.importKey(
+      "jwk",
+      jwk,
+      { name: "Ed25519" },
+      true,
+      ["verify"],
+    );
+  } catch (error) {
+    throw new BundleError(
+      "SIGNING_KEY_MISSING",
+      `bundle signing public key cannot be imported: ${(error as Error).message}`,
+    );
+  }
+}
+
+/** Decode standard base64 (padding optional) to bytes. */
+function decodeBase64(value: string): Uint8Array<ArrayBuffer> {
+  const padded =
+    value.length % 4 === 0 ? value : value + "=".repeat(4 - (value.length % 4));
+  const buf = Buffer.from(padded, "base64");
+  return toBytes(buf);
 }
 
 export function bundleItemRelPath(kind: string, name: string): string {

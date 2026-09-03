@@ -21,6 +21,7 @@ import {
   OwnerBootstrapRequest,
   OwnerBootstrapStateRecord,
   Spec006Error,
+  isValidOwnerBootstrapTransition,
   resolveFirstOwnerRequest,
 } from "@nexus/setup";
 import { OnboardingDb, type QueryResultRow } from "../db.js";
@@ -129,7 +130,14 @@ export class OwnerBootstrapStore {
 
   /**
    * Record an owner bootstrap state transition (durable ladder record).
-   * Uses the contract's transition validation.
+   *
+   * AUD-044: the durable boundary enforces the owner ladder. OWNER_AUTHORIZED
+   * can never be written without traversing every preceding security
+   * transition. The supplied state must be a VALID next rung from the
+   * owner's CURRENT durable state (via the contract's
+   * isValidOwnerBootstrapTransition); a jump over any rung, a backwards
+   * move, or an unauthorized state write is rejected with Policy BEFORE
+   * any UPDATE touches the row.
    */
   async recordState(
     ownerId: string,
@@ -140,6 +148,30 @@ export class OwnerBootstrapStore {
       throw new Spec006Error(
         ErrorCode.Validation,
         "owner bootstrap state principal_id does not match owner row",
+        correlationId,
+      );
+    }
+    // Read the owner's CURRENT durable state: the ladder transition is
+    // validated against durable truth, never against a client-supplied
+    // prior state.
+    const current = await this.readOwnerById(ownerId, correlationId);
+    if (current === undefined) {
+      throw new Spec006Error(
+        ErrorCode.NotFound,
+        "owner bootstrap row not found; cannot record state",
+        correlationId,
+      );
+    }
+    const from = current.state;
+    const to = record.state;
+    if (from === to) {
+      // Idempotent re-assertion of the same durable rung is allowed.
+      return;
+    }
+    if (!isValidOwnerBootstrapTransition(from as never, to as never)) {
+      throw new Spec006Error(
+        ErrorCode.Policy,
+        `invalid owner bootstrap transition ${from} -> ${to} at the durable boundary`,
         correlationId,
       );
     }

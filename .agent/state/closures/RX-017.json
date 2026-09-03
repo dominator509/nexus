@@ -1,0 +1,111 @@
+{
+  "attestation_digest": "sha256:ece71784b81630f114903232731a0e5514641a6a41aff5ceb340d7bc2de0be04",
+  "closure_commit": "fbfc5bcf6c970fc93ab6cd4813190e7aca2192bf",
+  "created_at": "2026-09-01T20:14:33Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:0d42d830d47d88fb39875c6b79e7749f70b8fb3ab7e242b6c86735757d4b8ed4",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-017/fbfc5bcf6c970fc93ab6cd4813190e7aca2192bf",
+  "milestones": {
+    "max": 7,
+    "passed": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "node": "RX-017",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:33439a58d995e14f94ed3e736f6d700afe01226b14aaf6bac55bf6e485c2ed82",
+      "id": "enrollment-claim-secret-bound",
+      "ref": "packages/onboarding/src/stores/enrollment-token.store.ts"
+    },
+    {
+      "digest": "sha256:a7b46b1ee51344a0293fcd7a58fa98aff365f92d64ec33a9af725aba18b8cf72",
+      "id": "owner-ladder-durable",
+      "ref": "packages/onboarding/src/stores/owner-bootstrap.store.ts"
+    },
+    {
+      "digest": "sha256:f74541fa1dcfc5d027c1bf6e155216b1ecdd1cd748caf3beb52fe896855a4c6b",
+      "id": "recovery-retry-negative-observation",
+      "ref": "apps/setup/src/contracts/recovery.ts"
+    },
+    {
+      "digest": "sha256:8bb223262fd1246df659835fede9f902fafe4ca97868384d85b91f2e2aa195fa",
+      "id": "ssh-provider-real-transport",
+      "ref": "providers/existing-ssh/src/lib.rs"
+    },
+    {
+      "digest": "sha256:f107f9717edffbda05a6761079c7921310e1ab154818af1657564fb8ce5fd0d5",
+      "id": "placement-observed-capacity-gate",
+      "ref": "crates/nexus-compute/src/model.rs"
+    },
+    {
+      "digest": "sha256:185fda416a10b5dc86cfe41e0936fec365f19ee0b85c6b40d546e694fb420be5",
+      "id": "placement-observed-capacity-ranking",
+      "ref": "crates/nexus-compute/src/placement.rs"
+    },
+    {
+      "digest": "sha256:f107f9717edffbda05a6761079c7921310e1ab154818af1657564fb8ce5fd0d5",
+      "id": "placement-cost-ceiling-gate",
+      "ref": "crates/nexus-compute/src/model.rs"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:0d42d830d47d88fb39875c6b79e7749f70b8fb3ab7e242b6c86735757d4b8ed4",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "ep035-setup-contracts",
+        "passed": 89
+      },
+      {
+        "failed": 0,
+        "family": "nexus-setup-crate",
+        "passed": 83
+      },
+      {
+        "failed": 0,
+        "family": "onboarding-stores-unit",
+        "passed": 7
+      },
+      {
+        "failed": 0,
+        "family": "lf001-livefire",
+        "passed": 8
+      },
+      {
+        "failed": 0,
+        "family": "onboarding-integration",
+        "passed": 44
+      },
+      {
+        "failed": 0,
+        "family": "onboarding-failure-suite",
+        "passed": 24
+      },
+      {
+        "failed": 0,
+        "family": "existing-ssh-real-transport",
+        "passed": 8
+      },
+      {
+        "failed": 0,
+        "family": "nexus-compute-placement",
+        "passed": 52
+      }
+    ],
+    "passed": 315
+  },
+  "verify_log": ".agent/remediation/evidence/RX-017/verify.log|sha256:c70213d6059e87314a4a30a47988fb11eb8e9bf195a4fe69bc56ea3ea9f5f29c",
+  "verify_sentinel": "verify: ok"
+}

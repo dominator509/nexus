@@ -167,6 +167,30 @@ fn hash_of(bytes: &[u8]) -> ArtifactResult<ArtifactHash> {
     ArtifactHash::new(sha256_hex(bytes))
 }
 
+/// Verify a backup manifest's signature (SPEC-024 requirement 6 /
+/// AUD-052). Structural checks live in the contract crate; the
+/// CRYPTOGRAPHIC verification (real ring Ed25519 over the canonical
+/// manifest bytes, excluding the signature field) is owned here in the
+/// adapter. Missing, malformed, wrong-signer, or tampered signatures
+/// fail closed before any hash in the manifest is trusted.
+fn verify_backup_signature(backup: &BackupSet) -> ArtifactResult<()> {
+    use ring::signature::{UnparsedPublicKey, ED25519};
+    backup.verify_manifest_signature_structure()?;
+    let sig = backup
+        .manifest_signature
+        .as_ref()
+        .expect("structure check passed");
+    let public_key = nexus_artifacts::hex_decode(&sig.public_key_hex).ok_or_else(|| {
+        ArtifactError::verification("manifest signature public key is not valid hex")
+    })?;
+    let signature = nexus_artifacts::hex_decode(&sig.signature_hex)
+        .ok_or_else(|| ArtifactError::verification("manifest signature value is not valid hex"))?;
+    let message = backup.canonical_manifest_bytes()?;
+    let key = UnparsedPublicKey::new(&ED25519, &public_key);
+    key.verify(&message, &signature)
+        .map_err(|_| ArtifactError::verification("backup manifest signature verification failed"))
+}
+
 fn map_s3_error(e: S3Error) -> ArtifactError {
     match e {
         S3Error::Connect(m) => ArtifactError::unavailable(format!("provider unreachable: {m}")),
@@ -405,16 +429,13 @@ impl ArtifactStore for S3ArtifactStore {
         let _ = Instant::now();
         let _ = correlation;
         // ENCRYPTION-BEFORE-EGRESS: S3 leaves the node. A sensitive-class
-        // artifact WITHOUT encryption metadata fails closed BEFORE any
-        // byte crosses the network (zero provider mutation on policy
-        // failure).
-        if metadata.data_class.requires_encryption_before_egress() && metadata.encryption.is_none()
-        {
-            return Err(ArtifactError::policy(format!(
-                "sensitive artifact on S3 backend must be encrypted before egress (class {})",
-                metadata.data_class
-            )));
-        }
+        // artifact must carry encryption metadata AND the bytes about to
+        // be persisted must not be the plaintext (AUD-051) - verified
+        // BEFORE any byte crosses the network (zero provider mutation on
+        // policy failure). The adapter never holds the key; the encrypting
+        // caller recorded the plaintext's SHA-256 in the metadata, and we
+        // verify the stored bytes hash differs from it.
+        metadata.verify_encryption_before_egress(&sha256_hex(bytes))?;
         if &metadata.content_hash != expected_hash {
             return Err(ArtifactError::validation(
                 "metadata content hash does not match expected hash",
@@ -532,6 +553,10 @@ impl ArtifactStore for S3ArtifactStore {
             Err(S3Error::Status { code: 404, .. }) => {}
             Err(e) => return Err(map_s3_error(e)),
         }
+        // SPEC-024 requirement 6: every backup has a signed manifest.
+        // Verified cryptographically BEFORE the manifest is written; an
+        // unsigned or tampered manifest is never persisted (fail closed).
+        verify_backup_signature(backup)?;
         // Backup is hash-gated: every manifest hash must verify on the
         // provider before the manifest is written.
         for h in &backup.manifest_hashes {
@@ -560,6 +585,10 @@ impl ArtifactStore for S3ArtifactStore {
             .map_err(map_s3_error)?;
         let backup: BackupSet = serde_json::from_slice(&raw)
             .map_err(|e| ArtifactError::internal(format!("corrupt backup manifest: {e}")))?;
+        // SPEC-024 requirement 6: restore authenticates signer +
+        // signature before trusting manifest content (fail closed on
+        // missing/tampered signature).
+        verify_backup_signature(&backup)?;
         for required in &plan.required_hashes {
             if !backup.manifest_hashes.contains(required) {
                 return Err(ArtifactError::verification(format!(

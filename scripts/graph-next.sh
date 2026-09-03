@@ -1,6 +1,14 @@
 #!/usr/bin/env sh
 # 6LAYER deterministic scheduler.
 set -eu
+# Generation 2 (remediation): the ledger-derived DONE path is never authority
+# (AUD-085 root cause). Scheduling delegates to GraphLock V2, which recomputes
+# node truth from closure attestations, not NODE_DONE.
+if [ -f ".agent/remediation/REMEDIATION_STATE.env" ] && \
+   grep -q '^REMEDIATION_GENERATION=2' .agent/remediation/REMEDIATION_STATE.env 2>/dev/null; then
+  _self=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+  exec sh "$_self/graph-next-v2.sh" "$@"
+fi
 GRAPH=".agent/GRAPH.md"
 [ -f "$GRAPH" ] || { echo "graph-next.sh: missing $GRAPH" >&2; exit 1; }
 tmp=$(mktemp)

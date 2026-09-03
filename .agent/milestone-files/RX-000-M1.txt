@@ -1,0 +1,3 @@
+.agent/remediation/REMEDIATION_STATE.env
+.agent/remediation/register_data.py
+.agent/remediation/import_register.py

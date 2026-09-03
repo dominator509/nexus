@@ -345,18 +345,23 @@ async fn ep005_failure_unacked_messages_remain_pending() {
     assert_eq!(batch.len(), 2);
 
     // Verify through a RAW handle that the messages are still pending
-    // (never ack'd): the server observes them as unacknowledged.
+    // (never ack'd): the server observes them as unacknowledged on the
+    // ephemeral consumer (found by filter subject; the server auto-names
+    // ephemeral consumers).
     let raw = async_nats::connect(&url).await.expect("raw connect");
     let ctx = async_nats::jetstream::new(raw);
     let stream = ctx.get_stream(STREAM).await.expect("get stream");
-    let consumer_handle: async_nats::jetstream::consumer::PullConsumer = stream
-        .get_consumer("no-ack-check-1")
-        .await
-        .expect("get consumer");
-    let mut consumer_handle = consumer_handle;
-    let info = consumer_handle.info().await.expect("consumer info");
+    use futures_util::StreamExt;
+    let mut consumers = stream.consumers();
+    let mut pending = 0usize;
+    while let Some(info) = consumers.next().await {
+        let info = info.expect("consumer info");
+        if info.config.filter_subject == "nexus.memory.>" {
+            pending += info.num_ack_pending;
+        }
+    }
     assert_eq!(
-        info.num_ack_pending, 2,
+        pending, 2,
         "unacked deliveries must remain pending on the server"
     );
 }

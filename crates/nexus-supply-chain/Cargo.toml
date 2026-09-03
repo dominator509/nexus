@@ -10,3 +10,6 @@ nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10"
+# ring 0.17 is already in the workspace lock (nexus-skills dependency);
+# no new dependency class is introduced by signing here.
+ring = "0.17"

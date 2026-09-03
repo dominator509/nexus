@@ -11,6 +11,10 @@ nexus-domain = { path = "../../crates/nexus-domain", version = "0.1.0" }
 sha2 = "0.10"
 serde.workspace = true
 serde_json.workspace = true
+# Real Ed25519 manifest signature verification (SPEC-024 req 6 /
+# AUD-052). Crypto lives in the adapters (same ring line as the
+# live-fire storage harness); the contract crate stays dependency-lean.
+ring = "0.17"
 
 [dev-dependencies]
 tempfile = "3"

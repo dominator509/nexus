@@ -1,0 +1,80 @@
+# RX-020-pre / AUD-090 gap-work milestone
+
+Status: COMPLETE (2026-09-02)
+Agent: ipman
+Register row: AUD-090 (P1, sole owner RX-022 - pre-executed as gap work so
+  RX-020's register-wide P0/P1 gate can unlock; RX-022 lease absorbs/audits)
+
+## Finding
+
+"The claimed final fresh-clone ship proof does not perform the ship-standard
+fresh-clone run" (SPEC-008 behavior 4).
+
+Affected: scripts/ep043-freshclone-accept.sh, SPEC-008 fresh-clone requirement.
+
+## Root cause (two halves)
+
+1. The acceptance only ran the EP-043 M1-M4 gates inside the clone, then
+   REQUIRED a knowingly NOT_READY readiness report (`grep -q "NOT_READY"`)
+   and wrote a markdown-only evidence file. It NEVER ran scripts/verify.sh,
+   the production-readiness command (scripts/production-readiness-check.sh),
+   or the full live-fire registry - so the "final fresh-clone ship proof"
+   was structurally incapable of passing at true ship time and certified a
+   NOT_READY tree as accepted.
+2. Even if the ladder had been wired, the canonical fresh-clone evidence
+   consumer (collectFreshCloneEvidence -> loadValidatedEvidence) requires a
+   STRUCTURED ep043-freshclone-*.json ExecutionEvidence record (schema
+   version 1, exit 0, VERIFIED, git_commit bound). The acceptance produced
+   only markdown, so freshCloneRerun was ALWAYS false and no JSON producer
+   existed anywhere in the repo.
+
+## Reproducibility blocker discovered during the fix (same finding)
+
+node-status-v2.sh validates each closure manifest's verify_log digest
+against the file on disk. The *.log gitignore rule meant the 20 attested
+closure verify.log files were never committed, so a fresh clone could never
+reproduce node-DONE truth and graph-next.sh could never print ALL_DONE in
+the clone - making the ship-standard fresh-clone run unreachable even at
+true ship. Fixed: .gitignore negation + committed the 20 attested logs
+(digests unchanged; closure manifests still validate).
+
+## Fix
+
+1. scripts/ep043-freshclone-accept.sh rewritten as the SHIP-STANDARD
+   fresh-clone run:
+   - full clone at the candidate commit (not --depth 1: tags + committed
+     evidence must be present so node-DONE truth is reproducible),
+   - refuses FAIL-CLOSED with no evidence when the clone graph is not
+     ALL_DONE ("a knowingly-NOT_READY tree is never accepted"),
+   - runs EP-043 M1-M4 gates inside the clone (owned regressions),
+   - runs the ship-standard ladder in the clone: scripts/verify.sh
+     (verify: ok), production-readiness command (production readiness: ok),
+     and the full live-fire registry with NEXUS_REQUIRE_ALL_PROOFS=1
+     (live-fire: ok),
+   - runs readiness/manifest/verify-manifest CLIs in the clone,
+   - source-tree leakage negative proof,
+   - writes STRUCTURED ep043-freshclone-m5.json ExecutionEvidence
+     (schema_version 1, proof_id ep043-freshclone, result VERIFIED,
+     git_commit bound, digests) only after every step passed.
+2. scripts/ep043-m5-tests.sh updated: acceptance-failure path preserves the
+   AUD-080 closure-gate failure reason (RX-001 hostile check stays green);
+   evidence greps moved from the removed .md to the structured .json.
+3. .gitignore + commit of the 20 attested closure verify.log files
+   (evidence reproducibility prerequisite, committed separately).
+4. pnpm-workspace.yaml override fast-uri >=3.1.6 (4 high advisories on the
+   transitive 3.1.5 via ajv under @temporalio tooling) - live security gate
+   found during the gate run; no allowlist.
+
+## Proofs (scripts/aud090-freshclone-ship-tests.sh)
+
+- aud090 ladder wiring: verify.sh + production-readiness + full live-fire
+  with sentinel requirements present in the acceptance.
+- aud090 fail-closed: no NOT_READY acceptance remains; refusal text present.
+- aud090 structured evidence: JSON schema fields required.
+- aud090 hostile: acceptance refuses on the CURRENT non-ALL_DONE tree and
+  writes no evidence anywhere (real run, exit non-zero, refusal reason).
+- aud090 positive: extracted JSON evidence producer round-trips through the
+  repo's own parseExecutionEvidence + validateExecutionEvidence machinery.
+- Regressions: rx001 hostile battery 18/18; release-evidence vitest 160/160;
+  security gate green after fast-uri override; EP-043 M5 gate in quarantine
+  still fails with the AUD-080 readiness reason (expected).

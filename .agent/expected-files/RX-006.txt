@@ -1,0 +1,29 @@
+# RX-006 expected files: remediation surface for AUD-012 + AUD-041..045
+# (Headscale mesh identity truth, mobile step-up enforcement, setup
+#  enrollment/owner/recovery security)
+.agent/expected-files/RX-006.txt
+.agent/milestone-files/RX-006-M1.txt
+.agent/milestone-files/RX-006-M2.txt
+.agent/milestone-files/RX-006-M3.txt
+.agent/milestone-files/RX-006-M4.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/DECISIONS.md
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+crates/nexus-setup/src/lib.rs
+crates/nexus-setup/src/model.rs
+crates/nexus-setup/src/port.rs
+crates/nexus-setup/tests/ep035_unit_enrollment.rs
+crates/nexus-setup/tests/ep035_unit_owner.rs
+crates/nexus-setup/tests/ep035_unit_recovery.rs
+crates/nexus-trust/src/mesh.rs
+Cargo.lock
+infra/headscale/Cargo.toml
+infra/headscale/src/mesh.rs
+infra/headscale/src/lib_tests.rs
+infra/headscale/examples/mesh_live_proof.rs
+packages/mobile-contracts/lib/src/behavior/approval_binding.dart
+packages/mobile-contracts/test/ep034_unit_approval_binding_test.dart
+scripts/nodes/RX-006.sh
+scripts/rx006-remediation-tests.sh
+tests/trust/test_ep009_integration_headscale.py

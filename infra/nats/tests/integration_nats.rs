@@ -6,8 +6,8 @@
 //! PUBLISHED HOST PORT. Host ports are dynamically allocated so parallel
 //! runs never collide. These tests exercise the nexus-events ports
 //! through the `nexus-nats` adapter: stream provisioning, publish with
-//! ack, durable consumption, explicit acknowledgement, and correlation
-//! survival.
+//! ack, consumption with durable checkpoints, explicit acknowledgement,
+//! and correlation survival.
 //!
 //! Runtime: each test drives the adapter from a real Tokio multi-thread
 //! runtime owned by the test harness (the composition root in
@@ -18,8 +18,8 @@ use std::time::{Duration, Instant};
 
 use nexus_domain::{CorrelationId, EventId, TenantId};
 use nexus_events::{
-    ConsumerConfig, EventConsumer, EventDataClass, EventEnvelope, EventPublisher, EventType,
-    StreamConfig, StreamProvisioner,
+    ConsumerCheckpoint, ConsumerConfig, EventConsumer, EventDataClass, EventEnvelope,
+    EventPublisher, EventType, StreamConfig, StreamProvisioner,
 };
 use nexus_nats::{NatsEventConsumer, NatsEventPublisher, NatsStreamProvisioner};
 
@@ -156,20 +156,25 @@ async fn provision(url: &str) -> nexus_events::StreamStatus {
         .expect("ensure stream")
 }
 
-/// Server-observed number of delivered-but-unacknowledged messages for a
-/// durable consumer, read through a raw async-nats handle (not the
-/// adapter) so the proof is independent of the code under test.
-async fn ack_pending(url: &str, consumer_name: &str) -> usize {
+/// Server-observed number of delivered-but-unacknowledged messages for
+/// the stream consumer matching `subject`, read through a raw async-nats
+/// handle (not the adapter) so the proof is independent of the code under
+/// test. `poll` creates ephemeral consumers auto-named by the server, so
+/// the consumer is found by its filter subject rather than a name.
+async fn ack_pending(url: &str, subject: &str) -> usize {
     let client = async_nats::connect(url).await.expect("raw connect");
     let ctx = async_nats::jetstream::new(client);
     let stream = ctx.get_stream(STREAM).await.expect("raw get stream");
-    let consumer: async_nats::jetstream::consumer::PullConsumer = stream
-        .get_consumer(consumer_name)
-        .await
-        .expect("raw get consumer");
-    let mut consumer = consumer;
-    let info = consumer.info().await.expect("raw consumer info");
-    info.num_ack_pending
+    use futures_util::StreamExt;
+    let mut consumers = stream.consumers();
+    let mut total = 0usize;
+    while let Some(info) = consumers.next().await {
+        let info = info.expect("raw consumer info");
+        if info.config.filter_subject == subject {
+            total += info.num_ack_pending;
+        }
+    }
+    total
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -243,11 +248,9 @@ async fn ep005_integration_consumer_receives_and_explicitly_acks() {
     assert_eq!(batch[0].payload["seed"], 2);
     assert_eq!(batch[2].payload["seed"], 4);
 
-    // The durable consumer is named `{consumer}-{after_sequence}`.
-    let consumer_name = "memory-indexer-1";
-
-    // Before explicit acks the server observes three pending deliveries.
-    let before = ack_pending(&url, consumer_name).await;
+    // Before explicit acks the server observes three pending deliveries
+    // on the ephemeral consumer (found by filter subject).
+    let before = ack_pending(&url, "nexus.memory.>").await;
     assert_eq!(
         before, 3,
         "three deliveries must be pending explicit acknowledgement"
@@ -262,7 +265,7 @@ async fn ep005_integration_consumer_receives_and_explicitly_acks() {
     }
 
     // After explicit acks the server observes zero pending deliveries.
-    let after = ack_pending(&url, consumer_name).await;
+    let after = ack_pending(&url, "nexus.memory.>").await;
     assert_eq!(
         after, 0,
         "explicit acks must clear all pending deliveries on the server"
@@ -309,7 +312,7 @@ async fn ep005_integration_envelope_round_trips_fully() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn ep005_integration_consumer_after_checkpoint_skips_acked() {
+async fn ep005_integration_checkpoint_persists_and_resume_skips_processed() {
     let nats = TestNats::start();
     nats.wait_ready().await;
     let url = nats.url();
@@ -325,22 +328,113 @@ async fn ep005_integration_consumer_after_checkpoint_skips_acked() {
         );
         publisher.publish(&e).await.expect("publish");
     }
-    let consumer = NatsEventConsumer::connect(&url)
-        .await
-        .expect("connect consumer");
     let config = ConsumerConfig {
         consumer: "resume-check".to_string(),
         stream: STREAM.to_string(),
         subject: "nexus.memory.>".to_string(),
         batch_size: 10,
     };
-    // First pass consumes everything (checkpoint would advance to 3).
+    // First pass consumes everything and persists a real checkpoint.
+    let consumer = NatsEventConsumer::connect(&url)
+        .await
+        .expect("connect consumer");
     let first = consumer.poll(&config, 1).await.expect("first poll");
     assert_eq!(first.len(), 3);
-    // Durable resume from after the checkpoint: no duplicate logical
-    // effects (SPEC-023 behavior 4).
-    let resumed = consumer.poll(&config, 4).await.expect("resume poll");
+    consumer
+        .save_checkpoint(&ConsumerCheckpoint {
+            consumer: config.consumer.clone(),
+            stream: config.stream.clone(),
+            subject: config.subject.clone(),
+            last_sequence: 3,
+        })
+        .await
+        .expect("save checkpoint must persist to the KV store");
+    for e in &first {
+        consumer
+            .ack(&config.consumer, e.event_id.as_str())
+            .await
+            .expect("ack");
+    }
+    drop(consumer);
+
+    // Restart: a fresh connection reads the durable checkpoint from the
+    // server-side KV store and resumes AFTER it - nothing new is
+    // delivered (SPEC-023 behavior 4: resume from the last checkpoint).
+    let restarted = NatsEventConsumer::connect(&url)
+        .await
+        .expect("reconnect consumer");
+    let cp = restarted
+        .checkpoint(&config.consumer)
+        .await
+        .expect("read checkpoint")
+        .expect("checkpoint must exist after save");
+    assert_eq!(cp.consumer, "resume-check");
+    assert_eq!(cp.last_sequence, 3);
+    let resumed = restarted
+        .poll(&config, cp.last_sequence + 1)
+        .await
+        .expect("resume poll");
     assert_eq!(resumed.len(), 0, "nothing new after the checkpoint");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ep005_integration_checkpoint_round_trips_and_overwrites() {
+    let nats = TestNats::start();
+    nats.wait_ready().await;
+    let url = nats.url();
+    provision(&url).await;
+    let consumer = NatsEventConsumer::connect(&url)
+        .await
+        .expect("connect consumer");
+
+    // A consumer with no saved checkpoint reads None (start from the
+    // beginning) - never a fabricated zero.
+    assert!(
+        consumer
+            .checkpoint("fresh-consumer")
+            .await
+            .expect("missing checkpoint")
+            .is_none(),
+        "unsaved checkpoint must read as None"
+    );
+
+    let cp1 = ConsumerCheckpoint {
+        consumer: "round-trip".to_string(),
+        stream: STREAM.to_string(),
+        subject: "nexus.memory.>".to_string(),
+        last_sequence: 7,
+    };
+    consumer.save_checkpoint(&cp1).await.expect("save cp1");
+    let got = consumer
+        .checkpoint("round-trip")
+        .await
+        .expect("read cp1")
+        .expect("cp1 must exist");
+    assert_eq!(got, cp1, "checkpoint must round-trip exactly");
+
+    // Overwrite advances the checkpoint.
+    let cp2 = ConsumerCheckpoint {
+        last_sequence: 42,
+        ..cp1.clone()
+    };
+    consumer.save_checkpoint(&cp2).await.expect("save cp2");
+    let got = consumer
+        .checkpoint("round-trip")
+        .await
+        .expect("read cp2")
+        .expect("cp2 must exist");
+    assert_eq!(got, cp2, "overwrite must advance the checkpoint");
+
+    // Durability across a fresh connection: the store is server-side.
+    let restarted = NatsEventConsumer::connect(&url)
+        .await
+        .expect("reconnect consumer");
+    let got = restarted
+        .checkpoint("round-trip")
+        .await
+        .expect("read after restart")
+        .expect("checkpoint must survive restart");
+    assert_eq!(got.last_sequence, 42);
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -28,6 +28,7 @@
 pub mod error;
 pub mod model;
 pub mod port;
+pub mod signer;
 pub mod vocabulary;
 
 pub use error::{SupplyChainError, SupplyChainErrorCode, SupplyChainResult};

@@ -84,6 +84,18 @@ impl Dsn {
         &self.host
     }
 
+    /// The DSN scheme (`http` or `https`).
+    pub fn scheme(&self) -> &str {
+        &self.scheme
+    }
+
+    /// Whether this DSN requires TLS. An `https` DSN MUST negotiate
+    /// TLS before any envelope byte is written; a plaintext send on an
+    /// `https` DSN is the AUD-055 defect and fails closed.
+    pub fn is_https(&self) -> bool {
+        self.scheme == "https"
+    }
+
     /// The numeric project id.
     pub fn project_id(&self) -> u64 {
         self.project_id

@@ -1,0 +1,7 @@
+enrollment-claim-secret-bound	packages/onboarding/src/stores/enrollment-token.store.ts	sha256:33439a58d995e14f94ed3e736f6d700afe01226b14aaf6bac55bf6e485c2ed82
+owner-ladder-durable	packages/onboarding/src/stores/owner-bootstrap.store.ts	sha256:a7b46b1ee51344a0293fcd7a58fa98aff365f92d64ec33a9af725aba18b8cf72
+recovery-retry-negative-observation	apps/setup/src/contracts/recovery.ts	sha256:f74541fa1dcfc5d027c1bf6e155216b1ecdd1cd748caf3beb52fe896855a4c6b
+ssh-provider-real-transport	providers/existing-ssh/src/lib.rs	sha256:8bb223262fd1246df659835fede9f902fafe4ca97868384d85b91f2e2aa195fa
+placement-observed-capacity-gate	crates/nexus-compute/src/model.rs	sha256:f107f9717edffbda05a6761079c7921310e1ab154818af1657564fb8ce5fd0d5
+placement-observed-capacity-ranking	crates/nexus-compute/src/placement.rs	sha256:185fda416a10b5dc86cfe41e0936fec365f19ee0b85c6b40d546e694fb420be5
+placement-cost-ceiling-gate	crates/nexus-compute/src/model.rs	sha256:f107f9717edffbda05a6761079c7921310e1ab154818af1657564fb8ce5fd0d5

@@ -1,0 +1,2 @@
+scripts/node-status-v2.sh
+.agent/state/closures/

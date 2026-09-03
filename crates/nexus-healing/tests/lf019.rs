@@ -33,16 +33,13 @@
 //! real production canary certification are DEFERRED (EP-040/EP-043 /
 //! deployment-owning node) and recorded in CERTIFICATION_REGISTRY.md.
 
-use nexus_domain::{
-    ApprovalClass, ApprovalId, CorrelationId, DiagnosisId, IncidentId, PatchId, RollbackId,
-    TenantId,
-};
+use nexus_domain::{ApprovalClass, ApprovalId, CorrelationId, PatchId, RollbackId, TenantId};
 use nexus_healing::{
-    CanaryPlan, CanaryState, DiagnosisConfidence, DiagnosisTask, HealthCriterion,
-    HealthCriterionState, InMemoryIncidentMemory, IncidentMemory, IncidentMemoryRecord,
+    CanaryPlan, CanaryState, DiagnosisConfidence, HealingErrorCode, HealthCriterion,
+    HealthCriterionState, InMemoryIncidentMemory, Incident, IncidentEngine, IncidentMemory,
     IncidentSignal, IncidentSignalKind, IncidentState, PatchProposal, RemediationApproval,
     ReviewDecision, ReviewVerdict, Risk, RollbackPlan, RollbackState, SandboxVerdict,
-    SecurityVerdict,
+    SecurityVerdict, StandardIncidentEngine,
 };
 use std::path::PathBuf;
 use std::process::Command;
@@ -60,16 +57,8 @@ fn tenant() -> TenantId {
     TenantId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6072").expect("valid UUIDv7")
 }
 
-fn incident_id() -> IncidentId {
-    IncidentId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6101").expect("valid UUIDv7")
-}
-
 fn correlation() -> CorrelationId {
     CorrelationId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6102").expect("valid UUIDv7")
-}
-
-fn diagnosis_id() -> DiagnosisId {
-    DiagnosisId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6103").expect("valid UUIDv7")
 }
 
 fn patch_id() -> PatchId {
@@ -162,47 +151,57 @@ fn lf019_self_healing_fix_loop_full_chain() {
     };
     assert_eq!(signal.kind, IncidentSignalKind::ProcessFailure);
 
+    // The production engine owns the whole lifecycle: observe,
+    // correlate, diagnose, patch, validate, approve, verify, close.
+    let engine = StandardIncidentEngine::new(InMemoryIncidentMemory::new());
+    let mut incident: Incident = engine.observe(signal.clone()).expect("observe");
+    assert_eq!(incident.state, IncidentState::Incident);
+
     // -----------------------------------------------------------------
     // 2. CORRELATE: canonical dedup key (tenant-scoped).
     // -----------------------------------------------------------------
     let dedup = InMemoryIncidentMemory::canonical_dedup_key(&tenant(), "PROCESS_CRASH", "worker-a");
-    let mut memory = InMemoryIncidentMemory::new();
-    let incident_record = IncidentMemoryRecord {
-        incident_id: incident_id(),
-        tenant_id: tenant(),
-        dedup_key: dedup.clone(),
-        error_class: "PROCESS_CRASH".into(),
-        component: "worker-a".into(),
-        final_state: Some(IncidentState::Incident.as_str().into()),
-        skill_candidate_ref: None,
-    };
-    memory
-        .record(incident_record.clone())
-        .expect("record incident");
-    assert_eq!(memory.find_by_dedup_key(&dedup).len(), 1);
+    engine
+        .transition(&mut incident, IncidentState::Correlate)
+        .expect("correlate");
+    assert_eq!(incident.dedup_key, dedup);
+    // The open incident is deduplicated on re-observe.
+    let again = engine.observe(signal.clone()).expect("re-observe");
+    assert_eq!(again.incident_id, incident.incident_id);
 
     // -----------------------------------------------------------------
     // 3. DIAGNOSE: hypothesis is NOT root cause; reproduction validates.
     // -----------------------------------------------------------------
-    let mut diagnosis = DiagnosisTask {
-        diagnosis_id: diagnosis_id(),
-        incident_id: incident_id(),
-        tenant_id: tenant(),
-        correlation_id: correlation(),
-        hypothesis: "worker checks hard-coded wrong filename".into(),
-        confidence: DiagnosisConfidence::Hypothesis,
-        evidence_refs: vec![],
-        attempts: 1,
-    };
+    engine
+        .transition(&mut incident, IncidentState::Diagnose)
+        .expect("diagnose");
+    let mut diagnosis = engine
+        .create_diagnosis(&incident, "worker checks hard-coded wrong filename".into())
+        .expect("diagnosis");
     assert_eq!(diagnosis.confidence, DiagnosisConfidence::Hypothesis);
     assert!(!diagnosis.confidence.is_authoritative());
 
     // -----------------------------------------------------------------
     // 4. REPRODUCE: the SAME invocation fails (before/after gold proof).
+    //    The engine raises confidence only on real evidence, one
+    //    canonical rung at a time.
     // -----------------------------------------------------------------
     assert_eq!(before_code, 1);
-    diagnosis.evidence_refs.push("reproduction:exit=1".into());
-    diagnosis.confidence = DiagnosisConfidence::Reproduced;
+    engine
+        .update_diagnosis_confidence(
+            &mut diagnosis,
+            DiagnosisConfidence::Supported,
+            "correlated crash log".into(),
+        )
+        .expect("supported");
+    engine
+        .update_diagnosis_confidence(
+            &mut diagnosis,
+            DiagnosisConfidence::Reproduced,
+            format!("reproduction:exit={before_code}"),
+        )
+        .expect("reproduced");
+    assert_eq!(diagnosis.confidence, DiagnosisConfidence::Reproduced);
 
     // -----------------------------------------------------------------
     // 5. PATCH_PROPOSED: real patch artifact with real digest.
@@ -212,7 +211,7 @@ fn lf019_self_healing_fix_loop_full_chain() {
     assert_eq!(digest.len(), 64);
     let proposal = PatchProposal {
         patch_id: patch_id(),
-        incident_id: incident_id(),
+        incident_id: incident.incident_id.clone(),
         tenant_id: tenant(),
         correlation_id: correlation(),
         files_changed: vec!["failing-worker.sh".into()],
@@ -225,11 +224,21 @@ fn lf019_self_healing_fix_loop_full_chain() {
         rollback_plan_ref: rollback_id().as_str().into(),
         patch_digest: digest.clone(),
     };
-    assert_eq!(proposal.files_changed, vec!["failing-worker.sh"]);
+    engine
+        .transition(&mut incident, IncidentState::Reproduce)
+        .expect("reproduce");
+    engine
+        .propose_patch(&incident, proposal)
+        .expect("propose patch");
 
     // -----------------------------------------------------------------
     // 6. SANDBOX_VALIDATION: isolated working copy, scope preserved.
+    //    The verdict is recorded through the engine; pass:false would
+    //    fail closed into VALIDATION_FAILED.
     // -----------------------------------------------------------------
+    engine
+        .transition(&mut incident, IncidentState::PatchProposed)
+        .expect("patch proposed");
     let sandbox = SandboxVerdict {
         pass: true,
         checks: vec![
@@ -243,7 +252,10 @@ fn lf019_self_healing_fix_loop_full_chain() {
         ],
         evidence_ref: "ep019-m3 isolated copy".into(),
     };
-    assert!(sandbox.pass);
+    engine
+        .record_sandbox_validation(&mut incident, &sandbox)
+        .expect("sandbox verdict");
+    assert_eq!(incident.state, IncidentState::SandboxValidation);
 
     // -----------------------------------------------------------------
     // 7. SECURITY_VALIDATION: gates pass (security not weakened).
@@ -261,7 +273,10 @@ fn lf019_self_healing_fix_loop_full_chain() {
         ],
         evidence_ref: "ep019 m4 gates".into(),
     };
-    assert!(security.pass);
+    engine
+        .record_security_validation(&mut incident, &security)
+        .expect("security verdict");
+    assert_eq!(incident.state, IncidentState::SecurityValidation);
 
     // -----------------------------------------------------------------
     // 8. REVIEW: independent reviewer binds to the exact patch digest.
@@ -277,11 +292,12 @@ fn lf019_self_healing_fix_loop_full_chain() {
 
     // -----------------------------------------------------------------
     // 9. APPROVAL: human approval bound to the exact digest; a
-    //    different digest is NEVER authorized.
+    //    different digest is NEVER authorized. The ENGINE rejects the
+    //    mismatch (the caller never checks it).
     // -----------------------------------------------------------------
     let approval = RemediationApproval {
         approval_id: approval_id(),
-        incident_id: incident_id(),
+        incident_id: incident.incident_id.clone(),
         tenant_id: tenant(),
         correlation_id: correlation(),
         patch_digest: digest.clone(),
@@ -289,13 +305,28 @@ fn lf019_self_healing_fix_loop_full_chain() {
         approver: "human-owner".into(),
         granted_at_epoch_ms: 10,
     };
-    assert_eq!(approval.patch_digest, digest);
     use sha2::{Digest, Sha256};
     let other_digest = Sha256::digest(b"different patch")
         .iter()
         .map(|b| format!("{b:02x}"))
         .collect::<String>();
     assert_ne!(approval.patch_digest, other_digest);
+    // Hostile: a wrong-digest approval fails closed Policy, and the
+    // incident state does NOT advance.
+    let wrong = RemediationApproval {
+        patch_digest: other_digest.clone(),
+        ..approval.clone()
+    };
+    let mismatch = engine
+        .record_approval(&mut incident, &wrong)
+        .expect_err("wrong-digest approval must be rejected by the engine");
+    assert_eq!(mismatch.code, HealingErrorCode::Policy);
+    assert_eq!(incident.state, IncidentState::SecurityValidation);
+    // Correct digest passes and advances to APPROVAL.
+    engine
+        .record_approval(&mut incident, &approval)
+        .expect("approval");
+    assert_eq!(incident.state, IncidentState::Approval);
 
     // -----------------------------------------------------------------
     // 10. APPLY + REPRODUCE AFTER: the SAME reproduction passes.
@@ -304,7 +335,13 @@ fn lf019_self_healing_fix_loop_full_chain() {
     let (after_code, after_out, _) = run_worker(&worker, &marker);
     assert_eq!(after_code, 0, "same reproduction must pass after patch");
     assert!(after_out.contains("healthy"), "healthy output present");
-    diagnosis.confidence = DiagnosisConfidence::Validated;
+    engine
+        .update_diagnosis_confidence(
+            &mut diagnosis,
+            DiagnosisConfidence::Validated,
+            format!("after-patch reproduction:exit={after_code}"),
+        )
+        .expect("validated");
     assert!(diagnosis.confidence.is_authoritative());
 
     // Fail-closed preserved: a missing marker still crashes.
@@ -328,6 +365,9 @@ fn lf019_self_healing_fix_loop_full_chain() {
     };
     assert_eq!(canary.state, CanaryState::Healthy);
     assert!(canary.auto_rollback_on_regression);
+    engine
+        .transition(&mut incident, IncidentState::StagedDeployment)
+        .expect("staged deployment");
 
     // -----------------------------------------------------------------
     // 12. POST_DEPLOY_VERIFICATION: original reproduction re-run.
@@ -335,15 +375,20 @@ fn lf019_self_healing_fix_loop_full_chain() {
     let (verify_code, verify_out, _) = run_worker(&worker, &marker);
     assert_eq!(verify_code, 0);
     assert!(verify_out.contains("healthy"));
+    engine
+        .transition(&mut incident, IncidentState::PostDeployVerification)
+        .expect("post-deploy verification");
 
     // -----------------------------------------------------------------
     // 13. CLOSED: only real observed verification closes the incident.
     // -----------------------------------------------------------------
-    let mut final_state = IncidentState::PostDeployVerification;
-    assert!(!final_state.is_terminal());
-    final_state = IncidentState::Closed;
-    assert!(final_state.is_terminal());
-    assert!(final_state.is_healthy_terminal());
+    assert!(!incident.state.is_terminal());
+    engine
+        .record_post_deploy_verification(&mut incident, true)
+        .expect("verify closes incident");
+    assert_eq!(incident.state, IncidentState::Closed);
+    assert!(incident.state.is_terminal());
+    assert!(incident.state.is_healthy_terminal());
 
     // -----------------------------------------------------------------
     // 14. ROLLBACK PROOF: restore the previous artifact, the original
@@ -371,22 +416,13 @@ fn lf019_self_healing_fix_loop_full_chain() {
     assert!(rollback.health_verified);
 
     // -----------------------------------------------------------------
-    // 15. INCIDENT MEMORY: redacted record of the closed incident.
+    // 15. INCIDENT MEMORY: the engine's backing memory holds the
+    //     redacted terminal record of the closed incident.
     // -----------------------------------------------------------------
-    let closed = IncidentMemoryRecord {
-        incident_id: incident_id(),
-        tenant_id: tenant(),
-        dedup_key: dedup,
-        error_class: "PROCESS_CRASH".into(),
-        component: "worker-a".into(),
-        final_state: Some("CLOSED".into()),
-        skill_candidate_ref: None,
-    };
-    let mut memory2 = InMemoryIncidentMemory::new();
-    memory2.record(closed).expect("record closed incident");
-    let found = memory2.get(&incident_id());
-    assert!(found.is_some());
-    assert_eq!(found.unwrap().final_state.as_deref(), Some("CLOSED"));
+    let found = engine.memory().find_by_dedup_key(&incident.dedup_key);
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].final_state.as_deref(), Some("CLOSED"));
+    assert_eq!(found[0].incident_id, incident.incident_id);
 
     // Cleanup: no isolated copies / fixtures left behind.
     let _ = std::fs::remove_dir_all(&workdir);

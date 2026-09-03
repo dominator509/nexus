@@ -5,9 +5,10 @@
 # RUNS the REAL storage-s3 adapter suite against REAL digest-pinned
 # MinIO + SeaweedFS S3-gateway containers, the REAL LF-020
 # storage-backend-portability journey (local -> MinIO with
-# approval-before-source-delete), the REAL LF-002 restore-existing-nexus
-# journey (encrypted state -> fresh deployment -> five domains
-# reattach), with vacuity guards, anti-masking sentinels, current-run
+# approval-before-source-delete), the REAL LF-002 destroyed-host DR
+# journey (export self-contained bundle -> source root wiped -> fresh
+# target reconstructed from the bundle alone -> five domains reattach),
+# with vacuity guards, anti-masking sentinels, current-run
 # evidence freshness, redaction scans, M1-M4 regressions, expected-files
 # EP-037, clippy/fmt, and orphan/resource hygiene.
 #
@@ -225,11 +226,11 @@ if ! sh -c 'cargo test -p nexus-storage-livefire --locked --test lf020_storage_b
 fi
 ok "LF-020 storage-backend-portability journey green"
 
-# --- LF-002 restore-existing-nexus journey ---
+# --- LF-002 destroyed-host DR journey (AUD-053) ---
 if ! sh -c 'cargo test -p nexus-storage-livefire --locked --test lf002_restore_existing_nexus -- --nocapture >> "$1" 2>&1' _ "$log"; then
   fail "LF-002 journey failed" "$log"
 fi
-ok "LF-002 restore-existing-nexus journey green"
+ok "LF-002 destroyed-host DR journey green"
 
 # --- vacuity + anti-masking ---
 if ! grep -qE 'test result: ok\. [0-9]+ passed' "$log"; then

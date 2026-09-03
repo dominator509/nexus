@@ -1,0 +1,18 @@
+ok - release-evidence suite (159 tests: release tag truth, raw-byte artifact digests, nested manifest digest binding, nested evidence digest binding)
+ok - typecheck clean (release-evidence)
+ok - EP-043 m1 gate green
+ok - EP-043 m2 gate green
+ok - EP-043 m3 gate green
+ok - EP-043 m4 gate green
+ok - EP-043 M5 substantive surface green; closure step correctly NOT_READY on branch (AUD-076 truth)
+ok - readiness on branch honestly NOT_READY with 'no release tag' blocker (AUD-076 live)
+ok - workspace check clean
+ok - workspace clippy clean (-D warnings)
+ok - remediation register: VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+---
+RX-010 battery: 11 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-010: ok
+RX-010 verify: ok
+verify: ok
+VERIFY_EXIT=0

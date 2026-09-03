@@ -10,9 +10,21 @@
 
 use crate::error::{ComputeError, ComputeResult};
 use crate::model::{
-    ComputeNode, PlacementConstraint, PlacementDecision, ProvisioningRequestId, WorkloadManifestId,
+    CapacityProfile, ComputeNode, PlacementConstraint, PlacementDecision, ProvisioningRequestId,
+    WorkloadManifestId,
 };
 use crate::vocabulary::PlacementFailureClass;
+
+/// The capacity a placement decision may truthfully rank on: OBSERVED
+/// capacity when present, otherwise a CERTIFIED declaration. DECLARED-only
+/// capacity is never used for ranking (AUD-047: constraints already fail
+/// closed on it, so eligible nodes always carry observed or certified
+/// capacity).
+fn effective_capacity(node: &ComputeNode) -> &CapacityProfile {
+    node.observed_capacity
+        .as_ref()
+        .unwrap_or(&node.declared_capacity)
+}
 
 /// Result of evaluating a constraint against a set of nodes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,16 +72,18 @@ pub fn placement_decision(
     }
 
     // Deterministic choice: prefer the least-powerful eligible node
-    // (smallest cpu_cores, then memory) so the fabric does not waste
-    // capacity and does not escalate to GPU-class nodes unless required.
+    // (smallest observed cpu_cores, then memory) so the fabric does not
+    // waste capacity and does not escalate to GPU-class nodes unless
+    // required. Eligible nodes always have observed (or certified)
+    // capacity per AUD-047, so this ranks observed truth.
     eligible.sort_by(|a, b| {
         let ac = (
-            a.declared_capacity.cpu_cores,
-            a.declared_capacity.memory_gib,
+            effective_capacity(a).cpu_cores,
+            effective_capacity(a).memory_gib,
         );
         let bc = (
-            b.declared_capacity.cpu_cores,
-            b.declared_capacity.memory_gib,
+            effective_capacity(b).cpu_cores,
+            effective_capacity(b).memory_gib,
         );
         ac.cmp(&bc)
     });

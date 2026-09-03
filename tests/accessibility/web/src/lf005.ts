@@ -194,7 +194,16 @@ export function runLf005Journey(run: string): Lf005Evidence {
   // 4. FINAL ARTIFACT IN THE SAME TASK GRAPH: dispatch the continuation
   //    command through the real dispatcher (R3 approved by FOUR_EYES),
   //    producing the final artifact task node in the same graph.
-  const vocabulary = new KnownCapabilityVocabulary(["objectives.continue"]);
+  const vocabulary = new KnownCapabilityVocabulary(
+    ["objectives.continue"],
+    [
+      {
+        capability_id: "objectives.continue",
+        risk: "R3",
+        approval: "FOUR_EYES",
+      },
+    ],
+  );
   const dispatcher = new DesktopCommandDispatcher(vocabulary);
   let executed = false;
   const request = TypedCommandRequest.fromWire(

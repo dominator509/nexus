@@ -1,0 +1,5 @@
+.agent/remediation/evidence/RX-002/verify.log
+.agent/remediation/evidence/RX-002/tests.tsv
+.agent/remediation/evidence/RX-002/proofs.tsv
+.agent/expected-files/RX-002.txt
+.agent/remediation/AUDIT_FINDINGS.tsv

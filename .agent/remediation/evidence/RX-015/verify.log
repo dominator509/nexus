@@ -1,0 +1,22 @@
+ok - nexus-sentinel (AUD-025 approval receipt) (28 passed)
+ok - nexus-sentinel-advanced (AUD-025 approval-binds) (20 passed)
+ok - nexus-opnsense-connector (AUD-026 observed source) (24 passed)
+ok - nexus-openwrt (AUD-029 owner notification) (22 passed)
+ok - nexus-adguard-connector (AUD-027 filtering status) (23 passed)
+ok - nexus-opnsense-connector inventory (AUD-028 ARP) (24 passed)
+ok - nexus-suricata-connector (AUD-030 EVE JSON) (10 passed)
+ok - nexus-sentinel-advanced (AUD-031 preauthorize) (20 passed)
+ok - nexus-sentinel-advanced (AUD-032 confidence) (20 passed)
+ok - nexus-sentinel-advanced (AUD-033 verifier) (20 passed)
+ok - nexus-zeek-connector (AUD-034 minute truth) (8 passed)
+ok - nexus-osquery-connector (AUD-035/036/037) (31 passed)
+ok - LF-009 quarantine journey (AUD-025..037, 6 passed)
+ok - LF-010 network diagnosis (AUD-027/028, 2 passed)
+ok - clippy -D warnings
+ok - fmt --check
+ok - workspace check
+
+RX-015 battery: 17 ok, 0 fail
+expected files RX-015: ok
+RX-015 verify: ok
+verify: ok

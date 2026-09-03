@@ -1,0 +1,41 @@
+# RX-016 expected files: desktop/mobile client truth (AUD-038 actual React
+#  PWA entry; AUD-039 desktop high-risk authorization resolves approval class
+#  from the registered capability profile, never the wire; AUD-040 real native
+#  mobile security channel Android/iOS; AUD-041 step-up enforcement +
+#  identity/tenant binding VERIFIED_FIXED)
+.agent/expected-files/RX-016.txt
+.agent/milestone-files/RX-016-M1.txt
+.agent/milestone-files/RX-016-M2.txt
+.agent/milestone-files/RX-016-M3.txt
+.agent/milestone-files/RX-016-M4.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/evidence/RX-016/
+.agent/state/evidence/LF-005-ep033-m5-lf005.json
+.agent/state/evidence/LF-005-ep033-m5.json
+apps/desktop/src/__tests__/ep033_unit_desktop_dispatcher.test.ts
+apps/desktop/src/dispatcher.ts
+apps/mobile/android/app/build.gradle.kts
+apps/mobile/android/app/src/main/kotlin/com/nexus/nexus_mobile/MainActivity.kt
+apps/mobile/ios/Runner/AppDelegate.swift
+apps/mobile/lib/nexus_mobile.dart
+apps/mobile/lib/src/native/security_channel.dart
+apps/mobile/test/ep034_native_security_channel_test.dart
+apps/web/index.html
+apps/web/package.json
+apps/web/public/manifest.webmanifest
+apps/web/src/__tests__/ep033_aud038_pwa_entry.test.tsx
+apps/web/src/contracts/capability.ts
+apps/web/src/main.tsx
+apps/web/tsconfig.build.json
+apps/web/tsconfig.json
+apps/web/vite.config.ts
+packages/mobile-contracts/test/ep034_unit_approval_binding_test.dart
+scripts/ep034-m5-tests.sh
+scripts/nodes/RX-016.sh
+scripts/rx016-remediation-tests.sh
+tests/accessibility/web/src/lf005.ts
+tests/e2e/mobile/test/ep034_integration_transport_test.dart
+tests/e2e/web/src/__tests__/ep033_failure_denied_policy.test.ts
+tests/e2e/web/src/__tests__/ep033_failure_malformed_input.test.ts
+tests/e2e/web/src/__tests__/ep033_failure_state_authority.test.ts
+tests/livefire/mobile/test/ep034_lf004_multi_user_test.dart

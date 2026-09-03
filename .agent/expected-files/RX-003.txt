@@ -1,0 +1,14 @@
+.agent/expected-files/RX-003.txt
+.agent/milestone-files/RX-003-M1.txt
+.agent/milestone-files/RX-003-M2.txt
+.agent/milestone-files/RX-003-M3.txt
+.agent/milestone-files/RX-003-M4.txt
+.agent/milestone-files/RX-003-M5.txt
+.github/workflows/ci.yml
+.github/workflows/nightly.yml
+.github/workflows/release.yml
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/DECISIONS.md
+.agent/remediation/evidence/
+scripts/rx003-ci-authority-tests.sh
+scripts/nodes/RX-003.sh

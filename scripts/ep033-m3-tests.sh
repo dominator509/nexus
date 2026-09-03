@@ -22,7 +22,7 @@ fail() {
 }
 ok() { echo "EP-033 M3 gate: $1"; }
 
-PNPM="${PNPM_BIN:-/root/.local/share/mise/installs/pnpm/11.17.0/pnpm}"
+PNPM="${PNPM_BIN:-pnpm}"
 
 # Vacuity guard 0: the ui package must exist.
 if [ ! -f packages/ui/package.json ]; then

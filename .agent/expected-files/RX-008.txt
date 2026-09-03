@@ -1,0 +1,23 @@
+# RX-008 expected files: remediation surface for AUD-083 + AUD-084
+# (runtime telemetry bootstrap; canonical control-plane composition
+#  root with the SPEC-003 application surfaces)
+.agent/expected-files/RX-008.txt
+.agent/milestone-files/RX-008-M1.txt
+.agent/milestone-files/RX-008-M2.txt
+.agent/milestone-files/RX-008-M3.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/DECISIONS.md
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+Cargo.lock
+apps/control-plane/Cargo.toml
+apps/control-plane/src/composition.rs
+apps/control-plane/src/lib.rs
+apps/control-plane/src/main.rs
+apps/control-plane/src/server.rs
+apps/control-plane/src/telemetry.rs
+apps/control-plane/tests/ep044_bounds.rs
+apps/control-plane/tests/ep044_integration_http.rs
+crates/nexus-a2a/src/gateway.rs
+scripts/nodes/RX-008.sh
+scripts/rx008-remediation-tests.sh

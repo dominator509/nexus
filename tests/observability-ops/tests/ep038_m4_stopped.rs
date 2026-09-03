@@ -38,6 +38,7 @@ fn ep038_failure_stopped_provider_unavailable_and_budget_exhausted() {
         glitchtip_dsn: Some(dsn),
         slos: vec![],
         metrics: ops_metric_definitions(),
+        state_dir: None,
     })
     .expect("runtime builds");
 

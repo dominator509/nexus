@@ -24,9 +24,13 @@
 #![forbid(unsafe_code)]
 
 pub mod adapter;
+pub mod inventory;
 pub mod observability;
 pub mod transport;
 
 pub use adapter::OpnsenseFirewallProvider;
+pub use inventory::OpnsenseNetworkInventory;
 pub use observability::{SentinelAuditEntry, SentinelObservability};
-pub use transport::{HttpOpnsenseTransport, OpnsenseRule, OpnsenseRulePayload, OpnsenseTransport};
+pub use transport::{
+    HttpOpnsenseTransport, OpnsenseArpEntry, OpnsenseRule, OpnsenseRulePayload, OpnsenseTransport,
+};

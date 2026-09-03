@@ -1,0 +1,35 @@
+# RX-009 expected files: remediation surface for AUD-059 + AUD-060 + AUD-065
+# (cryptographic evidence sealing; multi-ecosystem shipped-product SBOM;
+#  cryptographic release-bundle signature verification)
+.agent/expected-files/RX-009.txt
+.agent/milestone-files/RX-009-M1.txt
+.agent/milestone-files/RX-009-M2.txt
+.agent/milestone-files/RX-009-M3.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+Cargo.lock
+crates/nexus-supply-chain/Cargo.toml
+crates/nexus-supply-chain/examples/evidence_sign.rs
+crates/nexus-supply-chain/src/lib.rs
+crates/nexus-supply-chain/src/signer.rs
+policies/licenses/examples/sbom_ecosystems.rs
+scripts/ep039-m1-tests.sh
+scripts/ep039-m4-tests.sh
+scripts/ep039-m5-tests.sh
+scripts/ep042-m5-tests.sh
+scripts/nodes/RX-009.sh
+scripts/rx009-remediation-tests.sh
+scripts/sbom/forced-failures.sh
+scripts/sbom/generate.sh
+scripts/sbom/verify.sh
+offline-bundle/scripts/bundle-produce.sh
+offline-bundle/src/errors.ts
+offline-bundle/src/verify.ts
+tests/release/src/bundle/ep042_bundle_offline.test.ts
+# Workspace clippy hygiene required by EP-042 M5 security-check (new lints
+# surfaced by the pinned 1.97.1 toolchain after RX-007/RX-008 closed; the
+# gate runs `cargo clippy --workspace -- -D warnings` and fails without these)
+crates/nexus-skills/src/executor.rs
+crates/nexus-skills/tests/rx007_remediation.rs
+apps/control-plane/src/composition.rs

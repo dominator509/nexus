@@ -14,6 +14,7 @@
 
 pub mod canary;
 pub mod contract;
+pub mod engine;
 pub mod error;
 pub mod memory;
 pub mod rollback;
@@ -24,6 +25,7 @@ pub use contract::{
     DiagnosisTask, Incident, IncidentEngine, IncidentSignal, IncidentSignalKind, PatchProposal,
     RemediationApproval, ReviewDecision, ReviewVerdict, SandboxVerdict, SecurityVerdict,
 };
+pub use engine::StandardIncidentEngine;
 pub use error::{HealingError, HealingErrorCode};
 pub use memory::{InMemoryIncidentMemory, IncidentMemory, IncidentMemoryRecord};
 pub use rollback::{RollbackPlan, RollbackState};

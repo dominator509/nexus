@@ -69,7 +69,9 @@ fn ep031_unit_alerts_correlate_into_incidents_not_floods() {
 fn ep031_unit_high_confidence_bounded_quarantine_can_be_preauthorized() {
     // Acceptance obligation 3: high-confidence bounded quarantine can
     // be preauthorized. Quarantine/Block/IsolateEndpoint are bounded
-    // reversible containment and may be preauthorized.
+    // reversible containment and may be preauthorized - but ONLY when
+    // high incident confidence AND a provider-specific reversibility
+    // proof are bound (AUD-031).
     let plan = ResponsePlan::new(
         ResponsePlanId::new("plan-1").unwrap(),
         incident_id(),
@@ -78,9 +80,65 @@ fn ep031_unit_high_confidence_bounded_quarantine_can_be_preauthorized() {
         ApprovalClass::Human,
         "2026-08-20T00:00:00Z",
     );
+    // Fail closed by default: the kind alone never mints
+    // preauthorization.
+    assert!(!plan.preauthorized);
+    let plan = plan
+        .preauthorize(
+            CorrelationConfidence::High,
+            "opnsense:proposal:p-1:reversible",
+        )
+        .expect("high-confidence bounded containment with provider proof may be preauthorized");
     assert!(plan.preauthorized);
+    assert_eq!(
+        plan.reversibility_proof.as_deref(),
+        Some("opnsense:proposal:p-1:reversible")
+    );
     assert!(ResponseKind::Block.is_bounded_containment());
     assert!(ResponseKind::IsolateEndpoint.is_bounded_containment());
+}
+
+#[test]
+fn ep031_unit_preauthorization_fails_closed_without_confidence_or_proof() {
+    // AUD-031: preauthorization requires BOTH high confidence AND a
+    // provider-specific reversibility proof. Missing either fails
+    // closed - no threat score may mint authorization.
+    let base = ResponsePlan::new(
+        ResponsePlanId::new("plan-2").unwrap(),
+        incident_id(),
+        tenant(),
+        ResponseKind::Quarantine,
+        ApprovalClass::Human,
+        "2026-08-20T00:00:00Z",
+    );
+    // Medium confidence even with a proof: denied.
+    assert!(base
+        .clone()
+        .preauthorize(
+            CorrelationConfidence::Medium,
+            "opnsense:proposal:p-1:reversible"
+        )
+        .is_err());
+    // High confidence but empty proof: denied.
+    assert!(base
+        .clone()
+        .preauthorize(CorrelationConfidence::High, "")
+        .is_err());
+    // High confidence with proof on a NON-bounded kind: denied.
+    let destructive = ResponsePlan::new(
+        ResponsePlanId::new("plan-3").unwrap(),
+        incident_id(),
+        tenant(),
+        ResponseKind::Wipe,
+        ApprovalClass::StrongHuman,
+        "2026-08-20T00:00:00Z",
+    );
+    assert!(destructive
+        .preauthorize(
+            CorrelationConfidence::High,
+            "opnsense:proposal:p-1:reversible"
+        )
+        .is_err());
 }
 
 #[test]

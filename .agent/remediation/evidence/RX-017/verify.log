@@ -1,0 +1,117 @@
+ok - ep035-m1-tests.sh (AUD-042 setup product)
+ok - ep035-m2-tests.sh (AUD-042 setup product)
+ok - ep035-m3-tests.sh (AUD-042 setup product)
+ok - ep035-m4-tests.sh (AUD-042 setup product)
+ok - ep035-m5-tests.sh (AUD-042 setup product)
+ok - onboarding enrollment integration (AUD-043)
+ok - onboarding owner-bootstrap integration (AUD-044)
+ok - onboarding recovery integration (AUD-045)
+ok - setup recovery contract (AUD-045)
+
+running 6 tests
+test tests::ep036_unit_existing_ssh_binding_rejects_bad_host ... ok
+test provider::tests::ep036_unit_generic_ssh_provider_rejects_non_generic_request ... ok
+test provider::tests::ep036_unit_generic_ssh_provider_receipt_never_overclaims ... ok
+test tests::ep036_unit_existing_ssh_binding_maps_to_generic_ssh ... ok
+test tests::ep036_unit_existing_ssh_binding_validates ... ok
+test provider::tests::ep036_unit_generic_ssh_provider_unreachable_target_fails_closed ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 2 tests
+test ep036_integration_existing_ssh_reaches_ephemeral_sshd ... ok
+test ep036_integration_generic_ssh_provider_operates_over_real_transport ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.85s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+ok - existing-ssh real transport (AUD-046)
+
+running 11 tests
+test model::tests::ep036_unit_capacity_declared_never_observed ... ok
+test model::tests::ep036_unit_ambiguous_outcome_requires_reconciliation ... ok
+test model::tests::ep036_unit_credential_ref_redacts_display ... ok
+test model::tests::ep036_unit_delete_ladder_requires_readback ... ok
+test model::tests::ep036_unit_credential_ref_rejects_secret_shape ... ok
+test model::tests::ep036_unit_placement_crosses_tenant_fails_closed ... ok
+test model::tests::ep036_unit_provisioning_receipt_never_overclaims ... ok
+test model::tests::ep036_unit_workload_state_ladder_blocks_leaps ... ok
+test model::tests::ep036_unit_placement_gpu_constraint_fails_closed ... ok
+test model::tests::ep036_unit_resource_state_ladder_blocks_leaps ... ok
+test model::tests::ep036_unit_placement_satisfies_constraints ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test ep036_unit_dependency_direction_allowed_dependencies_only ... ok
+test ep036_unit_dependency_direction_tree_depth_one ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+
+running 39 tests
+test ep036_unit_billing_estimate_never_settled ... ok
+test ep036_unit_capacity_provenance_distinct ... ok
+test ep036_unit_bootstrap_bundle_is_reference_only ... ok
+test ep036_unit_credential_ref_redacts_display_and_serialization ... ok
+test ep036_unit_idempotency_key_required ... ok
+test ep036_unit_placement_constraint_requires_classes ... ok
+test ep036_unit_credential_ref_is_opaque_reference ... ok
+test ep036_unit_placement_cost_ceiling_exceeded_fails_closed ... ok
+test ep036_unit_capacity_zero_rejected ... ok
+test ep036_unit_placement_decision_rejected_has_no_node ... ok
+test ep036_unit_fleet_enrollment_ladder ... ok
+test ep036_unit_manifest_requires_constraint ... ok
+test ep036_unit_placement_cost_ceiling_satisfied_selects ... ok
+test ep036_unit_placement_declared_only_capacity_fails_closed ... ok
+test ep036_unit_placement_fails_closed_when_no_eligible_target ... ok
+test ep036_unit_placement_never_crosses_privacy_boundary ... ok
+test ep036_unit_placement_never_crosses_tenant_boundary ... ok
+test ep036_unit_placement_gpu_requirement_fails_closed ... ok
+test ep036_unit_placement_selects_eligible_node ... ok
+test ep036_unit_placement_unknown_api_health_fails_closed ... ok
+test ep036_unit_placement_unknown_cost_fails_closed ... ok
+test ep036_unit_placement_ranks_observed_not_declared ... ok
+test ep036_unit_placement_unknown_resource_health_fails_closed ... ok
+test ep036_unit_plan_ambiguous_outcome_requires_reconciliation ... ok
+test ep036_unit_placement_region_constraint_enforced ... ok
+test ep036_unit_plan_delete_requires_readback ... ok
+test ep036_unit_plan_mark_verified_requires_ready ... ok
+test ep036_unit_provider_api_health_distinct_from_resource_health ... ok
+test ep036_unit_provider_binding_requires_account_region ... ok
+test ep036_unit_quota_is_semantics_not_fabricated_default ... ok
+test ep036_unit_receipt_never_overclaims_readiness ... ok
+test ep036_unit_receipt_requires_request_identity ... ok
+test ep036_unit_resource_state_ladder_full ... ok
+test ep036_unit_provider_kind_canonical_set ... ok
+test ep036_unit_vocabulary_rejects_unknown_compute_class ... ok
+test ep036_unit_vocabulary_rejects_unknown_state ... ok
+test ep036_unit_workload_assignment_is_not_runtime_truth ... ok
+test ep036_unit_vocabulary_rejects_unknown_provider ... ok
+test ep036_unit_workload_state_ladder_full ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+ok - nexus-compute placement (AUD-047/048)
+ok - ep036-m1-tests.sh (EP-036 provisioning gates)
+ok - ep036-m2-tests.sh (EP-036 provisioning gates)
+ok - ep036-m3-tests.sh (EP-036 provisioning gates)
+ok - ep036-m4-tests.sh (EP-036 provisioning gates)
+ok - ep036-m5-tests.sh (EP-036 provisioning gates)
+
+RX-017 battery: 16 ok, 0 fail
+expected files RX-017: ok
+RX-017 verify: ok
+verify: ok
+EXIT=0

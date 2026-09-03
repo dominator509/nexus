@@ -106,6 +106,10 @@ impl HealingError {
         Self::new(HealingErrorCode::Verification, message, None, None)
     }
 
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self::new(HealingErrorCode::Internal, message, None, None)
+    }
+
     pub fn vocabulary(enum_name: &str, value: &str) -> Self {
         Self::new(
             HealingErrorCode::Vocabulary,

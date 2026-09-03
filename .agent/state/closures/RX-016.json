@@ -1,0 +1,138 @@
+{
+  "attestation_digest": "sha256:cb44e197302ba6907a1f4042b59d5de40f8831e941dd3115f45463e18a7cd666",
+  "closure_commit": "7ce55004ea9e51f4ebfb6867ad6911bc0aab0463",
+  "created_at": "2026-09-02T21:06:59Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:57ddc4f1a089d42cd2a049c08b2abf50e60f83bae5a84fcfdfa24384fa16af7f",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-016/7ce55004ea9e51f4ebfb6867ad6911bc0aab0463",
+  "milestones": {
+    "max": 4,
+    "passed": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "node": "RX-016",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:c7bf0522fa63e3ca64d066e0be7aa2a1a4cda71c971ac55846d609f413cefc14",
+      "id": "registered-profile-gate",
+      "ref": "apps/web/src/contracts/capability.ts"
+    },
+    {
+      "digest": "sha256:d19d47af54ffe8eb17264391c587f099f1c7a839849ecb5f3402106de303b81d",
+      "id": "dispatcher-registered-gate",
+      "ref": "apps/desktop/src/dispatcher.ts"
+    },
+    {
+      "digest": "sha256:f3cfb85bbf7e1d578f32a5c305b35b3caf1c919782883ba65da7d042981e6714",
+      "id": "mobile-stepup-binding",
+      "ref": "packages/mobile-contracts/test/ep034_unit_approval_binding_test.dart"
+    },
+    {
+      "digest": "sha256:2bd07033fc59a160dd07ad62102d3036d6afb65387a791d9c658308515355358",
+      "id": "native-security-channel",
+      "ref": "apps/mobile/lib/src/native/security_channel.dart"
+    },
+    {
+      "digest": "sha256:a52d31e0b097371bd36fde650b3a3480b06ab6d61276c6c222ff7f90ec0229a4",
+      "id": "native-android",
+      "ref": "apps/mobile/android/app/src/main/kotlin/com/nexus/nexus_mobile/MainActivity.kt"
+    },
+    {
+      "digest": "sha256:7659b1c85eecf8528f7b2475ddcbc87dd35f4148576da4b0e9828657d30fdf93",
+      "id": "native-ios",
+      "ref": "apps/mobile/ios/Runner/AppDelegate.swift"
+    },
+    {
+      "digest": "sha256:a2827fcfbe64ad2b93e780b75aa7ff81cd3ab27bcf15b25453b608987b7e9d3b",
+      "id": "native-channel-hostile",
+      "ref": "apps/mobile/test/ep034_native_security_channel_test.dart"
+    },
+    {
+      "digest": "sha256:53cb364bda4da5367509237c91b69a957bc817a014a9dfaea57e1e6c7cf360a0",
+      "id": "pwa-entry",
+      "ref": "apps/web/src/main.tsx"
+    },
+    {
+      "digest": "sha256:96390dc8c20e72b6551f36d8e6447d2a3acf21d9878a5ca1200e5a4b0e8781cb",
+      "id": "pwa-build",
+      "ref": "apps/web/vite.config.ts"
+    },
+    {
+      "digest": "sha256:85d550ca5ebe81e11c34e6b20425f1ae7e2e19307d058c77eb3804c9eaa70d43",
+      "id": "pwa-hostile",
+      "ref": "apps/web/src/__tests__/ep033_aud038_pwa_entry.test.tsx"
+    },
+    {
+      "digest": "sha256:b93eae1e4fbe0b2508a45972ea0fddb0e75173fea8fcf7ba136ab2cc59e82549",
+      "id": "lf004-fixture-truth",
+      "ref": "tests/livefire/mobile/test/ep034_lf004_multi_user_test.dart"
+    },
+    {
+      "digest": "sha256:3243c9dff310981f19ca19f6c38f9743a6111b59363eb8050e5c2bfdd8cdc527",
+      "id": "node-verify",
+      "ref": "scripts/nodes/RX-016.sh"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:57ddc4f1a089d42cd2a049c08b2abf50e60f83bae5a84fcfdfa24384fa16af7f",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "desktop-dispatcher-aud039",
+        "passed": 45
+      },
+      {
+        "failed": 0,
+        "family": "web-contracts-pwa-aud038-aud039",
+        "passed": 148
+      },
+      {
+        "failed": 0,
+        "family": "web-e2e-aud039",
+        "passed": 26
+      },
+      {
+        "failed": 0,
+        "family": "ep034-m1-mobile-contracts",
+        "passed": 54
+      },
+      {
+        "failed": 0,
+        "family": "ep034-m2-approval-binding-aud041",
+        "passed": 23
+      },
+      {
+        "failed": 0,
+        "family": "ep034-m3-e2e-transport",
+        "passed": 12
+      },
+      {
+        "failed": 0,
+        "family": "ep034-m4-failure",
+        "passed": 9
+      },
+      {
+        "failed": 0,
+        "family": "ep034-m5-livefire-lf004-lf022",
+        "passed": 11
+      },
+      {
+        "failed": 0,
+        "family": "ep033-m5-a11y-lf005",
+        "passed": 13
+      }
+    ],
+    "passed": 341
+  },
+  "verify_log": ".agent/remediation/evidence/RX-016/verify.log|sha256:cf9c1394b7e40d53b612475a8e7f9b7a9d792dde85458f5e6372be38f268b119",
+  "verify_sentinel": "verify: ok"
+}

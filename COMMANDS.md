@@ -63,7 +63,8 @@ export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 | Restore drill | `sh scripts/restore-drill.sh` | `restore drill: ok` |
 | Rollback drill | `sh scripts/rollback-drill.sh` | `rollback drill: ok` |
 | Release build | `sh scripts/release-build.sh` | `release build: ok` |
-| Deployment dry run | `sh scripts/deploy.sh --dry-run` | `deploy dry run: ok` |
+| Deployment dry run | `sh scripts/deploy.sh --dry-run <manifest> <artifacts>` | `deploy dry run: ok` |
+| Deployment (verified) | `sh scripts/deploy.sh --deploy <manifest> <artifacts> <install-root> <release-id> <install-id> <components>` | `deploy: completed` |
 
 ## Targeted diagnostics
 

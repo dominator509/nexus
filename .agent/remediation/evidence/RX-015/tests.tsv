@@ -1,0 +1,13 @@
+nexus-sentinel-aud025	28	0
+nexus-sentinel-advanced-aud025-aud031-aud032-aud033	80	0
+nexus-opnsense-connector-aud026-aud028	48	0
+nexus-openwrt-aud029	22	0
+nexus-adguard-connector-aud027	23	0
+nexus-suricata-connector-aud030	10	0
+nexus-zeek-connector-aud034	8	0
+nexus-osquery-connector-aud035-aud036-aud037	31	0
+lf009-quarantine-journey	6	0
+lf010-network-diagnosis	2	0
+clippy	1	0
+fmt	1	0
+workspace-check	1	0

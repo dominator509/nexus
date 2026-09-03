@@ -70,7 +70,7 @@ Rate limits, cost limits, message and call quotas, social publish approval, conn
 
 ## Security checks
 
-`scripts/security-check.sh` runs secret scanning, dependency vulnerability scans, static analysis, policy tests, IaC and container scans, image signature checks where artifacts exist, forbidden-route scans, tenant isolation tests, and license gate. A critical exploitable finding blocks release.
+`scripts/security-check.sh` runs secret scanning (tracked .env and secret-pattern scan over tracked files), dependency vulnerability scans (cargo audit, pnpm audit, python security audit), static analysis (cargo clippy -D warnings), policy/authorization tests (the real nexus-security-core failure battery: secrets, deny-by-default policy, authz, redaction, container termination), and the license and reality gates. A critical exploitable finding blocks release. IaC/container image scans, image signature verification, forbidden-route scans, and tenant-isolation integration tests are NOT part of this script's asserted surface; those capabilities are certified by their owning gates when they exist (see release trust chain, RX-009/RX-010).
 
 ## Security stop conditions
 

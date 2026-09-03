@@ -23,6 +23,7 @@ import {
   readFileSync,
   renameSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -31,7 +32,11 @@ import {
   collectReadinessInputs,
   defaultRepoPaths,
 } from "./repo-state.ts";
-import { evaluateReadiness, validateReadinessInputs } from "./readiness.ts";
+import {
+  evaluateReadiness,
+  validateReadinessInputs,
+  liveFireProofsToGateProofs,
+} from "./readiness.ts";
 import { renderProductionReadinessReport } from "./report.ts";
 import {
   buildReleaseManifest,
@@ -41,6 +46,12 @@ import {
   type ManifestComponentInput,
   type ReleaseManifestWire,
 } from "./manifest.ts";
+import {
+  createManualDeployHandoff,
+  createProductionReadinessDecision,
+  createReleaseEvidence,
+  createShipGate,
+} from "./model.ts";
 import { redactShipMessage, ShipError } from "./errors.ts";
 
 const [command, ...args] = process.argv.slice(2);
@@ -128,12 +139,47 @@ function rejectFileTarget(target: string): void {
  * Write a file atomically (temp file + rename) so cancelled or failed
  * work never leaves a partial target file (M4 partial-side-effect
  * guarantee). The temp path is owned by this process and removed by
- * the rename; a kill mid-write can only strand a .tmp-<pid> file.
+ * the rename; a kill mid-write strands a .tmp-<pid> file, so the path
+ * is tracked and unlinked by the SIGTERM/SIGINT cleanup handler below.
  */
+let pendingTmp: string | null = null;
+
 function writeAtomic(target: string, content: string): void {
   const tmp = `${target}.tmp-${process.pid}`;
-  writeFileSync(tmp, content, "utf8");
-  renameSync(tmp, target);
+  pendingTmp = tmp;
+  try {
+    writeFileSync(tmp, content, "utf8");
+    renameSync(tmp, target);
+  } finally {
+    pendingTmp = null;
+  }
+}
+
+/**
+ * Install SIGTERM/SIGINT cleanup so cancelled work never strands the
+ * atomic-write temp file (M4 no-partial-output guarantee, EP-043
+ * ep043_failure_cancelled_work_no_partial_output). With a handler
+ * installed, the process is not killed mid-syscall by the default
+ * signal behavior: a signal that arrives during the synchronous
+ * write+rename pair is delivered after the pair completes (target
+ * complete, no residue), and one that arrives before or between
+ * operations unlinks any tracked temp path. Either way no .tmp-*
+ * residue remains. The conventional exit codes are preserved (143 for
+ * SIGTERM, 130 for SIGINT).
+ */
+function installSignalCleanup(): void {
+  const cleanup = (code: number): void => {
+    if (pendingTmp !== null) {
+      try {
+        unlinkSync(pendingTmp);
+      } catch {
+        // Best effort: the temp file may already be renamed or absent.
+      }
+    }
+    process.exit(code);
+  };
+  process.on("SIGTERM", () => cleanup(143));
+  process.on("SIGINT", () => cleanup(130));
 }
 
 function runId(prefix: string): string {
@@ -166,11 +212,50 @@ async function commandReadiness(): Promise<void> {
   const inputs = collectReadinessInputs(paths);
   validateReadinessInputs(inputs);
   const evaluation = evaluateReadiness(inputs);
+  // AUD-087: the production readiness decision must be bound through the
+  // authoritative M1 decision constructor (gate verdict, fresh-clone
+  // rerun, every drill DATED_EVIDENCE, exact manual command), not only
+  // derived from the six acceptance obligations.
+  const runIdValue = runId("ep043-readiness");
+  const gitCommitValue = gitCommit();
+  const gate = createShipGate({
+    gateId: "ep043-ship-gate",
+    releaseKind: "CORE_RELEASE",
+    phase: "SHIP_DECISION",
+    requiredProofs: liveFireProofsToGateProofs(inputs.liveFireProofs),
+    freshCloneRerun: inputs.freshCloneRerun,
+  });
+  const evidence = createReleaseEvidence({
+    node: "EP-043",
+    runId: runIdValue,
+    gitCommit: gitCommitValue,
+    releaseId: "nexus-1.0.0-rc1",
+    certifications: [
+      ...inputs.certifications.providerRows,
+      ...inputs.certifications.hardwareRows,
+    ],
+    drills: inputs.drills,
+    reviews: inputs.reviews,
+  });
+  const handoff = createManualDeployHandoff({
+    handoffId: "ep043-deploy-handoff",
+    releaseId: "nexus-1.0.0-rc1",
+    profile: "core",
+    exactCommand: inputs.manualDeployCommand,
+  });
+  const decision = createProductionReadinessDecision({
+    decisionId: "ep043-production-readiness",
+    releaseId: "nexus-1.0.0-rc1",
+    gate,
+    evidence,
+    handoff,
+  });
   const report = renderProductionReadinessReport(evaluation, {
     node: "EP-043",
-    runId: runId("ep043-readiness"),
-    gitCommit: gitCommit(),
+    runId: runIdValue,
+    gitCommit: gitCommitValue,
     generatedAt: new Date().toISOString(),
+    decision: decision.decision,
   });
   const safe = redactShipMessage(report);
   const target = resolve(root, output);
@@ -178,10 +263,91 @@ async function commandReadiness(): Promise<void> {
   writeAtomic(target, safe);
   // eslint-disable-next-line no-console
   console.log(
-    `readiness: ${evaluation.decision} (${evaluation.blockingReasons.length} blocking reasons)`,
+    `readiness: ${decision.decision} (${evaluation.blockingReasons.length} blocking reasons)`,
   );
   // eslint-disable-next-line no-console
   console.log(`wrote ${output} (${safe.length} bytes)`);
+}
+
+/**
+ * AUD-082: real release artifacts. The manifest MUST be built from the
+ * REAL product artifacts that ship - the actual model code, provider
+ * config, router policy, and container definition committed in the
+ * repository - never from fixture strings. Each entry resolves to a
+ * committed, clone-portable path so a fresh checkout can rebuild and
+ * reverify the exact same manifest.
+ */
+const REAL_RELEASE_ARTIFACTS: ReadonlyArray<{
+  componentId: string;
+  name: string;
+  version: string;
+  /** Repository-relative artifact path (committed, clone-portable). */
+  relPath: string;
+}> = [
+  {
+    componentId: "nexus-wake-model",
+    name: "nexus-wake-model",
+    version: "1.0.0",
+    relPath: "models/wake/nexus_wake/decision.py",
+  },
+  {
+    componentId: "nexus-wake-manifest",
+    name: "nexus-wake-manifest",
+    version: "1.0.0",
+    relPath: "models/wake/nexus_wake/manifest.py",
+  },
+  {
+    componentId: "nexus-providers-config",
+    name: "nexus-providers-config",
+    version: "1.0.0",
+    relPath: "config/models/providers/providers.json",
+  },
+  {
+    componentId: "nexus-router-policy",
+    name: "nexus-router-policy",
+    version: "1.0.0",
+    relPath: "config/models/router/policy.json",
+  },
+  {
+    componentId: "nexus-container-seaweedfs",
+    name: "nexus-container-seaweedfs",
+    version: "1.0.0",
+    relPath: "infra/release/containers/seaweedfs.yaml",
+  },
+];
+
+function readRealArtifact(
+  root: string,
+  relPath: string,
+  componentId: string,
+): Uint8Array {
+  const fullPath = join(root, relPath);
+  try {
+    const bytes = readFileSync(fullPath);
+    return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  } catch {
+    throw new ShipError(
+      "NOT_FOUND",
+      `real release artifact missing for ${componentId}: ${relPath}`,
+    );
+  }
+}
+
+function realArtifactInputs(
+  root: string,
+  releaseId: string,
+): ManifestComponentInput[] {
+  return REAL_RELEASE_ARTIFACTS.map((artifact) => ({
+    componentId: artifact.componentId,
+    name: artifact.name,
+    version: artifact.version,
+    artifactBytes: readRealArtifact(
+      root,
+      artifact.relPath,
+      artifact.componentId,
+    ),
+    artifactKey: `releases/${releaseId}/components/${artifact.componentId}`,
+  }));
 }
 
 async function commandManifest(): Promise<void> {
@@ -193,44 +359,9 @@ async function commandManifest(): Promise<void> {
   rejectFileTarget(outPath);
   mkdirSync(outPath, { recursive: true });
 
-  const componentInputs: ManifestComponentInput[] = [
-    {
-      componentId: "nexus-core",
-      name: "nexus-core",
-      version: "1.0.0",
-      artifactBytes: new Uint8Array(
-        readFileSync(
-          join(
-            root,
-            "infra",
-            "release",
-            "fixtures",
-            "components",
-            "nexus-core",
-          ),
-        ),
-      ),
-      artifactKey: `releases/${releaseId}/components/nexus-core`,
-    },
-    {
-      componentId: "nexus-model",
-      name: "nexus-model",
-      version: "1.0.0",
-      artifactBytes: new Uint8Array(
-        readFileSync(
-          join(
-            root,
-            "infra",
-            "release",
-            "fixtures",
-            "components",
-            "nexus-model",
-          ),
-        ),
-      ),
-      artifactKey: `releases/${releaseId}/components/nexus-model`,
-    },
-  ];
+  // AUD-082: bind the manifest to the REAL committed product artifacts,
+  // never fixture strings.
+  const componentInputs = realArtifactInputs(root, releaseId);
 
   const manifest = buildReleaseManifest({
     releaseId,
@@ -251,7 +382,7 @@ async function commandManifest(): Promise<void> {
   );
   // eslint-disable-next-line no-console
   console.log(
-    `manifest: ${manifest.components.length} components, signatures PRESENT_NOT_VERIFIED`,
+    `manifest: ${manifest.components.length} real product artifacts, signatures PRESENT_NOT_VERIFIED`,
   );
 }
 
@@ -316,8 +447,19 @@ async function commandVerifyManifest(): Promise<void> {
   const fullPath = resolve(root, manifestPath);
   let raw: string;
   try {
+    const st = statSync(fullPath);
+    if (!st.isFile()) {
+      // A FIFO (or socket/device) blocks reads forever; the manifest
+      // must be a regular file. Fail closed instead of hanging the
+      // bounded budget (ep043_failure_timeout_blocked_dependency).
+      throw new ShipError(
+        "VALIDATION_FAILED",
+        `release manifest is not a regular file: ${manifestPath}`,
+      );
+    }
     raw = readFileSync(fullPath, "utf8");
-  } catch {
+  } catch (error) {
+    if (error instanceof ShipError) throw error;
     throw new ShipError(
       "NOT_FOUND",
       `release manifest not found or unreadable: ${manifestPath}`,
@@ -339,19 +481,25 @@ async function commandVerifyManifest(): Promise<void> {
       "manifest digest mismatch (tampered manifest)",
     );
   }
-  const componentDir = join(root, "infra", "release", "fixtures", "components");
+  // AUD-082: verify against the REAL committed product artifacts. A
+  // component that is not one of the real release artifacts is not a
+  // shippable product component and fails closed.
+  const realByComponentId = new Map(
+    REAL_RELEASE_ARTIFACTS.map((artifact) => [
+      artifact.componentId,
+      artifact.relPath,
+    ]),
+  );
   let verified = 0;
   for (const component of manifest.components) {
-    const artifactPath = join(componentDir, component.component_id);
-    let bytes: Uint8Array;
-    try {
-      bytes = new Uint8Array(readFileSync(artifactPath));
-    } catch {
+    const relPath = realByComponentId.get(component.component_id);
+    if (relPath === undefined) {
       throw new ShipError(
         "NOT_FOUND",
-        `artifact bytes missing for ${component.component_id}: ${artifactPath}`,
+        `component ${component.component_id} is not a real release artifact`,
       );
     }
+    const bytes = readRealArtifact(root, relPath, component.component_id);
     const actual = digestBytes(bytes);
     if (actual !== component.digest) {
       throw new ShipError(
@@ -372,6 +520,9 @@ async function commandVerifyManifest(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // M4 no-partial-output guarantee: cancelled work must never strand
+  // an atomic-write temp file.
+  installSignalCleanup();
   switch (command) {
     case "readiness":
       await commandReadiness();

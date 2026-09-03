@@ -28,7 +28,7 @@ const PURE_MODULES = [
 ];
 
 /** Adapter modules: node allowed, provider SDKs forbidden. */
-const ADAPTER_MODULES = ["repo-state.ts", "cli.ts", "index.ts"];
+const ADAPTER_MODULES = ["repo-state.ts", "cli.ts", "evidence.ts", "index.ts"];
 
 const FORBIDDEN_PROVIDER_IMPORTS = [
   "@nexus/",

@@ -1,0 +1,1 @@
+AUD-079: canonicalEvidenceDigest uses the same recursive canonicalize(); nested certification/drill/review/capability-status values are cryptographically bound; hostile proofs: nested drill status flip, nested review verdict flip, nested capability-status flip all change the digest

@@ -33,10 +33,12 @@ use std::time::{Duration, Instant};
 use nexus_adguard_connector::{AdGuardDnsSecurityProvider, HttpAdGuardTransport, QueryLogEntry};
 use nexus_domain::{ApprovalClass, TenantId};
 use nexus_openwrt_connector::{HttpOpenWrtTransport, OpenWrtFirewallProvider};
-use nexus_opnsense_connector::{HttpOpnsenseTransport, OpnsenseFirewallProvider};
+use nexus_opnsense_connector::{
+    HttpOpnsenseTransport, OpnsenseFirewallProvider, OpnsenseNetworkInventory,
+};
 use nexus_sentinel::{
-    DnsSecurityProvider, FirewallProvider, NetworkDevice, NetworkDeviceId, NetworkSegment,
-    QuarantineProposal, QuarantineState, SentinelCapabilityKind, TrustClass,
+    DnsSecurityProvider, FirewallProvider, NetworkDevice, NetworkDeviceId, NetworkInventory,
+    NetworkSegment, QuarantineProposal, QuarantineState, SentinelCapabilityKind, TrustClass,
 };
 
 const TENANT: &str = "018f0f6f-9c1e-7b6e-8000-000000000001";
@@ -185,6 +187,7 @@ struct OpnRule {
     description: String,
     enabled: bool,
     action: String,
+    source_net: Option<String>,
 }
 
 /// OPNsense-shaped fixture: searchRule / addRule / toggleRule / apply.
@@ -195,7 +198,12 @@ fn spawn_opnsense_fixture(
 ) -> (u16, Arc<Mutex<Vec<OpnRule>>>, thread::JoinHandle<()>) {
     let state: Arc<Mutex<Vec<OpnRule>>> = Arc::new(Mutex::new(initial));
     let state2 = state.clone();
-    let (port, handle) = spawn_http_fixture(8, move |method, path, body| {
+    // Connection budget: capabilities (searchRule), telemetry
+    // (searchRule), 4x inventory ARP (capabilities, list_devices,
+    // fingerprint, baseline), apply (addRule + apply), verify
+    // (searchRule), revoke (toggleRule + apply), verify-after-revoke
+    // (searchRule) = 12 sequential real-socket requests.
+    let (port, handle) = spawn_http_fixture(16, move |method, path, body| {
         let mut st = state2.lock().unwrap();
         if method == "GET" && path.contains("/api/firewall/filter/searchRule") {
             let phrase = path.split("searchPhrase=").nth(1).unwrap_or("").to_string();
@@ -208,6 +216,7 @@ fn spawn_opnsense_fixture(
                         "description": r.description,
                         "enabled": if r.enabled { "1" } else { "0" },
                         "action": r.action,
+                        "source_net": r.source_net.clone().unwrap_or_default(),
                     })
                 })
                 .collect();
@@ -235,6 +244,10 @@ fn spawn_opnsense_fixture(
                     .and_then(|v| v.as_str())
                     .unwrap_or("block")
                     .to_string(),
+                source_net: rule
+                    .get("source_net")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
             });
             (
                 200,
@@ -256,6 +269,39 @@ fn spawn_opnsense_fixture(
             (200, "application/json".into(), "{}".into())
         } else if method == "POST" && path.contains("/api/firewall/filter/apply") {
             (200, "application/json".into(), "{}".into())
+        } else if method == "GET" && path.contains("/api/diagnostics/interface/getArp") {
+            // Documented ARP table (AUD-028): the OBSERVED inventory
+            // source. One neighbor (the IOT camera) plus the firewall's
+            // own permanent interface entry (never a discovered device).
+            (
+                200,
+                "application/json".into(),
+                serde_json::json!([
+                    {
+                        "mac": "aa:bb:cc:00:00:10",
+                        "ip": "192.168.30.10",
+                        "intf": "iot",
+                        "expired": false,
+                        "expires": 300,
+                        "permanent": false,
+                        "type": "ethernet",
+                        "manufacturer": "ACME Cameras",
+                        "hostname": "iot-camera"
+                    },
+                    {
+                        "mac": "aa:bb:cc:00:00:01",
+                        "ip": "192.168.30.1",
+                        "intf": "lan",
+                        "expired": false,
+                        "expires": 0,
+                        "permanent": true,
+                        "type": "ethernet",
+                        "manufacturer": "",
+                        "hostname": "firewall"
+                    }
+                ])
+                .to_string(),
+            )
         } else {
             (404, "application/json".into(), "{}".into())
         }
@@ -458,6 +504,28 @@ fn spawn_adguard_fixture(entries: Vec<QueryLogEntry>) -> (u16, thread::JoinHandl
                 "application/json".into(),
                 serde_json::json!({ "oldest": "", "data": data }).to_string(),
             )
+        } else if method == "GET" && path.contains("/control/filtering/status") {
+            // Documented FilterStatus (AUD-027): the CONFIGURED
+            // blocklist - enabled subscription + user rules.
+            (
+                200,
+                "application/json".into(),
+                serde_json::json!({
+                    "enabled": true,
+                    "interval": 86400,
+                    "filters": [{
+                        "enabled": true,
+                        "id": 1,
+                        "last_updated": "2026-08-20T00:00:00Z",
+                        "name": "AdGuard Simplified Domain Names filter",
+                        "rules_count": 5912,
+                        "url": "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt"
+                    }],
+                    "whitelist_filters": [],
+                    "user_rules": ["||evil.example.com^"]
+                })
+                .to_string(),
+            )
         } else {
             (404, "application/json".into(), "{}".into())
         }
@@ -483,11 +551,21 @@ fn device(id: &str, label: &str, segment: NetworkSegment) -> NetworkDevice {
 }
 
 fn approved_proposal(provider: &OpnsenseFirewallProvider, d: &NetworkDevice) -> QuarantineProposal {
-    let proposal = provider.propose_containment(&tenant(), None, d).unwrap();
-    QuarantineProposal {
-        state: QuarantineState::Approved,
-        ..proposal
-    }
+    let proposal = provider
+        .propose_containment(&tenant(), None, d, Some("192.168.30.10"))
+        .unwrap();
+    // AUD-025: approval is an immutable receipt binding the exact
+    // action - never a bare state mutation.
+    let approved = proposal.approve(
+        nexus_domain::ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
+        nexus_domain::PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
+        nexus_domain::ApprovalClass::Human,
+        "2026-08-20T00:00:00Z",
+    );
+    // AUD-029: automated containment ALWAYS notifies the owner.
+    provider
+        .notify_owner(&approved, "person-owner-1", "push")
+        .unwrap()
 }
 
 fn qlog(time: &str, question: &str, client: &str, reason: &str) -> QueryLogEntry {
@@ -548,6 +626,7 @@ fn ep030_m5_lf010_network_diagnosis() {
         description: "nexus-quarantine-thermostat-1".into(),
         enabled: true,
         action: "block".into(),
+        source_net: Some("192.168.30.20".into()),
     }];
     let (opn_port, opn_rules, opn_handle) = spawn_opnsense_fixture(opn_state);
 
@@ -570,6 +649,20 @@ fn ep030_m5_lf010_network_diagnosis() {
             Duration::from_secs(2),
         )),
         tenant(),
+        CANARY_OPN_KEY,
+        CANARY_OPN_SECRET,
+    );
+    // AUD-028: the production network inventory discovers devices from
+    // the router's OBSERVED ARP table (real transport to the fixture).
+    let inventory = OpnsenseNetworkInventory::new(
+        Box::new(HttpOpnsenseTransport::new(
+            format!("http://127.0.0.1:{opn_port}"),
+            CANARY_OPN_KEY,
+            CANARY_OPN_SECRET,
+            Duration::from_secs(2),
+        )),
+        tenant(),
+        NetworkSegment::Iot,
         CANARY_OPN_KEY,
         CANARY_OPN_SECRET,
     );
@@ -633,9 +726,53 @@ fn ep030_m5_lf010_network_diagnosis() {
     let blocklist = adguard
         .read_blocklist(&tenant())
         .expect("adguard blocklist");
+    // AUD-027: blocklist reflects the CONFIGURED filter state - the
+    // enabled subscription and the user rule, never query-log hits.
     assert!(
-        blocklist.iter().any(|e| e.domain_ref == "evil.example.com"),
-        "observed blocklist entry required"
+        blocklist
+            .iter()
+            .any(|e| e.domain_ref == "||evil.example.com^"),
+        "configured blocklist user rule required"
+    );
+    assert!(
+        blocklist
+            .iter()
+            .any(|e| e.domain_ref == "AdGuard Simplified Domain Names filter"),
+        "configured blocklist subscription required"
+    );
+    // AUD-028: the production inventory discovers devices from the
+    // router's OBSERVED ARP table. The IOT camera is discovered; the
+    // firewall's own permanent interface entry is never a device.
+    let caps = inventory.capabilities();
+    assert!(caps.contains(SentinelCapabilityKind::Inventory));
+    assert!(caps.contains(SentinelCapabilityKind::Fingerprint));
+    let devices = inventory
+        .list_devices(&tenant())
+        .expect("inventory devices");
+    let camera = devices
+        .iter()
+        .find(|d| d.device_id.as_str() == "mac:aa:bb:cc:00:00:10")
+        .expect("observed camera device");
+    assert_eq!(camera.label, "iot-camera");
+    assert_eq!(camera.vendor.as_deref(), Some("ACME Cameras"));
+    assert_eq!(camera.segment, NetworkSegment::Iot);
+    assert!(
+        !devices
+            .iter()
+            .any(|d| d.device_id.as_str() == "mac:aa:bb:cc:00:00:01"),
+        "permanent firewall entry is not a discovered device"
+    );
+    let fp = inventory
+        .fingerprint(camera)
+        .expect("observed camera fingerprint");
+    assert_eq!(fp.ip_ref.as_deref(), Some("192.168.30.10"));
+    assert_eq!(fp.mac_ref.as_deref(), Some("aa:bb:cc:00:00:10"));
+    let baseline = inventory
+        .baseline(camera)
+        .expect("observed camera baseline");
+    assert_eq!(
+        baseline.state,
+        nexus_sentinel::BehaviorBaselineState::Learning
     );
 
     // ---- 4. DERIVED: normalized facts with provenance ----
@@ -671,7 +808,23 @@ fn ep030_m5_lf010_network_diagnosis() {
             "resource": "evil.example.com",
             "observed": true,
             "fact": "observed FilteredBlackList blocklist entry"
-        }
+        },
+        {
+            "source": "opnsense",
+            "provider": "OpnsenseNetworkInventory",
+            "segment": "IOT",
+            "resource": "mac:aa:bb:cc:00:00:10",
+            "observed": true,
+            "fact": "ARP-discovered device iot-camera 192.168.30.10 vendor ACME Cameras; fingerprint bound; baseline LEARNING"
+        },
+        {
+            "source": "opnsense",
+            "provider": "OpnsenseNetworkInventory",
+            "segment": "IOT",
+            "resource": "192.168.30.10",
+            "observed": true,
+            "fact": format!("{} ARP devices discovered, permanent/expired entries excluded", devices.len())
+        },
     ]);
 
     // ---- 5. INFERRED: bounded diagnosis from current-run facts ----
@@ -691,7 +844,7 @@ fn ep030_m5_lf010_network_diagnosis() {
     // ---- 6. RECOMMENDED: reversible quarantine proposal ----
     let camera = device("cam-iot-1", "192.168.30.10", NetworkSegment::Iot);
     let proposed = opnsense
-        .propose_containment(&tenant(), None, &camera)
+        .propose_containment(&tenant(), None, &camera, Some("192.168.30.10"))
         .unwrap();
     assert_eq!(proposed.state, QuarantineState::Proposed);
     assert!(proposed.preauthorized && proposed.reversible);
@@ -796,7 +949,9 @@ fn ep030_m5_lf010_network_diagnosis() {
             "openwrt_findings": owrt_findings.len(),
             "dns_total": dns.total_queries,
             "dns_blocked": dns.blocked_queries,
-            "blocklist_domains": blocklist.len()
+            "blocklist_domains": blocklist.len(),
+            "inventory_devices": devices.len(),
+            "inventory_fingerprint": fp.mac_ref.as_deref().unwrap_or("").to_string()
         },
         "redaction": "ZERO_LEAKAGE",
         "cleanup": "fixtures joined; no orphan containers or processes",

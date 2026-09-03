@@ -1,0 +1,2 @@
+verify-log	.agent/remediation/evidence/RX-000/verify.log	sha256:b4ede5fd89c31d06f76eefa4b65d5b4438f1494b6e06f93e747c2fd4dc99fed9
+register	.agent/remediation/AUDIT_FINDINGS.tsv	sha256:59f8cc2e1340bf311f55bdd1be47aeb75578084e26ddeb0eebc01bac635dbeb3

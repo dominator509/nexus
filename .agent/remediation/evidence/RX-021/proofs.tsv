@@ -1,0 +1,5 @@
+rx021-probe-lib	tests/performance/src/lib.rs	sha256:9ba7c55a0381ac3ebfc958848a1e46dd5a8d1101a85b65006b494a05d51223a0
+rx021-aud063-proofs	tests/performance/tests/aud063_runtime_observation.rs	sha256:59db7351c8e363ca342a25f3dd75ceec12e318d69a3e193cf73ef5889409c299
+rx021-live-probe-bin	tests/performance/src/bin/runtime_latency_probe.rs	sha256:fb041c62a0c50daf369f842ea4213ee026311022712251ac8c79f35af8c512db
+rx021-battery	scripts/rx021-remediation-tests.sh	sha256:7965fad831931bb3a90831a17149b3285808e636d5aa6f9fcbedaa76cd2049b7
+rx021-node-script	scripts/nodes/RX-021.sh	sha256:bbf7fc6c7d0fbd8494f2be0aa824d6f525caa209b2c88fcb773273467813a94c

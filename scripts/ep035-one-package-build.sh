@@ -16,7 +16,10 @@ export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
 
-PNPM="${PNPM_BIN:-/root/.local/share/mise/installs/pnpm/11.17.0/pnpm}"
+# pnpm resolves from PATH (mise shims on CI and dev); PNPM_BIN may
+# override. A hardcoded /root mise path is NOT portable - CI runners
+# run as a non-root user with no /root access (EP-043 lesson).
+PNPM="${PNPM_BIN:-pnpm}"
 repo="$(pwd)"
 commit="$(git rev-parse HEAD)"
 out="$repo/.agent/state/livefire/ep035-bundle"

@@ -9,10 +9,11 @@
 //! rule). Provider-specific payloads are normalized at the
 //! infrastructure boundary and never become domain contracts.
 
-use nexus_domain::NotificationChannel;
+use nexus_domain::{NotificationChannel, PersonId};
 
 use crate::error::NotificationError;
 use crate::model::{DeliveryPolicy, DeliveryReceipt, NotificationEnvelope};
+use crate::vocabulary::SmsDestination;
 
 /// Channel provider port (provider-neutral; push / SMS / desktop /
 /// speaker / email / phone / watch / car providers implement this
@@ -27,6 +28,17 @@ pub trait ChannelProvider {
         false
     }
 
+    /// Whether this provider REQUIRES an explicit destination to
+    /// deliver (e.g. SMS needs a phone number). Destination-requiring
+    /// providers cannot deliver from the channel-agnostic envelope
+    /// alone; the router resolves a destination through its
+    /// `DestinationResolver` before attempting the leg. A provider
+    /// that does not require a destination is attempted through the
+    /// canonical `deliver`.
+    fn requires_destination(&self) -> bool {
+        false
+    }
+
     /// Deliver an envelope on this provider's channel. Returns a
     /// delivery receipt; a receipt is the ONLY delivery authority.
     fn deliver(
@@ -37,6 +49,45 @@ pub trait ChannelProvider {
         Err(NotificationError::unavailable(
             "channel provider has no implementation bound",
         ))
+    }
+
+    /// Deliver an envelope to an EXPLICIT, validated destination
+    /// (destination-requiring channels such as SMS). The destination
+    /// is validated BEFORE any provider mutation (fail closed). A
+    /// provider without destination-aware delivery fails closed:
+    /// a destination can never be invented.
+    fn deliver_to(
+        &self,
+        envelope: &NotificationEnvelope,
+        destination: &SmsDestination,
+    ) -> Result<DeliveryReceipt, NotificationError> {
+        let _ = (envelope, destination);
+        Err(NotificationError::unavailable(
+            "channel provider has no destination-aware delivery bound",
+        ))
+    }
+}
+
+/// Resolves the destination a destination-requiring channel needs
+/// (e.g. the SMS phone number for a person) at delivery time.
+///
+/// A resolver is an authority over destinations: it never invents
+/// one. An unresolved destination is a truthful non-delivery (the
+/// router fails the leg closed and escalates), never a fabricated
+/// recipient.
+pub trait DestinationResolver {
+    /// Resolve the SMS destination for a person, if one is known.
+    fn resolve(&self, person_id: &PersonId) -> Option<SmsDestination>;
+}
+
+/// Fail-closed destination resolver: no destination is ever known.
+/// Destination-requiring legs fail closed (never fabricated).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct UnboundDestinationResolver;
+
+impl DestinationResolver for UnboundDestinationResolver {
+    fn resolve(&self, _person_id: &PersonId) -> Option<SmsDestination> {
+        None
     }
 }
 
@@ -51,6 +102,20 @@ pub trait NotificationRouter {
         policy: &DeliveryPolicy,
     ) -> Result<Vec<DeliveryReceipt>, NotificationError> {
         let _ = (envelope, policy);
+        Err(NotificationError::unavailable(
+            "notification router has no implementation bound",
+        ))
+    }
+
+    /// Route with an explicit delivery context (quiet hours, presence,
+    /// acknowledgement, time). Fails closed when unbound.
+    fn route_with_context(
+        &self,
+        envelope: &NotificationEnvelope,
+        policy: &DeliveryPolicy,
+        ctx: &crate::model::DeliveryContext,
+    ) -> Result<Vec<DeliveryReceipt>, NotificationError> {
+        let _ = (envelope, policy, ctx);
         Err(NotificationError::unavailable(
             "notification router has no implementation bound",
         ))

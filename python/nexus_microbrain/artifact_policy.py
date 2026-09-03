@@ -434,12 +434,17 @@ def promotion_gate_decision(
     eligibility: CandidateEligibilityVerdict | None = None,
     leakage: LeakageVerdict | None = None,
     eval_ref: str,
+    evidence: PromotionEvidence | None = None,
 ) -> PromotionDecision:
     """Compute the strict promotion decision.
 
     PROMOTE requires every owned prerequisite, shadow gate completion,
-    and zero consequential false positives. A decision is never an
-    autonomous deployment (PROMOTION DECISION != AUTONOMOUS DEPLOYMENT).
+    zero consequential false positives, AND a declared, internally
+    consistent promotion/evaluation evidence record (AUD-064). Missing
+    or inconsistent evidence fails closed: promotion must require the
+    declared promotion/evaluation evidence before the model becomes
+    routable. A decision is never an autonomous deployment
+    (PROMOTION DECISION != AUTONOMOUS DEPLOYMENT).
     """
     if not prerequisites.all_met():
         unmet = "; ".join(prerequisites.unmet())
@@ -453,8 +458,11 @@ def promotion_gate_decision(
             zero_consequential_false_positives=(prerequisites.zero_consequential_false_positives),
             reason="prerequisites unmet: " + unmet,
         )
-    # All prerequisites met: the gate advances through the ladder.
-    return PromotionDecision(
+    # All owned prerequisites met: the gate advances through the ladder,
+    # but only when the DECLARED promotion/evaluation evidence exists and
+    # is consistent (AUD-064). A prospective PROMOTE decision is bound to
+    # the evidence; any inconsistency falls back to DENY.
+    prospective = PromotionDecision(
         decision_id=decision_id,
         verdict=PromotionVerdict.PROMOTE,
         gate=PromotionGate.GRADUAL,
@@ -464,6 +472,25 @@ def promotion_gate_decision(
         zero_consequential_false_positives=prerequisites.zero_consequential_false_positives,
         reason="all owned prerequisites met (gate GRADUAL; autonomous deployment NOT implied)",
     )
+    evidence_verdict = declared_promotion_evidence_gate(
+        decision=prospective,
+        evidence=evidence,
+        candidate=candidate,
+        shadow=shadow,
+    )
+    if not evidence_verdict.supported:
+        reasons = "; ".join(evidence_verdict.reasons)
+        return PromotionDecision(
+            decision_id=decision_id,
+            verdict=PromotionVerdict.DENY,
+            gate=PromotionGate.SHADOW,
+            candidate_ref=candidate.candidate_id,
+            eval_ref=eval_ref,
+            shadow_ref=shadow.run_id,
+            zero_consequential_false_positives=prerequisites.zero_consequential_false_positives,
+            reason="declared evidence unsupported: " + reasons,
+        )
+    return prospective
 
 
 def promotion_decision_never_deploys(decision: PromotionDecision) -> bool:
@@ -471,4 +498,103 @@ def promotion_decision_never_deploys(decision: PromotionDecision) -> bool:
     return (
         decision.verdict is not PromotionVerdict.PROMOTE
         or decision.gate is not PromotionGate.PROMOTED
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class DeclaredEvidenceVerdict:
+    """Promotion declared-evidence gate result (AUD-064).
+
+    PROMOTE is only actionable when the DECLARED promotion/evaluation
+    evidence exists and is internally consistent with the decision.
+    Missing, fixture-only, or inconsistent evidence fails closed, so a
+    model can never become routable from caller-asserted booleans alone.
+    """
+
+    decision_id: str
+    supported: bool
+    reasons: tuple[str, ...] = field(default_factory=tuple)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "decision_id": self.decision_id,
+            "supported": self.supported,
+            "reasons": list(self.reasons),
+        }
+
+    def to_redacted_dict(self) -> dict[str, Any]:
+        redacted = redact_value(self.to_dict())
+        assert isinstance(redacted, dict)
+        return redacted
+
+
+def declared_promotion_evidence_gate(
+    *,
+    decision: PromotionDecision,
+    evidence: PromotionEvidence | None,
+    candidate: TrainingCandidate,
+    shadow: ShadowGateVerdict,
+) -> DeclaredEvidenceVerdict:
+    """Bind a promotion decision to its declared evidence (AUD-064).
+
+    A decision that is not PROMOTE needs no evidence (it already blocks).
+    A PROMOTE decision requires a declared, internally consistent
+    PromotionEvidence record: matching candidate, a COMPLETED (executed)
+    QLoRA run, a well-formed bound artifact digest, declared dataset and
+    eval suite digests, matching shadow run id, and zero consequential
+    false positives. Anything less fails closed - the declared
+    promotion/evaluation evidence must exist before the model becomes
+    routable.
+    """
+    if decision.verdict is not PromotionVerdict.PROMOTE:
+        return DeclaredEvidenceVerdict(
+            decision_id=decision.decision_id,
+            supported=True,
+            reasons=("non-promotion decision needs no declared evidence",),
+        )
+    reasons: list[str] = []
+    if evidence is None:
+        reasons.append("declared promotion/evaluation evidence required before promotion")
+        return DeclaredEvidenceVerdict(
+            decision_id=decision.decision_id,
+            supported=False,
+            reasons=tuple(reasons),
+        )
+    if evidence.candidate_id != decision.candidate_ref:
+        reasons.append(
+            f"declared evidence candidate {evidence.candidate_id!r} != decision "
+            f"candidate {decision.candidate_ref!r}"
+        )
+    if evidence.candidate_id != candidate.candidate_id:
+        reasons.append(
+            f"declared evidence candidate {evidence.candidate_id!r} != candidate "
+            f"{candidate.candidate_id!r}"
+        )
+    if evidence.qlora_status != QloraStatus.COMPLETED.value:
+        reasons.append(
+            "declared evidence training run not COMPLETED "
+            "(fixture/declared-only run cannot promote)"
+        )
+    if not _well_formed_digest(evidence.artifact_digest):
+        reasons.append("declared evidence artifact digest malformed")
+    if not evidence.artifact_id.strip():
+        reasons.append("declared evidence artifact id empty")
+    if not evidence.dataset_id.strip() or not _well_formed_digest(evidence.dataset_digest):
+        reasons.append("declared evidence dataset binding missing/malformed")
+    if not evidence.eval_suite_id.strip() or not _well_formed_digest(evidence.eval_suite_digest):
+        reasons.append("declared evidence eval suite binding missing/malformed")
+    if not evidence.plan_digest.strip() or not _well_formed_digest(evidence.plan_digest):
+        reasons.append("declared evidence plan digest missing/malformed")
+    if evidence.shadow_run_id != shadow.run_id:
+        reasons.append(
+            f"declared evidence shadow run {evidence.shadow_run_id!r} != shadow {shadow.run_id!r}"
+        )
+    if evidence.false_positive_count != 0:
+        reasons.append(f"declared evidence false positives {evidence.false_positive_count} > 0")
+    if not evidence.certification_boundary.strip():
+        reasons.append("declared evidence certification boundary empty")
+    return DeclaredEvidenceVerdict(
+        decision_id=decision.decision_id,
+        supported=not reasons,
+        reasons=tuple(reasons),
     )

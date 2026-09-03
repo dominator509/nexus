@@ -1,0 +1,22 @@
+ok - nexus-gmail (AUD-009 real wire format + send_draft) (17 passed)
+ok - nexus-microsoft-mail (AUD-010 Graph attachments) (41 passed)
+ok - nexus-imap-smtp (AUD-010 BODYSTRUCTURE attachments) (13 passed)
+ok - nexus-gmail attachments (AUD-010 payload.parts) (17 passed)
+ok - nexus-notifications (AUD-018 policy + AUD-019 router SMS) (37 passed)
+ok - nexus-sms-connector (AUD-019 destination-aware) (22 passed)
+ok - notifications e2e + livefire (17 passed, future-dated fixtures)
+ok - nexus-ictfax (AUD-020 real media + binding) (12 passed)
+ok - nexus-asterisk (AUD-021 governed consent) (64 passed)
+ok - nexus-telephony (AUD-021 policy surface) (34 passed)
+ok - lf012_orchestrator.py py_compile ok
+ok - EP-025 M5 gate asserts consent-first negative evidence (recording_started false, bytes 0, stt_skipped, transcript absent)
+ok - nexus-social-direct-connector (AUD-024 official reply object) (17 passed)
+ok - workspace check clean
+ok - workspace clippy clean (-D warnings)
+ok - remediation register: VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+---
+RX-014 battery: 16 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-014: ok
+RX-014 verify: ok
+verify: ok

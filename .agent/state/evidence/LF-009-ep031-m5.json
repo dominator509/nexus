@@ -3,9 +3,10 @@
     "advanced_contract": "INTERNAL_CERTIFIED",
     "crowdsec_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
     "opnsense_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
-    "osquery_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixture node",
+    "osquery_connector": "TRANSPORT_CERTIFIED over REAL TLS sockets vs controlled fixture node (AUD-036)",
     "real_firewall_appliance": "NOT_ASSERTED",
     "real_sensors": "NOT_ASSERTED",
+    "suricata_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures (AUD-030)",
     "wazuh_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
     "zeek_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures"
   },
@@ -17,12 +18,12 @@
   "incident": {
     "confidence": "HIGH",
     "correlation_id": "corr-lf009",
-    "event_count": 4,
+    "event_count": 5,
     "severity": "HIGH",
-    "summary": "observed source 192.168.40.77 corroborated across 3 independent plane(s) (network+reputation+endpoint), severity HIGH, 4 event(s) correlated"
+    "summary": "observed source 192.168.40.77 corroborated across 2 independent plane(s) (network+reputation), severity HIGH, 5 event(s) correlated"
   },
   "investigation": {
-    "evidence_refs": 4
+    "evidence_refs": 5
   },
   "milestone": "M5",
   "node": "EP-031",
@@ -35,6 +36,15 @@
       "provider": "ZeekNetworkDetectionProvider",
       "resource": "C1",
       "source": "zeek"
+    },
+    {
+      "event_id": "suricata-9101-2018358",
+      "fact": "ET SCAN Potential SSH Scan from 192.168.40.77 to 192.168.40.1:22 (src=192.168.40.77)",
+      "observed": true,
+      "profile": "SURICATA",
+      "provider": "SuricataNetworkDetectionProvider",
+      "resource": "9101",
+      "source": "suricata"
     },
     {
       "event_id": "crowdsec-1",
@@ -55,8 +65,8 @@
       "source": "wazuh"
     },
     {
-      "event_id": "osquery-listening_ports-0",
-      "fact": "wildcard listening socket 0.0.0.0:8443 observed via listening_ports",
+      "event_id": "osquery-srv-lab-1-listening_ports-0-0",
+      "fact": "wildcard listening socket 0.0.0.0:8443 observed via listening_ports on srv-lab-1 (durable endpoint identity)",
       "observed": true,
       "profile": "OSQUERY",
       "provider": "OsqueryEndpointTelemetryProvider",
@@ -77,7 +87,7 @@
     "state": "REVOKED",
     "verify_after_revoke": false
   },
-  "run_id": "run-20260821032929-ep031m5",
+  "run_id": "run-20260903035512-ep031m5",
   "sensors": {
     "crowdsec": {
       "action": "ban",
@@ -85,8 +95,18 @@
       "indicator": "192.168.40.77"
     },
     "osquery": {
+      "endpoint_identity": "host=srv-lab-1:address=0.0.0.0:port=8443",
+      "event_id": "osquery-srv-lab-1-listening_ports-0-0",
       "events": 1,
+      "observed_at": "2026-09-03T01:55:12Z",
+      "tls": "REAL_TLS_PINNED",
       "wildcard_listener": "0.0.0.0:8443"
+    },
+    "suricata": {
+      "events": 1,
+      "kind": "ScanDetected",
+      "signature": "ET SCAN Potential SSH Scan",
+      "source": "192.168.40.77"
     },
     "wazuh": {
       "alerts": 1,
@@ -96,15 +116,17 @@
     "zeek": {
       "events": 1,
       "kind": "ScanDetected",
+      "observed_at": "2024-07-03T09:46:40.000Z",
       "source": "192.168.40.77"
     }
   },
-  "surface": "documented Zeek JSON Streaming Logs + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
-  "transport": "JsonLinesZeekTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
+  "surface": "documented Zeek JSON Streaming Logs + documented Suricata EVE JSON + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
+  "transport": "JsonLinesZeekTransport over REAL socket + JsonLinesSuricataTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL TLS sockets, pinned collector certificate - AUD-036) + HttpOpnsenseTransport",
   "triage": {
     "priority": "CRITICAL"
   },
   "verification": {
+    "plan_binds_proposal": true,
     "state": "VERIFIED"
   }
 }

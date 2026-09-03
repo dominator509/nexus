@@ -1,0 +1,15 @@
+.agent/remediation/REMEDIATION_STATE.env
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/verify-remediation-register.sh
+.agent/remediation/REMEDIATION_DAG.txt
+.agent/remediation/GAPS.md
+.agent/milestone-files/RX-020-M1.txt
+scripts/rx020-remediation-tests.sh
+scripts/aud090-freshclone-ship-tests.sh
+scripts/nodes/RX-020.sh
+scripts/ep043-freshclone-accept.sh
+scripts/ep043-m5-tests.sh
+# RX-020 pre-executed AUD-090 (RX-022 gap work absorbed at RX-022 lease):
+# the ship-standard fresh-clone acceptance surface + closure evidence
+# reproducibility (committed verify.log files are closure-attested).
+.agent/remediation/evidence/RX-020/verify.log

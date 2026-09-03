@@ -39,20 +39,47 @@ pub trait FirewallProvider {
     /// Propose verified containment. The proposal is DATA, not an
     /// executed rule; it becomes containment only through the
     /// approved/applied/verified ladder.
+    ///
+    /// AUD-026: `observed_source` is the OBSERVED network identity
+    /// (the device fingerprint's ip_ref) that the containment rule
+    /// must bind to - NEVER the device display label. A proposal
+    /// without an observed source fails closed.
     fn propose_containment(
         &self,
         tenant_id: &TenantId,
         business_id: Option<&BusinessId>,
         device: &NetworkDevice,
+        observed_source: Option<&str>,
     ) -> Result<QuarantineProposal, SentinelError>;
 
     /// Apply a quarantine proposal. Fails closed unless the proposal
     /// is preauthorized high-confidence reversible AND approved; the
     /// applied rule is recorded with a rule reference.
+    ///
+    /// AUD-029: SPEC-013 behavior 5 requires automated containment to
+    /// ALWAYS notify the owner. Apply fails closed unless the proposal
+    /// carries an owner-notification receipt.
     fn apply_containment(
         &self,
         proposal: &QuarantineProposal,
     ) -> Result<QuarantineProposal, SentinelError>;
+
+    /// Notify the device owner of an imminent containment (AUD-029).
+    /// SPEC-013 behavior 5: automated containment ALWAYS notifies the
+    /// owner. The operation records an immutable notification receipt
+    /// on the proposal; apply fails closed without it. The concrete
+    /// delivery (push/sms/email) is the notification fabric's
+    /// responsibility; the sentinel contract requires the receipt and
+    /// the audit record. Unbound providers fail closed.
+    fn notify_owner(
+        &self,
+        proposal: &QuarantineProposal,
+        owner_ref: &str,
+        channel: &str,
+    ) -> Result<QuarantineProposal, SentinelError> {
+        let _ = (proposal, owner_ref, channel);
+        Err(SentinelError::unavailable("no firewall provider bound"))
+    }
 
     /// Verify containment by independent readback (exact-target: the
     /// verification binds to the exact proposal/device).
@@ -118,6 +145,7 @@ impl FirewallProvider for UnboundFirewallProvider {
         _tenant_id: &TenantId,
         _business_id: Option<&BusinessId>,
         _device: &NetworkDevice,
+        _observed_source: Option<&str>,
     ) -> Result<QuarantineProposal, SentinelError> {
         Err(SentinelError::unavailable("no firewall provider bound"))
     }
@@ -221,7 +249,7 @@ mod tests {
         let err = provider.read_telemetry(&tenant()).unwrap_err();
         assert_eq!(err.code, SentinelErrorCode::Unavailable);
         let err = provider
-            .propose_containment(&tenant(), None, &device())
+            .propose_containment(&tenant(), None, &device(), None)
             .unwrap_err();
         assert_eq!(err.code, SentinelErrorCode::Unavailable);
         let proposal = QuarantineProposal::new(

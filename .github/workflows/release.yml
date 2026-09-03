@@ -1,13 +1,10 @@
 name: Release
 
-# EP-042 M1: signed-release CI surface.
-#
-# This workflow builds and tests the release contract crate on version
-# tags. It never deploys: production deployment is not authorized
-# (AGENTS.md stop conditions; SPEC-016 promotion remains an exact manual
-# action). The M1 surface is contract + vocabulary + package boundary;
-# installers, offline bundles, and rollback drills are owned by later
-# EP-042 milestones and are intentionally absent here.
+# Release-integrity CI surface (RX-003 replacement for the EP-042 M1-only
+# workflow). Runs the complete verification surface on version tags and
+# produces structured release evidence. It never deploys: production
+# deployment is not authorized (AGENTS.md stop conditions; promotion remains
+# an exact manual action owned by RX-012/RX-013).
 
 on:
   push:
@@ -15,16 +12,27 @@ on:
       - "v*"
 
 jobs:
-  contract:
-    name: Release contract gate
+  graphlock-v2:
+    name: GraphLock V2 integrity
     runs-on: ubuntu-latest
     env:
       CI: "true"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Remediation register (90/90 + quarantine)
+        run: bash .agent/remediation/verify-remediation-register.sh
+
+  release-integrity:
+    name: Release integrity
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Install locked toolchain (mise)
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac
         with:
           version: 2026.8.5
           install: true
@@ -38,3 +46,21 @@ jobs:
 
       - name: Workspace unit battery
         run: sh scripts/test-unit.sh
+
+      - name: Integration tests
+        run: sh scripts/test-integration.sh
+
+      - name: Security gate
+        run: sh scripts/security-check.sh
+
+      - name: Dependency audit
+        run: sh scripts/dependency-audit.sh
+
+      - name: License gate
+        run: sh scripts/license-gate.sh
+
+      - name: Reality gate
+        run: sh scripts/reality-gate.sh
+
+      - name: Build
+        run: sh scripts/build.sh

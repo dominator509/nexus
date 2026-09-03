@@ -22,6 +22,27 @@ use crate::vocabulary::{
 /// Canonical hex digest length for the supported hash algorithm.
 pub const SHA256_HEX_LEN: usize = 64;
 
+/// Hex-decode a string into bytes (pure std, fails closed on malformed
+/// input). Only used for signature material, never content.
+pub fn hex_decode(value: &str) -> Option<Vec<u8>> {
+    if !value.len().is_multiple_of(2) || !value.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    let bytes = value.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len() / 2);
+    for pair in bytes.chunks_exact(2) {
+        let hi = (pair[0] as char).to_digit(16)?;
+        let lo = (pair[1] as char).to_digit(16)?;
+        out.push(((hi << 4) | lo) as u8);
+    }
+    Some(out)
+}
+
+/// Hex-encode bytes (lowercase canonical form).
+pub fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
 /// Content-addressed artifact hash (SPEC-024 requirement 2). The digest is
 /// the lowercase canonical hex SHA-256 of the artifact bytes; any other
 /// length, non-hex character, or uppercase form is rejected. The hash is
@@ -105,15 +126,24 @@ pub struct EncryptionMetadata {
     /// Opaque reference to the key held outside the storage backend
     /// (never the key material itself).
     pub key_reference: String,
+    /// SHA-256 hex of the PLAINTEXT (pre-encryption bytes). Recorded by
+    /// the encrypting caller so a storage adapter can verify, without
+    /// holding the key, that the bytes it is about to persist are NOT
+    /// the plaintext (AUD-051): if sha256(stored bytes) equals
+    /// plaintext_hash, the "ciphertext" is actually the plaintext and
+    /// encryption-before-egress was never performed.
+    pub plaintext_hash: String,
 }
 
 impl EncryptionMetadata {
     pub fn new(
         algorithm: impl Into<String>,
         key_reference: impl Into<String>,
+        plaintext_hash: impl Into<String>,
     ) -> ArtifactResult<Self> {
         let algorithm = algorithm.into();
         let key_reference = key_reference.into();
+        let plaintext_hash = plaintext_hash.into();
         if algorithm.trim().is_empty() {
             return Err(ArtifactError::validation(
                 "encryption algorithm must not be empty",
@@ -124,9 +154,15 @@ impl EncryptionMetadata {
                 "encryption key reference must not be empty",
             ));
         }
+        if plaintext_hash.trim().is_empty() {
+            return Err(ArtifactError::validation(
+                "encryption plaintext hash must not be empty",
+            ));
+        }
         Ok(Self {
             algorithm,
             key_reference,
+            plaintext_hash,
         })
     }
 }
@@ -255,6 +291,43 @@ impl ArtifactMetadata {
     }
 }
 
+impl ArtifactMetadata {
+    /// Verify an encryption-before-egress claim for the bytes about to
+    /// be persisted (AUD-051). Sensitive classes that leave the node MUST
+    /// carry encryption metadata AND the stored bytes must not be the
+    /// plaintext: the encrypting caller records the plaintext's SHA-256
+    /// in the metadata, and the adapter (which never holds the key)
+    /// verifies sha256(stored bytes) != plaintext_hash. If the bytes hash
+    /// to the recorded plaintext, the "ciphertext" is actually the
+    /// plaintext and encryption-before-egress never happened.
+    ///
+    /// `bytes_sha256` is the caller-computed SHA-256 hex of the bytes to
+    /// persist (kept dependency-free: the storage adapter already has a
+    /// sha2 implementation).
+    pub fn verify_encryption_before_egress(&self, bytes_sha256: &str) -> ArtifactResult<()> {
+        if !self.data_class.requires_encryption_before_egress() {
+            return Ok(());
+        }
+        let Some(enc) = &self.encryption else {
+            return Err(ArtifactError::policy(format!(
+                "sensitive artifact must be encrypted before egress (class {})",
+                self.data_class
+            )));
+        };
+        if enc.plaintext_hash.trim().is_empty() {
+            return Err(ArtifactError::policy(
+                "encryption metadata must record the plaintext hash",
+            ));
+        }
+        if enc.plaintext_hash == bytes_sha256 {
+            return Err(ArtifactError::policy(
+                "stored bytes hash to the recorded plaintext: bytes are not ciphertext",
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Object reference (SPEC-024 canonical term). An immutable content
 /// address: artifact ID plus content hash. An ObjectRef is what callers
 /// hold; it never changes when backend location changes.
@@ -270,6 +343,66 @@ impl ObjectRef {
             artifact_id,
             content_hash,
         }
+    }
+}
+
+/// Signature algorithm for backup manifests (SPEC-024 requirement 6:
+/// every backup has a signed manifest). Ed25519 is the only supported
+/// algorithm; the same ring 0.17 line the skill package signatures use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ManifestSignatureAlgorithm {
+    #[serde(rename = "Ed25519")]
+    Ed25519,
+}
+
+impl ManifestSignatureAlgorithm {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Ed25519 => "Ed25519",
+        }
+    }
+}
+
+/// A signature over the canonical manifest bytes (SPEC-024 requirement 6).
+///
+/// The signature covers the canonical JSON serialization of the `BackupSet`
+/// EXCLUDING the `manifest_signature` field itself (self-exclusion, the
+/// same canonical-digest rule the closure attestation uses). The adapter
+/// verifies with the embedded public key; the private signing key lives in
+/// the vault and is never held by an adapter. A manifest whose signature is
+/// missing or fails verification is rejected before it is written (create)
+/// and before it is trusted (restore).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ManifestSignature {
+    pub algorithm: ManifestSignatureAlgorithm,
+    /// Hex-encoded Ed25519 public key (64 hex chars).
+    pub public_key_hex: String,
+    /// Hex-encoded Ed25519 signature (128 hex chars).
+    pub signature_hex: String,
+}
+
+impl ManifestSignature {
+    pub fn new(
+        public_key_hex: impl Into<String>,
+        signature_hex: impl Into<String>,
+    ) -> ArtifactResult<Self> {
+        let public_key_hex = public_key_hex.into();
+        let signature_hex = signature_hex.into();
+        if public_key_hex.len() != 64 || !public_key_hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(ArtifactError::validation(
+                "manifest signature public key must be 64 hex chars (Ed25519)",
+            ));
+        }
+        if signature_hex.len() != 128 || !signature_hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(ArtifactError::validation(
+                "manifest signature must be 128 hex chars (64-byte Ed25519 signature)",
+            ));
+        }
+        Ok(Self {
+            algorithm: ManifestSignatureAlgorithm::Ed25519,
+            public_key_hex,
+            signature_hex,
+        })
     }
 }
 
@@ -298,6 +431,9 @@ pub struct BackupSet {
     pub schema_version: String,
     /// Backup creation timestamp (UTC RFC 3339).
     pub created_at: String,
+    /// Signature over the canonical manifest bytes (SPEC-024 req 6).
+    /// Required before a backup may be CREATED; verified before restore.
+    pub manifest_signature: Option<ManifestSignature>,
 }
 
 impl BackupSet {
@@ -351,7 +487,61 @@ impl BackupSet {
             application_version,
             schema_version,
             created_at,
+            manifest_signature: None,
         })
+    }
+
+    /// Attach a signature over the canonical manifest bytes. The caller
+    /// (the vault/operator that holds the signing key) computes the
+    /// signature via `BackupSet::canonical_manifest_bytes`; the adapter
+    /// only verifies with the embedded public key.
+    pub fn sign(&mut self, signature: ManifestSignature) {
+        self.manifest_signature = Some(signature);
+    }
+
+    /// Canonical manifest bytes the signature covers: the manifest with
+    /// the signature field EXCLUDED (self-exclusion, same rule as the
+    /// closure attestation digest). Deterministic JSON with sorted keys.
+    pub fn canonical_manifest_bytes(&self) -> ArtifactResult<Vec<u8>> {
+        let mut canonical = self.clone();
+        canonical.manifest_signature = None;
+        serde_json::to_vec(&canonical)
+            .map_err(|e| ArtifactError::internal(format!("cannot canonicalize backup: {e}")))
+    }
+
+    /// Verify the manifest signature STRUCTURE without crypto: the
+    /// signature must be present, Ed25519, well-formed hex, and carry a
+    /// 32-byte public key and 64-byte signature. Fails closed on missing
+    /// or malformed stored material. The CRYPTOGRAPHIC verification
+    /// (ring Ed25519 over the canonical bytes) is owned by the adapters,
+    /// which hold the crypto dependency (same boundary as
+    /// encryption-before-egress: the contract crate stays dependency-lean
+    /// per the M1 dependency-direction gate).
+    pub fn verify_manifest_signature_structure(&self) -> ArtifactResult<()> {
+        let sig = self.manifest_signature.as_ref().ok_or_else(|| {
+            ArtifactError::verification("backup manifest is not signed (SPEC-024 req 6)")
+        })?;
+        if sig.algorithm != ManifestSignatureAlgorithm::Ed25519 {
+            return Err(ArtifactError::verification(format!(
+                "unsupported manifest signature algorithm {:?}",
+                sig.algorithm
+            )));
+        }
+        if sig.public_key_hex.len() != 64
+            || !sig.public_key_hex.bytes().all(|b| b.is_ascii_hexdigit())
+        {
+            return Err(ArtifactError::verification(
+                "manifest signature public key is not 64 hex chars (Ed25519)",
+            ));
+        }
+        if sig.signature_hex.len() != 128
+            || !sig.signature_hex.bytes().all(|b| b.is_ascii_hexdigit())
+        {
+            return Err(ArtifactError::verification(
+                "manifest signature is not 128 hex chars (64-byte Ed25519 signature)",
+            ));
+        }
+        Ok(())
     }
 
     /// Advance the backup state ladder. DECLARED -> CREATED -> VERIFIED ->
@@ -369,6 +559,83 @@ impl BackupSet {
         };
         self.state = next;
         Ok(next)
+    }
+}
+
+/// One object carried by a self-contained backup bundle: the artifact's
+/// metadata, content hash, and raw bytes. The bytes are the STORED
+/// representation (encrypted for sensitive classes, per
+/// encryption-before-egress), so the bundle is portable and can
+/// reconstruct a wiped target without the source store.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BundleObject {
+    pub artifact_id: ArtifactId,
+    pub hash: ArtifactHash,
+    pub metadata: ArtifactMetadata,
+    pub bytes: Vec<u8>,
+}
+
+/// A self-contained disaster-recovery bundle (SPEC-024 requirement 5
+/// and the acceptance criterion: a destroyed control-plane host can be
+/// replaced from encrypted backup). Unlike a manifest, which only
+/// references objects already in a store, a bundle CARRIES the signed
+/// manifest plus every referenced object's bytes and metadata. A wiped
+/// target is reconstructed from the bundle alone; the source store is
+/// never consulted (AUD-015). The manifest signature is verified before
+/// the bundle is trusted, exactly as a stored manifest is.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BackupBundle {
+    /// Signed manifest (SPEC-024 req 6: signature verified at export
+    /// and at restore).
+    pub manifest: BackupSet,
+    /// Every object referenced by the manifest, with metadata.
+    pub objects: Vec<BundleObject>,
+}
+
+impl BackupBundle {
+    pub fn new(manifest: BackupSet, objects: Vec<BundleObject>) -> ArtifactResult<Self> {
+        if objects.is_empty() {
+            return Err(ArtifactError::validation(
+                "backup bundle must carry at least one object",
+            ));
+        }
+        let mut hashes: Vec<&ArtifactHash> = objects.iter().map(|o| &o.hash).collect();
+        hashes.sort();
+        hashes.dedup();
+        if hashes.len() != objects.len() {
+            return Err(ArtifactError::validation(
+                "backup bundle carries duplicate content hashes",
+            ));
+        }
+        for required in &manifest.manifest_hashes {
+            if !objects.iter().any(|o| &o.hash == required) {
+                return Err(ArtifactError::validation(format!(
+                    "backup bundle is missing manifest hash {}",
+                    required.as_str()
+                )));
+            }
+        }
+        Ok(Self { manifest, objects })
+    }
+
+    /// Structural verification of the bundle: the manifest signature
+    /// must be present and well-formed, and the bundle must carry every
+    /// object the manifest references (no more, no less). Cryptographic
+    /// signature verification AND per-object byte-hash verification are
+    /// performed by the adapter when the bundle is restored (crypto and
+    /// hashing live in adapters, per the M1 dependency-direction gate;
+    /// same boundary as encryption-before-egress).
+    pub fn verify_structure(&self) -> ArtifactResult<()> {
+        self.manifest.verify_manifest_signature_structure()?;
+        for required in &self.manifest.manifest_hashes {
+            if !self.objects.iter().any(|o| &o.hash == required) {
+                return Err(ArtifactError::verification(format!(
+                    "bundle is missing manifest hash {}",
+                    required.as_str()
+                )));
+            }
+        }
+        Ok(())
     }
 }
 

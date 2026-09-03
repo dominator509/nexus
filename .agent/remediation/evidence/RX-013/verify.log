@@ -1,0 +1,28 @@
+ok - release-evidence suite (160 tests: manifest binds real product artifacts, ghost component denied, tamper fails closed)
+ok - hostile AUD-082/081 sentinels present
+ok - typecheck clean (release-evidence)
+ok - deploy --dry-run real verification (manifest + artifact digests)
+ok - tampered artifact denied before mutation (digest mismatch)
+ok - no install state created by denied deploy
+ok - real deploy installed bytes matching real artifacts
+ok - real deploy wrote installer journal
+ok - no phantom executable invocations in canonical commands (AUD-086)
+ok - deploy.sh exposes real --deploy through the transactional installer (AUD-081/086)
+ok - rollback-drill.sh delegates to the real canonical drill
+ok - release-build.sh produces the real release manifest
+ok - EP-043 m1 gate green
+ok - EP-043 m2 gate green
+ok - EP-043 m3 gate green
+ok - EP-043 m4 gate green
+ok - EP-043 M5 substantive surface green; closure step correctly NOT_READY on branch (AUD-076/AUD-080 truth)
+ok - EP-042 M2 gate green
+ok - workspace check clean
+ok - workspace clippy clean (-D warnings)
+ok - remediation register: VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+---
+RX-013 battery: 21 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-013: ok
+RX-013 verify: ok
+verify: ok
+RX013_VERIFY_EXIT=0

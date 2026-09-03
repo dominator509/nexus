@@ -13,9 +13,11 @@
 //! - TELEMETRY IS OBSERVED DATA: total/blocked queries are counted
 //!   from the documented query log; an unreachable sidecar reports
 //!   Unavailable, never a fabricated zero.
-//! - BLOCKLIST STATE IS OBSERVED: entries are derived from observed
-//!   FilteredBlackList reasons; unknown filtering reasons are
-//!   normalized at the boundary and never widen the contract.
+//! - BLOCKLIST STATE IS CONFIGURED STATE: entries come from the
+//!   documented /control/filtering/status filter-state API (enabled
+//!   subscriptions + user rules). Configured rules with no recent hit
+//!   are still active entries; recent query-log hits are never
+//!   mistaken for configuration (AUD-027).
 //! - UNBOUND PROVIDERS FAIL CLOSED (Reality rule): no session is
 //!   fabricated and no capability is advertised.
 //!
@@ -146,11 +148,13 @@ impl DnsSecurityProvider for AdGuardDnsSecurityProvider {
         tenant_id: &TenantId,
     ) -> Result<Vec<DnsBlocklistEntry>, SentinelError> {
         let correlation = self.correlation();
-        // Blocklist state is OBSERVED from the query log: domains that
-        // were actually blocked (FilteredBlackList reason) are active
-        // blocklist entries. This never fabricates a blocklist; it
-        // reports what the sidecar demonstrably blocked.
-        let entries = self.transport.query_log(100, "").map_err(|e| {
+        // Blocklist state is the CONFIGURED filter state (documented
+        // GET /control/filtering/status), never inferred from recent
+        // query-log hits (AUD-027). Configured rules with no recent
+        // hit are still active blocklist entries; recent hits are not
+        // configuration. Fail closed when the configured state cannot
+        // be read.
+        let status = self.transport.filtering_status().map_err(|e| {
             self.record(
                 &correlation,
                 "READ_BLOCKLIST",
@@ -161,27 +165,38 @@ impl DnsSecurityProvider for AdGuardDnsSecurityProvider {
             e.with_correlation(correlation.clone())
                 .with_tenant(self.tenant_id.to_string())
         })?;
-        let mut seen = std::collections::BTreeMap::<String, String>::new();
-        for e in entries.iter() {
-            if e.reason == "FilteredBlackList" && !e.question.is_empty() {
-                // Keep the latest observed time per domain.
-                seen.insert(e.question.clone(), e.time.clone());
-            }
-        }
         let mut out = Vec::new();
-        for (domain, updated) in seen {
+        // Enabled filter subscriptions are configured blocklist
+        // sources. A disabled subscription is not an active entry.
+        for f in status.filters.iter().filter(|f| f.enabled) {
             out.push(DnsBlocklistEntry::new(
                 tenant_id.clone(),
-                domain,
+                f.name.clone(),
                 true,
-                updated,
+                f.last_updated.clone(),
             ));
+        }
+        // Explicit user rules are configured blocklist entries.
+        for rule in status.user_rules.iter() {
+            if !rule.is_empty() {
+                out.push(DnsBlocklistEntry::new(
+                    tenant_id.clone(),
+                    rule.clone(),
+                    true,
+                    String::new(),
+                ));
+            }
         }
         self.record(
             &correlation,
             "READ_BLOCKLIST",
             "ok",
-            format!("{} observed blocked domains", out.len()),
+            format!(
+                "{} configured blocklist entries ({} filters, {} user rules)",
+                out.len(),
+                status.filters.iter().filter(|f| f.enabled).count(),
+                status.user_rules.len(),
+            ),
             std::collections::BTreeMap::new(),
         );
         Ok(out)
@@ -191,7 +206,7 @@ impl DnsSecurityProvider for AdGuardDnsSecurityProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transport::{AdGuardStatus, QueryLogEntry};
+    use crate::transport::{AdGuardStatus, Filter, FilteringStatus, QueryLogEntry};
     use nexus_sentinel::SentinelErrorCode;
     use std::str::FromStr;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -205,14 +220,24 @@ mod tests {
     struct CountingTransport {
         status_calls: Arc<AtomicUsize>,
         query_calls: Arc<AtomicUsize>,
+        filtering_calls: Arc<AtomicUsize>,
         entries: Arc<Mutex<Vec<QueryLogEntry>>>,
+        status: Arc<Mutex<FilteringStatus>>,
         fail_status: bool,
+        fail_filtering: bool,
     }
 
     impl CountingTransport {
         fn with_entries(entries: Vec<QueryLogEntry>) -> Self {
             Self {
                 entries: Arc::new(Mutex::new(entries)),
+                ..Default::default()
+            }
+        }
+
+        fn with_filtering(status: FilteringStatus) -> Self {
+            Self {
+                status: Arc::new(Mutex::new(status)),
                 ..Default::default()
             }
         }
@@ -248,6 +273,21 @@ mod tests {
         ) -> Result<Vec<QueryLogEntry>, SentinelError> {
             self.query_calls.fetch_add(1, Ordering::SeqCst);
             Ok(self.entries.lock().unwrap().clone())
+        }
+
+        fn filtering_status(&self) -> Result<FilteringStatus, SentinelError> {
+            self.filtering_calls.fetch_add(1, Ordering::SeqCst);
+            if self.fail_filtering {
+                return Err(SentinelError::new(
+                    SentinelErrorCode::Unavailable,
+                    "fixture filtering status failed",
+                    None,
+                    None,
+                    None,
+                    None,
+                ));
+            }
+            Ok(self.status.lock().unwrap().clone())
         }
     }
 
@@ -323,35 +363,89 @@ mod tests {
     }
 
     #[test]
-    fn ep030_unit_blocklist_is_observed_not_fabricated() {
-        let t = CountingTransport::with_entries(vec![
-            entry(
-                "2026-08-20T00:00:00Z",
-                "ads.example.com",
-                "FilteredBlackList",
-            ),
-            entry(
-                "2026-08-20T00:00:01Z",
-                "tracker.example.net",
-                "FilteredBlackList",
-            ),
-            // A rewrite or whitelist entry is NOT a blocklist entry.
-            entry("2026-08-20T00:00:02Z", "rewrite.example.org", "Rewrite"),
-            entry(
-                "2026-08-20T00:00:03Z",
-                "good.example.com",
-                "NotFilteredNotFound",
-            ),
-        ]);
+    fn aud027_unit_blocklist_is_configured_state_not_query_hits() {
+        // AUD-027: read_blocklist must reflect the CONFIGURED filter
+        // state (documented /control/filtering/status), never recent
+        // query-log hits. Configured rules with no recent hit are
+        // still active; recent hits are not configuration.
+        let t = CountingTransport::with_filtering(FilteringStatus {
+            enabled: true,
+            interval: 86400,
+            filters: vec![
+                Filter {
+                    enabled: true,
+                    id: 1,
+                    last_updated: "2026-08-20T00:00:00Z".into(),
+                    name: "AdGuard Simplified Domain Names filter".into(),
+                    rules_count: 5912,
+                    url: "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt"
+                        .into(),
+                },
+                // A DISABLED subscription is not an active entry.
+                Filter {
+                    enabled: false,
+                    id: 2,
+                    last_updated: "2026-08-20T00:00:01Z".into(),
+                    name: "Disabled test list".into(),
+                    rules_count: 10,
+                    url: "https://example.invalid/list.txt".into(),
+                },
+            ],
+            whitelist_filters: vec![],
+            user_rules: vec!["||ads.example.com^".into(), "||tracker.example.net^".into()],
+        });
+        // Query-log hits (even FilteredBlackList) must NOT populate the
+        // blocklist - recent hits are not configuration.
+        t.entries.lock().unwrap().push(entry(
+            "2026-08-20T00:00:02Z",
+            "recent-hit.example.org",
+            "FilteredBlackList",
+        ));
         let provider =
             AdGuardDnsSecurityProvider::new(Box::new(t.clone()), tenant(), "admin", "pass");
         let blocklist = provider.read_blocklist(&tenant()).unwrap();
-        assert_eq!(blocklist.len(), 2);
+        // 1 enabled filter + 2 user rules; the disabled filter and the
+        // query-log hit are absent.
+        assert_eq!(blocklist.len(), 3);
         assert!(blocklist.iter().all(|e| e.active));
-        assert!(blocklist.iter().any(|e| e.domain_ref == "ads.example.com"));
+        assert!(blocklist
+            .iter()
+            .any(|e| e.domain_ref == "AdGuard Simplified Domain Names filter"));
+        assert!(blocklist
+            .iter()
+            .any(|e| e.domain_ref == "||ads.example.com^"));
+        assert!(blocklist
+            .iter()
+            .any(|e| e.domain_ref == "||tracker.example.net^"));
         assert!(!blocklist
             .iter()
-            .any(|e| e.domain_ref == "rewrite.example.org"));
+            .any(|e| e.domain_ref == "Disabled test list"));
+        assert!(!blocklist
+            .iter()
+            .any(|e| e.domain_ref == "recent-hit.example.org"));
+        // The configured-state API was used, not the query log.
+        assert_eq!(t.filtering_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(t.query_calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn aud027_unit_blocklist_fails_closed_when_configured_state_unreadable() {
+        // AUD-027 hostile: when the configured filter state cannot be
+        // read, the adapter fails closed (Unavailable) - it never
+        // fabricates a blocklist from query-log hits.
+        let t = CountingTransport {
+            fail_filtering: true,
+            ..Default::default()
+        };
+        let provider =
+            AdGuardDnsSecurityProvider::new(Box::new(t.clone()), tenant(), "admin", "pass");
+        let err = provider.read_blocklist(&tenant()).unwrap_err();
+        assert_eq!(err.code, SentinelErrorCode::Unavailable);
+        // The denial is audited with correlation.
+        assert!(provider
+            .audit()
+            .iter()
+            .any(|e| e.operation == "READ_BLOCKLIST" && e.outcome == "EXTERNAL_PROVIDER"));
     }
 
     #[test]

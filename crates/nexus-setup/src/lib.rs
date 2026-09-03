@@ -22,13 +22,14 @@ pub mod wizard;
 
 pub use error::{SetupError, SetupErrorCode, SetupResult};
 pub use model::{
-    decide_recovery, is_valid_integration_transition, resolve_first_owner, CredentialId,
-    CredentialKind, DeploymentIntentRecord, DeploymentProfile, DeploymentVerification,
-    DeploymentVerificationEvidence, DiscoveryObservation, DiscoveryReport, EdgeEnrollmentRequest,
-    EnrollmentCredential, EnrollmentId, FirstOwnerDecision, FirstOwnerRecord,
-    HardwareCapabilityDeclaration, HardwareFact, HardwareProfile, HardwareValue, IntegrationCard,
-    IntegrationId, IntegrationSelection, ObservationId, OwnerBootstrapRequest, ProfileId,
-    RecoveryDecision, RecoveryEvidence, RecoveryKit, RecoveryKitId, RedactedEnrollmentCredential,
+    advance_owner_state, decide_recovery, is_valid_integration_transition, resolve_first_owner,
+    CredentialId, CredentialKind, DeploymentIntentRecord, DeploymentProfile,
+    DeploymentVerification, DeploymentVerificationEvidence, DiscoveryObservation, DiscoveryReport,
+    EdgeEnrollmentRequest, EnrollmentCredential, EnrollmentId, FirstOwnerDecision,
+    FirstOwnerRecord, HardwareCapabilityDeclaration, HardwareFact, HardwareProfile, HardwareValue,
+    IntegrationCard, IntegrationId, IntegrationSelection, ObservationId, OwnerBootstrapRequest,
+    ProfileId, RecoveryDecision, RecoveryEvidence, RecoveryKit, RecoveryKitId,
+    RedactedEnrollmentCredential,
 };
 pub use nexus_domain::{CorrelationId, PersonId, TenantId};
 pub use port::{

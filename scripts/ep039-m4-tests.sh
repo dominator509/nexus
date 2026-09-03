@@ -199,10 +199,11 @@ for proof in \
   "missing Cargo.lock fails closed" \
   "malformed Cargo.lock fails closed" \
   "fresh evidence verifies against current repository state" \
-  "tampered evidence rejected (TAMPERED_EVIDENCE)" \
+  "tampered evidence rejected (SIGNATURE_INVALID despite resealed checksum)" \
   "stale evidence rejected (STALE_EVIDENCE)" \
   "mismatched run_id/git_commit rejected (MISMATCHED_RUN_ID)" \
   "empty evidence rejected (EMPTY_EVIDENCE)" \
+  "tampered ecosystems evidence rejected (ECOSYSTEMS_SIGNATURE_INVALID)" \
   "generated evidence redacted (no secret-shaped content)"; do
   if ! grep -qF "$proof" "$WORK/forced.log"; then
     fail "forced-failures proof missing: $proof" "$WORK/forced.log"

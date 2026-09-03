@@ -1,0 +1,170 @@
+{
+ "attestation_digest": "sha256:5703c6dd95a57b2dfb82facaaf7c13ba46e1f0e745efe5144f667e6bc2d74fc4",
+ "closure_commit": "92187dde9a2f055ecfc15dc569fc4b242adfab19",
+ "created_at": "2026-09-02T13:40:27Z",
+ "created_by": "node-close-v2.sh",
+ "expected_files_digest": "sha256:104560dc29d7266de55bfa728a3dd544b9cea28bb1d5448412d5255c8985ab0f",
+ "generation": 2,
+ "green_v2_tag": "green-v2/RX-019/92187dde9a2f055ecfc15dc569fc4b242adfab19",
+ "milestones": {
+  "max": 6,
+  "passed": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6
+  ]
+ },
+ "node": "RX-019",
+ "node_verify_exit": 0,
+ "proofs": [
+  {
+   "digest": "sha256:8bef48ccccd88e28bb939ac827b6d850bdfcc8d4465f8f966ea969f95afed169",
+   "id": "aud017-incident-engine",
+   "ref": "crates/nexus-healing/src/engine.rs"
+  },
+  {
+   "digest": "sha256:bda1e96bc983cebcc9d083d8190037eea73737d30dfae650dbe44861aba86005",
+   "id": "aud055-https-tls-transport",
+   "ref": "infra/glitchtip/src/transport.rs"
+  },
+  {
+   "digest": "sha256:544f3ad9484df793f9a274c9cb27c14206c2ec8c5d75f555ad3bf35ba5b2d9fb",
+   "id": "aud055-dsn-scheme-accessors",
+   "ref": "infra/glitchtip/src/dsn.rs"
+  },
+  {
+   "digest": "sha256:33f3268ab96f7eeebfb136247d0ca6c1c1684766a0a39926cb9e85d31a36e731",
+   "id": "aud056-sink-correlation",
+   "ref": "infra/glitchtip/src/sink.rs"
+  },
+  {
+   "digest": "sha256:431144f8cfe4b83f9f029c21e37a881bfb1e866c83e1a3cb7ee991dd8a6cfd52",
+   "id": "aud056-context-rendering",
+   "ref": "infra/glitchtip/src/incident.rs"
+  },
+  {
+   "digest": "sha256:56325466e61cbba34628191480e21bd73760b0ec422d3de1bf21e18a50b0546f",
+   "id": "aud056-runtime-redact-with-context",
+   "ref": "infra/observability/src/runtime.rs"
+  },
+  {
+   "digest": "sha256:fd0768c2a61c8be671535e3a3d8dde1a28921899e9895a07128f3a710aed116c",
+   "id": "aud057-durable-journal",
+   "ref": "infra/observability/src/journal.rs"
+  },
+  {
+   "digest": "sha256:56325466e61cbba34628191480e21bd73760b0ec422d3de1bf21e18a50b0546f",
+   "id": "aud057-runtime-reload",
+   "ref": "infra/observability/src/runtime.rs"
+  },
+  {
+   "digest": "sha256:33f3268ab96f7eeebfb136247d0ca6c1c1684766a0a39926cb9e85d31a36e731",
+   "id": "aud058-sink-ack-resolve-state",
+   "ref": "infra/glitchtip/src/sink.rs"
+  },
+  {
+   "digest": "sha256:73eeb12163b0a9c99cf24f580916f2c25f7e1c93c78ee45cc1b220593ec7f12f",
+   "id": "aud064-promotion-declared-evidence",
+   "ref": "python/nexus_microbrain/artifact_policy.py"
+  },
+  {
+   "digest": "sha256:c62f6928406729939c83174a1ae180c199b1417d2d5314764bc09aa3c444df4e",
+   "id": "aud064-package-exports",
+   "ref": "python/nexus_microbrain/__init__.py"
+  },
+  {
+   "digest": "sha256:1aa2fc9e41f8793b62e33ff4a7b0b5cb6caba43b795310070da2da3f6ca73735",
+   "id": "aud064-proofs",
+   "ref": "tests/microbrain/test_aud064_promotion_evidence.py"
+  },
+  {
+   "digest": "sha256:bf64979c5a4df822e4f162c91373415cf39409b5750b983ad50d6d0f2faa23de",
+   "id": "aud064-ep041-m5-updated-proofs",
+   "ref": "tests/microbrain/test_ep041_m5_artifact_policy.py"
+  }
+ ],
+ "schema_version": 2,
+ "scope_list_digest": "sha256:104560dc29d7266de55bfa728a3dd544b9cea28bb1d5448412d5255c8985ab0f",
+ "status": "DONE",
+ "test_summary": {
+  "failed": 0,
+  "families": [
+   {
+    "failed": 0,
+    "family": "nexus-healing-ep019-unit",
+    "passed": 27
+   },
+   {
+    "failed": 0,
+    "family": "nexus-healing-ep019-failure",
+    "passed": 13
+   },
+   {
+    "failed": 0,
+    "family": "workflows-ep019-vitest",
+    "passed": 11
+   },
+   {
+    "failed": 0,
+    "family": "healing-ep019-pytest",
+    "passed": 12
+   },
+   {
+    "failed": 0,
+    "family": "glitchtip-lib",
+    "passed": 52
+   },
+   {
+    "failed": 0,
+    "family": "glitchtip-ep038-integration",
+    "passed": 4
+   },
+   {
+    "failed": 0,
+    "family": "glitchtip-ep038-stopped",
+    "passed": 1
+   },
+   {
+    "failed": 0,
+    "family": "ops-lib",
+    "passed": 26
+   },
+   {
+    "failed": 0,
+    "family": "ops-ep038-failure",
+    "passed": 6
+   },
+   {
+    "failed": 0,
+    "family": "ops-ep038-revoked",
+    "passed": 1
+   },
+   {
+    "failed": 0,
+    "family": "ops-ep038-stopped",
+    "passed": 1
+   },
+   {
+    "failed": 0,
+    "family": "ops-ep038-restart-recovery",
+    "passed": 1
+   },
+   {
+    "failed": 0,
+    "family": "microbrain-ep041-m5",
+    "passed": 210
+   },
+   {
+    "failed": 0,
+    "family": "microbrain-aud064",
+    "passed": 11
+   }
+  ],
+  "passed": 376
+ },
+ "verify_log": ".agent/remediation/evidence/RX-019/verify.log|sha256:7d6d86b89d9d9a8ffbd7b1a4d4ebbde3a1a98f4fe49f445500408a3cbd507b33",
+ "verify_sentinel": "verify: ok"
+}

@@ -1,0 +1,1 @@
+AUD-012: live-fire proof uses REAL X25519 keypairs (openssl), stores the private key in a REAL OpenBao dev container under the REAL headscale node id, registers the derived public key, resolves the reference through the adapter SecretStore, and asserts cryptographic binding (stored mesh_key == registered public identity)

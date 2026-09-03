@@ -1,0 +1,13 @@
+register 90/90 all VERIFIED_FIXED with evidence
+ok - register 90/90 all VERIFIED_FIXED with evidence columns
+ok - quarantine active (generation 2, RELEASE_ALLOWED=false)
+ok - RX-000..RX-022 all V2-DONE (12 conditions each, recomputed)
+ok - graph scheduler reached RX-023 (deps all DONE): RESUME RX-023
+ok - RX-000..RX-022 closure manifests + verify.logs all present
+ok - zero P0/P1 findings not VERIFIED_FIXED (scheduler gate)
+---
+RX-023 battery: 6 passed, 0 failed
+VERIFY_REMEDIATION_REGISTER: PASS (90/90 registered, quarantine active)
+expected files RX-023: ok
+RX-023 verify: ok
+verify: ok

@@ -1,0 +1,79 @@
+{
+  "attestation_digest": "sha256:60a2711544d516c117b37d9bd8984562addf789db94ee05edad1d550ab0eb925",
+  "closure_commit": "fc8c3927240a332a87f583d62490d3e7ab62244a",
+  "created_at": "2026-08-29T18:28:21Z",
+  "created_by": "node-close-v2.sh",
+  "expected_files_digest": "sha256:af181f069dec5fec281c5740e71703a41382b0362b32663e61b782ddc9db609e",
+  "generation": 2,
+  "green_v2_tag": "green-v2/RX-002/fc8c3927240a332a87f583d62490d3e7ab62244a",
+  "milestones": {
+    "max": 5,
+    "passed": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "node": "RX-002",
+  "node_verify_exit": 0,
+  "proofs": [
+    {
+      "digest": "sha256:470c40698dc3c3f9f3250e167454f4cba14c091e6c0c14df16cbbc6d64429ddf",
+      "id": "verify-log",
+      "ref": ".agent/remediation/evidence/RX-002/verify.log"
+    },
+    {
+      "digest": "sha256:a08e91d7314c953f85729b26f36307098f515b2ff17eb779fee17452f4750f79",
+      "id": "ladder-script",
+      "ref": ".agent/remediation/evidence/RX-002/ladder.sh"
+    },
+    {
+      "digest": "sha256:9237a73978427681553817301057bd9c2631809a85057b8070686c7027e0c0c6",
+      "id": "register",
+      "ref": ".agent/remediation/verify-remediation-register.sh"
+    },
+    {
+      "digest": "sha256:29160868bf6c6addacb007ddf0cab556ee183dfa91dc7cacf1d5cf930887ee89",
+      "id": "evidence-module",
+      "ref": "release-evidence/src/evidence.ts"
+    },
+    {
+      "digest": "sha256:62aa023cf241d4f189aaf920fcc1536512bd94105f4890860b85ae3bc970a419",
+      "id": "readiness-module",
+      "ref": "release-evidence/src/readiness.ts"
+    }
+  ],
+  "schema_version": 2,
+  "scope_list_digest": "sha256:af181f069dec5fec281c5740e71703a41382b0362b32663e61b782ddc9db609e",
+  "status": "DONE",
+  "test_summary": {
+    "failed": 0,
+    "families": [
+      {
+        "failed": 0,
+        "family": "evidence-suite",
+        "passed": 149
+      },
+      {
+        "failed": 0,
+        "family": "register",
+        "passed": 90
+      },
+      {
+        "failed": 0,
+        "family": "canonical-verify",
+        "passed": 1
+      },
+      {
+        "failed": 0,
+        "family": "expected-files",
+        "passed": 1
+      }
+    ],
+    "passed": 241
+  },
+  "verify_log": ".agent/remediation/evidence/RX-002/verify.log|sha256:470c40698dc3c3f9f3250e167454f4cba14c091e6c0c14df16cbbc6d64429ddf",
+  "verify_sentinel": "verify: ok"
+}

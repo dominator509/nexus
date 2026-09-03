@@ -36,6 +36,32 @@ fail() {
 }
 ok() { echo "sbom/forced-failures: $1"; }
 
+# Re-sign a fixture evidence dir with a fresh keypair so the crypto seal
+# is valid; the fixture's intended failure class is then the ONLY denial
+# (staleness, run mismatch, empty - not a missing signature).
+# Also (re)sign the ecosystems evidence so multi-ecosystem checks pass.
+resign_fixture() {
+  dir="$1"
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    keygen "$dir/signing-key.der" "$dir/evidence.json.pub" \
+    >>"$log" 2>&1 || return 1
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    sign "$dir/evidence.json" "$dir/signing-key.der" \
+    "$dir/evidence.json.sig" "$dir/evidence.json.pub" \
+    >>"$log" 2>&1 || return 1
+  if [ -f "$dir/ecosystems.json" ]; then
+    cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+      keygen "$dir/eco-key.der" "$dir/ecosystems.json.pub" \
+      >>"$log" 2>&1 || return 1
+    cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+      sign "$dir/ecosystems.json" "$dir/eco-key.der" \
+      "$dir/ecosystems.json.sig" "$dir/ecosystems.json.pub" \
+      >>"$log" 2>&1 || return 1
+    rm -f "$dir/eco-key.der"
+  fi
+  rm -f "$dir/signing-key.der"
+}
+
 log="/tmp/ep039-sbom-forced-failures.log"
 : > "$log"
 
@@ -121,12 +147,20 @@ if ! sh scripts/sbom/verify.sh "$WORK/fresh" >"$WORK/fresh-verify.log" 2>&1; the
 fi
 ok "fresh evidence verifies against current repository state"
 
-# 2d. Tampered evidence must be rejected (seal mismatch).
+# 2d. Tampered evidence must be rejected - INCLUDING when the attacker
+# recomputes the sha256 seal. The cryptographic signature is the real
+# seal (AUD-059): changing the evidence invalidates the signature even
+# if the checksum is resealed.
 cp "$WORK/fresh/evidence.json" "$WORK/tampered.json"
 cp "$WORK/fresh/evidence.json.sha256" "$WORK/tampered.json.sha256"
 mkdir -p "$WORK/tampered"
 cp "$WORK/tampered.json" "$WORK/tampered/evidence.json"
 cp "$WORK/tampered.json.sha256" "$WORK/tampered/evidence.json.sha256"
+cp "$WORK/fresh/evidence.json.sig" "$WORK/tampered/evidence.json.sig"
+cp "$WORK/fresh/evidence.json.pub" "$WORK/tampered/evidence.json.pub"
+cp "$WORK/fresh/ecosystems.json" "$WORK/tampered/ecosystems.json" 2>/dev/null || true
+cp "$WORK/fresh/ecosystems.json.sig" "$WORK/tampered/ecosystems.json.sig" 2>/dev/null || true
+cp "$WORK/fresh/ecosystems.json.pub" "$WORK/tampered/ecosystems.json.pub" 2>/dev/null || true
 # Tamper one byte in the packages list.
 python3 - "$WORK/tampered/evidence.json" <<'PYEOF'
 import json
@@ -138,18 +172,21 @@ d["package_count"] = d["package_count"] + 1
 with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f)
 PYEOF
+# The attacker reseals the bare checksum - it must NOT help.
+sha256sum "$WORK/tampered/evidence.json" | awk '{print $1}' >"$WORK/tampered/evidence.json.sha256"
 if sh scripts/sbom/verify.sh "$WORK/tampered" >"$WORK/tampered-verify.log" 2>&1; then
   fail "tampered evidence verified (must be rejected)"
 fi
-if ! grep -q 'TAMPERED_EVIDENCE' "$WORK/tampered/verification.json"; then
+if ! grep -q 'SIGNATURE_INVALID' "$WORK/tampered/verification.json"; then
   fail "tampered evidence failure class not typed: $(cat "$WORK/tampered/verification.json")"
 fi
-ok "tampered evidence rejected (TAMPERED_EVIDENCE)"
+ok "tampered evidence rejected (SIGNATURE_INVALID despite resealed checksum)"
 
 # 2e. Stale evidence must be rejected (freshness window).
 mkdir -p "$WORK/stale"
 cp "$WORK/fresh/evidence.json" "$WORK/stale/evidence.json"
 cp "$WORK/fresh/evidence.json.sha256" "$WORK/stale/evidence.json.sha256"
+cp "$WORK/fresh/ecosystems.json" "$WORK/stale/ecosystems.json" 2>/dev/null || true
 python3 - "$WORK/stale/evidence.json" <<'PYEOF'
 import json
 import sys
@@ -161,6 +198,7 @@ with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f)
 PYEOF
 sha256sum "$WORK/stale/evidence.json" | awk '{print $1}' >"$WORK/stale/evidence.json.sha256"
+resign_fixture "$WORK/stale" || fail "stale fixture re-sign failed" "$log"
 if sh scripts/sbom/verify.sh "$WORK/stale" >"$WORK/stale-verify.log" 2>&1; then
   fail "stale evidence verified (must be rejected)"
 fi
@@ -185,6 +223,7 @@ with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f)
 PYEOF
 sha256sum "$WORK/mismatched/evidence.json" | awk '{print $1}' >"$WORK/mismatched/evidence.json.sha256"
+resign_fixture "$WORK/mismatched" || fail "mismatched fixture re-sign failed" "$log"
 if sh scripts/sbom/verify.sh "$WORK/mismatched" >"$WORK/mismatched-verify.log" 2>&1; then
   fail "mismatched run_id evidence verified (must be rejected)"
 fi
@@ -197,6 +236,7 @@ ok "mismatched run_id/git_commit rejected (MISMATCHED_RUN_ID)"
 mkdir -p "$WORK/empty"
 echo '{"schema":"nexus.sbom.evidence.v1","run_id":"ep039-sbom-empty","git_commit":"deadbeef","package_count":0,"packages":[]}' >"$WORK/empty/evidence.json"
 sha256sum "$WORK/empty/evidence.json" | awk '{print $1}' >"$WORK/empty/evidence.json.sha256"
+resign_fixture "$WORK/empty" || fail "empty fixture re-sign failed" "$log"
 if sh scripts/sbom/verify.sh "$WORK/empty" >"$WORK/empty-verify.log" 2>&1; then
   fail "empty evidence verified (must be rejected)"
 fi
@@ -204,6 +244,36 @@ if ! grep -q 'EMPTY_EVIDENCE\|MISMATCHED_RUN_ID' "$WORK/empty/verification.json"
   fail "empty evidence failure class not typed: $(cat "$WORK/empty/verification.json")"
 fi
 ok "empty evidence rejected (EMPTY_EVIDENCE)"
+
+# 2g2. Tampered ecosystems evidence must be rejected (AUD-060): the
+# multi-ecosystem inventory is cryptographically sealed like the main
+# evidence; an attacker who edits the ecosystem counts is caught even
+# if they leave the Cargo evidence untouched.
+mkdir -p "$WORK/eco-tampered"
+cp "$WORK/fresh/evidence.json" "$WORK/eco-tampered/evidence.json"
+cp "$WORK/fresh/evidence.json.sha256" "$WORK/eco-tampered/evidence.json.sha256"
+cp "$WORK/fresh/evidence.json.sig" "$WORK/eco-tampered/evidence.json.sig"
+cp "$WORK/fresh/evidence.json.pub" "$WORK/eco-tampered/evidence.json.pub"
+cp "$WORK/fresh/ecosystems.json" "$WORK/eco-tampered/ecosystems.json"
+cp "$WORK/fresh/ecosystems.json.sig" "$WORK/eco-tampered/ecosystems.json.sig"
+cp "$WORK/fresh/ecosystems.json.pub" "$WORK/eco-tampered/ecosystems.json.pub"
+python3 - "$WORK/eco-tampered/ecosystems.json" <<'PYEOF'
+import json
+import sys
+p = sys.argv[1]
+with open(p, encoding="utf-8") as f:
+    d = json.load(f)
+d["ecosystems"]["typescript"]["package_count"] = 999999
+with open(p, "w", encoding="utf-8") as f:
+    json.dump(d, f)
+PYEOF
+if sh scripts/sbom/verify.sh "$WORK/eco-tampered" >"$WORK/eco-tampered-verify.log" 2>&1; then
+  fail "tampered ecosystems evidence verified (must be rejected)"
+fi
+if ! grep -q 'ECOSYSTEMS_SIGNATURE_INVALID' "$WORK/eco-tampered/verification.json"; then
+  fail "tampered ecosystems failure class not typed: $(cat "$WORK/eco-tampered/verification.json")"
+fi
+ok "tampered ecosystems evidence rejected (ECOSYSTEMS_SIGNATURE_INVALID)"
 
 # 2h. Redaction proof: generated evidence contains no secret-shaped
 # markers.

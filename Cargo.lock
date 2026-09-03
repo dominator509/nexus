@@ -332,9 +332,9 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
 name = "chacha20"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d524456ba66e72eb8b115ff89e01e497f8e6d11d78b70b1aa13c0fbd97540a81"
+checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
@@ -1552,12 +1552,20 @@ name = "nexus-control-plane"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "nexus-a2a",
+ "nexus-auth",
  "nexus-capabilities",
+ "nexus-connectors",
  "nexus-domain",
+ "nexus-events",
  "nexus-fabric",
  "nexus-identity",
+ "nexus-mcp",
+ "nexus-observability",
+ "nexus-otel",
  "serde",
  "serde_json",
+ "sha2 0.11.0",
  "tokio",
 ]
 
@@ -1725,7 +1733,11 @@ dependencies = [
  "nexus-domain",
  "nexus-observability",
  "nexus-otel",
+ "rcgen",
+ "rustls",
+ "rustls-pki-types",
  "serde_json",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -1777,7 +1789,9 @@ version = "0.1.0"
 dependencies = [
  "nexus-domain",
  "nexus-identity",
+ "nexus-openbao",
  "nexus-trust",
+ "openssl",
  "serde",
  "serde_json",
 ]
@@ -1894,6 +1908,7 @@ name = "nexus-imap-smtp"
 version = "0.1.0"
 dependencies = [
  "imap",
+ "imap-proto",
  "lettre",
  "native-tls",
  "nexus-domain",
@@ -2181,6 +2196,9 @@ dependencies = [
  "nexus-domain",
  "nexus-sentinel",
  "nexus-sentinel-advanced",
+ "rcgen",
+ "rustls",
+ "rustls-pki-types",
  "serde",
  "serde_json",
 ]
@@ -2192,6 +2210,19 @@ dependencies = [
  "nexus-domain",
  "nexus-observability",
  "serde_json",
+]
+
+[[package]]
+name = "nexus-pg"
+version = "0.1.0"
+dependencies = [
+ "nexus-data",
+ "nexus-domain",
+ "nexus-events",
+ "postgres",
+ "serde",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]
@@ -2322,6 +2353,7 @@ version = "0.1.0"
 dependencies = [
  "nexus-artifacts",
  "nexus-domain",
+ "ring",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2335,6 +2367,7 @@ dependencies = [
  "nexus-artifacts",
  "nexus-domain",
  "nexus-provider-storage-local",
+ "ring",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2348,6 +2381,7 @@ dependencies = [
  "nexus-artifacts",
  "nexus-domain",
  "nexus-provider-storage-local",
+ "ring",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2361,6 +2395,7 @@ dependencies = [
  "nexus-artifacts",
  "nexus-domain",
  "nexus-provider-storage-local",
+ "ring",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2468,8 +2503,11 @@ dependencies = [
  "nexus-osquery-connector",
  "nexus-sentinel",
  "nexus-sentinel-advanced",
+ "nexus-suricata-connector",
  "nexus-wazuh-connector",
  "nexus-zeek-connector",
+ "rustls",
+ "rustls-pki-types",
  "serde",
  "serde_json",
 ]
@@ -2531,6 +2569,7 @@ name = "nexus-skills"
 version = "0.1.0"
 dependencies = [
  "jsonschema",
+ "libc",
  "nexus-domain",
  "nexus-fabric",
  "ring",
@@ -2612,6 +2651,7 @@ name = "nexus-supply-chain"
 version = "0.1.0"
 dependencies = [
  "nexus-domain",
+ "ring",
  "serde",
  "serde_json",
  "sha2 0.10.9",

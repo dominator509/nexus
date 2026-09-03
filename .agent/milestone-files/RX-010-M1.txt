@@ -1,0 +1,1 @@
+AUD-076: collectReleaseTag requires HEAD to resolve to a refs/tags/* ref; branch pointers (ref: refs/heads/master) and detached commits fail closed to "" so the readiness release-tag obligation can never be satisfied by merely being on a branch

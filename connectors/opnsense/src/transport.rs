@@ -54,6 +54,10 @@ pub struct OpnsenseRule {
     pub enabled: bool,
     /// Provider-side action (pass|block|reject).
     pub action: String,
+    /// Provider-side source network/alias (searchRule row
+    /// source_net). AUD-026: verification reads this back to prove the
+    /// rule binds the OBSERVED network identity, not just a rule id.
+    pub source_net: Option<String>,
 }
 
 /// Normalized OPNsense rule creation payload (documented addRule body
@@ -96,12 +100,51 @@ impl OpnsenseRulePayload {
     }
 }
 
+/// Normalized OPNsense ARP table entry (documented
+/// GET /api/diagnostics/interface/getArp; scripts/interfaces/list_arp.py
+/// produces `{mac, ip, intf, expired, expires, permanent, type,
+/// manufacturer, hostname}`).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct OpnsenseArpEntry {
+    /// MAC address reference.
+    pub mac: String,
+    /// IP address reference.
+    pub ip: String,
+    /// Interface name.
+    pub intf: String,
+    /// True when the kernel marked the entry expired.
+    #[serde(default)]
+    pub expired: bool,
+    /// True for the firewall's own permanent interface entries.
+    #[serde(default)]
+    pub permanent: bool,
+    /// Link type (e.g. "ethernet", "local").
+    #[serde(default)]
+    pub r#type: String,
+    /// Manufacturer when the entry carries one.
+    #[serde(default)]
+    pub manufacturer: String,
+    /// Hostname when the entry carries one.
+    #[serde(default)]
+    pub hostname: String,
+}
+
 /// The OPNsense transport port. Default implementations fail closed
 /// (Unavailable) so an unbound transport never fabricates a session.
 pub trait OpnsenseTransport {
     /// Search firewall automation rules (documented GET searchRule).
     fn search_rules(&self, phrase: &str) -> Result<Vec<OpnsenseRule>, SentinelError> {
         let _ = phrase;
+        Err(SentinelError::unavailable(
+            "opnsense transport has no implementation bound",
+        ))
+    }
+
+    /// Read the ARP/neighbor table (documented GET
+    /// /api/diagnostics/interface/getArp). The ARP table is the
+    /// OBSERVED network inventory source (AUD-028): devices are
+    /// discovered from what the router demonstrably sees.
+    fn arp_table(&self) -> Result<Vec<OpnsenseArpEntry>, SentinelError> {
         Err(SentinelError::unavailable(
             "opnsense transport has no implementation bound",
         ))
@@ -308,6 +351,13 @@ impl HttpOpnsenseTransport {
 }
 
 impl OpnsenseTransport for HttpOpnsenseTransport {
+    fn arp_table(&self) -> Result<Vec<OpnsenseArpEntry>, SentinelError> {
+        // Documented GET /api/diagnostics/interface/getArp -> bare
+        // JSON array (scripts/interfaces/list_arp.py shape).
+        let response = self.get("/api/diagnostics/interface/getArp")?;
+        Self::parse(response)
+    }
+
     fn search_rules(&self, phrase: &str) -> Result<Vec<OpnsenseRule>, SentinelError> {
         // Documented GET searchRule with current/rowCount/searchPhrase
         // query parameters (docs example).
@@ -331,6 +381,8 @@ impl OpnsenseTransport for HttpOpnsenseTransport {
             enabled: Option<serde_json::Value>,
             #[serde(default)]
             action: Option<String>,
+            #[serde(default)]
+            source_net: Option<String>,
         }
         let parsed: SearchResponse = Self::parse(response)?;
         Ok(parsed
@@ -346,6 +398,7 @@ impl OpnsenseTransport for HttpOpnsenseTransport {
                     _ => false,
                 },
                 action: row.action.unwrap_or_default(),
+                source_net: row.source_net,
             })
             .collect())
     }

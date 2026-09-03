@@ -64,7 +64,7 @@ fi
 ok "dart format clean"
 
 # Real test run: the full ep034_unit suite through flutter test.
-if ! (cd apps/mobile && $FLUTTER test >>"$log" 2>&1); then
+if ! (cd apps/mobile && $FLUTTER test --reporter expanded -j 1 >>"$log" 2>&1); then
   fail "flutter test failed" "$log"
 fi
 

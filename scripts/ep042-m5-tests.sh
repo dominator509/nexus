@@ -173,6 +173,30 @@ printf 'nexus-core-v1-real-bytes' > "$FIXTURE_BASE/artifacts/comp-1"
 printf 'nexus-model-v2-real-bytes' > "$FIXTURE_BASE/artifacts/comp-2"
 C1_DIGEST=$(sha256sum "$FIXTURE_BASE/artifacts/comp-1" | awk '{print $1}')
 C2_DIGEST=$(sha256sum "$FIXTURE_BASE/artifacts/comp-2" | awk '{print $1}')
+
+# Real ED25519 signing keypair (AUD-065). The release components carry
+# REAL cryptographic signatures over their canonical digests; the bundle
+# carries the matching public key (JWK) so verification is real.
+node -e "
+const {generateKeyPairSync, sign: cryptoSign} = require('crypto');
+const fs = require('fs');
+const {publicKey, privateKey} = generateKeyPairSync('ed25519');
+const pubJwk = publicKey.export({format:'jwk'});
+fs.writeFileSync('$FIXTURE_BASE/signing-key.pub.jwk', JSON.stringify(pubJwk));
+const doSign = (digestHex) => {
+  const msg = Buffer.from('sha256:' + digestHex);
+  return cryptoSign(null, msg, privateKey).toString('base64');
+};
+const c1sig = doSign('$C1_DIGEST');
+const c2sig = doSign('$C2_DIGEST');
+fs.writeFileSync('$FIXTURE_BASE/c1.sig', c1sig);
+fs.writeFileSync('$FIXTURE_BASE/c2.sig', c2sig);
+console.log('signing keypair generated, c1sig=' + c1sig.length + ' c2sig=' + c2sig.length);
+"
+C1_SIG=$(cat "$FIXTURE_BASE/c1.sig")
+C2_SIG=$(cat "$FIXTURE_BASE/c2.sig")
+[ ${#C1_SIG} -gt 60 ] || fail "real c1 signature not produced"
+[ ${#C2_SIG} -gt 60 ] || fail "real c2 signature not produced"
 cat > "$FIXTURE_BASE/manifest.json" <<EOF
 {
   "schema_version": 1,
@@ -180,8 +204,8 @@ cat > "$FIXTURE_BASE/manifest.json" <<EOF
   "version": "1.0.0",
   "channel": "STABLE",
   "components": [
-    {"component_id":"comp-1","name":"component-comp-1","version":"1.0.0","artifact_ref":{"backend":"local","key":"artifact-comp-1"},"digest":"sha256:${C1_DIGEST}","signature":{"algorithm":"ED25519","key_id":"key-test-1","value_b64":"AAAA01BBBB01"},"sbom_ref":{"backend":"local","key":"sbom-comp-1"},"license_ref":"MIT","size_bytes":24},
-    {"component_id":"comp-2","name":"component-comp-2","version":"2.0.0","artifact_ref":{"backend":"local","key":"artifact-comp-2"},"digest":"sha256:${C2_DIGEST}","signature":{"algorithm":"ED25519","key_id":"key-test-1","value_b64":"AAAA01BBBB01"},"sbom_ref":{"backend":"local","key":"sbom-comp-2"},"license_ref":"MIT","size_bytes":25}
+    {"component_id":"comp-1","name":"component-comp-1","version":"1.0.0","artifact_ref":{"backend":"local","key":"artifact-comp-1"},"digest":"sha256:${C1_DIGEST}","signature":{"algorithm":"ED25519","key_id":"key-test-1","value_b64":"${C1_SIG}"},"sbom_ref":{"backend":"local","key":"sbom-comp-1"},"license_ref":"MIT","size_bytes":24},
+    {"component_id":"comp-2","name":"component-comp-2","version":"2.0.0","artifact_ref":{"backend":"local","key":"artifact-comp-2"},"digest":"sha256:${C2_DIGEST}","signature":{"algorithm":"ED25519","key_id":"key-test-1","value_b64":"${C2_SIG}"},"sbom_ref":{"backend":"local","key":"sbom-comp-2"},"license_ref":"MIT","size_bytes":25}
   ],
   "compatibility": {
     "matrix_id": "matrix-1",
@@ -224,12 +248,14 @@ if ! sh offline-bundle/scripts/bundle-produce.sh \
   "sbom.json=$FIXTURE_BASE/sbom.json" \
   "LICENSE=$FIXTURE_BASE/LICENSE" \
   "mig.sql=$FIXTURE_BASE/mig.sql" \
-  "recover.sh=$FIXTURE_BASE/recover.sh" >>"$log" 2>&1; then
+  "recover.sh=$FIXTURE_BASE/recover.sh" \
+  "$FIXTURE_BASE/signing-key.pub.jwk" >>"$log" 2>&1; then
   fail "bundle-produce.sh failed" "$log"
 fi
 grep -q "bundle produced: bundle-m5" "$log" || fail "bundle produce sentinel missing" "$log"
 [ -f "$BUNDLE_DIR/bundle-manifest.json" ] || fail "bundle-manifest.json missing"
 [ -f "$BUNDLE_DIR/release-manifest.json" ] || fail "release-manifest.json missing"
+[ -f "$BUNDLE_DIR/signing-key.pub.jwk" ] || fail "signing-key.pub.jwk missing from bundle"
 [ -f "$BUNDLE_DIR/images/comp-1" ] || fail "bundle image payload missing"
 [ -f "$BUNDLE_DIR/models/comp-2" ] || fail "bundle model payload missing"
 cmp -s "$FIXTURE_BASE/artifacts/comp-1" "$BUNDLE_DIR/images/comp-1" || fail "bundled comp-1 bytes mismatch"
@@ -298,6 +324,67 @@ fi
 grep -q "BUNDLE_DIGEST_MISMATCH" "$log" || fail "tampered bundle not classified BUNDLE_DIGEST_MISMATCH" "$log"
 ok "real tampered bundle fails closed (BUNDLE_DIGEST_MISMATCH)"
 
+# --- real failure: dummy/placeholder signature fails closed (AUD-065) -------
+# SIGNATURE PRESENT != SIGNATURE VALID: the M5 gate previously shipped
+# AAAA01BBBB01 dummy signatures and expected verification success. A
+# bundle whose component signature does not cryptographically verify is
+# NOT VERIFIED - no placeholder may ever verify.
+cp -r "$BUNDLE_DIR" "$FIXTURE_BASE/bundle-dummy-sig"
+node -e "
+const fs=require('fs');
+const p='$FIXTURE_BASE/bundle-dummy-sig/release-manifest.json';
+const obj=JSON.parse(fs.readFileSync(p,'utf8'));
+obj.components[0].signature.value_b64='AAAA01BBBB01';
+fs.writeFileSync(p, JSON.stringify(obj));
+"
+# The manifest digest binding will change; recompute it so the ONLY
+# denial is the cryptographic signature.
+node -e "
+const {createHash}=require('crypto');
+const fs=require('fs');
+const p='$FIXTURE_BASE/bundle-dummy-sig/release-manifest.json';
+const obj=JSON.parse(fs.readFileSync(p,'utf8'));
+const {manifest_digest,...rest}=obj;
+obj.manifest_digest='sha256:'+createHash('sha256').update(JSON.stringify(rest)).digest('hex');
+fs.writeFileSync(p, JSON.stringify(obj));
+"
+if sh offline-bundle/scripts/bundle-verify.sh "$FIXTURE_BASE/bundle-dummy-sig" >>"$log" 2>&1; then
+  fail "dummy signature bundle verify must fail"
+fi
+grep -q "SIGNATURE_INVALID" "$log" || fail "dummy signature not classified SIGNATURE_INVALID" "$log"
+ok "dummy/placeholder signature fails closed (SIGNATURE_INVALID)"
+
+# --- real failure: signature from a WRONG key fails closed -------------------
+cp -r "$BUNDLE_DIR" "$FIXTURE_BASE/bundle-wrong-key"
+node -e "
+const {generateKeyPairSync, sign: cryptoSign}=require('crypto');
+const fs=require('fs');
+const {publicKey, privateKey}=generateKeyPairSync('ed25519');
+const p='$FIXTURE_BASE/bundle-wrong-key/release-manifest.json';
+const obj=JSON.parse(fs.readFileSync(p,'utf8'));
+const comp=obj.components[0];
+const digestHex=comp.digest.replace('sha256:','');
+const msg=Buffer.from('sha256:'+digestHex);
+comp.signature.value_b64=cryptoSign(null,msg,privateKey).toString('base64');
+const {manifest_digest,...rest}=obj;
+obj.manifest_digest='sha256:'+require('crypto').createHash('sha256').update(JSON.stringify(rest)).digest('hex');
+fs.writeFileSync(p, JSON.stringify(obj));
+"
+if sh offline-bundle/scripts/bundle-verify.sh "$FIXTURE_BASE/bundle-wrong-key" >>"$log" 2>&1; then
+  fail "wrong-key signature bundle verify must fail"
+fi
+grep -q "SIGNATURE_INVALID" "$log" || fail "wrong-key signature not classified SIGNATURE_INVALID" "$log"
+ok "signature from a wrong key fails closed (SIGNATURE_INVALID)"
+
+# --- real failure: missing signing key fails closed --------------------------
+cp -r "$BUNDLE_DIR" "$FIXTURE_BASE/bundle-missing-key"
+rm -f "$FIXTURE_BASE/bundle-missing-key/signing-key.pub.jwk"
+if sh offline-bundle/scripts/bundle-verify.sh "$FIXTURE_BASE/bundle-missing-key" >>"$log" 2>&1; then
+  fail "missing signing key bundle verify must fail"
+fi
+grep -q "SIGNING_KEY_MISSING" "$log" || fail "missing signing key not classified SIGNING_KEY_MISSING" "$log"
+ok "missing signing key fails closed (SIGNING_KEY_MISSING)"
+
 # --- real failure: path traversal denied ---------------------------------------
 cp -r "$BUNDLE_DIR" "$FIXTURE_BASE/bundle-traversal"
 node -e "
@@ -317,7 +404,7 @@ ok "real path traversal fails closed (PATH_ESCAPE)"
 EVIDENCE_DIR="$EVIDENCE_BASE"
 mkdir -p "$EVIDENCE_DIR"
 CANARY="ep042-m5-canary-$(date +%s)-x7"
-printf 'INTERNAL BEHAVIOR CERTIFIED for exact exercised local surface\nreal signature verification NOT ASSERTED\n' > "$EVIDENCE_DIR/boundary.txt"
+printf 'INTERNAL BEHAVIOR CERTIFIED for exact exercised local surface\nreal Ed25519 signature verification ASSERTED and proven (AUD-065)\n' > "$EVIDENCE_DIR/boundary.txt"
 export NEXUS_BUNDLE_CANARY="$CANARY"
 if ! node --experimental-transform-types --experimental-loader "$(cd offline-bundle/scripts && pwd)/ts-resolve-loader.mjs" \
   offline-bundle/src/cli.ts evidence \
@@ -334,7 +421,7 @@ if ! node --experimental-transform-types --experimental-loader "$(cd offline-bun
   --install-state "INSTALLED" \
   --rollback-state "VERIFIED" \
   --offline-install-state "OFFLINE_INSTALL_VERIFIED" \
-  --signature-state "SIGNATURE_PRESENT_NOT_VERIFIED" \
+  --signature-state "SIGNATURE_VERIFIED_ED25519" \
   --boundary "$EVIDENCE_DIR/boundary.txt" \
   --canaries "$CANARY" >>"$log" 2>&1; then
   fail "evidence CLI failed" "$log"

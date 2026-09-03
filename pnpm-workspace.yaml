@@ -21,8 +21,16 @@ packages:
 # GHSA-j3f2-48v5-ccww). The latest advisory requires >=7.6.5, so the
 # override pins the patched 7.x line. API-compatible minor bump within
 # the 7.x series; EP-006 M4 security gate fix (no allowlist).
+# fast-uri is pulled transitively by ajv/ajv-formats/ajv-keywords under
+# @temporalio/worker tooling (webpack > schema-utils). The resolved
+# 3.1.5 carries 4 high advisories (GHSA-5jgf-p345-68v8 host confusion,
+# GHSA-f65p-4m7j-42xc SSRF via malformed IPv6, GHSA-fph4-wmhf-6fwf SSRF
+# via repeated percent-decoding, GHSA-jqff-g426-hqxp host confusion via
+# percent-encoded scheme). All require >=3.1.6; the override pins the
+# patched 3.1.x line (AUD-090 gate verification, no allowlist).
 overrides:
   protobufjs: ">=7.6.5 <8"
+  fast-uri: ">=3.1.6 <4"
 allowBuilds:
   esbuild: true
   protobufjs: true

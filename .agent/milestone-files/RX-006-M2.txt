@@ -1,0 +1,1 @@
+AUD-012: wireguard_config resolves openbao:mesh/{tenant}/{node_id} through a real SecretStore or fails closed (no store -> StateConflict fail-fast; unresolvable reference -> NotFound); never fabricates a private-key reference

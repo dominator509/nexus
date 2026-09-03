@@ -190,6 +190,23 @@ canonical node verify ladder requires the control plane to be up for
 the runtime smoke stage; start it with the repository canonical
 local-start before running the ladder.
 
+The runtime smoke base URL resolves by precedence
+(`scripts/smoke/runtime.sh` and `scripts/live-fire/LF-029.sh`):
+
+1. `NEXUS_SMOKE_URL` - operator override, always wins. Set this when
+   hosting remotely (public domain or dynamic IP), e.g.
+   `export NEXUS_SMOKE_URL=https://nexus.example.com`.
+2. `NEXUS_BASE_DOMAIN` - used only when it is a real deployable domain
+   (`https://<domain>`); local/test placeholders (`.test`, `.local`,
+   `.example.test`, `localhost`) are ignored and fall through.
+3. Canonical local mapping `http://127.0.0.1:8443` - the compose core
+   profile binds the control plane on host `127.0.0.1:8443`.
+
+Every deployment (including a fresh clone on a foreign host or dynamic
+IP) must set `NEXUS_SMOKE_URL` in its `.env` (or use a real
+`NEXUS_BASE_DOMAIN`) so the verify ladder smoke stage targets the
+actual control plane.
+
 ### Release evidence refresh
 
 After any evidence-bearing commit, regenerate the readiness report and

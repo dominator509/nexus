@@ -31,7 +31,6 @@ use nexus_domain::TenantId;
 use nexus_openwrt_connector::{HttpOpenWrtTransport, OpenWrtFirewallProvider, OpenWrtTransport};
 use nexus_sentinel::{FirewallProvider, QuarantineState};
 use std::str::FromStr;
-
 const CANARY_USER: &str = "canary-user";
 const CANARY_PASS: &str = "canary-pass";
 const SESSION_ID: &str = "c1ed6c7b025d0caca723a816fa61b668";
@@ -427,14 +426,22 @@ fn ep030_integration_containment_lifecycle_over_real_sockets() {
     );
     // Propose: DATA, zero transport calls.
     let proposal = provider
-        .propose_containment(&tenant(), None, &device)
+        .propose_containment(&tenant(), None, &device, Some("192.0.2.10"))
         .unwrap();
     assert_eq!(proposal.state, QuarantineState::Proposed);
-    // Approve (caller-side decision).
-    let approved = QuarantineProposal {
-        state: QuarantineState::Approved,
-        ..proposal
-    };
+    // Approve via the immutable receipt binding (AUD-025: approval
+    // is a receipt over the exact action, never a bare state mutation).
+    let approved = proposal.approve(
+        nexus_domain::ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
+        nexus_domain::PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
+        nexus_domain::ApprovalClass::Human,
+        "2026-08-20T00:00:00Z",
+    );
+    // AUD-029: automated containment ALWAYS notifies the owner; apply
+    // fails closed without the immutable notification receipt.
+    let approved = provider
+        .notify_owner(&approved, "person-owner-1", "push")
+        .unwrap();
     let applied = provider.apply_containment(&approved).unwrap();
     assert_eq!(applied.state, QuarantineState::Applied);
     assert!(applied.rule_ref.is_some());
@@ -495,10 +502,19 @@ fn ep030_integration_policy_denial_zero_transport_calls() {
         "2026-08-20T00:00:00Z",
     );
     let proposal = provider
-        .propose_containment(&tenant(), None, &device)
+        .propose_containment(&tenant(), None, &device, Some("192.0.2.10"))
         .unwrap();
     // NOT approved: fails closed with zero transport calls.
     let err = provider.apply_containment(&proposal).unwrap_err();
+    assert_eq!(err.code, nexus_sentinel::SentinelErrorCode::Policy);
+    // AUD-025 hostile: a bare state mutation to Approved (no immutable
+    // receipt) is forgeable state and must ALSO fail closed with zero
+    // transport calls - state alone is never authority.
+    let forged = QuarantineProposal {
+        state: QuarantineState::Approved,
+        ..proposal
+    };
+    let err = provider.apply_containment(&forged).unwrap_err();
     assert_eq!(err.code, nexus_sentinel::SentinelErrorCode::Policy);
     // The audit ring records the denial with correlation.
     assert!(provider

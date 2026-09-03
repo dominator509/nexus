@@ -70,6 +70,43 @@ pub struct QueryLogEntry {
     pub reason: String,
 }
 
+/// Normalized filter subscription info (documented Filter schema).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Filter {
+    /// Subscription enabled flag.
+    pub enabled: bool,
+    /// Subscription id.
+    pub id: i64,
+    /// Last update time (RFC3339) when the upstream reported one.
+    #[serde(default)]
+    pub last_updated: String,
+    /// Human-readable filter list name.
+    pub name: String,
+    /// Number of rules in the list.
+    pub rules_count: u64,
+    /// Upstream list URL.
+    pub url: String,
+}
+
+/// Normalized filtering settings (documented FilterStatus schema).
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub struct FilteringStatus {
+    /// Global filtering enabled flag.
+    pub enabled: bool,
+    /// Filter update interval (seconds) when present.
+    #[serde(default)]
+    pub interval: u64,
+    /// Configured blocklist filter subscriptions.
+    #[serde(default)]
+    pub filters: Vec<Filter>,
+    /// Configured whitelist filter subscriptions.
+    #[serde(default)]
+    pub whitelist_filters: Vec<Filter>,
+    /// Explicit user rules (AdGuard rule syntax, e.g. `||example.com^`).
+    #[serde(default)]
+    pub user_rules: Vec<String>,
+}
+
 /// The AdGuard Home transport port. Default implementations fail
 /// closed (Unavailable) so an unbound transport never fabricates a
 /// session.
@@ -85,6 +122,16 @@ pub trait AdGuardTransport {
     /// `limit` bounds the page; `search` filters by domain or client.
     fn query_log(&self, limit: usize, search: &str) -> Result<Vec<QueryLogEntry>, SentinelError> {
         let _ = (limit, search);
+        Err(SentinelError::unavailable(
+            "adguard transport has no implementation bound",
+        ))
+    }
+
+    /// Read the CONFIGURED filtering state (documented
+    /// GET /control/filtering/status). This is the authoritative
+    /// blocklist surface (AUD-027): configured rules with no recent
+    /// query-log hit are still active blocklist entries.
+    fn filtering_status(&self) -> Result<FilteringStatus, SentinelError> {
         Err(SentinelError::unavailable(
             "adguard transport has no implementation bound",
         ))
@@ -256,6 +303,77 @@ impl AdGuardTransport for HttpAdGuardTransport {
                 reason: item.reason,
             })
             .collect())
+    }
+
+    fn filtering_status(&self) -> Result<FilteringStatus, SentinelError> {
+        // Documented GET /control/filtering/status -> FilterStatus.
+        let response = self.get("/control/filtering/status")?;
+        #[derive(serde::Deserialize)]
+        struct FilterStatusRaw {
+            #[serde(default)]
+            enabled: bool,
+            #[serde(default)]
+            interval: serde_json::Value,
+            #[serde(default)]
+            filters: Vec<FilterRaw>,
+            #[serde(default)]
+            whitelist_filters: Vec<FilterRaw>,
+            #[serde(default)]
+            user_rules: Vec<String>,
+        }
+        #[derive(serde::Deserialize)]
+        struct FilterRaw {
+            #[serde(default)]
+            enabled: bool,
+            #[serde(default)]
+            id: serde_json::Value,
+            #[serde(default)]
+            last_updated: String,
+            #[serde(default)]
+            name: String,
+            #[serde(default)]
+            rules_count: serde_json::Value,
+            #[serde(default)]
+            url: String,
+        }
+        let raw: FilterStatusRaw = Self::parse(response)?;
+        let to_u64 = |v: &serde_json::Value| -> u64 {
+            v.as_u64()
+                .unwrap_or_else(|| v.as_str().and_then(|s| s.parse().ok()).unwrap_or(0))
+        };
+        let to_i64 = |v: &serde_json::Value| -> i64 {
+            v.as_i64()
+                .unwrap_or_else(|| v.as_str().and_then(|s| s.parse().ok()).unwrap_or(0))
+        };
+        Ok(FilteringStatus {
+            enabled: raw.enabled,
+            interval: to_u64(&raw.interval),
+            filters: raw
+                .filters
+                .into_iter()
+                .map(|f| Filter {
+                    enabled: f.enabled,
+                    id: to_i64(&f.id),
+                    last_updated: f.last_updated,
+                    name: f.name,
+                    rules_count: to_u64(&f.rules_count),
+                    url: f.url,
+                })
+                .collect(),
+            whitelist_filters: raw
+                .whitelist_filters
+                .into_iter()
+                .map(|f| Filter {
+                    enabled: f.enabled,
+                    id: to_i64(&f.id),
+                    last_updated: f.last_updated,
+                    name: f.name,
+                    rules_count: to_u64(&f.rules_count),
+                    url: f.url,
+                })
+                .collect(),
+            user_rules: raw.user_rules,
+        })
     }
 }
 

@@ -2,9 +2,10 @@
 //!
 //! Proves a REAL advanced-detection quarantine journey over REAL
 //! std::net sockets against controlled local fixtures emitting REAL
-//! Zeek-shaped, CrowdSec LAPI-shaped, Wazuh-shaped, osquery-shaped,
-//! and OPNsense-shaped responses. The PRODUCTION connectors
-//! (nexus-zeek-connector, nexus-crowdsec-connector,
+//! Zeek-shaped, Suricata EVE-shaped, CrowdSec LAPI-shaped,
+//! Wazuh-shaped, osquery-shaped, and OPNsense-shaped responses. The
+//! PRODUCTION connectors (nexus-zeek-connector,
+//! nexus-suricata-connector, nexus-crowdsec-connector,
 //! nexus-wazuh-connector, nexus-osquery-connector,
 //! nexus-opnsense-connector) are composed behind the
 //! nexus-sentinel-advanced contract; production transports are never
@@ -55,6 +56,7 @@ use nexus_sentinel_advanced_live_fire::{
     SentinelInvestigationService, SentinelResponsePlanner, SentinelTriageService,
     SentinelVerificationService,
 };
+use nexus_suricata_connector::{JsonLinesSuricataTransport, SuricataNetworkDetectionProvider};
 use nexus_wazuh_connector::{HttpWazuhTransport, WazuhEndpointTelemetryProvider};
 use nexus_zeek_connector::{JsonLinesZeekTransport, ZeekNetworkDetectionProvider};
 
@@ -105,6 +107,68 @@ fn write_evidence(doc: serde_json::Value) {
         serde_json::to_string_pretty(&doc).expect("evidence json"),
     )
     .expect("write evidence");
+}
+
+/// POST a documented osquery request to the collector over REAL TLS
+/// (AUD-036), pinning the collector's certificate. Returns the raw
+/// HTTP response body.
+fn osq_post(ep: &HttpOsqueryEndpoint, port: u16, path: &str, body: &str) -> String {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("connect osquery tls");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("timeout");
+    let mut roots = rustls::RootCertStore::empty();
+    roots
+        .add(rustls_pki_types::CertificateDer::from(ep.certificate_der()))
+        .expect("pin collector certificate");
+    let config = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    let mut conn = rustls::ClientConnection::new(
+        Arc::new(config),
+        "localhost".try_into().expect("server name"),
+    )
+    .expect("client connection");
+    conn.complete_io(&mut stream).expect("tls handshake");
+    let req = format!(
+        "POST {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    conn.writer().write_all(req.as_bytes()).expect("write");
+    conn.complete_io(&mut stream).expect("tls flush");
+    let mut resp: Vec<u8> = Vec::new();
+    let mut chunk = [0u8; 8192];
+    loop {
+        match conn.reader().read(&mut chunk) {
+            Ok(0) => break,
+            Ok(n) => {
+                resp.extend_from_slice(&chunk[..n]);
+                if let Some(end) = resp.windows(4).position(|w| w == b"\r\n\r\n") {
+                    let head = String::from_utf8_lossy(&resp[..end]);
+                    let clen = head
+                        .lines()
+                        .find_map(|l| {
+                            let l = l.to_ascii_lowercase();
+                            l.strip_prefix("content-length:")
+                                .and_then(|v| v.trim().parse::<usize>().ok())
+                        })
+                        .unwrap_or(0);
+                    if resp.len() >= end + 4 + clen {
+                        break;
+                    }
+                }
+            }
+            Err(_) => {
+                if conn.complete_io(&mut stream).is_err() {
+                    break;
+                }
+            }
+        }
+    }
+    let text = String::from_utf8_lossy(&resp).to_string();
+    let body_start = text.find("\r\n\r\n").map(|i| i + 4).unwrap_or(text.len());
+    text[body_start..].to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -215,6 +279,40 @@ fn spawn_zeek_fixture(lines: Vec<String>) -> (u16, thread::JoinHandle<()>) {
 }
 
 // ---------------------------------------------------------------------------
+// Suricata fixture (REAL documented EVE JSON surface)
+// ---------------------------------------------------------------------------
+
+/// Spawn a fixture that writes REAL Suricata eve.json alert lines to
+/// the first accepted connection, then closes. AUD-030: the Enhanced
+/// profile sensor must actually operate in the live-fire journey.
+fn spawn_suricata_fixture(lines: Vec<String>) -> (u16, thread::JoinHandle<()>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    let handle = thread::spawn(move || {
+        listener.set_nonblocking(true).expect("nonblocking");
+        let deadline = Instant::now() + Duration::from_secs(15);
+        let (mut stream, _) = loop {
+            match listener.accept() {
+                Ok(c) => break c,
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    if Instant::now() > deadline {
+                        return;
+                    }
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(_) => return,
+            }
+        };
+        for line in lines {
+            let _ = stream.write_all(line.as_bytes());
+            let _ = stream.write_all(b"\n");
+        }
+        let _ = stream.flush();
+    });
+    (port, handle)
+}
+
+// ---------------------------------------------------------------------------
 // CrowdSec fixture (REAL documented LAPI surface)
 // ---------------------------------------------------------------------------
 
@@ -270,6 +368,7 @@ struct OpnRule {
     description: String,
     enabled: bool,
     action: String,
+    source_net: Option<String>,
 }
 
 fn spawn_opnsense_fixture(
@@ -290,6 +389,7 @@ fn spawn_opnsense_fixture(
                         "description": r.description,
                         "enabled": if r.enabled { "1" } else { "0" },
                         "action": r.action,
+                        "source_net": r.source_net.clone().unwrap_or_default(),
                     })
                 })
                 .collect();
@@ -317,6 +417,10 @@ fn spawn_opnsense_fixture(
                     .and_then(|v| v.as_str())
                     .unwrap_or("block")
                     .to_string(),
+                source_net: rule
+                    .get("source_net")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
             });
             (
                 200,
@@ -361,12 +465,23 @@ fn unknown_device() -> NetworkDevice {
     )
 }
 
-fn approved_proposal(provider: &OpnsenseFirewallProvider, d: &NetworkDevice) -> QuarantineProposal {
-    let proposal = provider.propose_containment(&tenant(), None, d).unwrap();
-    QuarantineProposal {
-        state: QuarantineState::Approved,
-        ..proposal
-    }
+fn approved_proposal_from(
+    provider: &OpnsenseFirewallProvider,
+    proposal: QuarantineProposal,
+) -> QuarantineProposal {
+    // AUD-025: approval is an immutable receipt binding the exact
+    // action - never a bare state mutation. The journey must go
+    // through the real approve() binding.
+    let approved = proposal.approve(
+        nexus_domain::ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
+        nexus_domain::PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
+        nexus_domain::ApprovalClass::Human,
+        "2026-08-20T00:00:00Z",
+    );
+    // AUD-029: automated containment ALWAYS notifies the owner.
+    provider
+        .notify_owner(&approved, "person-owner-1", "push")
+        .unwrap()
 }
 
 // ---------------------------------------------------------------------------
@@ -384,6 +499,18 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     ];
     let (zeek_port, zeek_handle) = spawn_zeek_fixture(zeek_lines);
 
+    // Suricata (Enhanced profile): the same unknown device
+    // (192.168.40.77) triggers a documented ET SCAN alert on the
+    // scanned host. AUD-030: the advertised Suricata profile must
+    // operate, not merely exist as vocabulary.
+    let suricata_lines = vec![
+        format!(
+            r#"{{"timestamp":"2026-08-20T00:00:01.000000+0000","flow_id":9101,"event_type":"alert","src_ip":"{SCANNER}","src_port":40000,"dest_ip":"{TARGET}","dest_port":22,"proto":"TCP","alert":{{"action":"allowed","gid":1,"signature_id":2018358,"rev":10,"signature":"ET SCAN Potential SSH Scan","category":"Attempted Information Leak","severity":2}}}}"#
+        )
+        .to_string(),
+    ];
+    let (suricata_port, suricata_handle) = spawn_suricata_fixture(suricata_lines);
+
     // CrowdSec: a ban decision exists for the scanner.
     let (cs_port, cs_handle) = spawn_crowdsec_fixture();
 
@@ -391,7 +518,8 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     let (wz_port, wz_handle) = spawn_wazuh_fixture();
 
     // osquery: the production collector endpoint (self-hosted server);
-    // the test plays the enrolled node over a REAL socket.
+    // the test plays the enrolled node over a REAL TLS socket with the
+    // collector certificate pinned (AUD-036 - never plaintext).
     let osq_ep = HttpOsqueryEndpoint::new(
         CANARY_OSQ_SECRET.to_string(),
         vec![DistributedQuery {
@@ -400,65 +528,37 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         }],
     );
     let osq_port = osq_ep.serve().expect("osquery serve");
+    assert!(
+        !osq_ep.certificate_der().is_empty(),
+        "osquery collector must expose a TLS certificate to pin"
+    );
     {
-        // Node side (real socket): enroll, read the issued query, and
+        // Node side (REAL TLS): enroll, read the issued query, and
         // report an observed wildcard listener on the target host.
-        let mut stream = TcpStream::connect(("127.0.0.1", osq_port)).expect("connect osquery");
         let body =
             format!(r#"{{"enroll_secret":"{CANARY_OSQ_SECRET}","host_identifier":"srv-lab-1"}}"#);
-        let req = format!(
-            "POST /enroll HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        stream.write_all(req.as_bytes()).expect("enroll write");
-        let mut resp = String::new();
-        stream.read_to_string(&mut resp).expect("enroll read");
-        let node_key = serde_json::from_str::<serde_json::Value>(
-            &resp[resp.find("\r\n\r\n").map(|i| i + 4).unwrap_or(resp.len())..],
-        )
-        .expect("enroll json")
-        .get("node_key")
-        .and_then(|v| v.as_str())
-        .expect("node_key")
-        .to_string();
+        let resp = osq_post(&osq_ep, osq_port, "/enroll", &body);
+        let node_key = serde_json::from_str::<serde_json::Value>(&resp)
+            .expect("enroll json")
+            .get("node_key")
+            .and_then(|v| v.as_str())
+            .expect("node_key")
+            .to_string();
         assert!(!node_key.is_empty());
 
-        let mut stream = TcpStream::connect(("127.0.0.1", osq_port)).expect("connect osquery 2");
         let body = format!(r#"{{"node_key":"{node_key}"}}"#);
-        let req = format!(
-            "POST /distributed_read HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        stream.write_all(req.as_bytes()).expect("read write");
-        let mut resp = String::new();
-        stream.read_to_string(&mut resp).expect("read read");
-        let v: serde_json::Value = serde_json::from_str(
-            &resp[resp.find("\r\n\r\n").map(|i| i + 4).unwrap_or(resp.len())..],
-        )
-        .expect("read json");
+        let resp = osq_post(&osq_ep, osq_port, "/distributed_read", &body);
+        let v: serde_json::Value = serde_json::from_str(&resp).expect("read json");
         assert!(v["queries"]["listening_ports"]
             .as_str()
             .unwrap_or("")
             .contains("listening_ports"));
 
-        let mut stream = TcpStream::connect(("127.0.0.1", osq_port)).expect("connect osquery 3");
         let body = format!(
             r#"{{"node_key":"{node_key}","queries":{{"listening_ports":[{{"address":"0.0.0.0","port":"8443","protocol":"tcp","pid":"42"}}]}},"statuses":{{"listening_ports":0}}}}"#
         );
-        let req = format!(
-            "POST /distributed_write HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        stream.write_all(req.as_bytes()).expect("write write");
-        let mut resp = String::new();
-        stream.read_to_string(&mut resp).expect("write read");
-        let v: serde_json::Value = serde_json::from_str(
-            &resp[resp.find("\r\n\r\n").map(|i| i + 4).unwrap_or(resp.len())..],
-        )
-        .expect("write json");
+        let resp = osq_post(&osq_ep, osq_port, "/distributed_write", &body);
+        let v: serde_json::Value = serde_json::from_str(&resp).expect("write json");
         assert_eq!(v["node_invalid"], serde_json::Value::Bool(false));
     }
 
@@ -468,6 +568,9 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     // ---- 2. Production connectors (real transports to fixtures) ----
     let zeek = ZeekNetworkDetectionProvider::new(JsonLinesZeekTransport::new(
         TcpStream::connect(("127.0.0.1", zeek_port)).expect("zeek connect"),
+    ));
+    let suricata = SuricataNetworkDetectionProvider::new(JsonLinesSuricataTransport::new(
+        TcpStream::connect(("127.0.0.1", suricata_port)).expect("suricata connect"),
     ));
     let crowdsec = CrowdSecThreatIntelProvider::new(HttpCrowdSecTransport::new(
         format!("http://127.0.0.1:{cs_port}"),
@@ -505,6 +608,19 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         "zeek observed scan from the unknown device"
     );
 
+    let suricata_caps = suricata.capabilities();
+    assert!(suricata_caps.contains(SentinelCapabilityKind::ReadFindings));
+    let suricata_events = suricata.read_events(&tenant()).expect("suricata events");
+    assert_eq!(suricata_events.len(), 1, "one observed ET SCAN alert");
+    assert!(
+        suricata_events[0].evidence_ref.contains("ET SCAN"),
+        "suricata observed scan evidence"
+    );
+    assert_eq!(
+        suricata_events[0].correlation.as_deref(),
+        Some(&format!("src={SCANNER}") as &str)
+    );
+
     let cs_event = crowdsec
         .lookup_reputation(&tenant(), SCANNER)
         .expect("crowdsec lookup")
@@ -520,6 +636,37 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         .expect("osquery telemetry");
     assert_eq!(osq_events.len(), 1);
     assert!(osq_events[0].evidence_ref.contains("8443"));
+    // AUD-035: the normalized finding is attributable to the durable
+    // endpoint identity enrolled over the REAL socket (srv-lab-1) -
+    // evidence reference AND correlation both bind the endpoint.
+    assert!(
+        osq_events[0].evidence_ref.contains("srv-lab-1"),
+        "finding evidence must carry the durable endpoint identity"
+    );
+    assert_eq!(
+        osq_events[0].correlation.as_deref(),
+        Some("host=srv-lab-1:address=0.0.0.0:port=8443"),
+        "finding correlation must bind the durable endpoint identity"
+    );
+    // AUD-037: over the REAL socket the normalized finding carries the
+    // collector's REAL stamped observation time - never the fabricated
+    // constant - and a collision-proof event id binding the endpoint.
+    assert!(
+        osq_events[0].observed_at.ends_with('Z'),
+        "osquery observed_at is RFC3339 UTC"
+    );
+    assert!(
+        osq_events[0].observed_at != "2026-08-20T00:00:00Z",
+        "osquery observed_at must never be the fabricated constant"
+    );
+    assert!(
+        osq_events[0].event_id.as_str().contains("srv-lab-1"),
+        "event id binds the durable endpoint identity"
+    );
+    assert!(
+        osq_events[0].event_id.as_str().contains("listening_ports"),
+        "event id binds the query id"
+    );
 
     let opn_caps = opnsense.capabilities();
     assert!(opn_caps.contains(SentinelCapabilityKind::ReadFirewallTelemetry));
@@ -535,6 +682,15 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "observed": true,
             "fact": format!("Scan::Portscan from {SCANNER} to {TARGET}:22 (src={SCANNER})"),
             "event_id": zeek_events[0].event_id.as_str()
+        },
+        {
+            "source": "suricata",
+            "provider": "SuricataNetworkDetectionProvider",
+            "profile": "SURICATA",
+            "resource": "9101",
+            "observed": true,
+            "fact": format!("ET SCAN Potential SSH Scan from {SCANNER} to {TARGET}:22 (src={SCANNER})"),
+            "event_id": suricata_events[0].event_id.as_str()
         },
         {
             "source": "crowdsec",
@@ -560,7 +716,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "profile": "OSQUERY",
             "resource": "srv-lab-1",
             "observed": true,
-            "fact": "wildcard listening socket 0.0.0.0:8443 observed via listening_ports",
+            "fact": "wildcard listening socket 0.0.0.0:8443 observed via listening_ports on srv-lab-1 (durable endpoint identity)",
             "event_id": osq_events[0].event_id.as_str()
         }
     ]);
@@ -573,6 +729,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     // the SAME indicator, never from raw sensor count.
     let triage = SentinelTriageService;
     let mut all_events = zeek_events.clone();
+    all_events.extend(suricata_events.clone());
     all_events.push(cs_event.clone());
     all_events.extend(wz_events.clone());
     all_events.extend(osq_events.clone());
@@ -612,6 +769,22 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     assert!(investigation.evidence_refs.len() >= 4);
 
     // ---- 8. RECOMMENDED: quarantine proposal (DATA, zero mutation) ----
+    // The provider proposal is DATA - creating it mutates nothing. It
+    // carries the provider-specific reversibility proof (AUD-031):
+    // only a proposal the provider certifies as reversible can
+    // preauthorize auto-execution.
+    let device = unknown_device();
+    let proposed = opnsense
+        .propose_containment(&tenant(), None, &device, Some(SCANNER))
+        .expect("propose containment");
+    assert_eq!(proposed.state, QuarantineState::Proposed);
+    assert!(proposed.preauthorized && proposed.reversible);
+    assert_eq!(proposed.approval_class, ApprovalClass::Human);
+    let reversibility_proof = format!(
+        "opnsense:proposal:{}:reversible",
+        proposed.proposal_id.as_str()
+    );
+
     let planner = SentinelResponsePlanner;
     let plan = planner
         .plan_response(
@@ -620,13 +793,41 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             &incident,
             ResponseKind::Quarantine,
             ApprovalClass::Human,
+            Some(&reversibility_proof),
         )
-        .expect("quarantine plan");
+        .expect("quarantine plan")
+        // AUD-033: the plan BINDS the exact proposal it will verify.
+        // Verification of this plan can never read back a different
+        // proposal's evidence.
+        .with_quarantine(proposed.proposal_id.as_str());
     assert!(
         plan.preauthorized,
-        "bounded containment may be preauthorized"
+        "high-confidence bounded containment with provider reversibility proof may be preauthorized"
     );
     assert_eq!(plan.kind, ResponseKind::Quarantine);
+    assert_eq!(
+        plan.reversibility_proof.as_deref(),
+        Some(reversibility_proof.as_str()),
+        "preauthorization binds the provider reversibility proof"
+    );
+
+    // AUD-031: a bounded plan WITHOUT the provider reversibility
+    // proof is NOT preauthorized - it may execute under human
+    // approval but never auto-execute.
+    let no_proof_plan = planner
+        .plan_response(
+            &tenant(),
+            ResponsePlanId::new("plan-no-proof").unwrap(),
+            &incident,
+            ResponseKind::Quarantine,
+            ApprovalClass::Human,
+            None,
+        )
+        .expect("bounded plan without proof is still a plan");
+    assert!(
+        !no_proof_plan.preauthorized,
+        "bounded plan without provider reversibility proof must fail closed"
+    );
 
     // DESTRUCTIVE NEVER PREAUTHORIZED: no threat score may mint
     // authorization. Planning a wipe under Policy fails closed; even
@@ -637,6 +838,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         &incident,
         ResponseKind::Wipe,
         ApprovalClass::Policy,
+        None,
     );
     assert!(
         denied.is_err(),
@@ -649,6 +851,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             &incident,
             ResponseKind::Wipe,
             ApprovalClass::Human,
+            None,
         )
         .expect("human wipe plan allowed");
     assert!(
@@ -657,14 +860,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
     );
 
     // ---- 9. AUTHORIZED: policy permits (approved + reversible) ----
-    let device = unknown_device();
-    let proposed = opnsense
-        .propose_containment(&tenant(), None, &device)
-        .expect("propose containment");
-    assert_eq!(proposed.state, QuarantineState::Proposed);
-    assert!(proposed.preauthorized && proposed.reversible);
-    assert_eq!(proposed.approval_class, ApprovalClass::Human);
-    let approved = approved_proposal(&opnsense, &device);
+    let approved = approved_proposal_from(&opnsense, proposed);
 
     // ---- 10. EXECUTED: real provider mutation (addRule + apply) ----
     let applied = opnsense
@@ -702,6 +898,30 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "created rule must exist enabled block in provider state"
         );
     }
+
+    // AUD-033 hostile live-fire: a plan bound to a DIFFERENT proposal
+    // is refused BEFORE any firewall readback - even against the real
+    // engine, proposal B's evidence can never verify plan A.
+    let other_plan = planner
+        .plan_response(
+            &tenant(),
+            ResponsePlanId::new("plan-other").unwrap(),
+            &incident,
+            ResponseKind::Quarantine,
+            ApprovalClass::Human,
+            Some(&reversibility_proof),
+        )
+        .expect("other quarantine plan")
+        .with_quarantine("proposal-other");
+    let denied = verifier.verify_response(
+        &tenant(),
+        VerificationRecordId::new("verify-other").unwrap(),
+        &other_plan,
+    );
+    assert!(
+        denied.is_err(),
+        "cross-proposal verification must fail closed"
+    );
 
     // ---- 12. REVOKED: reversible rollback (toggleRule 0 + apply) ----
     let revoked = opnsense
@@ -768,13 +988,20 @@ fn ep031_m5_lf009_sentinel_quarantine() {
         "node": "EP-031",
         "milestone": "M5",
         "proof": "LF-009",
-        "surface": "documented Zeek JSON Streaming Logs + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
-        "transport": "JsonLinesZeekTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL std::net sockets) + HttpOpnsenseTransport",
+        "surface": "documented Zeek JSON Streaming Logs + documented Suricata EVE JSON + documented CrowdSec LAPI + documented Wazuh server API + documented osquery TLS remote API + documented OPNsense firewall automation API",
+        "transport": "JsonLinesZeekTransport over REAL socket + JsonLinesSuricataTransport over REAL socket + HttpCrowdSecTransport + HttpWazuhTransport + HttpOsqueryEndpoint (REAL TLS sockets, pinned collector certificate - AUD-036) + HttpOpnsenseTransport",
         "sensors": {
-            "zeek": { "events": zeek_events.len(), "source": SCANNER, "kind": "ScanDetected" },
+            // AUD-034: observed_at carries the TRUE minute - the epoch
+            // formatter no longer shadows the minute with the month.
+            "zeek": { "events": zeek_events.len(), "source": SCANNER, "kind": "ScanDetected", "observed_at": zeek_events[0].observed_at },
+            "suricata": { "events": suricata_events.len(), "source": SCANNER, "kind": "ScanDetected", "signature": "ET SCAN Potential SSH Scan" },
             "crowdsec": { "event": true, "indicator": SCANNER, "action": "ban" },
             "wazuh": { "alerts": wz_events.len(), "rule_level": 12, "severity": "HIGH" },
-            "osquery": { "events": osq_events.len(), "wildcard_listener": "0.0.0.0:8443" }
+            // AUD-036: REAL TLS pinned collector certificate.
+            // AUD-037: observed_at is the collector's REAL stamped
+            // observation time (never the fabricated constant) and the
+            // event id binds host + query + batch sequence + index.
+            "osquery": { "events": osq_events.len(), "wildcard_listener": "0.0.0.0:8443", "endpoint_identity": osq_events[0].correlation.as_deref().unwrap_or(""), "tls": "REAL_TLS_PINNED", "observed_at": osq_events[0].observed_at, "event_id": osq_events[0].event_id.as_str() }
         },
         "normalized_facts": normalized_facts,
         "incident": {
@@ -794,16 +1021,26 @@ fn ep031_m5_lf009_sentinel_quarantine() {
             "destructive_never_preauthorized": true
         },
         "execution": { "state": applied.state.as_str(), "rule_ref": applied.rule_ref },
-        "verification": { "state": verification.state.as_str() },
+        "verification": {
+            "state": verification.state.as_str(),
+            // AUD-033: the verified record binds the plan to the EXACT
+            // applied proposal; a different proposal's evidence can
+            // never satisfy this plan.
+            "plan_binds_proposal": matches!(
+                plan.quarantine_proposal_ref.as_deref(),
+                Some(r) if r == applied.proposal_id.as_str()
+            )
+        },
         "rollback": { "state": revoked.state.as_str(), "verify_after_revoke": false },
         "correlation_rule": "incident confidence derives from independent observation planes corroborating the SAME observed source indicator; raw sensor count never inflates confidence",
         "redaction": "ZERO_LEAKAGE",
         "certification": {
             "advanced_contract": "INTERNAL_CERTIFIED",
             "zeek_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
+            "suricata_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures (AUD-030)",
             "crowdsec_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
             "wazuh_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
-            "osquery_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixture node",
+            "osquery_connector": "TRANSPORT_CERTIFIED over REAL TLS sockets vs controlled fixture node (AUD-036)",
             "opnsense_connector": "TRANSPORT_CERTIFIED over real sockets vs controlled fixtures",
             "real_sensors": "NOT_ASSERTED",
             "real_firewall_appliance": "NOT_ASSERTED"
@@ -813,6 +1050,7 @@ fn ep031_m5_lf009_sentinel_quarantine() {
 
     // ---- 15. Zero-orphan cleanup: fixture threads bounded and done ----
     let _ = zeek_handle.join();
+    let _ = suricata_handle.join();
     let _ = cs_handle.join();
     let _ = wz_handle.join();
     let _ = opn_handle.join();

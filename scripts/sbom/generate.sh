@@ -77,6 +77,63 @@ fi
 # tampering after this point breaks verify.sh.
 sha256sum "$EVIDENCE" | awk '{print $1}' >"$OUT_DIR/evidence.json.sha256"
 
+# Cryptographic seal (AUD-059): a bare sha256 checksum stored beside the
+# evidence can be recomputed by anyone able to change the evidence. The
+# real seal is an Ed25519 signature over the evidence digest. The
+# private key is taken from NEXUS_EVIDENCE_SIGNING_KEY (PKCS#8 v2 DER,
+# base64) or generated fresh for the run; the public key is written next
+# to the evidence so verify.sh can check the signature without the
+# private key.
+if [ -n "${NEXUS_EVIDENCE_SIGNING_KEY:-}" ]; then
+  printf '%s' "$NEXUS_EVIDENCE_SIGNING_KEY" | base64 -d >"$OUT_DIR/signing-key.der"
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    sign "$EVIDENCE" "$OUT_DIR/signing-key.der" \
+    "$OUT_DIR/evidence.json.sig" "$OUT_DIR/evidence.json.pub" \
+    >>"$OUT_DIR/generate.log" 2>&1 || fail "cryptographic evidence signing failed"
+  rm -f "$OUT_DIR/signing-key.der"
+else
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    keygen "$OUT_DIR/signing-key.der" "$OUT_DIR/evidence.json.pub" \
+    >>"$OUT_DIR/generate.log" 2>&1 || fail "evidence signing keygen failed"
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    sign "$EVIDENCE" "$OUT_DIR/signing-key.der" \
+    "$OUT_DIR/evidence.json.sig" "$OUT_DIR/evidence.json.pub" \
+    >>"$OUT_DIR/generate.log" 2>&1 || fail "cryptographic evidence signing failed"
+  rm -f "$OUT_DIR/signing-key.der"
+fi
+[ -f "$OUT_DIR/evidence.json.sig" ] || fail "evidence signature missing"
+[ -f "$OUT_DIR/evidence.json.pub" ] || fail "evidence public key missing"
+
+# Multi-ecosystem shipped-product inventory (AUD-060): the certified SBOM
+# must cover the whole shipped product - pnpm/TypeScript, Flutter/Dart,
+# and model/data/image artifacts - not just Cargo.lock. The ecosystems
+# evidence is generated from the REAL lockfiles and artifact trees and
+# sealed with the same signature flow.
+ECOSYSTEMS="$OUT_DIR/ecosystems.json"
+cargo run -q -p nexus-supply-chain-policy-io --example sbom_ecosystems -- \
+  "$REPO_ROOT" "$RUN_ID" "$GIT_COMMIT" "$ECOSYSTEMS" \
+  >>"$OUT_DIR/generate.log" 2>&1 || fail "multi-ecosystem inventory failed"
+[ -f "$ECOSYSTEMS" ] || fail "ecosystems evidence missing"
+if [ -n "${NEXUS_EVIDENCE_SIGNING_KEY:-}" ]; then
+  printf '%s' "$NEXUS_EVIDENCE_SIGNING_KEY" | base64 -d >"$OUT_DIR/signing-key.der"
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    sign "$ECOSYSTEMS" "$OUT_DIR/signing-key.der" \
+    "$OUT_DIR/ecosystems.json.sig" "$OUT_DIR/ecosystems.json.pub" \
+    >>"$OUT_DIR/generate.log" 2>&1 || fail "ecosystems signing failed"
+  rm -f "$OUT_DIR/signing-key.der"
+else
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    keygen "$OUT_DIR/signing-key.der" "$OUT_DIR/ecosystems.json.pub" \
+    >>"$OUT_DIR/generate.log" 2>&1 || fail "ecosystems keygen failed"
+  cargo run -q -p nexus-supply-chain --example evidence_sign -- \
+    sign "$ECOSYSTEMS" "$OUT_DIR/signing-key.der" \
+    "$OUT_DIR/ecosystems.json.sig" "$OUT_DIR/ecosystems.json.pub" \
+    >>"$OUT_DIR/generate.log" 2>&1 || fail "ecosystems signing failed"
+  rm -f "$OUT_DIR/signing-key.der"
+fi
+[ -f "$OUT_DIR/ecosystems.json.sig" ] || fail "ecosystems signature missing"
+[ -f "$OUT_DIR/ecosystems.json.pub" ] || fail "ecosystems public key missing"
+
 cat "$OUT_DIR/generate.log"
 echo "sbom/generate: evidence $EVIDENCE"
 echo "sbom/generate: run_id $RUN_ID"

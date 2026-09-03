@@ -1,9 +1,9 @@
 # PRODUCTION READINESS
 
 Node: EP-043
-Run: ep043-readiness-1787734389038
-Git commit: ddaa9c148f0abb5d3db93bbce02584f9a29e4ed7
-Generated: 2026-08-26T08:53:09.039Z
+Run: ep043-readiness-1788208314887
+Git commit: d0f821275760f26adbd69083f5b5ce8754a65bb4
+Generated: 2026-08-31T20:31:54.890Z
 
 ## Decision: NOT_READY
 
@@ -12,18 +12,41 @@ Ship gate verdict: BLOCKED
 Production readiness is NOT declared. The following blocking
 reasons must be resolved before a ship decision:
 
-- graph node EP-043 is not DONE
+- LF-001 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-002 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-003 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-004 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-005 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-006 has no evidence file
 - LF-007 has no evidence file
 - LF-008 has no evidence file
+- LF-009 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-010 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-011 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-012 has no evidence file
 - LF-013 has no evidence file
+- LF-014 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-015 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-016 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-017 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-018 has no evidence file
 - LF-019 has no evidence file
+- LF-020 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-021 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-022 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-023 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-024 has no evidence file
+- LF-025 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-026 has no evidence file
+- LF-027 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-028 has no evidence file
 - LF-029 has no evidence file
+- drill RESTORE has no dated evidence (NOT_RUN)
+- drill ROLLBACK has no dated evidence (NOT_RUN)
+- drill PROVIDER_FAILOVER has no dated evidence (NOT_RUN)
+- drill IDENTITY_RECOVERY has no dated evidence (NOT_RUN)
+- drill SENTINEL_CONTAINMENT has no dated evidence (NOT_RUN)
+- drill UPDATE_FAILURE has no dated evidence (NOT_RUN)
 - certification row provider-1-DeepSeek-is-required-for is RELEASE-BLOCKING-PENDING
 - certification row hardware-1-Full-release-requires-th is RELEASE-BLOCKING-PENDING
 - review SECURITY is not PASS
@@ -35,30 +58,59 @@ reasons must be resolved before a ship decision:
 - review RESTORE is not PASS
 - review UPDATE is not PASS
 - review ROLLBACK is not PASS
+- no release tag
+- fresh-clone-equivalent rerun has not been executed
 
 ## Acceptance Obligations
 
 ### all graph nodes are DONE
 
-Status: NOT MET
-
-- graph node EP-043 is not DONE
+Status: MET
 
 ### all live-fire proofs pass
 
 Status: NOT MET
 
+- LF-001 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-002 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-003 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-004 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-005 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-006 has no evidence file
 - LF-007 has no evidence file
 - LF-008 has no evidence file
+- LF-009 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-010 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-011 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-012 has no evidence file
 - LF-013 has no evidence file
+- LF-014 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-015 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-016 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-017 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-018 has no evidence file
 - LF-019 has no evidence file
+- LF-020 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-021 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-022 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
+- LF-023 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-024 has no evidence file
+- LF-025 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-026 has no evidence file
+- LF-027 evidence is not a validated structured record (exit 0, PASS result, current commit, fresh)
 - LF-028 has no evidence file
 - LF-029 has no evidence file
+
+### restore, rollback, provider-failover, identity-recovery, sentinel-containment, and update-failure drills pass with dated evidence
+
+Status: NOT MET
+
+- drill RESTORE has no dated evidence (NOT_RUN)
+- drill ROLLBACK has no dated evidence (NOT_RUN)
+- drill PROVIDER_FAILOVER has no dated evidence (NOT_RUN)
+- drill IDENTITY_RECOVERY has no dated evidence (NOT_RUN)
+- drill SENTINEL_CONTAINMENT has no dated evidence (NOT_RUN)
+- drill UPDATE_FAILURE has no dated evidence (NOT_RUN)
 
 ### required provider and hardware certification rows are signed
 
@@ -83,7 +135,9 @@ Status: NOT MET
 
 ### a release tag and exact manual deploy command are produced without deploying production
 
-Status: MET
+Status: NOT MET
+
+- no release tag
 
 ## Evidence
 

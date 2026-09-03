@@ -113,6 +113,21 @@ pub trait DirectPlatformTransport {
             "direct platform transport has no implementation bound",
         ))
     }
+
+    /// Reply to an existing tweet (documented POST /2/tweets with the
+    /// official `reply.in_reply_to_tweet_id` object). The reply is
+    /// NEVER a standalone post: the thread reference is carried in
+    /// the provider request (AUD-024). Fails closed when unbound.
+    fn reply_to_tweet(
+        &self,
+        text: &str,
+        in_reply_to_tweet_id: &str,
+    ) -> Result<XCreateResponse, SocialError> {
+        let _ = (text, in_reply_to_tweet_id);
+        Err(SocialError::unavailable(
+            "direct platform transport has no implementation bound",
+        ))
+    }
 }
 
 fn classify_status(status: reqwest::StatusCode) -> SocialErrorCode {
@@ -277,6 +292,44 @@ impl DirectPlatformTransport for HttpDirectPlatformTransport {
     fn create_tweet(&self, text: &str) -> Result<XCreateResponse, SocialError> {
         // Documented request body: { "text": "..." }
         let body = serde_json::json!({ "text": text });
+        let response = self.send(reqwest::Method::POST, "/2/tweets", Some(body))?;
+        let envelope: serde_json::Value = Self::parse(response)?;
+        serde_json::from_value(
+            envelope
+                .get("data")
+                .cloned()
+                .ok_or_else(|| external_error("direct platform response missing data"))?,
+        )
+        .map_err(|_| external_error("direct platform response missing data"))
+    }
+
+    fn reply_to_tweet(
+        &self,
+        text: &str,
+        in_reply_to_tweet_id: &str,
+    ) -> Result<XCreateResponse, SocialError> {
+        // Documented request body: { "text": "...", "reply": {
+        // "in_reply_to_tweet_id": "..." } } (official X API v2
+        // CreatePostsReply schema; the id is a 1..=19 digit string).
+        // The reply object is REQUIRED for a reply - a reply without
+        // it is a standalone post, which is exactly the AUD-024
+        // defect. Fail closed on a missing/invalid thread reference.
+        let trimmed = in_reply_to_tweet_id.trim();
+        if trimmed.is_empty() || !trimmed.chars().all(|c| c.is_ascii_digit()) || trimmed.len() > 19
+        {
+            return Err(SocialError::new(
+                SocialErrorCode::Validation,
+                "reply requires a valid in_reply_to_tweet_id (1..=19 digits)",
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+        let body = serde_json::json!({
+            "text": text,
+            "reply": { "in_reply_to_tweet_id": trimmed },
+        });
         let response = self.send(reqwest::Method::POST, "/2/tweets", Some(body))?;
         let envelope: serde_json::Value = Self::parse(response)?;
         serde_json::from_value(

@@ -158,18 +158,44 @@ def main() -> int:
     # in, TTS response out). The M4 two-way proof exercises the mixing
     # bridge; M5 records + plays on the single channel directly.
 
-    # ---- real ARI channel recording of the caller's speech ------------
-    rec_name = f"lf012-{int(time.time())}"
-    r = requests.post(f"{ari_url}/channels/{channel_id}/record",
-                      params={"name": rec_name, "format": "wav",
-                              "maxDurationSeconds": 20, "beep": "no"},
-                      headers=headers, timeout=10)
-    print(f"ORCH: record {r.status_code}", flush=True)
-    if r.status_code not in (200, 201, 204):
-        print(f"ORCH: FAIL - record rc={r.status_code} {r.text[:200]}")
-        return 1
-    evidence["recording_name"] = rec_name
-    evidence["recording_started_http"] = r.status_code
+    # ---- production disclosure decision FIRST (AUD-021) ---------------
+    # Consent is evaluated BEFORE any recording or transcription. When
+    # recording is NOT consented, the orchestrator NEVER starts an ARI
+    # recording, NEVER fetches a WAV, and NEVER runs whisper - the
+    # caller's speech is never captured. A recording that happens
+    # "first and asks later" is a violation, not a governed call.
+    consented = args.consented == "true"
+    evidence["disclosure_policy"] = {
+        "recording_consented": consented,
+        "ai_disclosure_required": True,
+        "jurisdiction": args.jurisdiction,
+        "retention_seconds": args.retention,
+    }
+    evidence["disclosure_satisfied"] = consented
+    # The gate does NOT create a governed transcript artifact when
+    # recording is not consented (fail closed per the contract).
+    evidence["governed_transcript_created"] = consented
+
+    transcript = None
+    rec_name = ""
+    if consented:
+        # ---- real ARI channel recording of the caller's speech --------
+        rec_name = f"lf012-{int(time.time())}"
+        r = requests.post(f"{ari_url}/channels/{channel_id}/record",
+                          params={"name": rec_name, "format": "wav",
+                                  "maxDurationSeconds": 20, "beep": "no"},
+                          headers=headers, timeout=10)
+        print(f"ORCH: record {r.status_code}", flush=True)
+        if r.status_code not in (200, 201, 204):
+            print(f"ORCH: FAIL - record rc={r.status_code} {r.text[:200]}")
+            return 1
+        evidence["recording_name"] = rec_name
+        evidence["recording_started_http"] = r.status_code
+        evidence["recording_started"] = True
+    else:
+        evidence["recording_started"] = False
+        evidence["recording_started_http"] = "skipped (consent denied)"
+        evidence["recording_denied_reason"] = "recording not consented"
 
     # ---- signal the caller to speak (real RTP phrase) -----------------
     go_file = work / "lf012-go.flag"
@@ -179,74 +205,77 @@ def main() -> int:
     # The caller streams the phrase; give it the phrase duration + margin.
     time.sleep(8)
 
-    # ---- stop recording + fetch the real recording --------------------
-    # The recording may already have finalized on its own (Asterisk
-    # stops a channel recording after a short audio gap); in that case
-    # the live DELETE 404s and the file is available as a STORED
-    # recording. Treat that as success and fetch the stored file.
-    r = requests.delete(f"{ari_url}/recordings/live/{rec_name}",
-                        headers=headers, timeout=10)
-    print(f"ORCH: stop record {r.status_code}", flush=True)
-    if r.status_code not in (200, 204, 404):
-        print(f"ORCH: FAIL - stop record rc={r.status_code} {r.text[:200]}")
-        return 1
-    evidence["recording_stop_http"] = r.status_code
-    time.sleep(2)
-    r = requests.get(f"{ari_url}/recordings/stored/{rec_name}/file",
-                     headers=headers, timeout=30)
-    print(f"ORCH: fetch recording {r.status_code} bytes={len(r.content)}", flush=True)
-    if r.status_code != 200 or len(r.content) < 100:
-        print("ORCH: FAIL - recording fetch empty", flush=True)
-        return 1
-    rec_wav = work / "lf012-caller-speech.wav"
-    rec_wav.write_bytes(r.content)
-    evidence["caller_recording_wav_sha256"] = sha256_file(rec_wav)
-    evidence["caller_recording_bytes"] = len(r.content)
+    if consented:
+        # ---- stop recording + fetch the real recording ----------------
+        # The recording may already have finalized on its own (Asterisk
+        # stops a channel recording after a short audio gap); in that case
+        # the live DELETE 404s and the file is available as a STORED
+        # recording. Treat that as success and fetch the stored file.
+        r = requests.delete(f"{ari_url}/recordings/live/{rec_name}",
+                            headers=headers, timeout=10)
+        print(f"ORCH: stop record {r.status_code}", flush=True)
+        if r.status_code not in (200, 204, 404):
+            print(f"ORCH: FAIL - stop record rc={r.status_code} {r.text[:200]}")
+            return 1
+        evidence["recording_stop_http"] = r.status_code
+        time.sleep(2)
+        r = requests.get(f"{ari_url}/recordings/stored/{rec_name}/file",
+                         headers=headers, timeout=30)
+        print(f"ORCH: fetch recording {r.status_code} bytes={len(r.content)}", flush=True)
+        if r.status_code != 200 or len(r.content) < 100:
+            print("ORCH: FAIL - recording fetch empty", flush=True)
+            return 1
+        rec_wav = work / "lf012-caller-speech.wav"
+        rec_wav.write_bytes(r.content)
+        evidence["caller_recording_wav_sha256"] = sha256_file(rec_wav)
+        evidence["caller_recording_bytes"] = len(r.content)
 
-    # ---- real whisper.cpp STT on the recording ------------------------
-    stt = subprocess.run(
-        [ENGINE_PY, str(WHISPER_WORKER), "--wav", str(rec_wav)],
-        capture_output=True, text=True, timeout=900,
-    )
-    print(f"ORCH: whisper rc={stt.returncode}", flush=True)
-    if stt.returncode != 0:
-        print(f"ORCH: FAIL - whisper {stt.stderr[-500:]}", flush=True)
-        return 1
-    stt_json = json.loads(stt.stdout.strip().splitlines()[-1])
-    transcript = stt_json["transcript"]
-    evidence["stt_transcript"] = transcript
-    evidence["stt_digest"] = hashlib.sha256(transcript.encode()).hexdigest()
-    evidence["stt_seconds"] = stt_json["seconds"]
-    print(f"ORCH: STT={transcript!r}", flush=True)
-
-    # ---- production disclosure decision (mirrors TranscriptGate) ------
-    consented = args.consented == "true"
-    evidence["disclosure_policy"] = {
-        "recording_consented": consented,
-        "ai_disclosure_required": True,
-        "jurisdiction": args.jurisdiction,
-        "retention_seconds": args.retention,
-    }
-    # The gate does NOT create a governed transcript artifact when
-    # recording is not consented (fail closed per the contract).
-    evidence["governed_transcript_created"] = consented
-    evidence["disclosure_satisfied"] = consented
+        # ---- real whisper.cpp STT on the recording --------------------
+        stt = subprocess.run(
+            [ENGINE_PY, str(WHISPER_WORKER), "--wav", str(rec_wav)],
+            capture_output=True, text=True, timeout=900,
+        )
+        print(f"ORCH: whisper rc={stt.returncode}", flush=True)
+        if stt.returncode != 0:
+            print(f"ORCH: FAIL - whisper {stt.stderr[-500:]}", flush=True)
+            return 1
+        stt_json = json.loads(stt.stdout.strip().splitlines()[-1])
+        transcript = stt_json["transcript"]
+        evidence["stt_transcript"] = transcript
+        evidence["stt_digest"] = hashlib.sha256(transcript.encode()).hexdigest()
+        evidence["stt_seconds"] = stt_json["seconds"]
+        print(f"ORCH: STT={transcript!r}", flush=True)
+    else:
+        # Consent denied: no WAV is fetched and whisper NEVER runs. The
+        # caller's speech is not captured or transcribed; the evidence
+        # records the refusal, never a transcript (AUD-021).
+        evidence["caller_recording_bytes"] = 0
+        evidence["stt_skipped"] = "recording not consented"
+        print("ORCH: consent denied - recording/transcription skipped", flush=True)
 
     # ---- deterministic bounded response text (no frontier model) ------
-    low = transcript.lower()
-    hostile_markers = ("ignore the rules", "unlock the door", "ignore", "unlock")
-    if any(m in low for m in hostile_markers):
-        response_text = "I cannot help with that request."
+    if transcript is None:
+        # No transcript exists because recording was not consented. The
+        # response is a fixed bounded disclosure statement; there is no
+        # command recognition from speech that was never captured.
+        response_text = "Recording is not enabled for this call."
         evidence["command_recognized"] = False
-        evidence["hostile_content"] = True
-    elif "light" in low:
-        response_text = "Turning on the lights now."
-        evidence["command_recognized"] = True
         evidence["hostile_content"] = False
     else:
-        response_text = "Command not recognized."
-        evidence["command_recognized"] = False
-        evidence["hostile_content"] = False
+        low = transcript.lower()
+        hostile_markers = ("ignore the rules", "unlock the door", "ignore", "unlock")
+        if any(m in low for m in hostile_markers):
+            response_text = "I cannot help with that request."
+            evidence["command_recognized"] = False
+            evidence["hostile_content"] = True
+        elif "light" in low:
+            response_text = "Turning on the lights now."
+            evidence["command_recognized"] = True
+            evidence["hostile_content"] = False
+        else:
+            response_text = "Command not recognized."
+            evidence["command_recognized"] = False
+            evidence["hostile_content"] = False
     evidence["response_text"] = response_text
     print(f"ORCH: response_text={response_text!r}", flush=True)
 

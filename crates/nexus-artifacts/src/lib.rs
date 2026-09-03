@@ -16,6 +16,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod dr;
 pub mod error;
 pub mod model;
 pub mod port;
@@ -23,8 +24,9 @@ pub mod vocabulary;
 
 pub use error::{ArtifactError, ArtifactErrorCode, ArtifactResult};
 pub use model::{
-    ArtifactHash, ArtifactMetadata, ArtifactVersion, BackendLocation, BackupSet,
-    EncryptionMetadata, ObjectRef, RecoveryKey, RestorePlan, StorageMigration,
+    hex_decode, hex_encode, ArtifactHash, ArtifactMetadata, ArtifactVersion, BackendLocation,
+    BackupBundle, BackupSet, BundleObject, EncryptionMetadata, ManifestSignature,
+    ManifestSignatureAlgorithm, ObjectRef, RecoveryKey, RestorePlan, StorageMigration,
 };
 pub use nexus_domain::{ArtifactId, CorrelationId, TenantId};
 pub use port::ArtifactStore;

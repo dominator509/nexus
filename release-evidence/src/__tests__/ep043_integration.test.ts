@@ -15,7 +15,7 @@
 import { execFile, spawn } from "node:child_process";
 import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -23,7 +23,7 @@ import { buildReleaseManifest, digestBytes } from "@nexus/release-evidence";
 
 const execFileAsync = promisify(execFile);
 
-const ROOT = process.env.EP043_TEST_ROOT ?? "/root/nexus";
+const ROOT = process.env.EP043_TEST_ROOT ?? resolve(process.cwd(), "..");
 const LOADER = join(
   ROOT,
   "release-evidence",
@@ -32,13 +32,6 @@ const LOADER = join(
 );
 const CLI = join(ROOT, "release-evidence", "src", "cli.ts");
 const OPERATIONS = join(ROOT, "OPERATIONS.md");
-const FIXTURE_COMPONENTS = join(
-  ROOT,
-  "infra",
-  "release",
-  "fixtures",
-  "components",
-);
 
 const tempRoots: string[] = [];
 
@@ -103,9 +96,18 @@ describe("EP-043 M3 real dependency and transport integration", () => {
     const body = await readFile(report, "utf8");
     expect(body).toContain("EP-043");
     expect(body).toContain("certification row");
+    // AUD-087: the report decision is bound through the authoritative
+    // ProductionReadinessDecision constructor and matches the CLI verdict.
+    expect(body).toMatch(/## Decision: (READY|NOT_READY)/);
+    const decisionLine = body.match(/## Decision: (\w+)/)?.[1];
+    expect(decisionLine).toBe("NOT_READY");
   });
 
   it("ep043_integration_manifest_digests_real_artifact_bytes", async () => {
+    // AUD-082: the manifest binds the REAL committed product artifacts
+    // (model code, provider config, router policy, container def), never
+    // fixture strings. Component digests must equal real sha256 over the
+    // real committed artifact bytes.
     const out = await tempDir("ep043-m3-manifest-");
     const result = await runCli(["manifest", "--output-dir", out]);
     expect(result.code).toBe(0);
@@ -118,11 +120,18 @@ describe("EP-043 M3 real dependency and transport integration", () => {
         size_bytes: number;
       }>;
     };
-    expect(manifest.components.length).toBeGreaterThanOrEqual(2);
+    expect(manifest.components.length).toBeGreaterThanOrEqual(5);
+    const realArtifactPaths: Record<string, string> = {
+      "nexus-wake-model": "models/wake/nexus_wake/decision.py",
+      "nexus-wake-manifest": "models/wake/nexus_wake/manifest.py",
+      "nexus-providers-config": "config/models/providers/providers.json",
+      "nexus-router-policy": "config/models/router/policy.json",
+      "nexus-container-seaweedfs": "infra/release/containers/seaweedfs.yaml",
+    };
     for (const component of manifest.components) {
-      const bytes = await readFile(
-        join(FIXTURE_COMPONENTS, component.component_id),
-      );
+      const relPath = realArtifactPaths[component.component_id];
+      expect(relPath).toBeDefined();
+      const bytes = await readFile(join(ROOT, relPath!));
       const expected = digestBytes(new Uint8Array(bytes));
       expect(component.digest).toBe(expected);
       expect(component.size_bytes).toBe(bytes.length);
@@ -222,8 +231,12 @@ describe("EP-043 M3 real dependency and transport integration", () => {
   });
 
   it("ep043_integration_verify_manifest_fails_closed_missing_artifact", async () => {
+    // AUD-082: verify-manifest fails closed when a manifest component is
+    // NOT one of the real release artifacts (ghost/injected component).
     const out = await tempDir("ep043-m3-ghost-");
-    const bytes = await readFile(join(FIXTURE_COMPONENTS, "nexus-core"));
+    const bytes = await readFile(
+      join(ROOT, "models", "wake", "nexus_wake", "decision.py"),
+    );
     const ghost = buildReleaseManifest({
       releaseId: "nexus-1.0.0-ghost",
       version: "1.0.0",
@@ -320,11 +333,16 @@ describe("EP-043 M3 real dependency and transport integration", () => {
   });
 
   it("ep043_integration_certification_rows_read_real", async () => {
+    // Ship-gate ceremony: the pre-ship RELEASE-BLOCKING-PENDING placeholder
+    // rows in the real RESULTS.md files are replaced by the transcribed
+    // CERTIFICATION_REGISTRY.md rows (FULLY_LOCAL profile; optional providers
+    // honestly DEFERRED/NOT ASSERTED; no fabricated signing per AUD-074). The
+    // real files must still list both domains and no placeholder may remain.
     const result = await runCli(["certification-rows"]);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("PROVIDER");
     expect(result.stdout).toContain("HARDWARE");
-    expect(result.stdout).toContain("RELEASE-BLOCKING-PENDING");
+    expect(result.stdout).not.toContain("RELEASE-BLOCKING-PENDING");
     expect(result.stdout).toContain("certification rows: 2");
   });
 
@@ -346,7 +364,7 @@ describe("EP-043 M3 real dependency and transport integration", () => {
     expect(manifest.code).toBe(0);
     expect(manifest.stdout).toContain("manifest: wrote");
     expect(manifest.stdout).toContain(
-      "components, signatures PRESENT_NOT_VERIFIED",
+      "real product artifacts, signatures PRESENT_NOT_VERIFIED",
     );
   });
 });

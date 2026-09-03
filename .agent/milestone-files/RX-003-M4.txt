@@ -1,0 +1,1 @@
+[M4] default branch protected via GitHub API: required checks graphlock-v2/gate/integration, strict, enforce_admins, force pushes + deletions disabled (AUD-088 enforcement)

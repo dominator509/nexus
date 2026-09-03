@@ -142,8 +142,13 @@ impl ArtifactExchange for MemoryArtifactStore {
 /// the A2A attachment path. This is the composition fix: cloning the
 /// store at construction would give the A2A engine a stale copy and
 /// every attach would fail NOT_FOUND.
+///
+/// `Arc<Mutex<>>` (not `Rc<RefCell<>>`) because the A2A engine's
+/// artifact port is `Send + Sync` (RX-008 AUD-084): the composition
+/// root runs inside a concurrent HTTP server, so the shared store must
+/// be movable across threads.
 #[derive(Debug, Clone, Default)]
-pub struct SharedArtifactStore(std::rc::Rc<std::cell::RefCell<MemoryArtifactStore>>);
+pub struct SharedArtifactStore(std::sync::Arc<std::sync::Mutex<MemoryArtifactStore>>);
 
 impl SharedArtifactStore {
     pub fn new() -> Self {
@@ -158,13 +163,17 @@ impl SharedArtifactStore {
         parents: &[ArtifactId],
     ) -> Result<ArtifactManifest, FabricError> {
         self.0
-            .borrow_mut()
+            .lock()
+            .expect("artifact store lock")
             .publish_bytes(content, content_type, parents)
     }
 
     /// Fetch an artifact handle from the shared store.
     pub fn fetch(&self, artifact_id: &ArtifactId) -> Result<ArtifactHandle, FabricError> {
-        self.0.borrow().fetch(artifact_id)
+        self.0
+            .lock()
+            .expect("artifact store lock")
+            .fetch(artifact_id)
     }
 }
 
@@ -176,21 +185,33 @@ impl ArtifactExchange for SharedArtifactStore {
         content_type: &str,
         parents: &[ArtifactId],
     ) -> Result<ArtifactManifest, FabricError> {
-        self.0
-            .borrow_mut()
-            .publish(sha256, size_bytes, content_type, parents)
+        self.0.lock().expect("artifact store lock").publish(
+            sha256,
+            size_bytes,
+            content_type,
+            parents,
+        )
     }
 
     fn fetch(&self, artifact_id: &ArtifactId) -> Result<ArtifactHandle, FabricError> {
-        self.0.borrow().fetch(artifact_id)
+        self.0
+            .lock()
+            .expect("artifact store lock")
+            .fetch(artifact_id)
     }
 
     fn lineage(&self, artifact_id: &ArtifactId) -> Result<Vec<ArtifactId>, FabricError> {
-        self.0.borrow().lineage(artifact_id)
+        self.0
+            .lock()
+            .expect("artifact store lock")
+            .lineage(artifact_id)
     }
 
     fn revoke(&mut self, artifact_id: &ArtifactId) -> Result<(), FabricError> {
-        self.0.borrow_mut().revoke(artifact_id)
+        self.0
+            .lock()
+            .expect("artifact store lock")
+            .revoke(artifact_id)
     }
 }
 

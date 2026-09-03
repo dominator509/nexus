@@ -41,14 +41,14 @@ pub struct A2AGatewayImpl {
     tasks: BTreeMap<String, A2ATaskRecord>,
     streams: BTreeMap<String, TaskStream>,
     executor: TaskExecutor,
-    artifacts: Box<dyn ArtifactExchange>,
+    artifacts: Box<dyn ArtifactExchange + Send + Sync>,
 }
 
 impl A2AGatewayImpl {
     pub fn new(
         config: A2AGatewayConfig,
         executor: TaskExecutor,
-        artifacts: Box<dyn ArtifactExchange>,
+        artifacts: Box<dyn ArtifactExchange + Send + Sync>,
     ) -> Self {
         Self {
             config,

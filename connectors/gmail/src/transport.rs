@@ -30,6 +30,13 @@ use nexus_email::{MailError, MailErrorCode};
 
 /// Canonical Gmail message envelope (documented Gmail API shape,
 /// normalized at the boundary).
+///
+/// Matches the REAL Gmail wire format: `historyId` and `internalDate`
+/// are returned as JSON strings (int64/uint64 serialized as strings),
+/// and message headers live in `payload.headers` as `{name, value}`
+/// pairs - not as flat top-level fields. Accessors resolve From/To/
+/// Subject from the payload headers, so a real Gmail response
+/// deserializes and normalizes without loss.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct GmailMessage {
     pub id: String,
@@ -39,20 +46,100 @@ pub struct GmailMessage {
     pub label_ids: Vec<String>,
     pub snippet: String,
     #[serde(rename = "historyId")]
-    pub history_id: u64,
+    pub history_id: String,
     #[serde(rename = "internalDate")]
-    pub internal_date_ms: u64,
-    /// Canonical From header value (header payload, never trusted as
-    /// identity; displayed identity is advisory only).
-    #[serde(default)]
-    pub from_header: Option<String>,
-    #[serde(default)]
-    pub to_headers: Vec<String>,
-    #[serde(default)]
-    pub subject: Option<String>,
+    pub internal_date_ms: String,
+    pub payload: GmailPayload,
     /// base64url-encoded RFC822 body bytes (read scope only).
     #[serde(default)]
     pub raw: Option<String>,
+}
+
+impl GmailMessage {
+    /// Case-insensitive header lookup from payload.headers.
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.payload
+            .headers
+            .iter()
+            .find(|h| h.name.eq_ignore_ascii_case(name))
+            .map(|h| h.value.as_str())
+    }
+
+    pub fn from_header(&self) -> Option<String> {
+        self.header("From").map(str::to_string)
+    }
+
+    pub fn to_headers(&self) -> Vec<String> {
+        self.header("To")
+            .map(|v| v.split(',').map(|s| s.trim().to_string()).collect())
+            .unwrap_or_default()
+    }
+
+    pub fn subject(&self) -> Option<String> {
+        self.header("Subject").map(str::to_string)
+    }
+}
+
+/// Gmail payload envelope: the real wire format carries headers as a
+/// name/value list here, never as flat message fields, and attachment
+/// parts as a recursive part tree.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+pub struct GmailPayload {
+    #[serde(default)]
+    pub headers: Vec<GmailHeader>,
+    #[serde(default)]
+    pub parts: Vec<GmailPart>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GmailHeader {
+    pub name: String,
+    pub value: String,
+}
+
+/// One MIME part of a Gmail message payload. Attachment parts carry a
+/// body with an attachmentId; inline/text parts have no attachmentId.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+pub struct GmailPart {
+    #[serde(default, rename = "partId")]
+    pub part_id: String,
+    #[serde(default)]
+    pub filename: String,
+    #[serde(default, rename = "mimeType")]
+    pub mime_type: String,
+    #[serde(default)]
+    pub body: Option<GmailPartBody>,
+    #[serde(default)]
+    pub parts: Vec<GmailPart>,
+}
+
+impl GmailPart {
+    /// Walk this part tree collecting every part that carries a real
+    /// attachmentId (attachment metadata). Inline/text parts without
+    /// an attachmentId are skipped - never fabricated as attachments.
+    pub fn collect_attachments(&self, out: &mut Vec<GmailAttachmentMeta>) {
+        if let Some(body) = &self.body {
+            if let Some(attachment_id) = &body.attachment_id {
+                out.push(GmailAttachmentMeta {
+                    attachment_id: attachment_id.clone(),
+                    size_bytes: body.size,
+                    filename: self.filename.clone(),
+                    mime_type: self.mime_type.clone(),
+                });
+            }
+        }
+        for child in &self.parts {
+            child.collect_attachments(out);
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+pub struct GmailPartBody {
+    #[serde(default, rename = "attachmentId")]
+    pub attachment_id: Option<String>,
+    #[serde(default)]
+    pub size: u64,
 }
 
 /// Canonical Gmail draft envelope.
@@ -119,6 +206,16 @@ pub trait GmailTransport {
         ))
     }
 
+    /// Fetch a message with format=full and return its attachment
+    /// metadata (parts with an attachmentId). A message with no
+    /// attachments yields an empty list - never fabricated.
+    fn fetch_attachments(&self, message_id: &str) -> Result<Vec<GmailAttachmentMeta>, MailError> {
+        let _ = message_id;
+        Err(MailError::unavailable(
+            "gmail transport has no implementation bound",
+        ))
+    }
+
     fn create_draft(&self, raw: &str) -> Result<GmailDraft, MailError> {
         let _ = raw;
         Err(MailError::unavailable(
@@ -128,6 +225,17 @@ pub trait GmailTransport {
 
     fn send_raw(&self, raw: &str) -> Result<String, MailError> {
         let _ = raw;
+        Err(MailError::unavailable(
+            "gmail transport has no implementation bound",
+        ))
+    }
+
+    /// Send an EXISTING draft via POST /gmail/v1/users/me/drafts/send.
+    /// The draft id is the handle; Gmail resolves the stored
+    /// recipients/document from the draft server-side. The draft id is
+    /// NEVER a recipient address.
+    fn send_draft(&self, draft_id: &str) -> Result<String, MailError> {
+        let _ = draft_id;
         Err(MailError::unavailable(
             "gmail transport has no implementation bound",
         ))
@@ -324,11 +432,9 @@ impl GmailTransport for HttpGmailTransport {
                             thread_id,
                             label_ids: vec![],
                             snippet: String::new(),
-                            history_id: 0,
-                            internal_date_ms: 0,
-                            from_header: None,
-                            to_headers: vec![],
-                            subject: None,
+                            history_id: String::new(),
+                            internal_date_ms: String::new(),
+                            payload: GmailPayload::default(),
                             raw: None,
                         })
                     })
@@ -366,6 +472,25 @@ impl GmailTransport for HttpGmailTransport {
         )
     }
 
+    fn fetch_attachments(&self, message_id: &str) -> Result<Vec<GmailAttachmentMeta>, MailError> {
+        if !self.scope.allows_read() {
+            return Err(MailError::authorization(
+                "gmail token scope does not allow read",
+            ));
+        }
+        // format=full returns payload.parts with attachmentId/filename/
+        // mimeType/size - the REAL Gmail attachment enumeration surface.
+        let msg: GmailMessage = self.get_json(
+            &format!("/gmail/v1/users/me/messages/{message_id}"),
+            &[("format", "full")],
+        )?;
+        let mut out = Vec::new();
+        for part in &msg.payload.parts {
+            part.collect_attachments(&mut out);
+        }
+        Ok(out)
+    }
+
     fn create_draft(&self, raw: &str) -> Result<GmailDraft, MailError> {
         if !self.scope.allows_send() {
             return Err(MailError::authorization(
@@ -388,6 +513,23 @@ impl GmailTransport for HttpGmailTransport {
             .and_then(|id| id.as_str())
             .map(str::to_string)
             .ok_or_else(|| MailError::external("gmail send response missing id"))
+    }
+
+    fn send_draft(&self, draft_id: &str) -> Result<String, MailError> {
+        if !self.scope.allows_send() {
+            return Err(MailError::authorization(
+                "gmail token scope does not allow send",
+            ));
+        }
+        // Documented draft-send surface: POST /gmail/v1/users/me/drafts/send
+        // with the draft id. Gmail sends the STORED draft (its To/Cc/Bcc
+        // resolve server-side); the id is never placed in a To header.
+        let body = serde_json::json!({ "id": draft_id });
+        let sent: serde_json::Value = self.post_json("/gmail/v1/users/me/drafts/send", &body)?;
+        sent.get("id")
+            .and_then(|id| id.as_str())
+            .map(str::to_string)
+            .ok_or_else(|| MailError::external("gmail draft send response missing id"))
     }
 
     fn modify_labels(
@@ -475,18 +617,38 @@ mod tests {
 
     #[test]
     fn ep026_unit_gmail_message_serde() {
+        // REAL Gmail wire format: historyId/internalDate are JSON
+        // strings, headers live in payload.headers as name/value pairs.
         let json = r#"{
             "id": "msg-1",
             "threadId": "thread-1",
             "labelIds": ["INBOX", "UNREAD"],
             "snippet": "Hello",
-            "historyId": 42,
-            "internalDate": 1780000000000,
-            "payload": {"headers": [{"name": "From", "value": "alice@example.com"}]}
+            "historyId": "1234567890123",
+            "internalDate": "1780000000000",
+            "payload": {
+                "headers": [
+                    {"name": "From", "value": "Alice <alice@example.com>"},
+                    {"name": "To", "value": "bob@example.com, carol@example.com"},
+                    {"name": "Subject", "value": "Hello"}
+                ]
+            }
         }"#;
         let msg: GmailMessage = serde_json::from_str(json).expect("parse");
         assert_eq!(msg.id, "msg-1");
         assert_eq!(msg.thread_id, "thread-1");
+        assert_eq!(msg.history_id, "1234567890123");
+        assert_eq!(msg.internal_date_ms, "1780000000000");
         assert!(msg.label_ids.contains(&"INBOX".to_string()));
+        // Headers resolve from payload.headers, not flat fields.
+        assert_eq!(
+            msg.from_header().as_deref(),
+            Some("Alice <alice@example.com>")
+        );
+        assert_eq!(
+            msg.to_headers(),
+            vec!["bob@example.com", "carol@example.com"]
+        );
+        assert_eq!(msg.subject().as_deref(), Some("Hello"));
     }
 }

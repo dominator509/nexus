@@ -1,0 +1,21 @@
+# RX-007 expected files: remediation surface for AUD-011 + AUD-022
+# (sandboxed skill execution truth; bounded, deadlock-free subprocess
+#  execution)
+.agent/expected-files/RX-007.txt
+.agent/milestone-files/RX-007-M1.txt
+.agent/milestone-files/RX-007-M2.txt
+.agent/milestone-files/RX-007-M3.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/DECISIONS.md
+.agent/remediation/GAPS.md
+.agent/remediation/evidence/
+Cargo.lock
+crates/nexus-harness-adapters/src/process.rs
+crates/nexus-harness-adapters/tests/rx007_process_runner.rs
+crates/nexus-skills/Cargo.toml
+crates/nexus-skills/src/executor.rs
+crates/nexus-skills/tests/rx007_remediation.rs
+scripts/nodes/RX-007.sh
+scripts/rx007-remediation-tests.sh
+tests/agents/fixtures/sleep-fixture.sh
+tests/agents/fixtures/stderr-flood-fixture.sh

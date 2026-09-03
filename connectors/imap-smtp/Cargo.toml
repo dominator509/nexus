@@ -17,6 +17,9 @@ serde_json.workspace = true
 # no such dependency; it keeps the native-tls TLS feature and the
 # caller-owned-stream API used by the M4 transport.
 imap = { version = "3.0.0-alpha.15", features = ["native-tls"] }
+# imap_proto types (BodyStructure) for real BODYSTRUCTURE attachment
+# enumeration; same 0.16.7 line already locked via imap 3.0.0-alpha.15.
+imap-proto = "0.16.7"
 native-tls = "0.2"
 # Real SMTP submission client (mature, RFC 5321; MIT/Apache-2.0).
 # rustls feature + ring provider + webpki-roots (workspace rustls 0.23 line).

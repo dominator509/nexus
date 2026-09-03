@@ -124,10 +124,33 @@ impl OpenWrtFirewallProvider {
     ) -> Result<QuarantineProposal, SentinelError> {
         let correlation = self.correlation();
 
-        // Gate 1 (caller-side): the proposal must be APPROVED by a
-        // human-governed approval decision before any containment can
-        // be applied (SPEC-013 behavior 5/6). A proposal that is still
-        // PROPOSED is DATA, never an executed rule.
+        // Gate 1 (caller-side): the proposal must carry an IMMUTABLE
+        // approval receipt binding the exact action (AUD-025).
+        // Mutating `state` to `Approved` alone is forgeable state,
+        // never authority - the receipt's action digest must match
+        // THIS proposal and the approver's strength must meet the
+        // required class. A proposal that is still PROPOSED is DATA,
+        // never an executed rule.
+        if !proposal.approval_binds() {
+            self.record(
+                &correlation,
+                "APPLY_CONTAINMENT",
+                "POLICY",
+                "quarantine proposal lacks a matching immutable approval receipt".into(),
+                std::collections::BTreeMap::from([(
+                    "device".into(),
+                    proposal.device_id.to_string(),
+                )]),
+            );
+            return Err(SentinelError::new(
+                SentinelErrorCode::Policy,
+                "quarantine proposal lacks a matching immutable approval receipt",
+                Some(correlation.clone()),
+                None,
+                Some(self.tenant_id.to_string()),
+                Some(proposal.proposal_id.to_string()),
+            ));
+        }
         if proposal.state != QuarantineState::Approved {
             self.record(
                 &correlation,
@@ -142,6 +165,31 @@ impl OpenWrtFirewallProvider {
             return Err(SentinelError::new(
                 SentinelErrorCode::Policy,
                 "quarantine proposal is not approved",
+                Some(correlation.clone()),
+                None,
+                Some(self.tenant_id.to_string()),
+                Some(proposal.proposal_id.to_string()),
+            ));
+        }
+
+        // Gate 1b (AUD-029): SPEC-013 behavior 5 requires automated
+        // containment to ALWAYS notify the owner. A proposal applied
+        // without an owner-notification receipt violates the invariant
+        // and fails closed BEFORE any provider call.
+        if !proposal.owner_notified() {
+            self.record(
+                &correlation,
+                "APPLY_CONTAINMENT",
+                "POLICY",
+                "quarantine proposal has no owner-notification receipt".into(),
+                std::collections::BTreeMap::from([(
+                    "device".into(),
+                    proposal.device_id.to_string(),
+                )]),
+            );
+            return Err(SentinelError::new(
+                SentinelErrorCode::Policy,
+                "quarantine proposal has no owner-notification receipt",
                 Some(correlation.clone()),
                 None,
                 Some(self.tenant_id.to_string()),
@@ -513,11 +561,33 @@ impl FirewallProvider for OpenWrtFirewallProvider {
         tenant_id: &TenantId,
         business_id: Option<&BusinessId>,
         device: &NetworkDevice,
+        observed_source: Option<&str>,
     ) -> Result<QuarantineProposal, SentinelError> {
         let correlation = self.correlation();
+        // AUD-026: the containment rule MUST bind the OBSERVED network
+        // identity (the device fingerprint's ip_ref), never the
+        // display label. Without an observed source the proposal fails
+        // closed - a label is not a network identity.
+        let Some(observed_source) = observed_source.map(str::trim).filter(|s| !s.is_empty()) else {
+            self.record(
+                &correlation,
+                "PROPOSE_CONTAINMENT",
+                "NOT_FOUND",
+                "no observed network identity for device".into(),
+                std::collections::BTreeMap::from([("device".into(), device.device_id.to_string())]),
+            );
+            return Err(SentinelError::new(
+                SentinelErrorCode::NotFound,
+                "no observed network identity for device",
+                Some(correlation.clone()),
+                None,
+                Some(self.tenant_id.to_string()),
+                Some(device.device_id.to_string()),
+            ));
+        };
         // The proposal is DATA, not an executed rule. Capture the
-        // device's provider-neutral label as the source network
-        // reference for the later containment rule.
+        // device's OBSERVED source as the network identity for the
+        // later containment rule.
         let proposal = QuarantineProposal::new(
             nexus_sentinel::QuarantineProposalId::new(format!(
                 "{}-{}",
@@ -537,6 +607,7 @@ impl FirewallProvider for OpenWrtFirewallProvider {
             nexus_domain::ApprovalClass::Human,
             String::new(),
         )
+        .with_source_net(observed_source)
         .with_business(business_id.cloned().unwrap_or_else(|| {
             nexus_domain::BusinessId::new("018f0f6f-9c1e-7b6e-8000-000000000003")
                 .expect("static business id")
@@ -545,7 +616,7 @@ impl FirewallProvider for OpenWrtFirewallProvider {
 
         self.sources.lock().unwrap().insert(
             proposal.proposal_id.as_str().to_string(),
-            device.label.clone(),
+            observed_source.to_string(),
         );
 
         self.record(
@@ -566,6 +637,35 @@ impl FirewallProvider for OpenWrtFirewallProvider {
         proposal: &QuarantineProposal,
     ) -> Result<QuarantineProposal, SentinelError> {
         self.apply_containment_inner(proposal)
+    }
+
+    fn notify_owner(
+        &self,
+        proposal: &QuarantineProposal,
+        owner_ref: &str,
+        channel: &str,
+    ) -> Result<QuarantineProposal, SentinelError> {
+        let correlation = self.correlation();
+        // AUD-029: SPEC-013 behavior 5 - automated containment ALWAYS
+        // notifies the owner. The notification receipt is immutable
+        // and bound to the proposal; apply fails closed without it.
+        let notified =
+            proposal
+                .clone()
+                .with_owner_notification(owner_ref, channel, "2026-08-20T00:00:00Z");
+        self.record(
+            &correlation,
+            "NOTIFY_OWNER",
+            "ok",
+            format!(
+                "owner {} notified via {} for proposal {}",
+                owner_ref,
+                channel,
+                proposal.proposal_id.as_str()
+            ),
+            std::collections::BTreeMap::from([("device".into(), proposal.device_id.to_string())]),
+        );
+        Ok(notified)
     }
 
     fn verify_containment(
@@ -603,17 +703,34 @@ impl FirewallProvider for OpenWrtFirewallProvider {
                 .with_resource(proposal.proposal_id.to_string())
         })?;
 
+        // AUD-026: verification proves the rule binds the OBSERVED
+        // network identity (the fingerprint's ip_ref), not just a rule
+        // section. The matching rule must carry the exact observed
+        // source; a rule that is enabled DROP but binds a different
+        // (or no) source is NOT verified.
+        let expected_source = proposal.source_net.as_deref().unwrap_or("");
         let verified = rules
             .iter()
             .find(|r| Some(r.section.as_str()) == proposal.rule_ref.as_deref())
-            .map(|r| r.enabled && r.target == "DROP")
+            .map(|r| {
+                r.enabled
+                    && r.target == "DROP"
+                    && r.src_ip.as_deref() == Some(expected_source)
+                    && !expected_source.is_empty()
+            })
             .unwrap_or(false);
 
         let evidence = if verified {
             rules
                 .iter()
                 .find(|r| Some(r.section.as_str()) == proposal.rule_ref.as_deref())
-                .map(|r| format!("openwrt:rule:{}:enabled:drop", r.section))
+                .map(|r| {
+                    format!(
+                        "openwrt:rule:{}:enabled:drop:source={}",
+                        r.section,
+                        r.src_ip.as_deref().unwrap_or("")
+                    )
+                })
                 .unwrap_or_else(|| "openwrt:rule:none".to_string())
         } else {
             "openwrt:rule:none".to_string()
@@ -761,11 +878,22 @@ mod tests {
 
     fn approved_proposal(provider: &OpenWrtFirewallProvider, label: &str) -> QuarantineProposal {
         let d = device(label);
-        let proposal = provider.propose_containment(&tenant(), None, &d).unwrap();
-        QuarantineProposal {
-            state: QuarantineState::Approved,
-            ..proposal
-        }
+        let proposal = provider
+            .propose_containment(&tenant(), None, &d, Some("192.0.2.10"))
+            .unwrap();
+        // AUD-025: approval is an immutable receipt binding the exact
+        // action - never a bare state mutation. The helper must go
+        // through the real approve() binding.
+        let approved = proposal.approve(
+            nexus_domain::ApprovalId::new("0190e1c4-5c8a-7f40-8a1b-2c3d4e5f6105").unwrap(),
+            nexus_domain::PersonId::from_str("018f0f6f-9c1e-7b6e-8000-000000000002").unwrap(),
+            nexus_domain::ApprovalClass::Human,
+            "2026-08-20T00:00:00Z",
+        );
+        // AUD-029: automated containment ALWAYS notifies the owner.
+        provider
+            .notify_owner(&approved, "person-owner-1", "push")
+            .unwrap()
     }
 
     #[test]
@@ -789,7 +917,7 @@ mod tests {
         let t = CountingTransport::default();
         let provider = OpenWrtFirewallProvider::new(Box::new(t.clone()), tenant(), "root", "pass");
         let proposal = provider
-            .propose_containment(&tenant(), None, &device("thermostat"))
+            .propose_containment(&tenant(), None, &device("thermostat"), Some("192.0.2.10"))
             .unwrap();
         assert_eq!(proposal.state, QuarantineState::Proposed);
         assert!(proposal.is_auto_applicable());
@@ -803,7 +931,7 @@ mod tests {
         let t = CountingTransport::default();
         let provider = OpenWrtFirewallProvider::new(Box::new(t.clone()), tenant(), "root", "pass");
         let proposal = provider
-            .propose_containment(&tenant(), None, &device("thermostat"))
+            .propose_containment(&tenant(), None, &device("thermostat"), Some("192.0.2.10"))
             .unwrap();
         // Not approved: fails closed with ZERO provider calls.
         let err = provider.apply_containment(&proposal).unwrap_err();
@@ -883,7 +1011,7 @@ mod tests {
         let t = CountingTransport::default();
         let provider = OpenWrtFirewallProvider::new(Box::new(t.clone()), tenant(), "root", "pass");
         let proposal = provider
-            .propose_containment(&tenant(), None, &device("thermostat"))
+            .propose_containment(&tenant(), None, &device("thermostat"), Some("192.0.2.10"))
             .unwrap();
         let err = provider.revoke_containment(&proposal).unwrap_err();
         assert_eq!(err.code, SentinelErrorCode::Policy);

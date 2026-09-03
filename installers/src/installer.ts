@@ -42,7 +42,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve, dirname } from "node:path";
 import {
   parseReleaseManifest,
   sha256Hex,
@@ -63,7 +63,12 @@ import {
   assertNoSymlinkEscape,
   assertOwnedCleanupTarget,
 } from "./paths";
-import { assertBackupUsable, createBackup, type BackupResult } from "./backup";
+import {
+  assertBackupUsable,
+  createBackup,
+  verifyBackupDigest,
+  type BackupResult,
+} from "./backup";
 
 export interface InstallComponent {
   componentId: string;
@@ -184,6 +189,42 @@ export async function installRelease(
   opts: InstallOptions,
 ): Promise<InstallResult> {
   const cfg = journalCfg(opts);
+  // AUD-069: durable idempotency guard BEFORE any filesystem mutation.
+  // The journal is the durable record of this install root; a completed
+  // install (INSTALLED) for this install_id must never be replayed, and
+  // a journal owned by a different install_id must not be reset or
+  // overwritten. Only an empty journal, or a journal whose last state
+  // is a non-terminal failure for the SAME install_id, may proceed.
+  const priorJournal = journalRead(cfg);
+  if (priorJournal.entries.length > 0) {
+    const lastEntry = priorJournal.entries[priorJournal.entries.length - 1]!;
+    if (lastEntry.install_id !== opts.installId) {
+      journalAppend(
+        cfg,
+        "FAILED",
+        `journal owned by install ${lastEntry.install_id}; refusing ${opts.installId}`,
+        "AUTHORIZATION_DENIED",
+      );
+      throw new InstallerError(
+        "AUTHORIZATION_DENIED",
+        `installer journal is owned by install ${lastEntry.install_id}; duplicate install_id ${opts.installId} refused`,
+        { installId: opts.installId, releaseId: opts.releaseId },
+      );
+    }
+    if (lastEntry.state === "INSTALLED") {
+      journalAppend(
+        cfg,
+        "FAILED",
+        `install ${opts.installId} already completed; replay refused`,
+        "AUTHORIZATION_DENIED",
+      );
+      throw new InstallerError(
+        "AUTHORIZATION_DENIED",
+        `install ${opts.installId} already completed; replay refused (idempotency guard)`,
+        { installId: opts.installId, releaseId: opts.releaseId },
+      );
+    }
+  }
   journalReset(cfg);
   journalAppend(cfg, "STARTED", "install started");
 
@@ -214,6 +255,70 @@ export async function installRelease(
     );
   }
   journalAppend(cfg, "MANIFEST_VALIDATED", "manifest validated");
+
+  // AUD-068: bind the request to the validated release manifest. The
+  // caller's releaseId, component set, and declared digests are NOT
+  // trusted on their own - each must agree with the manifest:
+  //   1. releaseId must equal manifest.release_id
+  //   2. every supplied component must be declared by the manifest
+  //   3. every supplied declaredDigest must equal the manifest's digest
+  //      for that component
+  // Staged bytes are validated against these manifest-bound digests, so
+  // a caller cannot inject payloads the manifest never declared.
+  if (opts.releaseId !== manifest.release_id) {
+    journalAppend(
+      cfg,
+      "FAILED",
+      "release id not bound to manifest",
+      "MANIFEST_INVALID",
+    );
+    throw new InstallerError(
+      "MANIFEST_INVALID",
+      `install release_id ${opts.releaseId} does not match manifest release_id ${manifest.release_id}`,
+      { installId: opts.installId, releaseId: opts.releaseId },
+    );
+  }
+  const manifestDigestById = new Map<string, string>();
+  for (const component of manifest.components) {
+    manifestDigestById.set(component.component_id, component.digest);
+  }
+  for (const c of opts.components) {
+    const manifestDigest = manifestDigestById.get(c.componentId);
+    if (manifestDigest === undefined) {
+      journalAppend(
+        cfg,
+        "FAILED",
+        "component not declared by manifest",
+        "MANIFEST_INVALID",
+      );
+      throw new InstallerError(
+        "MANIFEST_INVALID",
+        `component ${c.componentId} is not declared by the release manifest`,
+        {
+          installId: opts.installId,
+          releaseId: opts.releaseId,
+          componentId: c.componentId,
+        },
+      );
+    }
+    if (c.declaredDigest !== manifestDigest) {
+      journalAppend(
+        cfg,
+        "FAILED",
+        "component digest not bound to manifest",
+        "MANIFEST_INVALID",
+      );
+      throw new InstallerError(
+        "MANIFEST_INVALID",
+        `component ${c.componentId} declaredDigest does not match manifest digest`,
+        {
+          installId: opts.installId,
+          releaseId: opts.releaseId,
+          componentId: c.componentId,
+        },
+      );
+    }
+  }
 
   // Dependency availability: every declared component must have real
   // artifact bytes supplied by the caller (e.g. fetched over transport).
@@ -391,13 +496,37 @@ export async function installRelease(
     throw error;
   }
 
-  // 5. Atomic switch: rename staging -> install root.
+  // 5. Atomic switch: rename staging -> install root. AUD-067: the
+  //    current install is NEVER deleted before the replacement is
+  //    committed. The live install is moved aside (rename, not delete)
+  //    and only removed after the new state is verified. A
+  //    rename/mount/filesystem failure therefore leaves the previous
+  //    install restorable at its old path, not destroyed.
   journalAppend(cfg, "SWITCHED", "atomic switch to staged state");
+  const previousRoot = join(
+    dirname(opts.installRoot),
+    `.previous-${opts.installId}`,
+  );
   try {
     if (existsSync(opts.installRoot)) {
-      rmSync(opts.installRoot, { recursive: true, force: true });
+      renameSync(opts.installRoot, previousRoot);
     }
-    renameSync(opts.stagingRoot, opts.installRoot);
+    try {
+      renameSync(opts.stagingRoot, opts.installRoot);
+    } catch (error) {
+      // The commit rename failed. Restore the preserved previous
+      // install so the live installation is not left deleted.
+      try {
+        if (existsSync(previousRoot)) {
+          renameSync(previousRoot, opts.installRoot);
+        }
+      } catch {
+        // Restore failure is a second failure; the journal records the
+        // real failure below. The previous install remains at
+        // previousRoot for explicit recovery.
+      }
+      throw error;
+    }
   } catch (error) {
     journalAppend(cfg, "FAILED", "atomic switch failed", "INSTALL_FAILED");
     throw new InstallerError(
@@ -426,6 +555,20 @@ export async function installRelease(
     installed.push(c.componentId);
   }
 
+  // AUD-067: the previous install was preserved (not deleted) through
+  // the atomic switch. Now that the new state is verified, remove the
+  // preserved previous install; the backup root already holds the prior
+  // bytes for explicit rollback. A cleanup failure is not a second
+  // failure path - the journal records the completed install.
+  if (existsSync(previousRoot)) {
+    try {
+      rmSync(previousRoot, { recursive: true, force: true });
+    } catch {
+      // Preserved install left in place; rollback remains possible from
+      // the backup root.
+    }
+  }
+
   journalAppend(cfg, "INSTALLED", "install completed");
   return {
     install_id: opts.installId,
@@ -449,6 +592,27 @@ export async function rollbackRelease(
   const cfg = journalCfg(opts);
   journalAppend(cfg, "ROLLBACK_REQUIRED", "rollback required");
   assertBackupUsable(opts.backupRoot, opts.installId);
+  // AUD-066: verify the backup source digest against the REAL backup
+  // bytes BEFORE any restore. A wrong/corrupt backup is denied here;
+  // the caller's expectedBackupDigest is never copied into a VERIFIED
+  // receipt without being proven against the actual source content.
+  const backupState = await verifyBackupDigest(
+    opts.backupRoot,
+    opts.expectedBackupDigest,
+  );
+  if (backupState !== "VERIFIED") {
+    journalAppend(
+      cfg,
+      "FAILED",
+      "rollback source digest mismatch; denied",
+      "ROLLBACK_FAILED",
+    );
+    throw new InstallerError(
+      "ROLLBACK_FAILED",
+      "rollback source digest mismatch; wrong or corrupt backup denied",
+      { installId: opts.installId, releaseId: opts.releaseId },
+    );
+  }
   try {
     if (existsSync(opts.installRoot)) {
       rmSync(opts.installRoot, { recursive: true, force: true });

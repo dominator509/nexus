@@ -17,6 +17,10 @@ sha2 = "0.11"
 # already-locked workspace dependency class (rustls/rcgen already pull
 # ring 0.17.14); no new dependency class.
 ring = "0.17"
+# Real OS sandbox primitives (RX-007 AUD-011): unshare, mount, setuid/
+# setgid/setgroups, prctl (no_new_privs + seccomp BPF). Already locked
+# in the workspace tree (0.2.189); Linux-only, unix-gated.
+libc = "0.2"
 
 [dev-dependencies]
 # Hermetic schema validation: EP-018 M3 tests resolve only LOCAL $ref

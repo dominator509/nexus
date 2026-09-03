@@ -113,45 +113,68 @@ fi
 rm -rf "$forge_dir"
 ok "forged rollback evidence cannot change canonical truth"
 
-# --- real final fresh-clone acceptance ----------------------------------------------
-rm -f .agent/state/evidence/ep043-freshclone-m5.md
+# --- real final fresh-clone acceptance (AUD-090 ship-standard run) --------------
+rm -f .agent/state/evidence/ep043-freshclone-m5.md \
+      .agent/state/evidence/ep043-freshclone-m5.json
 if ! sh scripts/ep043-freshclone-accept.sh >>"$log" 2>&1; then
+  # AUD-090: the acceptance is the ship-standard fresh-clone run; it
+  # refuses (writes NO evidence) while the clone graph is not ALL_DONE.
+  # During quarantine the tree is not shippable, so the gate must fail
+  # with the AUD-080 readiness reason, not a generic acceptance failure.
+  if [ "$(sh scripts/graph-next.sh)" != "ALL_DONE" ] && \
+     [ "$(sh scripts/graph-next.sh)" != "ALL_DONE_V2" ]; then
+    fail "closure gate: readiness is NOT_READY - node cannot close (AUD-080); fresh-clone ship-standard acceptance refused on non-ALL_DONE tree (AUD-090)" "$log"
+  fi
   fail "fresh-clone acceptance failed" "$log"
 fi
-[ -f .agent/state/evidence/ep043-freshclone-m5.md ] \
-  || fail "fresh-clone acceptance wrote no evidence"
-grep -q "Git commit: $(/usr/bin/git rev-parse HEAD)" .agent/state/evidence/ep043-freshclone-m5.md \
+[ -f .agent/state/evidence/ep043-freshclone-m5.json ] \
+  || fail "fresh-clone acceptance wrote no structured evidence"
+grep -q '"git_commit": "'"$(/usr/bin/git rev-parse HEAD)"'"' \
+  .agent/state/evidence/ep043-freshclone-m5.json \
   || fail "fresh-clone evidence not bound to candidate commit"
-grep -q "Source-tree leakage: none" .agent/state/evidence/ep043-freshclone-m5.md \
+grep -q "Source-tree leakage: none" \
+  .agent/state/evidence/ep043-freshclone-m5.json \
   || fail "fresh-clone evidence missing isolation proof"
-grep -q "ep043-m4-tests.sh ok" .agent/state/evidence/ep043-freshclone-m5.md \
+grep -q "ep043-m4-tests.sh ok" \
+  .agent/state/evidence/ep043-freshclone-m5.json \
   || fail "fresh-clone evidence missing owned gate results"
-ok "real fresh-clone acceptance executed with isolation proof"
+grep -q '"result": "VERIFIED"' \
+  .agent/state/evidence/ep043-freshclone-m5.json \
+  || fail "fresh-clone evidence not VERIFIED"
+ok "real fresh-clone acceptance executed with isolation + ship-standard ladder proof"
 
-# --- canonical readiness rerun: honest NOT_READY with real blockers cleared ----------
+# --- canonical readiness rerun: closure REQUIRES READY (AUD-080 root-cause fix) ----
+# A node whose own production-readiness result is NOT_READY / BLOCKED can never
+# close. The previous gate required preservation of NOT_READY and exited ok,
+# certifying a non-ready state (AUD-080). Now NOT_READY is a hard gate failure.
 readiness_out=$(mktemp /tmp/ep043-m5-readiness.XXXXXX)
 if ! $CLI_INVOKE readiness --output "$readiness_out" >>"$log" 2>&1; then
   fail "readiness CLI failed" "$log"
 fi
-grep -q "Decision: NOT_READY" "$readiness_out" \
-  || fail "readiness did not preserve honest NOT_READY"
-if grep -q "fresh-clone-equivalent rerun has not been executed" "$readiness_out"; then
-  fail "fresh-clone blocker not cleared by real acceptance evidence"
+if grep -q "Decision: NOT_READY" "$readiness_out"; then
+  fail "closure gate: readiness is NOT_READY - node cannot close (AUD-080)"
 fi
-grep -q "RELEASE-BLOCKING-PENDING" "$readiness_out" \
-  || fail "pending certification no longer blocking (must remain NOT_READY)"
+grep -q "Decision: READY" "$readiness_out" \
+  || fail "closure gate: readiness decision is not READY"
+if grep -q "RELEASE-BLOCKING-PENDING" "$readiness_out"; then
+  fail "closure gate: certification rows still RELEASE-BLOCKING-PENDING"
+fi
+if grep -q "fresh-clone-equivalent rerun has not been executed" "$readiness_out"; then
+  fail "closure gate: fresh-clone-equivalent rerun missing"
+fi
 rm -f "$readiness_out"
-ok "canonical readiness: NOT_READY preserved, fresh-clone blocker cleared"
+ok "canonical readiness: READY required for closure (AUD-080 fixed)"
 
 # --- ship-gate and signing honesty ---------------------------------------------------
 ship_out=$(mktemp /tmp/ep043-m5-ship.XXXXXX)
 if ! $CLI_INVOKE ship-gate-status >"$ship_out" 2>>"$log"; then
   fail "ship-gate-status CLI failed" "$log"
 fi
-grep -q "ship-gate verdict: BLOCKED" "$ship_out" \
-  || fail "ship gate not honestly BLOCKED"
-grep -q "readiness decision: NOT_READY" "$ship_out" \
-  || fail "ship gate did not preserve NOT_READY"
+if grep -q "ship-gate verdict: BLOCKED" "$ship_out"; then
+  fail "closure gate: ship gate BLOCKED - node cannot close (AUD-080)"
+fi
+grep -q "ship-gate verdict: PASSED" "$ship_out" \
+  || fail "closure gate: ship-gate verdict is not PASSED"
 rm -f "$ship_out"
 manifest_dir=$(mktemp -d /tmp/ep043-m5-manifest.XXXXXX)
 manifest_out=$(mktemp /tmp/ep043-m5-manifestout.XXXXXX)
@@ -181,7 +204,7 @@ rm -rf "$forge_dir" "$ship_out"
 ok "forged READY report cannot change canonical truth"
 
 # --- final evidence validation ----------------------------------------------------------
-for evidence in .agent/state/evidence/ep043-drill-rollback-m5.md .agent/state/evidence/ep043-freshclone-m5.md; do
+for evidence in .agent/state/evidence/ep043-drill-rollback-m5.md .agent/state/evidence/ep043-freshclone-m5.json; do
   [ -s "$evidence" ] || fail "evidence file empty: $evidence"
   grep -q "Run: ep043-" "$evidence" || fail "evidence missing run_id: $evidence"
   grep -q "Git commit: [0-9a-f]\{40\}" "$evidence" || fail "evidence missing git_commit binding: $evidence"

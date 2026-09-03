@@ -1,0 +1,1 @@
+AUD-065: offline-bundle verifyBundle cryptographically verifies every SignedComponent.signature (real Ed25519 via Node WebCrypto) over the component artifact digest; M5 gate produces REAL signatures with a real keypair and proves dummy/AAAA01BBBB01 signatures FAIL CLOSED (SIGNATURE_INVALID); evidence signature-state becomes SIGNATURE_VERIFIED; no placeholder signature may verify

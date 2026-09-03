@@ -1,0 +1,1 @@
+AUD-066: rollbackRelease now verifies the backup source digest against the REAL backup bytes (verifyBackupDigest) BEFORE any restore; a wrong/corrupt backup is denied with ROLLBACK_FAILED and the caller's expectedBackupDigest is never copied into a VERIFIED receipt without proof. Hostile proof: non-empty backup with mismatched digest is denied and the live install is untouched.

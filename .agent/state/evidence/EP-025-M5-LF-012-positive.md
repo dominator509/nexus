@@ -9,8 +9,8 @@ real RTP, real whisper.cpp STT, real Kokoro TTS.
   "asterisk_image": "andrius/asterisk:22.10.1_debian-trixie-amd64@sha256:7a22d773fe0f81adb715cd3e8df57c602726f8ef9d39deead6360e051483e280",
   "caller_number": "endpoint-v",
   "caller_recording_bytes": 34604,
-  "caller_recording_wav_sha256": "b0b87e8f660c4ef01e54d86180f34b13fd0afa011cbd8fcb693d49b35a1b582e",
-  "channel_id": "1787275885.0",
+  "caller_recording_wav_sha256": "0f13e306f89ca566116203071c5327c48047696c795a05cb028df8b5bcf2c6c6",
+  "channel_id": "1788400646.0",
   "command_recognized": true,
   "container": "nexus-ep025-ast",
   "dialplan": [],
@@ -24,10 +24,11 @@ real RTP, real whisper.cpp STT, real Kokoro TTS.
   "governed_transcript_created": true,
   "hangup_http": 204,
   "hostile_content": false,
-  "phrase_sha256": "e66384ce97417f83d6d1c99d45e516f89cd7183983e03709c1b0c173721fe0a0",
+  "phrase_sha256": "d0035f9eacce6cccfc230d46979c9ba00fb94545297d96d55281f23ca4897b42",
   "play_http": 201,
   "play_media": "sound:nexus-lf012-response",
-  "recording_name": "lf012-1787275885",
+  "recording_name": "lf012-1788400647",
+  "recording_started": true,
   "recording_started_http": 201,
   "recording_stop_http": 404,
   "response_text": "Turning on the lights now.",
@@ -36,10 +37,10 @@ real RTP, real whisper.cpp STT, real Kokoro TTS.
   "stt_seconds": 2.16,
   "stt_transcript": "Turn on the lights please.",
   "terminal_active_channels": 0,
-  "timestamp": "2026-08-21T01:31:23+0000",
+  "timestamp": "2026-09-03T01:57:24+0000",
   "tts_duration_seconds": 1.925,
   "tts_sample_rate_hz": 24000,
   "tts_voice": "af_heart",
-  "tts_wav_sha256": "1de1b61f1e443e7f6a00f6cafd5ffc37cfe6995e01069298bea7486217ed5f2f"
+  "tts_wav_sha256": "5f8291b7481e1b149f6fac0038657e4f358f7cf11a98758e9d348727666d21cf"
 }
 ```

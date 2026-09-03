@@ -5,7 +5,8 @@
 //! container on 2026-08-14 (see Decision Log). The real provider
 //! proofs live in tests/trust/ (ep009_integration_*).
 
-use nexus_trust::mesh::{MeshNode, WireGuardConfig, WireGuardPeer};
+use nexus_trust::mesh::{MeshController, MeshNode, WireGuardConfig, WireGuardPeer};
+use nexus_trust::secret::{SecretReference, SecretStore, SecretValue};
 use nexus_trust::vocabulary::{MeshNodeState, TrustZone};
 
 use crate::error::{HeadscaleError, HeadscaleErrorCode};
@@ -204,4 +205,206 @@ fn ep009_unit_headscale_controller_debug_redacts_api_key() {
     let debug = format!("{c:?}");
     assert!(!debug.contains("apikey-super-secret-value"));
     assert!(debug.contains("<redacted>"));
+}
+
+// ---------------------------------------------------------------------------
+// AUD-012 remediation regression tests: identity binding + resolvable
+// private-key references. These prove the adapter can NEVER register a
+// synthetic identity or fabricate a private-key reference.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn rx006_unit_headscale_rejects_placeholder_key() {
+    // A placeholder key (short, non-hex) must be rejected before any
+    // provider call: a synthetic identity can never be registered.
+    let node = MeshNode::new(
+        "1",
+        "tenant-alpha",
+        "node-1",
+        TrustZone::PrivateMesh,
+        "live-pubkey-a",
+        None,
+    )
+    .expect("valid node");
+    let c = HeadscaleMeshController::new(
+        "headscale",
+        "/tmp/hs-cli-config.yaml",
+        "127.0.0.1:50443",
+        "key",
+    );
+    let err = c.register_node(node).unwrap_err();
+    assert_eq!(
+        err.code,
+        nexus_trust::TrustErrorCode::MalformedProviderResponse,
+        "placeholder key must fail closed as MalformedProviderResponse"
+    );
+}
+
+#[test]
+fn rx006_unit_headscale_rejects_empty_key() {
+    // Construct a valid node, then empty the key field to simulate a
+    // caller bypassing MeshNode::new's own validation.
+    let mut node = MeshNode::new(
+        "1",
+        "tenant-alpha",
+        "node-1",
+        TrustZone::PrivateMesh,
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        None,
+    )
+    .expect("valid node");
+    node.wireguard_public_key = String::new();
+    let c = HeadscaleMeshController::new(
+        "headscale",
+        "/tmp/hs-cli-config.yaml",
+        "127.0.0.1:50443",
+        "key",
+    );
+    let err = c.register_node(node).unwrap_err();
+    assert_eq!(
+        err.code,
+        nexus_trust::TrustErrorCode::MalformedProviderResponse
+    );
+}
+
+#[test]
+fn rx006_unit_headscale_accepts_valid_key_shape() {
+    // A 32-byte hex key is accepted (the provider round-trip is proven
+    // by the live integration; here we prove the validation boundary).
+    // The binary path does not exist, so the failure is
+    // BinaryUnavailable, NOT a validation failure.
+    let key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    let node = MeshNode::new(
+        "1",
+        "tenant-alpha",
+        "node-1",
+        TrustZone::PrivateMesh,
+        key,
+        None,
+    )
+    .expect("valid node");
+    let c = HeadscaleMeshController::new(
+        "/nonexistent/headscale-bin",
+        "/tmp/hs-cli-config.yaml",
+        "127.0.0.1:50443",
+        "key",
+    );
+    let err = c.register_node(node).unwrap_err();
+    assert_eq!(
+        err.code,
+        nexus_trust::TrustErrorCode::Unavailable,
+        "valid key must reach the provider boundary (BinaryUnavailable), not be rejected"
+    );
+}
+
+#[test]
+fn rx006_unit_headscale_wireguard_config_fails_closed_without_store() {
+    // Without a secret store the adapter must refuse to fabricate a
+    // private-key reference: it fails closed instead of returning a
+    // config pointing at nothing.
+    let c = HeadscaleMeshController::new(
+        "headscale",
+        "/tmp/hs-cli-config.yaml",
+        "127.0.0.1:50443",
+        "key",
+    );
+    let err = c.wireguard_config("1").unwrap_err();
+    assert_eq!(
+        err.code,
+        nexus_trust::TrustErrorCode::StateConflict,
+        "no secret store -> wireguard_config must fail closed"
+    );
+}
+
+#[test]
+fn rx006_unit_headscale_secret_store_debug_redacted() {
+    use std::sync::Arc;
+    let store = Arc::new(NoopSecretStore);
+    let c = HeadscaleMeshController::new(
+        "headscale",
+        "/tmp/hs-cli-config.yaml",
+        "127.0.0.1:50443",
+        "key",
+    )
+    .with_secret_store(store);
+    let debug = format!("{c:?}");
+    assert!(debug.contains("<configured>"));
+    assert!(!debug.contains("SecretStoreHandle"));
+}
+
+/// Minimal store that never resolves anything (for fail-closed tests).
+#[derive(Debug)]
+struct NoopSecretStore;
+
+impl SecretStore for NoopSecretStore {
+    fn get(&self, _reference: &SecretReference) -> Result<SecretValue, nexus_trust::TrustError> {
+        Err(nexus_trust::TrustError::not_found("noop store"))
+    }
+    fn put(
+        &self,
+        _reference: &SecretReference,
+        _value: SecretValue,
+    ) -> Result<(), nexus_trust::TrustError> {
+        Err(nexus_trust::TrustError::not_found("noop store"))
+    }
+    fn rotate(
+        &self,
+        _reference: &SecretReference,
+        _value: SecretValue,
+    ) -> Result<(), nexus_trust::TrustError> {
+        Err(nexus_trust::TrustError::not_found("noop store"))
+    }
+    fn revoke(&self, _reference: &SecretReference) -> Result<(), nexus_trust::TrustError> {
+        Err(nexus_trust::TrustError::not_found("noop store"))
+    }
+    fn state(
+        &self,
+        _reference: &SecretReference,
+    ) -> Result<nexus_trust::vocabulary::SecretState, nexus_trust::TrustError> {
+        Err(nexus_trust::TrustError::not_found("noop store"))
+    }
+}
+
+#[test]
+fn rx006_unit_headscale_wireguard_config_fails_closed_when_reference_missing() {
+    use std::sync::Arc;
+    // Mock headscale CLI: emits a real node-list JSON document so the
+    // provider boundary is crossed; the store then cannot resolve the
+    // private key reference -> must fail closed (NotFound).
+    let mock = std::env::temp_dir().join("rx006-mock-headscale.sh");
+    std::fs::write(
+        &mock,
+        r#"#!/usr/bin/env sh
+cat <<'EOF'
+[{"id":1,"machine_key":"mkey:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","node_key":"nodekey:0026cb1ac4b8ea2ee507540a73448a1bd308ef889f028d2e5a2dd78e4b729b04","disco_key":"","ip_addresses":["100.64.0.1","fd7a:115c:a1e0::1"],"name":"node-1","user":{"id":"1","name":"tenant-alpha","created_at":{"seconds":0}},"last_seen":{"seconds":0},"expiry":{"seconds":0},"created_at":{"seconds":0}}]
+EOF
+"#,
+    )
+    .expect("write mock cli");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&mock)
+            .expect("mock metadata")
+            .permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&mock, perms).expect("chmod mock");
+    }
+    let store = Arc::new(NoopSecretStore);
+    let c = HeadscaleMeshController::new(
+        mock.to_str().expect("mock path"),
+        "/tmp/hs-cli-config.yaml",
+        "127.0.0.1:50443",
+        "key",
+    )
+    .with_secret_store(store);
+    // The store cannot resolve the key -> wireguard_config must fail
+    // closed (NotFound), never return a fabricated config.
+    let err = c.wireguard_config("1").unwrap_err();
+    let _ = std::fs::remove_file(&mock);
+    assert_eq!(
+        err.code,
+        nexus_trust::TrustErrorCode::NotFound,
+        "unresolvable private key reference must fail closed"
+    );
 }

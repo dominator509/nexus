@@ -22,6 +22,11 @@ __pycache__/
 .DS_Store
 Thumbs.db
 *.log
+# Closure/evidence attestation logs ARE canonical committed evidence:
+# node-status-v2 validates the closure manifest's verify_log digest
+# against the file on disk, so a fresh clone must reproduce them or
+# node-DONE truth is unreachable there (AUD-090 fresh-clone ship run).
+!.agent/remediation/evidence/*/verify.log
 *.tmp
 *.swp
 terraform.tfstate

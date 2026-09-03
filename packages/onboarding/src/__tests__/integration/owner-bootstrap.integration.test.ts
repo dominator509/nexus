@@ -195,4 +195,117 @@ describe("ep035_integration_owner_bootstrap", () => {
     ).rejects.toMatchObject({ code: ErrorCode.Validation });
     await db.close();
   });
+
+  it("cannot write OWNER_AUTHORIZED without traversing the ladder (AUD-044)", async () => {
+    const db = await freshDb(stack);
+    const store = new OwnerBootstrapStore(db);
+    const req = request(`jump-${randomUUID().slice(0, 8)}`);
+    const principal = derivePrincipalId(req);
+    await store.initialize(req, principal, 1_700_000_000);
+
+    // Hostile: a caller supplies OWNER_AUTHORIZED while the durable row
+    // sits at a LOWER rung (OWNER_IDENTITY_VERIFIED). The durable
+    // boundary must reject the leap over OWNER_PRINCIPAL_CREATED.
+    await db.query(
+      `UPDATE onboarding_owner SET state = 'OWNER_IDENTITY_VERIFIED',
+               updated_at_unix_s = 1_700_000_050 WHERE owner_id = $1`,
+      [principal],
+    );
+    const record = OwnerBootstrapStateRecord.parse({
+      state: "OWNER_AUTHORIZED",
+      owner_email: req.owner_email,
+      principal_id: principal,
+      correlation_id: randomUUID(),
+      updated_at_unix_s: 1_700_000_200,
+    });
+    await expect(
+      store.recordState(principal, record, req.correlation_id),
+    ).rejects.toMatchObject({ code: ErrorCode.Policy });
+
+    // Exact-target readback: durable state never moved.
+    const row = await store.readOwnerById(principal);
+    expect(row!.state).toBe("OWNER_IDENTITY_VERIFIED");
+
+    await db.close();
+  });
+
+  it("rejects a backwards ladder move at the durable boundary (AUD-044)", async () => {
+    const db = await freshDb(stack);
+    const store = new OwnerBootstrapStore(db);
+    const req = request(`backward-${randomUUID().slice(0, 8)}`);
+    const principal = derivePrincipalId(req);
+    await store.initialize(req, principal, 1_700_000_000);
+
+    // Hostile: OWNER_IDENTITY_VERIFIED is behind the current rung.
+    const record = OwnerBootstrapStateRecord.parse({
+      state: "OWNER_IDENTITY_VERIFIED",
+      owner_email: req.owner_email,
+      principal_id: principal,
+      correlation_id: randomUUID(),
+      updated_at_unix_s: 1_700_000_200,
+    });
+    await expect(
+      store.recordState(principal, record, req.correlation_id),
+    ).rejects.toMatchObject({ code: ErrorCode.Policy });
+
+    const row = await store.readOwnerById(principal);
+    expect(row!.state).toBe("OWNER_PRINCIPAL_CREATED");
+
+    await db.close();
+  });
+
+  it("accepts the exact next ladder rung and idempotent re-assertion (AUD-044)", async () => {
+    const db = await freshDb(stack);
+    const store = new OwnerBootstrapStore(db);
+    const req = request(`walk-${randomUUID().slice(0, 8)}`);
+    const principal = derivePrincipalId(req);
+    await store.initialize(req, principal, 1_700_000_000);
+
+    // Seed a lower durable rung via the raw boundary is NOT possible
+    // through the store (it enforces the ladder); walk from the initial
+    // rung by inserting the first transition manually through SQL to
+    // prove the store accepts only the exact next rung from ANY durable
+    // state.
+    await db.query(
+      `UPDATE onboarding_owner SET state = 'OWNER_IDENTITY_VERIFIED',
+               updated_at_unix_s = 1_700_000_050 WHERE owner_id = $1`,
+      [principal],
+    );
+
+    // Exact next rung -> accepted.
+    const next = OwnerBootstrapStateRecord.parse({
+      state: "OWNER_PRINCIPAL_CREATED",
+      owner_email: req.owner_email,
+      principal_id: principal,
+      correlation_id: randomUUID(),
+      updated_at_unix_s: 1_700_000_100,
+    });
+    await store.recordState(principal, next, req.correlation_id);
+    let row = await store.readOwnerById(principal);
+    expect(row!.state).toBe("OWNER_PRINCIPAL_CREATED");
+
+    // Idempotent re-assertion of the same rung -> accepted, no error.
+    await store.recordState(principal, next, req.correlation_id);
+    row = await store.readOwnerById(principal);
+    expect(row!.state).toBe("OWNER_PRINCIPAL_CREATED");
+
+    await db.close();
+  });
+
+  it("refuses state recording on a missing owner (AUD-044)", async () => {
+    const db = await freshDb(stack);
+    const store = new OwnerBootstrapStore(db);
+    const ghostId = randomUUID();
+    const record = OwnerBootstrapStateRecord.parse({
+      state: "OWNER_PRINCIPAL_CREATED",
+      owner_email: "ghost@nexus.test",
+      principal_id: ghostId,
+      correlation_id: randomUUID(),
+      updated_at_unix_s: 1_700_000_100,
+    });
+    await expect(
+      store.recordState(ghostId, record, randomUUID()),
+    ).rejects.toMatchObject({ code: ErrorCode.NotFound });
+    await db.close();
+  });
 });

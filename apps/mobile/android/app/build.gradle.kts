@@ -40,6 +40,16 @@ kotlin {
     }
 }
 
+dependencies {
+    // AUD-040: native biometric surface (BiometricManager/BiometricPrompt).
+    // androidx.biometric 1.1.0 stable provides
+    // BiometricManager.Authenticators.BIOMETRIC_STRONG and the
+    // crypto-based BiometricPrompt. The native security channel uses
+    // these documented APIs; Keystore-backed secure storage needs no
+    // extra dependency.
+    implementation("androidx.biometric:biometric:1.1.0")
+}
+
 flutter {
     source = "../.."
 }

@@ -1,0 +1,45 @@
+# RX-017 expected files: onboarding/provisioning truth (AUD-042 Setup/secure-
+#  enrollment product verified via LF-001 live-fire; AUD-043 enrollment claim
+#  binds bootstrap secret in the same atomic UPDATE; AUD-044 owner ladder
+#  enforced at the durable boundary; AUD-045 AMBIGUOUS+RECONCILED retry
+#  requires negative mutation observation; AUD-046 GenericSshProvider real
+#  transport; AUD-047 placement requires observed capacity + health;
+#  AUD-048 cost ceiling enforced)
+# NOTE: the five RX-016-owned files below are format-only repairs required by
+# the RX-017 verify battery (format-check.sh prettier gate failed on
+# pre-existing HEAD drift). Pure whitespace/line-wrap changes; RX-016 closure
+# will be re-attested (CORRECTION) after RX-017 closes.
+.agent/expected-files/RX-017.txt
+.agent/milestone-files/RX-017-M1.txt
+.agent/milestone-files/RX-017-M2.txt
+.agent/milestone-files/RX-017-M3.txt
+.agent/milestone-files/RX-017-M4.txt
+.agent/milestone-files/RX-017-M5.txt
+.agent/milestone-files/RX-017-M6.txt
+.agent/milestone-files/RX-017-M7.txt
+.agent/remediation/AUDIT_FINDINGS.tsv
+.agent/remediation/evidence/RX-017/
+.agent/state/evidence/EP-036-m5.json
+.agent/state/evidence/LF-001-ep035-m5.json
+apps/desktop/src/dispatcher.ts
+apps/web/src/__tests__/ep033_aud038_pwa_entry.test.tsx
+apps/web/src/contracts/capability.ts
+apps/web/src/main.tsx
+tests/workflows/src/helpers/stack.ts
+apps/setup/src/__tests__/ep035_unit_recovery.test.ts
+apps/setup/src/contracts/recovery.ts
+crates/nexus-compute/src/model.rs
+crates/nexus-compute/src/placement.rs
+crates/nexus-compute/tests/ep036_unit_contract.rs
+packages/onboarding/src/__tests__/integration/enrollment-token.integration.test.ts
+packages/onboarding/src/__tests__/integration/owner-bootstrap.integration.test.ts
+packages/onboarding/src/__tests__/integration/recovery-flow.integration.test.ts
+packages/onboarding/src/stores/enrollment-token.store.ts
+packages/onboarding/src/stores/owner-bootstrap.store.ts
+providers/existing-ssh/src/lib.rs
+providers/existing-ssh/tests/ep036_integration_existing_ssh.rs
+scripts/ep036-m3-tests.sh
+scripts/nodes/RX-017.sh
+scripts/rx017-remediation-tests.sh
+tests/onboarding/src/__tests__/ep035_failure_denied_permission.test.ts
+tests/onboarding/src/__tests__/ep035_failure_duplicate_request.test.ts

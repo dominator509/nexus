@@ -38,11 +38,13 @@ pub mod vocabulary;
 
 pub use error::{NotificationError, NotificationErrorCode};
 pub use model::{
-    DeliveryPolicy, DeliveryReceipt, EscalationPolicy, NotificationEnvelope, PrivacyRouting,
+    DeliveryContext, DeliveryPolicy, DeliveryReceipt, EscalationPolicy, NotificationEnvelope,
+    PrivacyRouting,
 };
 pub use observability::{NotificationObservability, NotificationObservation};
 pub use provider::{
-    ChannelProvider, NotificationRouter, UnboundChannelProvider, UnboundNotificationRouter,
+    ChannelProvider, DestinationResolver, NotificationRouter, UnboundChannelProvider,
+    UnboundDestinationResolver, UnboundNotificationRouter,
 };
 pub use router::EscalatingNotificationRouter;
 pub use vocabulary::{

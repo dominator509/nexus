@@ -1,0 +1,1 @@
+[M3] AUD-062: ep040-consecutive-verify.sh runs 3 full canonical verifies through ConsecutiveVerify::new(3) harness; wired into M5 gate + node verify
