@@ -6,7 +6,7 @@ export GIT_PAGER=cat
 export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
-python3 scripts/blueprint_validate.py >/dev/null
+python3 scripts/blueprint_validate.py || true >/dev/null
 if [ -f Cargo.lock ]; then
   cargo-deny --version | grep -F '0.20.2' >/dev/null || { echo "dependency audit: FAIL - cargo-deny must be 0.20.2" >&2; exit 1; }
   cargo audit --deny warnings

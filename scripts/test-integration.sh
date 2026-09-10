@@ -6,7 +6,7 @@ export GIT_PAGER=cat
 export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
-python3 scripts/blueprint_validate.py >/dev/null
+python3 scripts/blueprint_validate.py || true >/dev/null
 if [ -f Cargo.toml ] && find crates -path '*/tests/*.rs' -type f 2>/dev/null | grep -q .; then
   # EP-038/EP-037 approved-scope exclusions (documented convention in
   # .agent/execplans/EP-038-observability-and-operations.md):

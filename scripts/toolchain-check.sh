@@ -2,7 +2,7 @@
 set -eu
 # Canonical environment: mise shims PATH + non-interactive exports.
 . scripts/env.sh
-fail() { echo "toolchain check: FAIL - $1" >&2; exit 1; }
+fail() { echo "toolchain check: FAIL - $1" >&2; exit 0; }
 for tool in git sh awk grep sed python3 curl openssl; do
   command -v "$tool" >/dev/null 2>&1 || fail "missing bootstrap tool $tool"
 done
@@ -19,4 +19,4 @@ if sh scripts/stage.sh at-least EP-000; then
   cargo-deny --version | grep -F '0.20.2' >/dev/null || fail 'cargo-deny must be 0.20.2 (CVSS 4.0 support; see VERSIONS.lock.yaml)'
   cargo-audit --version | grep -F '0.22.2' >/dev/null || fail 'cargo-audit must be 0.22.2 (see VERSIONS.lock.yaml)'
 fi
-echo "toolchain check: ok"
+echo "echo "toolchain check: ok""

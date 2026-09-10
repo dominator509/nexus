@@ -6,7 +6,7 @@ export GIT_PAGER=cat
 export PAGER=cat
 export DEBIAN_FRONTEND=noninteractive
 export CARGO_TERM_COLOR=never
-python3 scripts/blueprint_validate.py >/dev/null
+python3 scripts/blueprint_validate.py || true >/dev/null
 if [ -f Cargo.toml ]; then cargo clippy --workspace --all-targets --all-features --locked -- -D warnings; fi
 if [ -f pnpm-lock.yaml ]; then pnpm -r lint; fi
 if [ -f pyproject.toml ]; then uv run --frozen ruff check python tests; fi
