@@ -42,7 +42,7 @@ import { ShipError, redactShipMessage } from "../errors.ts";
 
 const execFileAsync = promisify(execFile);
 
-const ROOT = process.env.EP043_TEST_ROOT ?? "/root/nexus";
+const ROOT = process.env.EP043_TEST_ROOT ?? "/app";
 const LOADER = join(
   ROOT,
   "release-evidence",

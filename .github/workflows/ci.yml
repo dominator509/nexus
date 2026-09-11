@@ -26,6 +26,16 @@ jobs:
           if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
           if ! cargo-audit --version | grep -F '0.22.2'; then cargo install cargo-audit --locked --version 0.22.2; fi
 
+      - name: System Setup
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq age
+          curl -fsSL https://github.com/getsops/sops/releases/download/v3.13.0/sops-v3.13.0.linux.amd64 -o sops
+          sudo chmod +x sops
+          sudo mv sops /usr/local/bin/
+          cp .env.example .env
+          sh scripts/install.sh
+
       - name: Preflight
         run: sh scripts/preflight.sh
 
@@ -67,6 +77,16 @@ jobs:
           version: 2026.8.5
           install: true
           cache: true
+
+      - name: System Setup
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq age
+          curl -fsSL https://github.com/getsops/sops/releases/download/v3.13.0/sops-v3.13.0.linux.amd64 -o sops
+          sudo chmod +x sops
+          sudo mv sops /usr/local/bin/
+          cp .env.example .env
+          sh scripts/install.sh
 
       - name: Preflight
         run: sh scripts/preflight.sh

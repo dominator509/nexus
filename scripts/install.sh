@@ -16,7 +16,7 @@ fi
 if [ -f Cargo.toml ] && ! command -v cargo-audit >/dev/null 2>&1; then
   cargo install cargo-audit --locked --version 0.22.2
 fi
-if [ -f pnpm-lock.yaml ]; then corepack enable; pnpm install --frozen-lockfile --offline; fi
-if [ -f uv.lock ]; then uv sync --frozen --offline; fi
-if [ -f apps/mobile/pubspec.lock ]; then (cd apps/mobile && flutter pub get --offline); fi
+if [ -f pnpm-lock.yaml ]; then corepack enable; pnpm install --frozen-lockfile ; fi
+if [ -f uv.lock ]; then uv sync --frozen ; fi
+if [ -f apps/mobile/pubspec.lock ]; then (cd apps/mobile && flutter pub get ); fi
 echo "install: ok"
