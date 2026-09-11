@@ -28,8 +28,13 @@ jobs:
 
       - name: System Setup
         run: |
-          sh scripts/install.sh
+          sudo apt-get update
+          sudo apt-get install -y jq age
+          curl -fsSL https://github.com/getsops/sops/releases/download/v3.13.0/sops-v3.13.0.linux.amd64 -o sops
+          sudo chmod +x sops
+          sudo mv sops /usr/local/bin/
           cp .env.example .env
+          sh scripts/install.sh
 
       - name: Preflight
         run: sh scripts/preflight.sh
@@ -75,8 +80,13 @@ jobs:
 
       - name: System Setup
         run: |
-          sh scripts/install.sh
+          sudo apt-get update
+          sudo apt-get install -y jq age
+          curl -fsSL https://github.com/getsops/sops/releases/download/v3.13.0/sops-v3.13.0.linux.amd64 -o sops
+          sudo chmod +x sops
+          sudo mv sops /usr/local/bin/
           cp .env.example .env
+          sh scripts/install.sh
 
       - name: Preflight
         run: sh scripts/preflight.sh
