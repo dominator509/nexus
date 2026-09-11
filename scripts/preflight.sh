@@ -7,7 +7,7 @@ fail() { echo "preflight: FAIL - $1" >&2; exit 1; }
 for f in AGENTS.md COMMANDS.md PREFLIGHT.md .env.example .agent/GRAPH.md .agent/LOOPS.md .agent/state/LEDGER.md .agent/reality-patterns .agent/reality-allow; do
   [ -f "$f" ] || fail "missing required file: $f"
 done
-python3 scripts/blueprint_validate.py || echo "blueprint ok"
+python3 scripts/blueprint_validate.py >/dev/null || fail "blueprint structural validation failed"
 sh scripts/check-shell.sh >/dev/null || fail "shell syntax validation failed"
 sh scripts/toolchain-check.sh >/dev/null || fail "toolchain validation failed"
 [ -f .env ] || fail "missing .env; copy .env.example and fill required values"

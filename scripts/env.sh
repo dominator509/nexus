@@ -36,6 +36,5 @@ done
 if [ -n "$_path_add" ]; then
   PATH="$_path_add$PATH"
 fi
-export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 export PATH
 unset _mise_shims _mise_bin _path_add _d

@@ -26,6 +26,11 @@ jobs:
           if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
           if ! cargo-audit --version | grep -F '0.22.2'; then cargo install cargo-audit --locked --version 0.22.2; fi
 
+      - name: System Setup
+        run: |
+          sh scripts/install.sh
+          cp .env.example .env
+
       - name: Preflight
         run: sh scripts/preflight.sh
 
@@ -67,6 +72,11 @@ jobs:
           version: 2026.8.5
           install: true
           cache: true
+
+      - name: System Setup
+        run: |
+          sh scripts/install.sh
+          cp .env.example .env
 
       - name: Preflight
         run: sh scripts/preflight.sh

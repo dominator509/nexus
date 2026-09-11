@@ -7,9 +7,7 @@ name = "nexus-contracts"
 version = "0.1.0"
 description = "Nexus generated cross-language contracts"
 requires-python = ">=3.14"
-dependencies = [
-    "pytest>=9.1.1",
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.9", "mypy>=1.14", "psycopg[binary]>=3.2"]
