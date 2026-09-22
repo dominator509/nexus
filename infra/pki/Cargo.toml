@@ -24,7 +24,7 @@ x509-parser = "0.18.1"
 # mTLS server/client. Already in the workspace lock graph at 0.23.43
 # (ring provider, matched to the pinned rustls-webpki/ring chain).
 # Apache-2.0 OR ISC OR MIT.
-rustls = { version = "0.23.43", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rustls = { version = "0.23.45", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 rustls-pki-types = "1.15.1"
 
 [dev-dependencies]

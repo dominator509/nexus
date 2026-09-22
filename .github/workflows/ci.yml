@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: "true"
+      EP043_TEST_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,10 +22,45 @@ jobs:
           install: true
           cache: true
 
+      - name: Install clippy + rustfmt components
+        run: rustup component add clippy rustfmt
+
+      - name: Sync Python environment (uv)
+        run: uv sync --frozen --extra dev
+
+      - name: Resolve Flutter dependencies
+        run: |
+          for d in apps/mobile packages/mobile-contracts tests/e2e/mobile tests/accessibility/mobile tests/livefire/mobile; do
+            if [ -f "$d/pubspec.yaml" ]; then (cd "$d" && flutter pub get); fi
+          done
+
       - name: Install pinned cargo security tools
         run: |
           if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
           if ! cargo-audit --version | grep -F '0.22.2'; then cargo install cargo-audit --locked --version 0.22.2; fi
+
+      - name: Install pinned secrets tools (age, sops)
+        run: |
+          if ! age --version | grep -F '1.1.1'; then
+            curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz -o /tmp/age.tar.gz
+            tar -xzf /tmp/age.tar.gz -C /tmp
+            sudo mv /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
+          fi
+          if ! sops --version | grep -F '3.13.0'; then
+            curl -fsSL https://github.com/getsops/sops/releases/download/v3.13.0/sops-v3.13.0.linux.amd64 -o /usr/local/bin/sops
+            sudo chmod +x /usr/local/bin/sops
+          fi
+
+      - name: Prepare CI environment (.env + age key)
+        run: |
+          cp .env.example .env
+          mkdir -p secrets
+          age-keygen -o secrets/age-key.txt >/dev/null 2>&1 || true
+          if [ -n "$DEEPSEEK_API_KEY" ]; then
+            sed -i "s|^DEEPSEEK_API_KEY=.*|DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY|" .env
+          fi
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
       - name: Preflight
         run: sh scripts/preflight.sh
@@ -58,6 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: "true"
+      EP043_TEST_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
 
@@ -68,8 +105,55 @@ jobs:
           install: true
           cache: true
 
+      - name: Install clippy + rustfmt components
+        run: rustup component add clippy rustfmt
+
+      - name: Sync Python environment (uv)
+        run: uv sync --frozen --extra dev
+
+      - name: Resolve Flutter dependencies
+        run: |
+          for d in apps/mobile packages/mobile-contracts tests/e2e/mobile tests/accessibility/mobile tests/livefire/mobile; do
+            if [ -f "$d/pubspec.yaml" ]; then (cd "$d" && flutter pub get); fi
+          done
+
+      - name: Install pinned cargo security tools
+        run: |
+          if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
+          if ! cargo-audit --version | grep -F '0.22.2'; then cargo install cargo-audit --locked --version 0.22.2; fi
+
+      - name: Install pinned secrets tools (age, sops)
+        run: |
+          if ! age --version | grep -F '1.1.1'; then
+            curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz -o /tmp/age.tar.gz
+            tar -xzf /tmp/age.tar.gz -C /tmp
+            sudo mv /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
+          fi
+          if ! sops --version | grep -F '3.13.0'; then
+            curl -fsSL https://github.com/getsops/sops/releases/download/v3.13.0/sops-v3.13.0.linux.amd64 -o /usr/local/bin/sops
+            sudo chmod +x /usr/local/bin/sops
+          fi
+
+      - name: Prepare CI environment (.env + age key)
+        run: |
+          cp .env.example .env
+          mkdir -p secrets
+          age-keygen -o secrets/age-key.txt >/dev/null 2>&1 || true
+          if [ -n "$DEEPSEEK_API_KEY" ]; then
+            sed -i "s|^DEEPSEEK_API_KEY=.*|DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY|" .env
+          fi
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+
       - name: Preflight
         run: sh scripts/preflight.sh
 
+      - name: Provision battery fixtures (MinIO, SeaweedFS, GlitchTip)
+        run: sh scripts/ci-battery-env.sh
+
       - name: Integration tests
-        run: sh scripts/test-integration.sh
+        run: |
+          set -a
+          . /tmp/battery.env
+          set +a
+          sh scripts/test-integration.sh
