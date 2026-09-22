@@ -103,6 +103,12 @@ jobs:
       - name: Sync Python environment (uv)
         run: uv sync --frozen --extra dev
 
+      - name: Resolve Flutter dependencies
+        run: |
+          for d in apps/mobile packages/mobile-contracts tests/e2e/mobile tests/accessibility/mobile tests/livefire/mobile; do
+            if [ -f "$d/pubspec.yaml" ]; then (cd "$d" && flutter pub get); fi
+          done
+
       - name: Install pinned cargo security tools
         run: |
           if ! cargo-deny --version | grep -F '0.20.2'; then cargo install cargo-deny --locked --version 0.20.2; fi
