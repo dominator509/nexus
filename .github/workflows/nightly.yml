@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: "true"
+      EP043_TEST_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
 
@@ -87,6 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: "true"
+      EP043_TEST_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
 
