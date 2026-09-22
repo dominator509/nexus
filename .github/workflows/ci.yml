@@ -148,5 +148,12 @@ jobs:
       - name: Preflight
         run: sh scripts/preflight.sh
 
+      - name: Provision battery fixtures (MinIO, SeaweedFS, GlitchTip)
+        run: sh scripts/ci-battery-env.sh
+
       - name: Integration tests
-        run: sh scripts/test-integration.sh
+        run: |
+          set -a
+          . /tmp/battery.env
+          set +a
+          sh scripts/test-integration.sh
