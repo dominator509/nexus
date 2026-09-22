@@ -45,7 +45,7 @@ import {
   createShipGate,
 } from "@nexus/release-evidence";
 
-const ROOT = "/root/nexus";
+const ROOT = process.env.EP043_TEST_ROOT ?? "/root/nexus";
 const PATHS = defaultRepoPaths(ROOT);
 
 function allDoneNodes(count = 2): { nodeId: string; done: boolean }[] {
