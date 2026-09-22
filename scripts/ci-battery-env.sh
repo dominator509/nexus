@@ -29,13 +29,21 @@ SWF_PW="ci-$(date +%s | tail -c 9)-swf-x7"
 fail() { echo "ci battery: FAIL - $1" >&2; exit 1; }
 ok() { echo "ci battery: $1"; }
 
+# Fail fast with a clear message when the Docker daemon is unreachable,
+# instead of letting every `docker run` below fail opaquely.
+if ! docker info >/dev/null 2>&1; then
+  docker_err="$(docker info 2>&1 >/dev/null | head -3 | tr '\n' ' ')"
+  fail "docker daemon unreachable: ${docker_err:-unknown error}"
+fi
+ok "docker daemon reachable"
+
 docker rm -f "$MINIO_CONTAINER" >/dev/null 2>&1 || true
-if ! docker run -d --name "$MINIO_CONTAINER" \
+if ! minio_err="$(docker run -d --name "$MINIO_CONTAINER" \
   -p "127.0.0.1:${MINIO_PORT}:9000" \
   -e "MINIO_ROOT_USER=${MINIO_ACCESS}" \
   -e "MINIO_ROOT_PASSWORD=${MINIO_PW}" \
-  "$MINIO_IMAGE" server /data >/dev/null 2>&1; then
-  fail "cannot start MinIO container"
+  "$MINIO_IMAGE" server /data 2>&1 >/dev/null)"; then
+  fail "cannot start MinIO container: $(echo "$minio_err" | head -5 | tr '\n' ' ')"
 fi
 ok "MinIO container started"
 
@@ -56,7 +64,7 @@ printf '{"identities":[{"name":"nexus-ci","credentials":[{"accessKey":"%s","secr
   "$SWF_ACCESS" "$SWF_PW" > "$SWF_CFG_DIR/s3.json"
 
 docker rm -f "$SWF_CONTAINER" >/dev/null 2>&1 || true
-if ! docker run -d --name "$SWF_CONTAINER" \
+if ! swf_err="$(docker run -d --name "$SWF_CONTAINER" \
   -p "127.0.0.1:${SWF_S3_PORT}:8333" \
   -p "127.0.0.1:${SWF_FILER_PORT}:8888" \
   -p "127.0.0.1:${SWF_VOLUME_PORT}:8080" \
@@ -64,8 +72,8 @@ if ! docker run -d --name "$SWF_CONTAINER" \
   "$SWF_IMAGE" \
   server -master.port=9333 -volume.port=8080 -filer.port=8888 -s3.port=8333 \
   -filer -s3 \
-  -s3.config=/etc/seaweedfs/s3.json -volume.max=256 -dir=/data >/dev/null 2>&1; then
-  fail "cannot start SeaweedFS container"
+  -s3.config=/etc/seaweedfs/s3.json -volume.max=256 -dir=/data 2>&1 >/dev/null)"; then
+  fail "cannot start SeaweedFS container: $(echo "$swf_err" | head -5 | tr '\n' ' ')"
 fi
 ok "SeaweedFS container started"
 
@@ -101,9 +109,11 @@ GT_PROV_ERR="/tmp/${GT_OWN}-provision.err"
 docker network create "$GT_NET" >/dev/null 2>&1 || true
 docker rm -f "${GT_OWN}-postgres" "${GT_OWN}-redis" "${GT_OWN}-glitchtip" >/dev/null 2>&1 || true
 
-docker run -d --name "${GT_OWN}-postgres" --network "$GT_NET" \
+if ! gtpg_err="$(docker run -d --name "${GT_OWN}-postgres" --network "$GT_NET" \
   -e POSTGRES_USER=glitchtip -e POSTGRES_PASSWORD="***" -e POSTGRES_DB=glitchtip \
-  "$GT_PG_IMG" >/dev/null 2>&1 || fail "cannot start glitchtip postgres"
+  "$GT_PG_IMG" 2>&1 >/dev/null)"; then
+  fail "cannot start glitchtip postgres: $(echo "$gtpg_err" | head -5 | tr '\n' ' ')"
+fi
 
 pg_ready=0
 for i in $(seq 1 30); do
@@ -115,7 +125,7 @@ done
 [ "$pg_ready" -eq 1 ] || fail "glitchtip postgres not ready"
 ok "glitchtip postgres ready"
 
-docker run -d --name "${GT_OWN}-redis" --network "$GT_NET" --network-alias redis "$GT_REDIS_IMG" >/dev/null 2>&1 || fail "cannot start glitchtip redis"
+docker run -d --name "${GT_OWN}-redis" --network "$GT_NET" --network-alias redis "$GT_REDIS_IMG" >/dev/null 2>&1 || { gtr_err="$(docker logs "${GT_OWN}-redis" 2>&1 | head -5 | tr '\n' ' ')"; fail "cannot start glitchtip redis: $gtr_err"; }
 
 docker run -d --name "${GT_OWN}-glitchtip" --network "$GT_NET" \
   -p "127.0.0.1:${GT_PORT}:8000" \
@@ -123,7 +133,7 @@ docker run -d --name "${GT_OWN}-glitchtip" --network "$GT_NET" \
   -e "DATABASE_URL=postgres://glitchtip:***@${GT_OWN}-postgres:5432/glitchtip" \
   -e "SECRET_KEY=ci-secret-$(date +%s | tail -c 9)" -e EMAIL_URL=consolemail:// \
   -e "GLITCHTIP_DOMAIN=http://127.0.0.1:${GT_PORT}" -e PORT=8000 \
-  "$GT_IMG" >/dev/null 2>&1 || fail "cannot start glitchtip"
+  "$GT_IMG" >/dev/null 2>&1 || { gta_err="$(docker logs "${GT_OWN}-glitchtip" 2>&1 | head -5 | tr '\n' ' ')"; fail "cannot start glitchtip: $gta_err"; }
 
 gt_ready=0
 for i in $(seq 1 90); do
