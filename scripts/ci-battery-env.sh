@@ -11,7 +11,11 @@ set -eu
 export CI=true
 export CARGO_TERM_COLOR=never
 
-MINIO_IMAGE="minio/minio:RELEASE.2024-04-06T05-26-02Z"
+# NOTE: minio/minio was removed from Docker Hub by MinIO Inc. in 2025
+# (pulls now fail with "pull access denied / repository does not exist").
+# quay.io/minio/minio is MinIO's own registry and serves the identical
+# release tags; same tag, same content, registry swap only.
+MINIO_IMAGE="quay.io/minio/minio:RELEASE.2024-04-06T05-26-02Z"
 MINIO_CONTAINER="nexus-ci-minio"
 MINIO_PORT="19090"
 MINIO_ACCESS="nexus-ci-access"
