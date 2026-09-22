@@ -35,6 +35,7 @@ import { execFileSync } from "node:child_process";
 import { createConnection } from "node:net";
 import { createHash, randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import yaml from "js-yaml";
 
 export const POSTGRES_IMAGE = "postgres:18.4";
 export const POSTGRES_DIGEST =
@@ -410,24 +411,28 @@ function assertAuthenticatedQuery(
   }
 }
 
-/** Validate the dynamic-config fixture with pyyaml before mounting it. */
+/**
+ * Validate the dynamic-config fixture with js-yaml before mounting it.
+ * Node-side parsing (js-yaml is a declared dependency) - never spawn a
+ * system python3 whose PyYAML presence varies between runners (CI
+ * system python has no yaml module; the uv-locked env has none either).
+ */
 function validateDynamicConfig(): void {
   const path = dynamicConfigPath();
   const raw = readFileSync(path, "utf8");
   if (raw.trim().length === 0) {
     throw new Error(`dynamic config fixture is empty: ${path}`);
   }
-  const result = execFileSync(
-    "python3",
-    [
-      "-c",
-      "import sys, yaml; yaml.safe_load(open(sys.argv[1], encoding='utf-8')); print('yaml ok')",
-      path,
-    ],
-    { encoding: "utf8" },
-  );
-  if (!result.includes("yaml ok")) {
-    throw new Error(`dynamic config YAML validation failed: ${path}`);
+  let parsed: unknown;
+  try {
+    parsed = yaml.load(raw);
+  } catch (err) {
+    throw new Error(
+      `dynamic config YAML validation failed: ${path}: ${String(err)}`,
+    );
+  }
+  if (parsed === undefined || typeof parsed !== "object") {
+    throw new Error(`dynamic config YAML must parse to an object: ${path}`);
   }
 }
 
